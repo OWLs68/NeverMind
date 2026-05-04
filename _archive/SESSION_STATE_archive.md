@@ -2452,3 +2452,106 @@ Claude підготував питання для другої думки про
 - **3229b (15-16.04):** повна переробка Фінансів v2 (6 фаз, 20 комітів)
 - **6v2eR (15.04):** повна переробка Здоров'я (6 фаз + 5 багів за один день)
 - **jMR6m (15.04):** Фаза 1 Здоров'я (розширена структура `nm_health_cards`, алергії, міграція), B-26 Inbox board layout
+## 🔧 Сесія UvEHE — модалки calendar-pattern + settings 4-ітер scale-glitch + sub-агенти + pre-commit-i18n (03.05.2026)
+
+### Зроблено
+
+#### A. Інфраструктура (4 коміти)
+1. **`/c` slash command** (`87b026a`): короткий індикатор `📊 NN% · XXXK/1M` через `lib/compute-context-pct.sh`. Видалено мертвий statusLine + `statusline.sh` (не працює у Claude Code Web).
+2. **context-warning.sh оновлено** (`87b026a`): мовчить <75%, `⚠️` 75-89%, `🚨` ≥90%.
+
+#### B. Health-картка модалка (B-120 + B-121, 6 ітерацій)
+3. **B-120 v1→v2** (`d636dee` → `ec76954`): `overflow:hidden` (iOS ігнорує) → `position:fixed` body + scrollY restore.
+4. **B-121 v1→v2** (`d636dee` → `35a76a0`): `min-width:0` на native inputs + placeholder через type swap.
+5. **Drum-picker заміна native picker** (`15e8b0a`): окрема mini-модалка з 3-кол date drum + 2-кол time drum. Роки 2024-2031 → 1990-2035 (`1179ab9`).
+6. **Кнопка «+ Додати препарат»** (`c4f4c8c` → `613d94b`): біла, зліва, повний текст.
+
+#### C. Усі модалки на calendar-pattern (5 фаз)
+7. **Phase 1-4** (`c6520f3` → `8e8c366`): 13 модалок на top-level overlay sibling.
+8. **MutationObserver `modal-overlay-sync.js`** (`c6520f3`): авто-sync display + auto-extract overlay для динамічних модалок (`3fc5ad9`).
+9. **Універсальний swipe-close** (`c84b858`): touch на root, transform на картку.
+10. **deploy-info-modal** (`efa3cb9`): blur винесено з root.
+11. **Bottom-sheet only** (`e2a3615`): swipe-close НЕ для повноекранних (note-view, task-chat).
+12. **`overscroll-behavior:none`** (`bd42bab`): авто всім модалкам.
+
+#### D. Settings scale-glitch (4 ітерації)
+13. **v1: position:fixed body** — false lead.
+14. **v2: видалено flex layout** (`a0a627c`) — false lead.
+15. **v3: nested backdrop-filter з .s-group** (`3ac8323`) — false lead, але правильна оптимізація.
+16. **v4 КОРІНЬ — `[onclick]:active scale(0.87)` глобальне правило** (`0df4c28`): override `#settings-overlay:active, [id$="-modal"]:active { transform: none }`.
+17. **Settings calendar-pattern повний** (`d83b4f9`): top-level overlay-bg + scale animation.
+18. **null-safe input-memory** (`fcebe88`): overlay-bg застрягав видимий — try/catch фікс.
+19. **mask-image видалено** (`d4417b5`) — false lead.
+
+#### E. Help-drawer (8 вкладок)
+20. **Help-drawer-dim у scale override** (`c9464ee`).
+21. **HELP_CONTENT для health/projects** (`671f72a`): 3 секції кожна, обгорнуто у `t()`.
+22. **Swipe-right на drawer (root)** (`72694c7`).
+
+#### F. Інше
+23. **Inbox→habit навігація** (`8ba96b9`): `INBOX_NAV_MAP.habit: 'tasks'` + `switchProdTab('habits')`.
+24. **calc(env(safe-area-inset-X)+Npx) пробіли** (`0d97ebb`): 22 місця.
+25. **3 read-only sub-агенти** (`d4417b5`): ios-bug-hunter, code-regression-finder, silent-bug-scout.
+26. **pre-commit-i18n хук** (`377b238`): БЕЗ bypass.
+
+### Ключові рішення
+
+- **Top-level overlay sibling > дитячий backdrop-div** — корінь iOS Safari clipping.
+- **Calendar-pattern еталон** для всіх модалок.
+- **Sub-агенти read-only за конструкцією** — урок з UvEHE: агент сам зробив Edit бо у промпті була фраза «old_string + new_string».
+- **pre-commit-i18n БЕЗ bypass** — щоб Claude не обходив навмисне.
+- **Settings 4 ітерації false leads** (mask-image, flex, nested blur, body-lock) — справжній корінь у глобальному CSS `[onclick]:active`. Урок: симптом «реакція на touch» — шукати CSS :active в першу чергу.
+
+### Інциденти
+
+- **CI auto-merge не зливав 15+ хв** через check-i18n (`15e8b0a` падав на 4 рядках без `t()`). Фікс `b3278da`. Урок повторений з MIeXK — створено pre-commit-i18n хук.
+- **Council агент сам Edit+commit** — у промпті інструкція звучала як директива. Тепер явно блокую.
+- **Settings stuck overlay-bg** — closeSettings падав на null input-memory → setTimeout не fire. Null-safe фікс.
+
+### Відкладене
+
+- **CHANGES.md запис UvEHE** — наступний крок.
+- **lessons.md** урок про nested backdrop-filter + global :active.
+- **DESIGN_SYSTEM.md** правило max 1 blur layer.
+- **NEVERMIND_BUGS.md** закрити B-120/B-121.
+- **Smoke-test v600+** Health AI-інтерв'ю (17 сценаріїв з MIeXK).
+- **B-117** табло звичок stale.
+- **Розкочення rAF B-119** на 6 чатів.
+
+#### G. Розширення UvEHE — chips fixes 4 ітерації + sub-agents + Jarvis-roadmap (UPDATE finish)
+27. **silent-bug-scout audit** (`2ee00ee`): 3 превентивні фікси — null-safe openSettings, swipe-block input/textarea, help-drawer transform reset.
+28. **Tasks clarify-guard Phase 3** (`6c5ca35`): 7-й чат з guard. Імпорт `shouldClarify` + `CLARIFY_INLINE_RULES` + `addTaskBarMsg` chips-сигнатура + tasks у `_CLARIFY_ADDMSG`.
+29. **B-119 rollout 7 чатів** (`1776fbf`): rAF scroll-fix у Health/Notes/Tasks/Finance/Evening/Projects/Me після Inbox-фіксу з mUpS8.
+30. **Chips clipping 4 ітерації** (`4fb9272` → `a55cafe` → `8ab3c41` → `f0ab497`):
+    - v1 mask-image видалено (false lead)
+    - v2 padding 28→48 + double rAF (false lead)
+    - v3 flex-shrink:0 + scrollIntoView (false lead)
+    - v4 КОРІНЬ через Council code-regression-finder: `transform:translateZ(0)` на `.chat-chips-row` ізолює composite layer від parent `.ai-bar-chat-window` blur(16px). Той самий iOS quirk що був у settings.
+31. **Notes re-render після chip-save** (`f0ab497` → `fe05ecc`): централізований `nm-data-changed` listener у `boot.js setupSync()` з DETAIL_TO_KEY мапою для всіх 8 вкладок. Раніше chip-save не викликав renderNotes (Роман: «папки пропали»).
+32. **+5 нових read-only sub-agents** (`505b644`): `dry-violation-finder`, `prompt-engineer-auditor`, `supabase-migration-scout`, `ai-cost-analyst`, `doc-consistency-checker`. CLAUDE.md секція Council отримала **таблицю симптом → агент** для авто-активації БЕЗ запиту Романа. Усі 8 агентів read-only.
+33. **🚀 ROADMAP Active: Dynamic AI-driven chips** (`e7e3f72`): план на наступну сесію з 6 кроків (~1-2 год). Роман: «3 фіксованих варіанти — слабо і не Jarvis. Має бути базовою потужною версією».
+
+### Інциденти (UPDATE)
+
+- **Chips 4 ітерації false leads** — mask-image, padding, flex-shrink, scrollIntoView. Жоден не корінь. Council `code-regression-finder` знайшов справжню причину — composite layer parent. Урок: коли симптом «обрізається на iOS» — спершу шукати `backdrop-filter` parent + dump composite layers.
+- **Pre-push hook bypass-фраза** двічі — після pre-commit-i18n тригер «міграція» з історії повідомлень фолс-позитив. «pre-push: ok» прийнято.
+- **Council агент сам зробив Edit без дозволу** (settings flex layout аудит) — урок: у промптах ЯВНО блокувати модифікації для агентів. Записано у CLAUDE.md та у systemPrompt всіх 8 sub-agents.
+- Без `git reset` / `git push --force` / skip hooks. Усі коміти першою спробою.
+
+### Конфлікти/суперечності (UPDATE)
+
+- **Settings 4 ітерації перш ніж знайти CSS корінь** — я (Голова) шукав у layout/composite/scroll, корінь у глобальному `[onclick]:active scale(0.87)`. Проста CSS-перевірка `:active` selectors на старті сесії знайшла б миттєво. Урок у lessons.md.
+- **Chips 4 ітерації** аналогічно — false leads. Власна гіпотеза без перевірки виявилась неправильною. Council другої спроби влучно діагностував.
+
+### Метрики (фінал UvEHE)
+
+- Коміти: ~42 (від `87b026a` до `e7e3f72`)
+- Версії: v570 (start) → ~v615+
+- CACHE_NAME: `nm-20260503-0856` → `nm-20260503-2140`
+- Build: `node --check` чисті, `check-i18n.js` чисті, baseline стабільний
+- Гілка: `claude/start-session-UvEHE`
+- Sub-агенти: 3 → 8 (з повною таблицею auto-activation у CLAUDE.md)
+- Закриті: B-120 + B-121 (фінально через calendar-pattern + drum-picker)
+- Створено: `pre-commit-i18n.js` хук, `.claude/agents/` каталог з 8 файлами
+
+

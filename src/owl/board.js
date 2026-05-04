@@ -1,6 +1,6 @@
 import { openChatBar } from '../ai/core.js';
 import { renderChips } from './chips.js';
-import { getCurrentMessage, getTabMessages, getUnifiedBoard, saveTabMessage } from './unified-storage.js';
+import { getCurrentMessage, getTabMessages, getUnifiedBoard, saveTabMessage, downgradeBriefingPriority } from './unified-storage.js';
 import { isMessageRelevant } from './board-utils.js';
 
 // === OWL TAB BOARDS (#37) ===
@@ -117,8 +117,19 @@ function _pickMessageForTab(tab) {
   // на вже-закриту задачу — воно зникає, наступне за пріоритетом виходить наперед.
   const all = getUnifiedBoard().filter(isMessageRelevant);
   if (all.length === 0) return null;
-  // 1. Найсвіжіше критичне пробиває фільтр — Jarvis-пуш
-  if (all[0].priority === 'critical') return all[0];
+  // 1. Найсвіжіше критичне пробиває фільтр — Jarvis-пуш.
+  // B-117 fix (RGisY 04.05): TTL 2 год для critical. Раніше брифінг 14 годин
+  // тому ще був priority='critical' і завжди вибирався → табло показувало
+  // застарілу інфу. Якщо critical >2 год — auto-downgrade у storage щоб не
+  // повторювалось + tabMsg fallback візьме своє повідомлення.
+  const CRITICAL_TTL = 2 * 60 * 60 * 1000;
+  const top = all[0];
+  const topAge = Date.now() - (top.ts || top.id || 0);
+  if (top.priority === 'critical' && topAge < CRITICAL_TTL) return top;
+  if (top.priority === 'critical' && topAge >= CRITICAL_TTL) {
+    try { downgradeBriefingPriority(); } catch(e) {}
+    // Після downgrade — продовжуємо до tabMsg fallback (не повертаємо stale critical)
+  }
   // 2. Найсвіжіше повідомлення для цієї вкладки
   const tabMsg = all.find(m => m.forTab === tab);
   if (tabMsg) return tabMsg;
