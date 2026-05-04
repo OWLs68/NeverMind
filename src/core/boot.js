@@ -419,7 +419,72 @@ function runMigrations() {
       localStorage.setItem('nm_health_status_v2_done', '1');
     } catch (e) { console.error('[boot] v9 migration failed:', e); }
   }
-  // v10: нові міграції додавати тут
+  // v10 (04.05.2026 RGisY Шар 6 chip-system): chip.id (UUID) + payload externalization +
+  // legacy ✔️-чіпи з action='chat' → action='complete'.
+  // Бекап per-key (не один великий ключ — quota-safe для iPhone). Транзакційно.
+  if (!localStorage.getItem('nm_chips_v10_done')) {
+    try {
+      const CHAT_KEYS = ['nm_chat_inbox','nm_chat_tasks','nm_chat_notes','nm_chat_me',
+                         'nm_chat_evening','nm_chat_finance','nm_chat_health','nm_chat_projects'];
+      let backupOk = true;
+      CHAT_KEYS.forEach(k => {
+        const raw = localStorage.getItem(k);
+        if (raw) {
+          try { localStorage.setItem(k + '_backup_v10', raw); }
+          catch (e) { backupOk = false; }
+        }
+      });
+
+      const payloadsMap = JSON.parse(localStorage.getItem('nm_chip_payloads') || '{}');
+      let chipsTouched = 0, payloadsExtracted = 0, completionsRewired = 0;
+
+      CHAT_KEYS.forEach(k => {
+        const raw = localStorage.getItem(k);
+        if (!raw) return;
+        let msgs;
+        try { msgs = JSON.parse(raw); } catch { return; }
+        if (!Array.isArray(msgs)) return;
+        let dirty = false;
+        msgs.forEach(m => {
+          if (!Array.isArray(m.chips) || m.chips.length === 0) return;
+          m.chips.forEach(c => {
+            if (typeof c !== 'object' || !c) return;
+            if (!c.id) { c.id = generateUUID(); dirty = true; chipsTouched++; }
+            if (c.payload && typeof c.payload === 'object') {
+              payloadsMap[c.id] = c.payload;
+              c.payloadId = c.id;
+              delete c.payload;
+              payloadsExtracted++;
+              dirty = true;
+            }
+            if (c.action === 'chat' && typeof c.label === 'string' && c.label.includes('✔️')) {
+              c.action = 'complete';
+              completionsRewired++;
+              dirty = true;
+            }
+          });
+        });
+        if (dirty) {
+          try { localStorage.setItem(k, JSON.stringify(msgs)); }
+          catch (e) { console.warn('[boot] v10: ' + k + ' write failed', e); }
+        }
+      });
+
+      try { localStorage.setItem('nm_chip_payloads', JSON.stringify(payloadsMap)); }
+      catch (e) { console.error('[boot] v10: nm_chip_payloads write failed', e); }
+
+      localStorage.setItem('nm_chips_v10_done', '1');
+      console.log(`[boot] v10 migration: chips=${chipsTouched}, payloads=${payloadsExtracted}, completions=${completionsRewired}, backupOk=${backupOk}`);
+    } catch (e) {
+      console.error('[boot] v10 migration failed:', e);
+      // Rollback з per-key бекапів
+      ['nm_chat_inbox','nm_chat_tasks','nm_chat_notes','nm_chat_me',
+       'nm_chat_evening','nm_chat_finance','nm_chat_health','nm_chat_projects'].forEach(k => {
+        const b = localStorage.getItem(k + '_backup_v10');
+        if (b) { try { localStorage.setItem(k, b); } catch {} }
+      });
+    }
+  }
 }
 
 // === INIT ===
@@ -482,6 +547,11 @@ function init() {
   // у чат о 18:00 через тригер evening-prompt (src/owl/followups.js). Щогодинний
   // автопідсумок у картці став дублем і зайвим шумом.
   try { cleanupTrash(); } catch(e) {}
+  // Phase 7 Шар 6 (04.05): GC nm_chip_payloads (ленива cleanup, раз на 7 днів
+  // АБО якщо >500 keys). Окремий tick через setTimeout — не блокує splash.
+  setTimeout(() => {
+    import('../owl/chips.js').then(m => { try { m._gcChipPayloads && m._gcChipPayloads(); } catch(e) {} });
+  }, 5000);
   // Показуємо кешований OWL Board одразу (без затримки).
   // Шар 2 "Один мозок V2" (rJYkw 21.04): unified storage + міграція старих ключів
   // виконуються автоматично при першому читанні.
