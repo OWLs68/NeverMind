@@ -9651,8 +9651,29 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
   }
   function isMessageRelevant(msg) {
     if (!msg) return false;
-    if (!Array.isArray(msg.entityRefs) || msg.entityRefs.length === 0) return true;
-    return msg.entityRefs.some(isEntityRelevant);
+    if (Array.isArray(msg.entityRefs) && msg.entityRefs.length > 0) {
+      return msg.entityRefs.some(isEntityRelevant);
+    }
+    if (_isStaleHabitGeneralization(msg)) return false;
+    return true;
+  }
+  function _isStaleHabitGeneralization(msg) {
+    const topic = (msg.topic || "").toLowerCase();
+    const text = (msg.text || "").toLowerCase();
+    const isHabitTopic = /habit|звич/.test(topic);
+    const isHabitTextNegative = /не\s+вико|не\s+відміч|жодн[аоу].*звич|активі[зс]уй|нагада[йю].*звич/.test(text);
+    if (!isHabitTopic && !isHabitTextNegative) return false;
+    try {
+      const habits = getHabits();
+      const buildHabits = habits.filter((h) => h.type !== "quit");
+      if (buildHabits.length === 0) return false;
+      const todayKey = (/* @__PURE__ */ new Date()).toDateString();
+      const log = getHabitLog();
+      const allDoneToday = buildHabits.every((h) => !!log[todayKey]?.[h.id]);
+      return allDoneToday;
+    } catch (e) {
+      return false;
+    }
   }
   var todayISO;
   var init_board_utils = __esm({
@@ -19055,10 +19076,16 @@ ${logLines}
         } catch (e) {
         }
       },
+      // B-117 fix (QDIGl 04.05): додано renderTabBoard щоб сова оновилася
+      // одразу після complete_task/habit. Без цього старе critical-повідомлення
+      // («не виконано звичку») висить у табло поки юзер не перейде на іншу
+      // вкладку і назад. Pruning через isMessageRelevant викине stale msg
+      // у наступному _pickMessageForTab.
       "nm_tasks": () => {
         if (currentTab === "tasks") try {
           renderTasks();
           updateProdTabCounters();
+          renderTabBoard("tasks");
         } catch (e) {
         }
       },
@@ -19066,6 +19093,7 @@ ${logLines}
         if (currentTab === "tasks") try {
           renderHabits();
           renderProdHabits();
+          renderTabBoard("tasks");
         } catch (e) {
         }
       },
@@ -19073,6 +19101,7 @@ ${logLines}
         if (currentTab === "tasks") try {
           renderHabits();
           renderProdHabits();
+          renderTabBoard("tasks");
         } catch (e) {
         }
         if (currentTab === "me") try {
