@@ -16,26 +16,24 @@
 
 ---
 
-**🚀 Dynamic AI-driven chips — Jarvis-level interaction** (UvEHE 03.05 → Шар 1 закрито у rC4TO 04.05 → Шари 2-6 для наступних сесій)
+**🚀 Dynamic AI-driven chips — Jarvis-level interaction** (Шари 1+2 закриті rC4TO+NpBmN 04.05 → Шари 3-6 для наступних сесій)
 
-**Прогрес rC4TO 04.05:**
-- ✅ **Шар 1: Контекстний чіп [Створити проект] для бізнес-іменників** (`a625539`) — `BUSINESS_NOUN_RE` детектор у `clarify-guard.js` (~20 іменників: автомийка/салон/сайт/магазин/студія/курси/хімчистка/...) + розширено `CLARIFY_INLINE_RULES` блоком «КОНТЕКСТНИЙ ЧІП Створити проект (ПРІОРИТЕТ)». End-to-end демо у Inbox підтверджено: «Відкрив автомийку» → 4 чіпи → тап `[Створити проект]` → «✅ Проект Автомийка створено» + Inbox interview.
-
-**Проблема (вихідна):** зараз `clarify-guard` повертає **3 фіксованих chips** [У щоденник / Як момент / Не зберігати]. Примітивно і часто несумісно з контекстом. Має бути потужний AI-driven варіант основним; фіксовані — тільки safety net.
+**Прогрес:**
+- ✅ **Шар 1: Контекстний чіп [Створити проект]** (`a625539` rC4TO 04.05) — `BUSINESS_NOUN_RE` детектор + `CLARIFY_INLINE_RULES` блок ПРІОРИТЕТ-2.
+- ✅ **Шар 2: Контекстні чіпи лікарів** (`e136951`+`be37491`+`288bc52` NpBmN 04.05) — `DOCTOR_MENTION_RE` (~25 спеціальностей+клініки) + `_buildDoctorChips()` через `getHealthCards()` → до 3 реальних `card.doctor` + «Інший лікар». Виняток для Health-чату з focused карткою (`tab` параметр + `getFocusedHealthCard()`). DOCTOR check ПЕРЕД HAS_NUMBER. ПРІОРИТЕТ-1 у промпті, перемагає «Створити проект» при перетинах.
 
 **Архітектура (працює):**
-1. **Первинний шлях — AI генерує dynamic chips** за контекстом через `parseContentChips` (`content` повертає `{"text":"...","chips":[{"label":"...","action":"...","payload":"..."}]}`).
-2. **Fallback — `clarify-guard` BUSINESS_NOUN_RE + 3-фіксовані** спрацьовує коли AI ігнорує промпт. Тепер додає 4-й контекстний чіп якщо матчиться бізнес-іменник.
+1. **Первинний шлях — AI генерує dynamic chips** за контекстом через `parseContentChips` (`content` повертає `{"text":"...","chips":[{...}]}`).
+2. **Fallback — `clarify-guard` детектори + готові чіпи** спрацьовує коли AI ігнорує промпт. Має детектори: BUSINESS_NOUN (Шар 1), DOCTOR_MENTION (Шар 2).
 
-**Залишилось 5 шарів** (за тим же патерном):
+**Залишилось 4 шари** (за тим же патерном):
 
-2. **Шар 2 — Лікарі (Health context)** ⏸️ Next: детектор `DOCTOR_MENTION_RE` (приходив/був/у|до|в...лікар|стомат|хірург|терапевт) + `getHealthCards().history.doctor` → 3 чіпи з реальних імен лікарів + 1 «Інший лікар». payload `target:'add_health_history_entry'`.
-3. **Шар 3 — Час** ⏸️ Next: коли AI пише «Коли?» / «О котрій?» — додає `[Зараз][Через годину][Завтра вранці][Інше]` (action='chat'). Активується через post-process content checker якщо AI не згенерував chips сам.
-4. **Шар 4 — Destructive confirm** ⏸️ Next: «Видалити X?» / «Скасувати?» → `[Так, видалити][Скасувати][Тільки сьогодні]`. Знов через post-process checker.
-5. **Шар 5 — Multi-step інтерв'ю** ⏸️ Next: новий action `multi_step` у `chips.js handleChipClick`. State у `nm_inline_interview_pending`. Дозволяє AI запускати 3-крокові інтерв'ю у будь-якому чаті, не тільки Health Phase C.
-6. **Шар 6 — Уніфікація 8 системних промптів** ⏸️ Next: prompt-engineer-auditor у rC4TO знайшов **3 несумісні chip-схеми** (action:"chat" / "clarify_save" / inline-JSON у Owl-chat). Створити `CHIP_TRIGGER_TABLE` константу як у `getEveningChatSystem` і інжектити у всі 8 промптів. Параметризація фолдеру `Особисте → активний чат`.
+3. **Шар 3 — Час** ⏸️ Next: коли AI пише «Коли?» / «О котрій?» — додає `[Зараз][Через годину][Завтра вранці][Інше]` (action='chat'). Через post-process content checker.
+4. **Шар 4 — Destructive confirm** ⏸️ Next: «Видалити X?» / «Скасувати?» → `[Так, видалити][Скасувати][Тільки сьогодні]`.
+5. **Шар 5 — Multi-step інтерв'ю** ⏸️ Next: новий action `multi_step` у `chips.js handleChipClick`. State у `nm_inline_interview_pending`. Дозволяє AI запускати 3-крокові інтерв'ю у будь-якому чаті.
+6. **Шар 6 — Уніфікація 8 системних промптів** ⏸️ Next: 3 несумісні chip-схеми (action:"chat" / "clarify_save" / inline-JSON у Owl-chat) → `CHIP_TRIGGER_TABLE` константа.
 
-**Тригер для наступної сесії:** `/start` → виконати Шар 2 (Лікарі) як наступний — він використовує реальний контекст з `nm_health_cards` і має найбільший ROI після Шару 1.
+**Тригер для наступної сесії:** Шар 3 (Час) — найпростіший з решти, без зовнішнього контексту, post-process регекс на content. Або Архітектурний борг (8 копій addXChatMsg → helper) якщо хочеться рефакторингу.
 
 ---
 
