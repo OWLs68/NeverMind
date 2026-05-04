@@ -19427,7 +19427,14 @@ ${logLines}
       }
     }
     const v10Done = localStorage.getItem("nm_chips_v10_done");
-    const v10DoneTs = +(localStorage.getItem("nm_chips_v10_done_ts") || 0);
+    let v10DoneTs = +(localStorage.getItem("nm_chips_v10_done_ts") || 0);
+    if (v10Done === "1" && v10DoneTs === 0) {
+      v10DoneTs = Date.now();
+      try {
+        localStorage.setItem("nm_chips_v10_done_ts", String(v10DoneTs));
+      } catch {
+      }
+    }
     if (v10Done === "1" && v10DoneTs > 0 && Date.now() - v10DoneTs > 7 * 24 * 60 * 60 * 1e3) {
       try {
         [
