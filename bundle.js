@@ -14159,6 +14159,18 @@ ${JSON.stringify(contextData, null, 2)}` : "";
       localStorage.setItem(key, JSON.stringify(msgs));
       if (role === "user") window.dispatchEvent(new CustomEvent("nm-data-changed", { detail: "chat" }));
     } catch (e) {
+      if (e && (e.name === "QuotaExceededError" || e.code === 22 || e.code === 1014)) {
+        console.error("[saveChatMsg] QuotaExceededError \u0443", key, "\u2014 iPhone localStorage \u043F\u0435\u0440\u0435\u043F\u043E\u0432\u043D\u0435\u043D\u0438\u0439");
+        try {
+          if (!window._nm_quota_warned) {
+            window._nm_quota_warned = true;
+            Promise.resolve().then(() => (init_nav(), nav_exports)).then((m) => m.showToast && m.showToast("\u26A0\uFE0F \u041F\u0430\u043C\u02BC\u044F\u0442\u044C \u0437\u0430\u0441\u0442\u043E\u0441\u0443\u043D\u043A\u0443 \u043F\u0435\u0440\u0435\u043F\u043E\u0432\u043D\u0435\u043D\u0430. \u041E\u0447\u0438\u0441\u0442\u0438 \u0441\u0442\u0430\u0440\u0456 \u0447\u0430\u0442\u0438 \u0443 \u041D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445.", 6e3));
+          }
+        } catch {
+        }
+      } else {
+        console.warn("[saveChatMsg] write failed \u0443", key, e);
+      }
     }
   }
   function loadChatMsgs(tab) {
@@ -19482,6 +19494,28 @@ ${logLines}
   });
 
   // src/core/nav.js
+  var nav_exports = {};
+  __export(nav_exports, {
+    _undoData: () => _undoData,
+    _undoToastTimer: () => _undoToastTimer,
+    applyTheme: () => applyTheme,
+    autoRefreshMemory: () => autoRefreshMemory,
+    closeDeployInfo: () => closeDeployInfo,
+    closeSettings: () => closeSettings,
+    currentTab: () => currentTab,
+    getActiveTabs: () => getActiveTabs,
+    getProfile: () => getProfile,
+    openSettings: () => openSettings,
+    saveActiveTabs: () => saveActiveTabs,
+    setUndoData: () => setUndoData,
+    setUndoTimer: () => setUndoTimer,
+    setupDrumTabbar: () => setupDrumTabbar,
+    shouldRefreshMemory: () => shouldRefreshMemory,
+    showDeployInfo: () => showDeployInfo,
+    showToast: () => showToast,
+    switchTab: () => switchTab,
+    updateKeyStatus: () => updateKeyStatus
+  });
   function switchTab(tab) {
     if (tab === currentTab) return;
     const pageEl = document.getElementById(`page-${tab}`);
