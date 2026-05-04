@@ -324,11 +324,12 @@
           <div style="display:flex;margin:0 14px;gap:8px;align-items:stretch">
 
             <!-- Segmented Control: Задачі ↔ Звички (drag-to-toggle).
-                 Track — «вдавлений» (inset shadow + темнуватий фон).
-                 Indicator — виступаючий білий pill з direction shadow + кольоровою рамкою. -->
-            <div id="prod-tab-toggle" style="flex:1;display:flex;border-radius:18px;background:rgba(30,16,64,0.06);box-shadow:inset 0 1px 3px rgba(30,16,64,0.08);padding:4px;position:relative;-webkit-tap-highlight-color:transparent;touch-action:pan-y">
-              <!-- Виступаючий повзунок — біла капсула з тінню вниз. translateX(0) для tasks, translateX(100%) для habits. -->
-              <div id="prod-tab-indicator" style="position:absolute;top:4px;left:4px;width:calc(50% - 4px);height:calc(100% - 8px);background:white;border-radius:14px;border:2px solid rgba(234,88,12,0.6);box-shadow:0 4px 10px rgba(30,16,64,0.14), 0 1px 2px rgba(30,16,64,0.06);box-sizing:border-box;pointer-events:none;z-index:0;transform:translateX(0);transition:transform 0.3s cubic-bezier(0.4,0,0.2,1), border-color 0.3s ease;will-change:transform"></div>
+                 Track — матове скло (стандарт --card-bg + --card-blur 16px) +
+                 inset shadow для ефекту «вдавлення».
+                 Indicator — виступаючий solid білий pill з direction shadow + кольоровою рамкою. -->
+            <div id="prod-tab-toggle" style="flex:1;display:flex;border-radius:18px;background:rgba(255,255,255,0.5);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);box-shadow:inset 0 1px 3px rgba(30,16,64,0.08);padding:4px;position:relative;-webkit-tap-highlight-color:transparent;touch-action:pan-y">
+              <!-- Виступаючий повзунок — solid біла капсула з тінню вниз. translateX(0) для tasks, translateX(100%) для habits. -->
+              <div id="prod-tab-indicator" style="position:absolute;top:4px;left:4px;width:calc(50% - 4px);height:calc(100% - 8px);background:#ffffff;border-radius:14px;border:2px solid rgba(234,88,12,0.6);box-shadow:0 4px 10px rgba(30,16,64,0.14), 0 1px 2px rgba(30,16,64,0.06);box-sizing:border-box;pointer-events:none;z-index:0;transform:translateX(0);transition:transform 0.3s cubic-bezier(0.4,0,0.2,1), border-color 0.3s ease;will-change:transform"></div>
 
               <!-- Половинка Задачі -->
               <div id="prod-tab-tasks" onclick="switchProdTab('tasks')"
@@ -351,8 +352,8 @@
               </div>
             </div>
 
-            <!-- Календар (іконка) -->
-            <div onclick="openCalendarModal()" style="width:54px;border-radius:16px;padding:8px 0;cursor:pointer;background:rgba(255,255,255,0.6);border:2px solid rgba(234,88,12,0.1);box-shadow:0 2px 12px rgba(30,16,64,0.06);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.2s;-webkit-tap-highlight-color:transparent">
+            <!-- Календар (іконка) — стандартизовано glass --card-bg + --card-blur -->
+            <div onclick="openCalendarModal()" style="width:54px;border-radius:16px;padding:8px 0;cursor:pointer;background:rgba(255,255,255,0.5);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:2px solid rgba(234,88,12,0.1);box-shadow:0 2px 12px rgba(30,16,64,0.06);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.2s;-webkit-tap-highlight-color:transparent">
               <svg id="cal-icon-svg" width="28" height="28" viewBox="0 0 28 28" fill="none">
                 <rect x="2" y="4" width="24" height="22" rx="4" stroke="#ea580c" stroke-width="2" fill="rgba(234,88,12,0.08)"/>
                 <line x1="2" y1="10" x2="26" y2="10" stroke="#ea580c" stroke-width="1.5"/>
@@ -362,8 +363,8 @@
               </svg>
             </div>
 
-            <!-- Розпорядок дня (іконка) -->
-            <div onclick="openRoutineModal()" style="width:54px;border-radius:16px;padding:8px 0;cursor:pointer;background:rgba(255,255,255,0.6);border:2px solid rgba(234,88,12,0.1);box-shadow:0 2px 12px rgba(30,16,64,0.06);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.2s;-webkit-tap-highlight-color:transparent">
+            <!-- Розпорядок дня (іконка) — стандартизовано glass --card-bg + --card-blur -->
+            <div onclick="openRoutineModal()" style="width:54px;border-radius:16px;padding:8px 0;cursor:pointer;background:rgba(255,255,255,0.5);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:2px solid rgba(234,88,12,0.1);box-shadow:0 2px 12px rgba(30,16,64,0.06);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.2s;-webkit-tap-highlight-color:transparent">
               <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
                 <rect x="4" y="2" width="18" height="24" rx="3" stroke="#ea580c" stroke-width="1.8" fill="rgba(234,88,12,0.06)"/>
                 <line x1="8" y1="9" x2="18" y2="9" stroke="#ea580c" stroke-width="1.3" stroke-linecap="round" opacity="0.5"/>
