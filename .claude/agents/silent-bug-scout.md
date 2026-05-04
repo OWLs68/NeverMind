@@ -51,6 +51,17 @@ tools: Read, Grep, Bash
 18. `nm-data-changed` event без правильного `detail.type` → listeners не реагують.
 19. Поле value не зберігається у localStorage (save-функція пропускає).
 
+## ⚠️ ПЕРЕД звітом про "stale/missing/broken" артефакт
+
+Якщо знайшов що `bundle.js` не оновлений / файл `dist/` пропав / build-артефакт виглядає застарілим / згенерований файл не співпадає з src/ — **НЕ ЗВІТУЙ одразу**. Спочатку 4 перевірки:
+
+1. `cat .gitignore` — чи цей файл взагалі під git? (`bundle.js` у NeverMind НЕ під git — генерується CI)
+2. `cat .github/workflows/auto-merge.yml` (або інші `.yml`) — чи є крок `node build.js` після merge?
+3. `cat build.js | head -30` — який output формат, куди пише, які джерела
+4. `git log --oneline -5 -- <файл>` — як часто комітиться (якщо ніколи — генерується CI)
+
+Тільки після цих 4 кроків звітуй. Урок з NpBmN 04.05 — silent-bug-scout звітував "stale bundle.js" не знаючи що `auto-merge.yml` його перегенеровує після кожного merge у main. Регресія правила «Critic always reads» — агенти не бачать всю інфраструктуру, тільки задану область.
+
 ## Алгоритм аудиту
 
 ### Швидкий sweep (2-5 хв)
