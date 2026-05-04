@@ -5128,7 +5128,7 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
     });
     if (role !== "agent") projectsBarHistory.push({ role: "user", content: text });
     else projectsBarHistory.push({ role: "assistant", content: text });
-    if (!_noSave) saveChatMsg("projects", role, text);
+    if (!_noSave) saveChatMsg("projects", role, text, chips);
   }
   async function sendProjectsBarMessage() {
     if (projectsBarLoading) return;
@@ -6893,7 +6893,7 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     });
     if (role !== "agent") financeBarHistory.push({ role: "user", content: text });
     else financeBarHistory.push({ role: "assistant", content: text });
-    if (!_noSave) saveChatMsg("finance", role, text);
+    if (!_noSave) saveChatMsg("finance", role, text, chips);
   }
   function checkFinBudgetWarning(type, category, amount) {
     if (type !== "expense") return;
@@ -9296,7 +9296,7 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
     });
     if (role !== "agent") notesBarHistory.push({ role: "user", content: text });
     else notesBarHistory.push({ role: "assistant", content: text });
-    if (!_noSave) saveChatMsg("notes", role, text);
+    if (!_noSave) saveChatMsg("notes", role, text, chips);
   }
   async function sendNotesBarMessage() {
     if (notesBarLoading) return;
@@ -10268,7 +10268,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
     });
     if (role !== "agent") eveningBarHistory.push({ role: "user", content: text });
     else eveningBarHistory.push({ role: "assistant", content: text });
-    if (!_noSave) saveChatMsg("evening", role, text);
+    if (!_noSave) saveChatMsg("evening", role, text, chips);
     if (role === "agent") {
       const bar = document.getElementById("evening-ai-bar");
       const chatWin = bar ? bar.querySelector(".ai-bar-chat-window") : null;
@@ -10952,7 +10952,7 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
     requestAnimationFrame(() => {
       el.scrollTop = el.scrollHeight;
     });
-    if (!_noSave) saveChatMsg("me", role, text);
+    if (!_noSave) saveChatMsg("me", role, text, chips);
   }
   var meChatHistory, INSIGHTS_KEY, _insightsGenerating, _insightsRegenTimer, INSIGHTS_VERSION, MONTHLY_KEY, _monthlyGenerating;
   var init_me = __esm({
@@ -14192,7 +14192,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
       projects: "projects-chat-messages"
     };
     const addMsgMap = {
-      tasks: (r, t2) => addTaskBarMsg(r, t2, true),
+      tasks: (r, t2, c) => addTaskBarMsg(r, t2, true, c),
       notes: (r, t2, c) => addNotesChatMsg(r, t2, true, c),
       me: (r, t2, c) => addMeChatMsg(r, t2, true, "", c),
       evening: (r, t2, c) => addEveningBarMsg(r, t2, true, c),
@@ -14931,7 +14931,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
     });
     if (role !== "agent") taskBarHistory.push({ role: "user", content: text });
     else taskBarHistory.push({ role: "assistant", content: text });
-    if (!_noSave) saveChatMsg("tasks", role, text);
+    if (!_noSave) saveChatMsg("tasks", role, text, chips);
   }
   var editingTaskId, tempSteps, taskChatId, taskChatHistory, taskChatLoading, taskBarLoading, taskBarHistory, _taskTypingEl;
   var init_tasks = __esm({
@@ -16108,7 +16108,7 @@ ${userText}
     requestAnimationFrame(() => {
       el.scrollTop = el.scrollHeight;
     });
-    saveChatMsg("inbox", role, text);
+    saveChatMsg("inbox", role, text, chips);
     if (role === "agent") {
       const bar = document.getElementById("inbox-ai-bar");
       const chatWin = bar ? bar.querySelector(".ai-bar-chat-window") : null;
