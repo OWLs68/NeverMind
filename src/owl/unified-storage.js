@@ -12,10 +12,32 @@
 // Backward compat: старі ключі nm_owl_board і nm_owl_tab_* лишаються 2 релізи
 // як backup — не видаляємо, тільки не пишемо в них.
 
+import { generateUUID } from '../core/uuid.js';
+
 const UNIFIED_KEY = 'nm_owl_board_unified';
 const UNIFIED_TS_KEY = 'nm_owl_board_unified_ts';
 const MIGRATION_FLAG = 'nm_owl_board_migrated_v2';
 const MAX_HISTORY = 50;
+const CHIP_PAYLOADS_KEY = 'nm_chip_payloads';
+
+// Phase 9 Шар 6 (RGisY 04.05) — Регресія 4 fix: нормалізуємо chips ПЕРЕД
+// записом у board storage щоб chip.id + payload externalization були тут
+// як і у chat_log[].chips[]. Дубльована логіка з chips.js (НЕ імпортуємо
+// бо chips.js імпортує downgradeBriefingPriority звідси — створило б цикл).
+function _normalizeChipForStorage(c) {
+  const obj = typeof c === 'string' ? { label: c, action: 'chat' } : { ...c };
+  if (!obj.id) obj.id = generateUUID();
+  if (obj.payload && typeof obj.payload === 'object') {
+    try {
+      const map = JSON.parse(localStorage.getItem(CHIP_PAYLOADS_KEY) || '{}');
+      map[obj.id] = obj.payload;
+      localStorage.setItem(CHIP_PAYLOADS_KEY, JSON.stringify(map));
+    } catch {}
+    obj.payloadId = obj.id;
+    delete obj.payload;
+  }
+  return obj;
+}
 
 const ALL_TABS = ['inbox', 'tasks', 'notes', 'me', 'evening', 'finance', 'health', 'projects'];
 
@@ -88,7 +110,7 @@ export function saveTabMessage(tab, msg) {
     text: msg.text || '',
     topic: msg.topic || '',
     priority: msg.priority || 'normal',
-    chips: Array.isArray(msg.chips) ? msg.chips : [],
+    chips: Array.isArray(msg.chips) ? msg.chips.map(_normalizeChipForStorage) : [],
     // Pruning Engine (Фаза 2 UVKL1) — посилання на активні сутності.
     // Порожній масив = загальне повідомлення (не фільтрується).
     entityRefs: Array.isArray(msg.entityRefs) ? msg.entityRefs : [],
