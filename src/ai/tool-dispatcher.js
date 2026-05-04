@@ -98,6 +98,8 @@ export function _toolCallToUniversalAction(name, args) {
       return [{ action: 'delete_task', task_id: args.task_id }];
     case 'delete_habit':
       return [{ action: 'delete_habit', habit_id: args.habit_id }];
+    case 'delete_project':
+      return [{ action: 'delete_project', project_id: args.project_id, project_name: args.project_name }];
     case 'delete_event':
       return [{ action: 'delete_event', event_id: args.event_id }];
     case 'delete_folder':
