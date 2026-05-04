@@ -15,7 +15,7 @@
 
 import { t } from '../core/utils.js';
 import { dispatchChatToolCalls } from '../ai/tool-dispatcher.js';
-import { getFocusedHealthCard } from '../tabs/health.js';
+import { getFocusedHealthCard, getHealthCards } from '../tabs/health.js';
 
 // 20 типових українських дієслів минулого часу + ший/жив/ела/ала закінчення.
 // Не лінгвістично-точний морфологічний аналізатор — список покриває ~90%.
@@ -152,12 +152,14 @@ export function shouldClarify(text, toolCalls, tab) {
   return { question, chips };
 }
 
-// Шар 2: збирає чіпи з реальних лікарів у картках Здоров'я. Читає
-// localStorage напряму щоб уникнути circular import (health.js → clarify-guard.js).
-// Повертає {question, chips} або null якщо немає жодного непорожнього doctor.
+// Шар 2: збирає чіпи з реальних лікарів у картках Здоров'я. NpBmN audit fix #K:
+// раніше читали localStorage напряму повз getHealthCards() → пропускали v2-міграцію
+// (`_migrateHealthCard`). Edge case: юзер імпортує стару картку → одразу пише
+// «був у дерматолога» → guard читає raw `card.doctor` без міграційних правок.
+// Тепер виклик через імпорт getHealthCards (ESM circular OK для функцій).
 function _buildDoctorChips(text) {
   let cards = [];
-  try { cards = JSON.parse(localStorage.getItem('nm_health_cards') || '[]'); }
+  try { cards = getHealthCards(); }
   catch (e) { return null; }
   if (!Array.isArray(cards) || cards.length === 0) return null;
 

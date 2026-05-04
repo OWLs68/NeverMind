@@ -770,6 +770,13 @@ const OWL_APP_TIPS = [
   { key: 'tip_memory', msg: 'Все що ти розповідаєш — я запамʼятовую. В налаштуваннях є розділ Памʼять де можна подивитись і відредагувати що я знаю про тебе.' },
 ];
 
+// NpBmN audit fix #I: helper замість 5 копій localStorage.setItem('nm_guide_last_ts').
+// Cooldown 3хв між guide-tip'ами (project interview / OWL_APP_TIPS / OWL_GUIDE_TOPICS).
+// Якщо завтра з'явиться 4-й тип — одна точка правки замість 5.
+function _bumpGuideCooldown() {
+  localStorage.setItem('nm_guide_last_ts', Date.now().toString());
+}
+
 function owlGuideNextTip() {
   // Не питаємо якщо опитування ще йде
   if (surveyWaiting) return;
@@ -795,7 +802,7 @@ function owlGuideNextTip() {
       addInboxChatMsg('agent', projectQuestions[projectStep - 1]);
       // NpBmN audit fix #7: оновлюємо last_ts на кожному питанні інтерв'ю,
       // інакше після фінального Q5 cooldown=0 → одразу random tip без 3хв паузи.
-      localStorage.setItem('nm_guide_last_ts', Date.now().toString());
+      _bumpGuideCooldown();
       if (projectStep < projectQuestions.length) {
         localStorage.setItem('nm_project_interview_step', (projectStep + 1).toString());
       } else {
@@ -819,7 +826,7 @@ function owlGuideNextTip() {
     localStorage.setItem('nm_guide_shown_tips', JSON.stringify(shownTips));
     // NpBmN audit fix #7: оновлюємо last_ts і для tip-шляху — раніше тільки
     // gate-перевірка робила setItem, тепер єдина точка для всіх 3 типів питань.
-    localStorage.setItem('nm_guide_last_ts', Date.now().toString());
+    _bumpGuideCooldown();
     return;
   }
 
@@ -831,7 +838,7 @@ function owlGuideNextTip() {
     localStorage.setItem('nm_guide_shown_topics', JSON.stringify(shownTopics));
     localStorage.setItem('nm_guide_waiting_topic', nextTopic.key);
     // NpBmN audit fix #7: і тут теж — щоб 3хв пауза рахувалась від моменту питання.
-    localStorage.setItem('nm_guide_last_ts', Date.now().toString());
+    _bumpGuideCooldown();
   }
 }
 
@@ -852,7 +859,7 @@ export function maybeAskGuideQuestion() {
     const elapsed = Date.now() - lastGuideTs;
     if (elapsed < 3 * 60 * 1000) return; // не частіше 3 хвилин
     if (Math.random() > 0.25) return; // 25% шанс
-    localStorage.setItem('nm_guide_last_ts', Date.now().toString());
+    _bumpGuideCooldown();
   }
 
   setTimeout(() => owlGuideNextTip(), 1200); // невелика пауза після відповіді агента
@@ -911,7 +918,7 @@ export async function saveGuideTopicAnswer(userText) {
   // Cooldown ставимо ПІСЛЯ key check — інакше у юзера без ключа cooldown
   // «виплачувався» даремно. Тепер last_ts оновлюється тільки коли реально
   // консумуємо topic answer (є шанс що fetch успішно оновить пам'ять).
-  localStorage.setItem('nm_guide_last_ts', Date.now().toString());
+  _bumpGuideCooldown();
 
   const currentMemory = localStorage.getItem('nm_memory') || '';
   const topicData = OWL_GUIDE_TOPICS.find(t => t.key === waitingTopic);

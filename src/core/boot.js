@@ -294,8 +294,15 @@ export const NM_KEYS = {
   chat: ['nm_chat_inbox','nm_chat_tasks','nm_chat_notes','nm_chat_me',
          'nm_chat_evening','nm_chat_finance','nm_chat_health','nm_chat_projects'],
   // Кеш/тимчасове (не потребує Supabase)
+  // NpBmN audit fix #J: додано guide+interview state (раніше clearAllData
+  // не чистив їх → після ресету юзер міг отримати «зомбі-питання» про
+  // неіснуючий проект або повторні OWL_GUIDE_TOPICS). Це runtime-флаги,
+  // не дані — Supabase їм не потрібен.
   cache: ['nm_owl_board','nm_owl_board_ts','nm_owl_cooldowns','nm_owl_schedule_asked',
-          'nm_owl_schedule_pending','nm_error_log'],
+          'nm_owl_schedule_pending','nm_error_log',
+          'nm_project_interview_step','nm_project_interview_name',
+          'nm_guide_waiting_topic','nm_guide_last_ts',
+          'nm_guide_shown_tips','nm_guide_shown_topics','nm_survey_done'],
   // Динамічні патерни (видаляти через startsWith)
   patterns: ['nm_task_chat_', 'nm_visited_', 'nm_owl_tab_'],
 };

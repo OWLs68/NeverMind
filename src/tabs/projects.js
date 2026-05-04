@@ -131,15 +131,34 @@ function renderProjectsList() {
 
 // NpBmN audit fix #1: cleanup interview-state коли видаляється проект-тема.
 // Дивимось і за name (legacy) і за id (на майбутнє коли interview зберігатиме id).
+// NpBmN audit fix #E: повертає snapshot щоб undo міг відновити стан інтерв'ю
+// (без snapshot юзер після undo бачив проект, але AI не задавав Q2-Q5).
 function _cleanupProjectInterviewIfMatches(deletedProject) {
-  if (!deletedProject) return;
+  if (!deletedProject) return null;
   const interviewName = localStorage.getItem('nm_project_interview_name') || '';
-  if (interviewName && deletedProject.name && interviewName === deletedProject.name) {
-    localStorage.removeItem('nm_project_interview_step');
-    localStorage.removeItem('nm_project_interview_name');
-    // Скидаємо й waiting_topic якщо він project_*
-    const wt = localStorage.getItem('nm_guide_waiting_topic') || '';
-    if (wt.startsWith('project_')) localStorage.removeItem('nm_guide_waiting_topic');
+  if (!(interviewName && deletedProject.name && interviewName === deletedProject.name)) return null;
+  const snapshot = {
+    step: localStorage.getItem('nm_project_interview_step') || '',
+    name: interviewName,
+    waitingTopic: localStorage.getItem('nm_guide_waiting_topic') || '',
+  };
+  localStorage.removeItem('nm_project_interview_step');
+  localStorage.removeItem('nm_project_interview_name');
+  // Скидаємо й waiting_topic якщо він project_*
+  if (snapshot.waitingTopic.startsWith('project_')) {
+    localStorage.removeItem('nm_guide_waiting_topic');
+  }
+  return snapshot;
+}
+
+// NpBmN audit fix #E: відновлення interview-state на undo. Викликається
+// з callback'у showUndoToast після того як проект повернуто у nm_projects.
+function _restoreProjectInterview(snapshot) {
+  if (!snapshot) return;
+  if (snapshot.step) localStorage.setItem('nm_project_interview_step', snapshot.step);
+  if (snapshot.name) localStorage.setItem('nm_project_interview_name', snapshot.name);
+  if (snapshot.waitingTopic && snapshot.waitingTopic.startsWith('project_')) {
+    localStorage.setItem('nm_guide_waiting_topic', snapshot.waitingTopic);
   }
 }
 
@@ -158,7 +177,8 @@ function _attachProjectsSwipeDelete() {
       // NpBmN audit fix #1: коли видалений проект був темою активного
       // інтерв'ю — скидаємо стейт. Інакше OWL ставив би питання 2-5 про
       // неіснуючий проект на наступному повідомленні (зомбі-інтерв'ю).
-      _cleanupProjectInterviewIfMatches(item);
+      // NpBmN audit fix #E: snapshot повертається щоб undo відновив все.
+      const interviewSnapshot = _cleanupProjectInterviewIfMatches(item);
       renderProjectsList();
       if (item) showUndoToast(t('projects.toast.deleted', 'Проект видалено'), () => {
         const projs = getProjects();
@@ -170,6 +190,7 @@ function _attachProjectsSwipeDelete() {
         }
         projs.splice(insertIdx, 0, item);
         saveProjects(projs);
+        _restoreProjectInterview(interviewSnapshot);
         renderProjectsList();
       });
     });
