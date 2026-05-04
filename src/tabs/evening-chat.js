@@ -147,7 +147,7 @@ export function addEveningBarMsg(role, text, _noSave = false, chips = null) {
   requestAnimationFrame(() => { el.scrollTop = el.scrollHeight; });
   if (role !== 'agent') eveningBarHistory.push({ role: 'user', content: text });
   else eveningBarHistory.push({ role: 'assistant', content: text });
-  if (!_noSave) saveChatMsg('evening', role, text);
+  if (!_noSave) saveChatMsg('evening', role, text, chips);
 
   // Червона крапка на кнопці Надіслати — якщо агент написав а чат закритий
   // (типовий кейс: сова поклала evening-prompt о 18:00 а юзер ще не заходив)

@@ -96,7 +96,7 @@ export function addInboxChatMsg(role, text, chips = null) {
 
   el.scrollTop = el.scrollHeight;
   requestAnimationFrame(() => { el.scrollTop = el.scrollHeight; });
-  saveChatMsg('inbox', role, text);
+  saveChatMsg('inbox', role, text, chips);
 
   // Якщо агент надіслав повідомлення а чат закритий — показуємо бейдж
   if (role === 'agent') {

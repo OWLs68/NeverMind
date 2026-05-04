@@ -726,7 +726,7 @@ export function addMeChatMsg(role, text, _noSave = false, id = '', chips = null)
   }
   el.scrollTop = el.scrollHeight;
   requestAnimationFrame(() => { el.scrollTop = el.scrollHeight; });
-  if (!_noSave) saveChatMsg('me', role, text);
+  if (!_noSave) saveChatMsg('me', role, text, chips);
 }
 // === WINDOW EXPORTS (HTML handlers only) ===
 Object.assign(window, {

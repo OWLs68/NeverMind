@@ -1022,7 +1022,7 @@ export function addNotesChatMsg(role, text, _noSave = false, chips = null) {
   requestAnimationFrame(() => { el.scrollTop = el.scrollHeight; });
   if (role !== 'agent') notesBarHistory.push({ role: 'user', content: text });
   else notesBarHistory.push({ role: 'assistant', content: text });
-  if (!_noSave) saveChatMsg('notes', role, text);
+  if (!_noSave) saveChatMsg('notes', role, text, chips);
 }
 
 export async function sendNotesBarMessage() {

@@ -54,7 +54,7 @@ export function addFinanceChatMsg(role, text, _noSave = false, chips = null) {
   requestAnimationFrame(() => { el.scrollTop = el.scrollHeight; });
   if (role !== 'agent') financeBarHistory.push({ role: 'user', content: text });
   else financeBarHistory.push({ role: 'assistant', content: text });
-  if (!_noSave) saveChatMsg('finance', role, text);
+  if (!_noSave) saveChatMsg('finance', role, text, chips);
 }
 
 // Перевірка перевищення бюджету (локальна копія — використовується після save_expense)
