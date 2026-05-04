@@ -15,9 +15,7 @@ _Немає відкритих критичних багів станом на 0
 
 ## 🟡 Середні (є обхідний шлях або рідко трапляється)
 
-| ID | Файл | Симптом | Аналіз |
-|---|---|---|---|
-| **B-117** | `src/owl/proactive.js:1091` (м'який кеш 5хв) + `_pickMessageForTab` + Pruning без entityRefs | Юзер виконав 2/2 звичок (зелені ✓ у вкладці Продуктивність), але сова в табло показує застаріле «Сьогодні не виконано жодну звичку. Активізуйся — 5 присідань або 2 хв розтяжки». Скріншот mUpS8 16:47. Дані оновлені (заголовок «Звички 2 з 2 сьогодні» правильний), застаріле тільки повідомлення сови. | **Знайдено гілки розслідування, не зафіксовано корінь:** (1) `tryTabBoardUpdate` рядок 1091 блокує генерацію якщо latestMsg молодше 5 хв (м'який кеш для економії API); (2) listener `nm-data-changed: habits` рядок 1185 викликає `generateBoardMessage` через 5 сек **повз кеш**, але якщо `_boardGenerating[tab]=true` (рядок 625) — пропускається; (3) Pruning Engine (`isMessageRelevant` у `getTabBoardMsgs`) перевіряє `entityRefs`, а повідомлення «не виконано звичку» не має ref на конкретні `habit_X` → не фільтрується; (4) `_pickMessageForTab` міг обирати критичне повідомлення з історії навіть після генерації нового. **Потребує live debug у DevTools на iPhone:** `localStorage.nm_unified_board` (повний stack повідомлень для tab=tasks) + `_boardGenerating` стан + чи створено новий запис після `complete_habit`. Фікс наосліп = ризик зламати Brain Pulse. **Опції фіксу:** (а) додати `force` параметр у `tryBoardUpdate`, listener викликає з `force:true` для `e.detail !== 'chat'`; (б) розширити `entityRefs` для habit-related повідомлень щоб Pruning ловив; (в) у listener для `habits/tasks/...` детайл — інвалідувати `latestMsg.ts=0` через нову експорт-функцію у `unified-storage.js`. Найбезпечніше — (в). |
+_Немає відкритих 🟡 багів станом на 04.05.2026 (RGisY)._
 
 ---
 
@@ -29,7 +27,12 @@ _Немає відкритих дрібних багів._
 
 ## ✅ Закриті (активні сесії)
 
-_Зберігаються закриті у 2 останніх активних сесіях (rC4TO + UvEHE). Старіші (MIeXK з 0 багів + iWyjU з 0 багів + 4xJ7n + mUpS8 + BqTWF) перенесено у [`_archive/BUGS_HISTORY.md`](_archive/BUGS_HISTORY.md)._
+_Зберігаються закриті у 2 останніх активних сесіях (RGisY + rC4TO). Старіші (UvEHE + MIeXK + iWyjU + 4xJ7n + mUpS8 + BqTWF) перенесено у [`_archive/BUGS_HISTORY.md`](_archive/BUGS_HISTORY.md)._
+
+_Сесія **RGisY** (04.05.2026) — Шар 6 chip-system (5 фаз) + Phase 9 (4 регресії) + Phase 11+11b (3 баги smoke-test + 4 регресії post-fix) + діагностика Фази A/B/C:_
+- **B-117 закрито** (`82c5019`) — табло Inbox показувало повідомлення 14 годин старе. Корінь: `src/owl/board.js:121` `_pickMessageForTab` повертав `priority='critical'` БЕЗ TTL. Брифінг 14 год тому був ще `critical` і завжди вибирався. Фікс Phase 11+11b: TTL 2 год для critical у `_pickMessageForTab` — стале повідомлення локально mutate priority='normal' ПЕРЕД будь-яким вибором + auto-call `downgradeBriefingPriority()` у storage. Phase 11 v1 мала регресію (читала старе priority після downgrade) → Phase 11b v2 фікс через локальну mutation raw[]. Закрито через TTL без потреби live DevTools.
+- **«Один мозок» різні чіпи закрито** (`1e60fb4`+`82c5019`) — Inbox vs Health давали різні chips на однаковий запит. Корінь: `src/ai/prompts.js:357` блок «КОНТЕКСТ ІНТЕРВ'Ю» (Inbox-only) вчив AI генерувати власні chips з `action='chat'` обходячи clarify-guard. Фікс Phase 11: переписано блок 357 на «делегуй clarify-guard, верни короткий нейтральний content + chips:[]». CLARIFY_INLINE_RULES (255): жорстка заборона `action='chat'` для clarify. Phase 11b v2: «chips:[]» замість «без chips» (виняток з G11) щоб AI не мовчав.
+- **Schedule context ignored закрито** (`1e60fb4`) — OWL пропонувала «5 присідань ЗАРАЗ» о 12:50 коли юзер на роботі (06:30-15:15). Корінь: `proactive.js:729` секція розкладу мала бан-лист тільки «біг/зал/спорт» — «присідання» НЕ у списку, явного `[ФАЗА: РОБОТА]` маркера для tab-board не було. Фікс: розширений промпт з явною ФАЗА: ${phase.toUpperCase()} (work/evening/morning/dawn/night/silent) + розгорнутий бан-лист фізичних вправ (присідання, віджимання, розтяжка, "встань", "займе всього 2 хв"). Habit nagging пом'якшено: «залишилась на ввечері» замість «не виконано».
 
 _Сесія **rC4TO** (04.05.2026) — silent failures фіксовано (chips Phase C + dispatcher) + swipe-delete карток Здоров'я + iOS діагноз правило + Notes render guard:_
 - **B-122 закрито** (`8a05ada`) — Health Phase C інтерв'ю чіпи мовчать. Корінь у `src/owl/chips.js:199-204`: (1) whitelist action переписував `health_interview` у `'chat'` → handler ніколи не спрацьовував, (2) `escapeHtml` не кодує `"` → JSON payload ламав HTML-атрибут. Фікс: додано `health_interview` у whitelist + локальний escape `"` → `&quot;` для payloadAttr + `console.warn` у fallback `handleChipClick` для майбутніх silent failures. Юзер підтвердив: «Чіпи працюють».
