@@ -98,8 +98,40 @@ export function isEntityRelevant(ref) {
 // false → повідомлення можна викидати з історії і UI.
 export function isMessageRelevant(msg) {
   if (!msg) return false;
-  if (!Array.isArray(msg.entityRefs) || msg.entityRefs.length === 0) return true;
-  return msg.entityRefs.some(isEntityRelevant);
+  if (Array.isArray(msg.entityRefs) && msg.entityRefs.length > 0) {
+    return msg.entityRefs.some(isEntityRelevant);
+  }
+  // B-117 fix (QDIGl 04.05): content-based fallback для habit-повідомлень
+  // без entityRefs. Сценарій: AI генерує узагальнення «не виконано жодну
+  // звичку — активізуйся» без конкретного [habit_X] → entityRefs=[] →
+  // Pruning не фільтрує. Юзер виконує всі звички, але stale-нагадування
+  // лишається у табло. Перевіряємо реальний стан habits — якщо всі виконані
+  // сьогодні (включно з quit), це повідомлення вже неактуальне.
+  if (_isStaleHabitGeneralization(msg)) return false;
+  return true;
+}
+
+// Детектор stale habit-повідомлень без entityRefs. true → можна викидати.
+// Працює для узагальнень типу «не виконано звичок», «активізуйся», «жодну звичку».
+// Свідомо вузький — не ловимо позитивні «3/3 виконано» (топ != «не виконано»).
+function _isStaleHabitGeneralization(msg) {
+  const topic = (msg.topic || '').toLowerCase();
+  const text = (msg.text || '').toLowerCase();
+  const isHabitTopic = /habit|звич/.test(topic);
+  const isHabitTextNegative = /не\s+вико|не\s+відміч|жодн[аоу].*звич|активі[зс]уй|нагада[йю].*звич/.test(text);
+  if (!isHabitTopic && !isHabitTextNegative) return false;
+
+  try {
+    const habits = getHabits();
+    const buildHabits = habits.filter(h => h.type !== 'quit');
+    if (buildHabits.length === 0) return false; // нема звичок взагалі — повідомлення не релевантне у будь-якому разі, але не наша справа фільтрувати
+    const todayKey = new Date().toDateString();
+    const log = getHabitLog();
+    const allDoneToday = buildHabits.every(h => !!log[todayKey]?.[h.id]);
+    return allDoneToday;
+  } catch (e) {
+    return false;
+  }
 }
 
 // Експорт у window для діагностики/ручного тестування з DevTools
