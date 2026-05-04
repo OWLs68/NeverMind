@@ -124,16 +124,23 @@ function setupSync() {
   // Карта: ключ localStorage → функція рендеру (тільки для активної вкладки)
   const KEY_RENDER_MAP = {
     'nm_inbox':           () => { if (currentTab === 'inbox') try { renderInbox(); } catch(e) {} },
-    // B-117 fix (QDIGl 04.05): додано renderTabBoard щоб сова оновилася
-    // одразу після complete_task/habit. Без цього старе critical-повідомлення
-    // («не виконано звичку») висить у табло поки юзер не перейде на іншу
-    // вкладку і назад. Pruning через isMessageRelevant викине stale msg
-    // у наступному _pickMessageForTab.
-    'nm_tasks':           () => { if (currentTab === 'tasks') try { renderTasks(); updateProdTabCounters(); renderTabBoard('tasks'); } catch(e) {} },
-    'nm_habits2':         () => { if (currentTab === 'tasks') try { renderHabits(); renderProdHabits(); renderTabBoard('tasks'); } catch(e) {} },
+    // B-117 fix (QDIGl 04.05): renderTabBoard для всіх вкладок щоб сова
+    // оновилася одразу після complete_task/habit на БУДЬ-ЯКІЙ вкладці
+    // (раніше тільки 'tasks' → у Notes/Health/Me табло висіло stale).
+    // Pruning через isMessageRelevant викине stale msg у наступному _pickMessageForTab.
+    // renderTabBoard читає з localStorage, не йде в API → дешево для 7 вкладок.
+    'nm_tasks':           () => {
+                            if (currentTab === 'tasks') try { renderTasks(); updateProdTabCounters(); } catch(e) {}
+                            try { ['tasks','notes','me','evening','finance','health','projects'].forEach(t => renderTabBoard(t)); } catch(e) {}
+                          },
+    'nm_habits2':         () => {
+                            if (currentTab === 'tasks') try { renderHabits(); renderProdHabits(); } catch(e) {}
+                            try { ['tasks','notes','me','evening','finance','health','projects'].forEach(t => renderTabBoard(t)); } catch(e) {}
+                          },
     'nm_habit_log2':      () => {
-                            if (currentTab === 'tasks') try { renderHabits(); renderProdHabits(); renderTabBoard('tasks'); } catch(e) {}
+                            if (currentTab === 'tasks') try { renderHabits(); renderProdHabits(); } catch(e) {}
                             if (currentTab === 'me')    try { renderMe(); } catch(e) {}
+                            try { ['tasks','notes','me','evening','finance','health','projects'].forEach(t => renderTabBoard(t)); } catch(e) {}
                           },
     'nm_notes':           () => { if (currentTab === 'notes') try { renderNotes(); } catch(e) {} },
     'nm_folders_meta':    () => { if (currentTab === 'notes') try { renderNotes(); } catch(e) {} },

@@ -112,8 +112,11 @@ export function isMessageRelevant(msg) {
 }
 
 // Детектор stale habit-повідомлень без entityRefs. true → можна викидати.
-// Працює для узагальнень типу «не виконано звичок», «активізуйся», «жодну звичку».
-// Свідомо вузький — не ловимо позитивні «3/3 виконано» (топ != «не виконано»).
+// Ширший за початковий — ловимо ОБИДВА кейси:
+//   1. «всі виконано» (текст «активізуйся / жодну виконано») — стале коли doneCount > 0
+//   2. «жодну не виконано» — стале коли реально хоч одну виконано
+// QDIGl 04.05: розширено бо raw кейс — Notes сова казала «жодну звичку» при 2/4.
+// Свідомо НЕ ловимо позитивні повідомлення (топ-тренд, прогрес, мотивація).
 function _isStaleHabitGeneralization(msg) {
   const topic = (msg.topic || '').toLowerCase();
   const text = (msg.text || '').toLowerCase();
@@ -124,11 +127,17 @@ function _isStaleHabitGeneralization(msg) {
   try {
     const habits = getHabits();
     const buildHabits = habits.filter(h => h.type !== 'quit');
-    if (buildHabits.length === 0) return false; // нема звичок взагалі — повідомлення не релевантне у будь-якому разі, але не наша справа фільтрувати
+    if (buildHabits.length === 0) return false;
     const todayKey = new Date().toDateString();
     const log = getHabitLog();
-    const allDoneToday = buildHabits.every(h => !!log[todayKey]?.[h.id]);
-    return allDoneToday;
+    const doneCount = buildHabits.filter(h => !!log[todayKey]?.[h.id]).length;
+
+    // Якщо текст негативний («жодну / не виконано / активізуйся») але реально
+    // хоча б одну виконано → стале (повідомлення «жодну» вже неактуальне).
+    if (isHabitTextNegative && doneCount > 0) return true;
+    // Якщо все виконано — будь-яке нагадування про звички стале.
+    if (doneCount === buildHabits.length) return true;
+    return false;
   } catch (e) {
     return false;
   }
