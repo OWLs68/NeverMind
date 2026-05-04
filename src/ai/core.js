@@ -656,7 +656,23 @@ export function saveChatMsg(tab, role, text, chips) {
     if (msgs.length > CHAT_STORE_MAX) msgs.splice(0, msgs.length - CHAT_STORE_MAX);
     localStorage.setItem(key, JSON.stringify(msgs));
     if (role === 'user') window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'chat' }));
-  } catch(e) {}
+  } catch(e) {
+    // Phase 5 Шар 6 (04.05): не глитаємо QuotaExceededError мовчки.
+    // Council Critic Р7: silent catch → юзер бачить "повідомлення зникають
+    // при reload" без розуміння чому. Тепер console.warn + один раз on-screen
+    // toast щоб юзер знав що localStorage iPhone заповнений.
+    if (e && (e.name === 'QuotaExceededError' || e.code === 22 || e.code === 1014)) {
+      console.error('[saveChatMsg] QuotaExceededError у', key, '— iPhone localStorage переповнений');
+      try {
+        if (!window._nm_quota_warned) {
+          window._nm_quota_warned = true;
+          import('../core/nav.js').then(m => m.showToast && m.showToast('⚠️ Памʼять застосунку переповнена. Очисти старі чати у Налаштуваннях.', 6000));
+        }
+      } catch {}
+    } else {
+      console.warn('[saveChatMsg] write failed у', key, e);
+    }
+  }
 }
 
 export function loadChatMsgs(tab) {
