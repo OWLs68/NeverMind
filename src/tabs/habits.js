@@ -699,20 +699,18 @@ export function renderProdHabits() {
   const today = new Date().toDateString();
   const todayDow = (new Date().getDay() + 6) % 7;
 
-  // QDIGl 04.05: «сьогодні» включає І scheduled-на-цей-день-тижня, І
-  // вручну виконані поза розкладом. Раніше — тільки scheduled, тому коли
-  // юзер тапав ✓ на не-scheduled звичку, вона все одно мала зелений ✓
-  // у списку, але шкала «3/3» (без неї). Тепер шкала збігається з реальним
-  // вмістом списку: 4 виконаних → «4/4».
+  // QDIGl 04.05 (двофазний фікс): шкала показує ВСІ build звички у total,
+  // а не тільки scheduled-on-DOW. Раніше юзер бачив «1/3» при 4 звичках
+  // (одна не у розкладі понеділка) — невідповідність з карткою «4 звичок».
+  // Тепер total = всі buildHabits (4), done = реально виконані (1) → «1/4».
   const _isDone = (h) => {
     const target = h.targetCount || 1;
     const rawVal = log[today]?.[h.id];
     const cur = typeof rawVal === 'boolean' ? (rawVal ? 1 : 0) : (rawVal || 0);
     return cur >= target;
   };
-  const todayHabits = habits.filter(h =>
-    (h.days || [0,1,2,3,4]).includes(todayDow) || _isDone(h)
-  );
+  const buildHabitsForBar = habits.filter(h => h.type !== 'quit');
+  const todayHabits = buildHabitsForBar; // total = всі (юзер хоче 1/4, не 1/3)
   const doneTodayCount = todayHabits.filter(_isDone).length;
   const countEl = document.getElementById('habits-today-count');
   const barEl = document.getElementById('habits-today-bar');

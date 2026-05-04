@@ -611,10 +611,11 @@ function renderMeActivityChart() {
   const tasksDone = doneToday;
 
   const buildHabits = getHabits().filter(h => h.type !== 'quit');
-  const todaysHabits = buildHabits.filter(h => (h.days || [0,1,2,3,4]).includes(todayDow));
   const log = getHabitLog();
-  const habitsDone = todaysHabits.filter(h => !!log[todayDS]?.[h.id]).length;
-  const habitsTotal = todaysHabits.length;
+  // QDIGl 04.05: total = ВСІ build звички (раніше scheduled-on-DOW звужувало
+  // ring до 3/3 при реально 4 звичках). Узгоджено з шкалою у Продуктивності.
+  const habitsDone = buildHabits.filter(h => !!log[todayDS]?.[h.id]).length;
+  const habitsTotal = buildHabits.length;
 
   const ringSVG = (done, total, color, label) => {
     const r = 38;

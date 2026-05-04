@@ -212,7 +212,7 @@ function _getInboxBoardContext() {
 
   // === РАНКОВИЙ БРИФ ===
   if (phase === 'morning' && owlCdExpired('morning_brief_ctx', 3 * 60 * 60 * 1000)) {
-    const todayDow = now.getDay();
+    const todayDow = (now.getDay() + 6) % 7;
     const _morningLog = getHabitLog()[now.toDateString()] || {};
     const todayHabitsAll = getHabits().filter(h => h.type !== 'quit' && ((h.days || [0,1,2,3,4]).includes(todayDow) || !!_morningLog[h.id]));
     const briefParts = [];
@@ -229,7 +229,7 @@ function _getInboxBoardContext() {
   // === ВЕЧІРНІЙ ПУЛЬС ===
   if ((phase === 'evening' || phase === 'night') && owlCdExpired('evening_pulse_ctx', 4 * 60 * 60 * 1000)) {
     const doneTasks = tasks.filter(t => t.status === 'done' && t.updatedAt && Date.now() - t.updatedAt < 24*60*60*1000);
-    const todayDow = now.getDay();
+    const todayDow = (now.getDay() + 6) % 7;
     const todayLogAll = getHabitLog()[todayStr] || {};
     const todayHabitsAll = getHabits().filter(h => h.type !== 'quit' && ((h.days || [0,1,2,3,4]).includes(todayDow) || !!todayLogAll[h.id]));
     const doneH = todayHabitsAll.filter(h => todayLogAll[h.id]).length;
@@ -312,13 +312,22 @@ function _getInboxBoardContext() {
   const quitHabits = habits.filter(h => h.type === 'quit');
   const log = getHabitLog();
   const todayLog = log[todayStr] || {};
-  const todayHabits = buildHabits.filter(h => h.days.includes(now.getDay()) || !!todayLog[h.id]);
+  // QDIGl 04.05 КРИТИЧНО — DOW-конвенція уніфікована з рештою файлу:
+  // habits.js і ai/core.js використовують Mon=0 ((getDay()+6)%7), а тут було
+  // Sun=0 (now.getDay()) → у понеділок інтерпретація h.days=[0..4] інша →
+  // одна звичка випадково потрапляла, інші три — ні → AI казав «Всі 1 звичок
+  // виконано!» при реальному 1 з 4. Корінь скріна Романа 04.05 21:58.
+  const todayDowMon = (now.getDay() + 6) % 7;
+  const todayHabits = buildHabits.filter(h => (h.days || [0,1,2,3,4]).includes(todayDowMon) || !!todayLog[h.id]);
   const doneHabits = todayHabits.filter(h => todayLog[h.id]);
   const pendingHabits = todayHabits.filter(h => !todayLog[h.id]);
 
-  // Всі звички виконані
-  if (todayHabits.length > 0 && pendingHabits.length === 0) {
-    important.push(`[ВАЖЛИВО] Всі ${todayHabits.length} звичок виконано сьогодні!`);
+  // Всі звички виконані — порівнюємо проти buildHabits.length (всі), а не
+  // todayHabits.length (фільтрований). Інакше «Всі 1 виконано» при 1/4
+  // випадкової DOW-арифметики. Якщо є quit habits — вони НЕ йдуть у count
+  // (юзер їх "не виконує", а "тримається").
+  if (buildHabits.length > 0 && doneHabits.length === buildHabits.length) {
+    important.push(`[ВАЖЛИВО] Всі ${buildHabits.length} звичок виконано сьогодні!`);
   }
 
   // Звички з серією під загрозою ввечері
