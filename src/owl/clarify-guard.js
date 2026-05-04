@@ -84,7 +84,9 @@ export function shouldClarify(text, toolCalls, tab) {
     try {
       const focusedId = getFocusedHealthCard();
       if (focusedId) {
-        const cards = JSON.parse(localStorage.getItem('nm_health_cards') || '[]');
+        // NpBmN audit fix #K (consistency): через getHealthCards() — однаково
+        // з _buildDoctorChips. Раніше у цій гілці лишався прямий LS read.
+        const cards = getHealthCards();
         const focused = cards.find(c => c.id === focusedId);
         if (focused && (focused.doctor || '').trim()) return null;
       }
