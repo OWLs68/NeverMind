@@ -6,6 +6,16 @@
 
 ---
 
+## Сесія UvEHE (03.05.2026) — модалки + Settings + Help-drawer
+
+- **B-120 закрито фінально** — модалка Health на calendar-pattern: top-level `#health-card-modal-overlay` як sibling + onclick на root з `event.target===this`. Окремий swipe-handler через `setupModalSwipeClose`. iOS rubber-band усунуто бо overlay не у transformed-context.
+- **B-121 закрито фінально** — заміна native `<input type=date/time>` на drum-picker mini-модалку (`#health-dt-picker-modal`) з 3-кол date drum + 2-кол time drum. Роки 1990-2035.
+- **Settings scale-glitch (4 ітерації — без B-номера, регресія)** — модалка візуально стискалась. Корінь: глобальне CSS `[onclick]:active { transform: scale(0.87); }`. Фікс: override `#settings-overlay:active, [id$="-modal"]:active { transform: none }`.
+- **deploy-info-modal blur** — переніс blur з root на окремий top-level overlay-bg sibling.
+- **Help-drawer** для всіх 8 вкладок: HELP_CONTENT для health/projects + swipe-right на drawer.
+
+---
+
 ## ✅ Закриті баги (хронологічно, нові зверху)
 
 ### Сесія 4xJ7n (03.05.2026) — iPhone smoke-test + B-118/B-119 фікси
