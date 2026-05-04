@@ -21,24 +21,11 @@ import { sendProjectsBarMessage, addProjectsChatMsg } from '../tabs/projects.js'
 import { getTasks, saveTasks, renderTasks } from '../tabs/tasks.js';
 import { getHabits, getHabitLog, saveHabitLog, renderHabits, renderProdHabits, getQuitStatus } from '../tabs/habits.js';
 import { applyClarifyChoice } from './clarify-guard.js';
-import { generateUUID } from '../core/uuid.js';
+import { ensureChipIdAndExternalize, readChipPayloads, writeChipPayloads, CHIP_PAYLOADS_KEY } from './chip-payload-store.js';
 
-// === Phase 3 Шар 6 (RGisY 04.05) — denormalized payload storage ===
-// Раніше chip.payload серіалізувався у data-chip-payload DOM-атрибут.
-// Проблеми: (а) escapeHtml + JSON.stringify breakage для вкладених `&`,
-// (б) chat_log[].chips[].payload роздуває localStorage (Council Critic Р7
-// — iPhone quota 5MB). Розв'язка: payload живе у окремому ключі
-// nm_chip_payloads = {chipId: payload}, у chat_log/DOM тільки chipId.
-// chip.id === payloadId — економія поля + 1:1 mapping.
-const CHIP_PAYLOADS_KEY = 'nm_chip_payloads';
-
-function _readChipPayloads() {
-  try { return JSON.parse(localStorage.getItem(CHIP_PAYLOADS_KEY) || '{}'); } catch { return {}; }
-}
-function _writeChipPayloads(map) {
-  try { localStorage.setItem(CHIP_PAYLOADS_KEY, JSON.stringify(map)); }
-  catch (e) { console.warn('[chips] payload map write failed', e); }
-}
+// Aliases для backward-compat (старий код у файлі використовує підкреслені імена)
+const _readChipPayloads = readChipPayloads;
+const _writeChipPayloads = writeChipPayloads;
 // Garbage collector для nm_chip_payloads — викликається з boot.js init()
 // через setTimeout(_, 5000). Тригерить cleanup якщо >7 днів з останнього GC
 // АБО keys > 500. Сканує всі 8 chat_log[].chips[] збираючи referenced chipId,
@@ -77,19 +64,10 @@ export function _gcChipPayloads() {
   } catch (e) { console.warn('[gc] chip payloads failed', e); }
 }
 
-// Експорт для core.js saveChatMsg + boot.js _gcChipPayloads
-export function _ensureChipIdAndExternalize(c) {
-  const obj = typeof c === 'string' ? { label: c, action: 'chat' } : { ...c };
-  if (!obj.id) obj.id = generateUUID();
-  if (obj.payload && typeof obj.payload === 'object') {
-    const map = _readChipPayloads();
-    map[obj.id] = obj.payload;
-    _writeChipPayloads(map);
-    obj.payloadId = obj.id;
-    delete obj.payload;
-  }
-  return obj;
-}
+// Phase 12 (RGisY 04.05): _ensureChipIdAndExternalize переїхала у
+// chip-payload-store.js (нейтральний модуль) щоб core.js saveChatMsg
+// міг викликати без circular dependency. Backward-compat alias.
+export const _ensureChipIdAndExternalize = ensureChipIdAndExternalize;
 
 // === ВАЛІДНІ ЦІЛІ НАВІГАЦІЇ ===
 const VALID_NAV_TARGETS = ['tasks','notes','habits','finance','health','projects','evening','me','inbox'];
@@ -147,7 +125,7 @@ export function normalizeChips(chips) {
   if (!Array.isArray(chips)) return [];
   // Phase 3 Шар 6: гарантуємо chip.id (UUID) + виносимо inline payload у map
   // (nm_chip_payloads). Ідемпотентно — якщо id/payloadId уже є, не змінюємо.
-  return chips.map(_ensureChipIdAndExternalize);
+  return chips.map(ensureChipIdAndExternalize);
 }
 
 // ============================================================

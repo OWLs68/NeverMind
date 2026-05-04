@@ -434,6 +434,17 @@ function runMigrations() {
           catch (e) { backupOk = false; }
         }
       });
+      // Phase 12 (RGisY 04.05) — Регресія 3 fix: abortive guard.
+      // Якщо ХОЧ ОДИН backup впав через QuotaExceededError — НЕ продовжуємо
+      // міграцію. Без backup міграція не може безпечно відкотитись.
+      // Залишаємо v10_done='' → наступного boot спробуємо знов після того як
+      // юзер очистить кеш (або saveChatMsg toast підкаже про переповнення).
+      if (!backupOk) {
+        console.error('[boot] v10 migration aborted: backup failed (likely QuotaExceeded). Очисти localStorage і перезапусти.');
+        // Чистимо неповні backups щоб не залишати сміття
+        CHAT_KEYS.forEach(k => { try { localStorage.removeItem(k + '_backup_v10'); } catch {} });
+        return; // НЕ ставимо nm_chips_v10_done — наступного разу спробуємо знов
+      }
 
       const payloadsMap = JSON.parse(localStorage.getItem('nm_chip_payloads') || '{}');
       let chipsTouched = 0, payloadsExtracted = 0, completionsRewired = 0;

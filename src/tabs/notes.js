@@ -10,7 +10,7 @@ import { logUsage } from '../core/usage-meter.js';
 import { addToTrash, showUndoToast } from '../core/trash.js';
 import { callAI, callAIWithTools, getAIContext, getOWLPersonality, openChatBar, safeAgentReply, saveChatMsg, INBOX_TOOLS, handleChatError } from '../ai/core.js';
 import { renderChips } from '../owl/chips.js';
-import { UI_TOOLS_RULES, REMINDER_RULES } from '../ai/prompts.js';
+import { UI_TOOLS_RULES, REMINDER_RULES, CLARIFY_INLINE_RULES } from '../ai/prompts.js';
 import { dispatchChatToolCalls } from '../ai/tool-dispatcher.js';
 import { shouldClarify } from '../owl/clarify-guard.js';
 import { attachSwipeDelete } from '../ui/swipe-delete.js';
@@ -1068,6 +1068,8 @@ export async function sendNotesBarMessage() {
 - Просто відповісти: текст (1-3 речення)
 
 ${REMINDER_RULES}
+
+${CLARIFY_INLINE_RULES}
 ВАЖЛИВО: для open_folder — fuzzy match назви, для search_notes — шукай по тексту нотаток.
 Наявні папки: ${[...new Set(getNotes().map(n => n.folder || t('notes.default_folder', 'Загальне')))].join(', ') || 'немає'}
 НЕ вигадуй дані яких немає в контексті.

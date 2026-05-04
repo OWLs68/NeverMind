@@ -18,7 +18,7 @@ import { showToast, switchTab, currentTab } from '../core/nav.js';
 import { escapeHtml, logRecentAction, extractJsonBlocks, parseContentChips, t } from '../core/utils.js';
 import { callAI, callAIWithHistory, callAIWithTools, getAIContext, getMeStatsContext, getOWLPersonality, openChatBar, saveChatMsg, INBOX_TOOLS } from '../ai/core.js';
 import { renderChips } from '../owl/chips.js';
-import { UI_TOOLS_RULES, REMINDER_RULES } from '../ai/prompts.js';
+import { UI_TOOLS_RULES, REMINDER_RULES, CLARIFY_INLINE_RULES } from '../ai/prompts.js';
 import { dispatchChatToolCalls } from '../ai/tool-dispatcher.js';
 import { shouldClarify } from '../owl/clarify-guard.js';
 import { getTasks } from './tasks.js';
@@ -51,6 +51,8 @@ export async function sendMeChatMessage() {
 ЗАДАЧА = дія ЗРОБИТИ (save_task). ПОДІЯ = факт що СТАНЕТЬСЯ (create_event). "Перенеси подію" = edit_event.
 
 ${REMINDER_RULES}
+
+${CLARIFY_INLINE_RULES}
 
 Для CRUD дій — викликай відповідний tool. Для аналізу/відповіді — пиши текст.
 

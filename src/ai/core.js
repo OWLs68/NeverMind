@@ -6,6 +6,8 @@
 import { currentTab, getProfile, showToast } from '../core/nav.js';
 import { escapeHtml } from '../core/utils.js';
 import { getTrash } from '../core/trash.js';
+import { ensureChipIdAndExternalize } from '../owl/chip-payload-store.js';
+import { renderChips } from '../owl/chips.js';
 import { getInbox, _clearInboxUnreadBadge, addInboxChatMsg } from '../tabs/inbox.js';
 import { getTasks, addTaskBarMsg } from '../tabs/tasks.js';
 import { getHabits, getHabitLog } from '../tabs/habits.js';
@@ -651,7 +653,12 @@ export function saveChatMsg(tab, role, text, chips) {
   try {
     const msgs = JSON.parse(localStorage.getItem(key) || '[]');
     const entry = { role, text, ts: Date.now() };
-    if (Array.isArray(chips) && chips.length > 0) entry.chips = chips;
+    // Phase 12 (RGisY 04.05) — Регресія 1 fix: externalize chip.payload ПЕРЕД
+    // записом у chat_log. Раніше chips зберігались inline → Smoke Test 10
+    // (Chips pipeline) FAIL після першого clarify-чіпа. Phase 3 була неповна.
+    if (Array.isArray(chips) && chips.length > 0) {
+      entry.chips = chips.map(ensureChipIdAndExternalize);
+    }
     msgs.push(entry);
     if (msgs.length > CHAT_STORE_MAX) msgs.splice(0, msgs.length - CHAT_STORE_MAX);
     localStorage.setItem(key, JSON.stringify(msgs));
@@ -826,18 +833,16 @@ function _renderInboxChatMsg(role, text, el, chips = null) {
     div.innerHTML = `<div style="background:rgba(255,255,255,0.88);color:#1e1040;border-radius:14px 4px 14px 14px;padding:8px 12px;font-size:15px;font-weight:500;line-height:1.5;max-width:85%">${escapeHtml(text)}</div>`;
   }
   el.appendChild(div);
-  // Phase 9 Шар 6 (RGisY 04.05) — Регресія 1 fix: chips render при restore історії.
-  // Раніше Phase 1 додала chips у saveChatMsg('inbox',...) але restore не відображав
-  // — _renderInboxChatMsg ігнорував. Тепер 4-й параметр + динамічний import щоб
-  // не створювати static circular dependency core.js ↔ chips.js (вже двостороння).
+  // Phase 12 (RGisY 04.05) — Регресія 4 fix: статичний import renderChips
+  // замість динамічного. У forEach з 5+ msgs паралельні Promise resolve
+  // НЕ зберігали порядок → chips зʼїжджались між бульбашками.
+  // Static import тепер створює явну циклічну залежність core.js ↔ chips.js
+  // — esbuild bundle обробляє це коректно (IIFE один scope).
   if (isAgent && Array.isArray(chips) && chips.length > 0) {
-    import('../owl/chips.js').then(m => {
-      const chipsRow = document.createElement('div');
-      chipsRow.className = 'chat-chips-row';
-      m.renderChips(chipsRow, chips, 'inbox');
-      el.appendChild(chipsRow);
-      el.scrollTop = el.scrollHeight;
-    }).catch(() => {});
+    const chipsRow = document.createElement('div');
+    chipsRow.className = 'chat-chips-row';
+    renderChips(chipsRow, chips, 'inbox');
+    el.appendChild(chipsRow);
   }
   el.scrollTop = el.scrollHeight;
 }
