@@ -6,6 +6,52 @@
 
 ---
 
+## 2026-05-04 — RGisY: Шар 6 chip-system (14 фаз) + Schedule context + One Brain + audit-fix цикли
+
+**Гілка:** `claude/start-session-RGisY` · 24 коміти · CACHE `nm-20260504-1447`
+
+### Council 8 агентів + Gemini 3 раунди — Шар 6 переосмислено
+
+Council Verifier підтвердив grep'ом що формат chip уже єдиний. «3 несумісні схеми» — 3 шляхи генерації, не структури. Шар 6 ПЕРЕВИЗНАЧЕНО з форматної переробки на інфраструктурні фікси: Persistence asymmetry, action='chat' overload, localStorage quota.
+
+### Phase 1-7 — Шар 6 інфраструктура
+- saveChatMsg+chips для 7 чатів (Р1)
+- 5-й enum action='complete' для ✔️ (Р2)
+- nm_chip_payloads denormalized + chip.id UUID (Р7)
+- saveChatMsg QuotaExceededError + toast
+- Migration v10 з per-key backup + GC weekly
+
+### Phase 9/9b/9c — Регресія-фікси (4 регресії після Phase 7)
+- Inbox chips restore, filterStaleChips action='complete', backup cleanup, saveTabMessage normalize
+- Шари 3+4 у CHIP_PROMPT_RULES
+
+### Phase 11/11b — Smoke-test 3 баги + 4 регресії
+- Один мозок: переписано КОНТЕКСТ ІНТЕРВ'Ю Inbox-only
+- B-117 stale: TTL 2 год для critical (v1 не вилікувано → v2 локальна mutation)
+- Schedule context: ФАЗА: ${phase} + бан-лист
+- Phase 11b: AI mute, dawn/silent, push merge-base
+
+### Фази A/B/C — Діагностика
+- Toast «Скопійовано» + блок «📊 Стан застосунку» + 3 нові smoke-тести
+- /audit upgrade на multi-pass
+
+### Phase 12/13 — Фінальний Council audit (10 нових регресій)
+**Phase 12 (4 КРИТИЧНІ):** saveChatMsg externalize, Notes/Me CLARIFY, v10 abortive guard, _renderInboxChatMsg race.
+**Phase 13 (6 СЕРЕДНІХ):** downgradeStaleCriticalPriority, G11 conflict, prompts.js:396, Шар 4 inconsistency, ban-list синоніми, isDocOnlyPush.
+
+### Закрито баги
+- **B-117** (stale board) через TTL у board.js
+- Один мозок (різні чіпи Inbox/Health) — закрито у двох ітераціях
+
+### Урок
+**«Фікси породжують регресії — потрібен post-fix audit».** Паттерн зустрівся 3 рази за сесію. Council audit після фіксу — стандарт. lessons.md.
+
+### Файли
+- Створено: `src/owl/chip-payload-store.js`
+- Змінено: `src/ai/{prompts,core}.js`, `src/owl/{chips,board,proactive,clarify-guard,unified-storage}.js`, `src/core/{boot,diagnostics,logger}.js`, `src/tabs/{notes,me,...}.js`, `.claude/hooks/pre-push-check.js`, `.claude/commands/audit.md`, `sw.js` (~14 CACHE bumps)
+
+---
+
 ## 2026-05-03 — UvEHE: модалки calendar-pattern + Settings 4-ітерац scale-glitch + sub-агенти + pre-commit-i18n
 
 **Гілка:** `claude/start-session-UvEHE` · ~30 комітів · v570 → ~v603

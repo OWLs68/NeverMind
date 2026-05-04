@@ -4,7 +4,7 @@
 >
 > Старіші сесії (до 6GoDe 19.04) — в [`_archive/SESSION_STATE_archive.md`](../_archive/SESSION_STATE_archive.md).
 
-**Оновлено:** 2026-05-04 (сесія **RGisY** — Шар 6 chip-system: Council 8 агентів + Gemini 3 раунди → перевизначення з «уніфікація формату» на «інфраструктурна гігієна». 8 фаз: Phase 1 saveChatMsg+chips для 7 чатів (Р1) + Phase 2 5-й enum action='complete' (Р2) + Phase 3 nm_chip_payloads denormalized + chip.id UUID (Р7) + Phase 5 QuotaExceeded захист + Phase 7 v10 міграція + GC weekly + **Phase 9** 4 регресії знайдені post-Phase-7 аудитом: Inbox chips restore (Р1крит) + filterStaleChips action='complete' (Р2серед) + backup_v10 cleanup (Р3серед) + saveTabMessage normalize (Р4мінор). **Phase 9b** legacy fallback timestamp. **Phase 9c** Шари 3+4 (Час+Destructive) у CHIP_PROMPT_RULES. Шар 2 Лікарі верифіковано як готовий. B1 pre-push-check тригери з тексту → у git diff. B2 silent-bug-scout правило перед звітом stale/missing. Гілка `claude/start-session-RGisY`, 11 чекпоінт-комітів, CACHE `nm-20260504-0948`).
+**Оновлено:** 2026-05-04 (сесія **RGisY** — мультипасний цикл фіксів + аудитів. Council 8 агентів + Gemini 3 раунди задали Шар 6 chip-system як «інфраструктурна гігієна». **14 фаз з checkpoint-комітами + audit-fix циклами:** Phases 1-7 (chip infrastructure) → Phase 9 (4 регресії аудит) → Phase 9b/9c → Phase 11 (3 баги smoke-test) → Phase 11b (4 регресії post-Phase-11) → Фази A/B/C (toast + state snapshot + 3 нові smoke-тести) → /audit upgrade на multi-pass → **Phase 12** (4 КРИТИЧНІ з фінального аудиту: saveChatMsg externalize, Notes/Me CLARIFY, v10 abortive guard, _renderInbox race) → **Phase 13** (6 СЕРЕДНІХ: downgradeStaleCriticalPriority, G11 conflict, prompts.js:396 застаріле, Шар 4 inconsistency, ban-list синоніми, isDocOnlyPush merge-base). Гілка `claude/start-session-RGisY`, **24 чекпоінт-коміти**, CACHE `nm-20260504-1447`. B-117 закрито (TTL у board.js). Один мозок Inbox/Health узгоджено + Notes/Me додано.
 
 ---
 
@@ -70,13 +70,37 @@
 - **B-117** табло звичок stale (потребує live Safari DevTools).
 - **Smoke-test шпаргалка пункти 15-38** — calendar-pattern модалки UvEHE, chips translateZ, drum-picker.
 
-### Метрики
-- Коміти: `1a41385` → `f713667` = 7 чекпоінт-комітів (B1+B2 + 5 фаз Шар 6) + ROADMAP/DATA_SCHEMA окремо
-- CACHE_NAME: `nm-20260504-0210` → `nm-20260504-0907` (5 bumps)
-- Build: всі коміти `node --check` чисті
+### Phase 11 (3 баги iPhone smoke-test) + Phase 11b (4 регресії post-fix)
+11. **Phase 11 — One Brain (різні чіпи) + B-117 stale + Schedule context** (`1e60fb4`): Inbox vs Health давали різні chips на «Відкрив страхування один». Корінь у `prompts.js:357` КОНТЕКСТ ІНТЕРВ'Ю Inbox-only вчив генерувати власні chat-чіпи. Фікс: переписано на «делегуй clarify-guard». B-117: TTL 2 год для priority='critical' у `_pickMessageForTab`. Schedule: розширений промпт з явною ФАЗА: ${phase.toUpperCase()} + бан фізичних вправ.
+12. **Phase 11b — 4 регресії аудиту** (`82c5019`): (а) B-117 v1 не вилікувано бо `downgradeBriefingPriority` локально не оновлював raw → fallback повертав stale → переписано на локальну mutation + downgrade. (б) AI mute via empty content → «короткий нейтральний content + chips:[]» замість «без chips» (виняток з G11). (в) phase='dawn' випав → додано dawn/silent + `(phase || 'morning')` safe fallback + покрито пізню зміну (workEnd>=21). (г) pre-push merge-base fallback для feature-branch першого push'у.
+
+### Фази A/B/C (Налаштування → Логи)
+13. **Toast «Скопійовано»** (`93cb6b2`): після `navigator.clipboard.writeText` показуємо toast + catch fallback.
+14. **State snapshot + 3 smoke-тести** (`ff6ce93`): новий блок «📊 СТАН ЗАСТОСУНКУ» між SMOKE і PERFORMANCE. Інтегровано у copyLogForClaude — clipboard містить snapshot. 3 нові smoke-тести: Chips pipeline, Board TTL, Schedule валідність.
+15. **/audit upgrade на multi-pass** (`8d7030c`): 4 pass'и (статичні чеки → Council паралельно → синтез → post-fix re-audit). Дубль /audit-deep НЕ створено.
+
+### Phase 12 (4 КРИТИЧНІ з фінального Council аудиту)
+16. **saveChatMsg НЕ виносив inline payload** (`41e0c70`): Phase 3 неповна — externalize йшов тільки через renderChips. Створено новий нейтральний модуль `src/owl/chip-payload-store.js` (без circular). saveChatMsg тепер викликає externalize ПЕРЕД entry.chips.
+17. **Notes/Me CLARIFY_INLINE_RULES** (`41e0c70`): 7 з 8 чатів тепер мають правило (раніше 5). Notes/Me були німі для clarify-кейсів.
+18. **v10 abortive guard** (`41e0c70`): якщо backupOk=false (QuotaExceeded) → НЕ продовжуємо міграцію + чистимо неповні бекапи + lишаємо v10_done пустим для retry.
+19. **_renderInboxChatMsg race** (`41e0c70`): динамічний import у forEach → chips розʼїжджались. Static import + явний цикл core↔chips (esbuild bundle обробляє).
+
+### Phase 13 (6 СЕРЕДНІХ з фінального Council аудиту)
+20. **downgradeStaleCriticalPriority** (`70237b7`): нова функція у unified-storage — downgrade ВСІХ critical, не тільки 'morning-briefing'.
+21. **G11 ↔ chips:[] конфлікт** (`70237b7`): виняток перенесено ПРЯМО у CHIP_PROMPT_RULES поряд з G11.
+22. **prompts.js:396 «action завжди chat» застаріле** (`70237b7`): оновлено на 4 actions з описом коли який.
+23. **Шар 4 inconsistency** (`70237b7`): третій destructive-чіп — КОНТЕКСТНИЙ (проект→Архівувати, звичка→Тільки сьогодні, подія→Перенести).
+24. **Ban-list синонімами** (`70237b7`): жорсткий список замінено на семантичне правило «дія що вимагає встати/рухатись/змінити позу». `(phase || 'unknown')` fallback з правилом «unknown — пиши обережно».
+25. **isDocOnlyPush merge-base fallback** (`70237b7`): той самий B1.5 fix що у getRealCodeDiff.
+
+### Метрики (фінал)
+- Коміти: `1a41385` → `70237b7` = **24 чекпоінт-коміти**
+- CACHE_NAME: `nm-20260504-0210` → `nm-20260504-1447` (~14 bumps)
+- Build: всі коміти `node --check` чисті, i18n baseline стабільний
 - Гілка: `claude/start-session-RGisY`
-- Council: 8 агентів + Gemini 3 раунди (загалом ~70K токенів агентами)
-- Ризиків Critic закрито: Р1 (Phase 1), Р2 (Phase 2), Р7 (Phase 3+5+7)
+- Council total: 8+5+5+4 = ~22 агентські запуски (~150K токенів)
+- Ризиків Critic закрито: всі 7 з фінального аудиту (4 critical + 3 medium)
+- Нові файли: `src/owl/chip-payload-store.js`
 
 ---
 

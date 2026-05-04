@@ -155,6 +155,25 @@
 
 ## ❌ Анти-патерни (як часто ламаюсь і чому)
 
+### Фікси породжують регресії — потрібен POST-FIX audit (RGisY 04.05)
+
+**Що сталось:** За одну сесію RGisY паттерн «фікс → регресія» зустрівся **ТРИ рази:**
+1. Phase 1-7 (інфраструктура Шар 6) → Phase 9 знайшла **4 регресії** (Inbox restore, filterStaleChips, backup_v10, saveTabMessage normalize).
+2. Phase 11 (3 баги smoke-test) → Phase 11b знайшла **4 регресії** (B-117 не вилікувано, AI mute, dawn випав, push fallback).
+3. Phase 12+13 (фінальний аудит виявив **10+ нових регресій** на код вже закомічений раніше у цій же сесії).
+
+**Чому ламаюсь:** після фіксу я схильний пушити одразу. Регресії невидимі без проактивного scanу — особливо ті що ламають smoke-test інваріанти у corner-cases.
+
+**Правило (доведено 3 разами):** після значимого фіксу (3+ змінених файли або src/core/* зміни) — **обовʼязково запустити Council audit ДО push'у:**
+- silent-bug-scout (топ-5 ризиків)
+- code-regression-finder (порівняння робочого vs зламаного)
+- prompt-engineer-auditor (якщо чіпали prompts.js)
+- doc-consistency-checker (sync документів)
+
+Цикл «фікс → 4 pass → fix → 4 pass» поки PASS — стандарт. Це формалізовано у `/audit` Pass 3 (post-fix re-audit). Емпіричне правило: **середній фікс породжує 2-4 регресії, які знайде Council у 2-3 хвилини, але юзер натрапить на них через 2-3 дні якщо ні.**
+
+**Ціна нехтування:** RGisY мав би бути 12-комітна сесія (Phase 1-10). Реально — 24 коміти бо кожен раунд аудиту знаходив нові проблеми. Час сесії × 2. Але якість: на /finish — фактично PASS на всі категорії.
+
 ### CSS :active scale на root модалок (UvEHE 03.05)
 
 **Що сталось:** Settings модалка візуально стискалась при тапі всередині. 4 ітерації false leads: mask-image, flex layout, nested backdrop-filter, body-lock. Справжній корінь — глобальне CSS правило `style.css:1551`: `button:active, [onclick]:active { transform: scale(0.87); }`. Settings-overlay має onclick → tap всередині bubbles до root → scale на ВСІЙ модалці.

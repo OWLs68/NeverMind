@@ -18,7 +18,7 @@
 
 **🚀 Dynamic AI-driven chips — Jarvis-level interaction** (UvEHE 03.05 → Шар 1 rC4TO 04.05 → Шар 2 + Шар 6 RGisY 04.05 → Шари 3-5 наступні сесії)
 
-**Прогрес RGisY 04.05 — Шар 2 + Шар 6 (5 фаз):**
+**Прогрес RGisY 04.05 — Шар 2 + Шар 6 (14 фаз з audit-fix циклами, 24 коміти):**
 - ✅ **Шар 1: Контекстний чіп [Створити проект]** (`a625539` rC4TO) — `BUSINESS_NOUN_RE` детектор + `CLARIFY_INLINE_RULES`.
 - ✅ **Шар 2: Лікарі (Health context)** (`clarify-guard.js:33-37, 81-89, 143-179`, частково реалізовано NpBmN, верифіковано RGisY) — `DOCTOR_MENTION_RE` (~26 спеціальностей) + `_buildDoctorChips` читає `nm_health_cards[].doctor` → до 3 унікальних імен + 1 «Інший лікар». payload `target:'add_health_history_entry'`. Інтегровано у `shouldClarify` ПЕРЕД BUSINESS_NOUN_RE check. Dispatcher handler `add_health_history_entry` готовий.
 - ✅ **Шар 6: ПЕРЕВИЗНАЧЕНО** після Council 8 агентів + Gemini 3 раунди. **Не «уніфікація формату»** (формат `{label, action, target?, payload?}` уже єдиний — Verifier підтвердив grep'ом). А «**інфраструктурна гігієна + майбутнє-готовність**»:
