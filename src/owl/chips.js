@@ -21,6 +21,37 @@ import { sendProjectsBarMessage, addProjectsChatMsg } from '../tabs/projects.js'
 import { getTasks, saveTasks, renderTasks } from '../tabs/tasks.js';
 import { getHabits, getHabitLog, saveHabitLog, renderHabits, renderProdHabits, getQuitStatus } from '../tabs/habits.js';
 import { applyClarifyChoice } from './clarify-guard.js';
+import { generateUUID } from '../core/uuid.js';
+
+// === Phase 3 Шар 6 (RGisY 04.05) — denormalized payload storage ===
+// Раніше chip.payload серіалізувався у data-chip-payload DOM-атрибут.
+// Проблеми: (а) escapeHtml + JSON.stringify breakage для вкладених `&`,
+// (б) chat_log[].chips[].payload роздуває localStorage (Council Critic Р7
+// — iPhone quota 5MB). Розв'язка: payload живе у окремому ключі
+// nm_chip_payloads = {chipId: payload}, у chat_log/DOM тільки chipId.
+// chip.id === payloadId — економія поля + 1:1 mapping.
+const CHIP_PAYLOADS_KEY = 'nm_chip_payloads';
+
+function _readChipPayloads() {
+  try { return JSON.parse(localStorage.getItem(CHIP_PAYLOADS_KEY) || '{}'); } catch { return {}; }
+}
+function _writeChipPayloads(map) {
+  try { localStorage.setItem(CHIP_PAYLOADS_KEY, JSON.stringify(map)); }
+  catch (e) { console.warn('[chips] payload map write failed', e); }
+}
+// Експорт для core.js saveChatMsg + boot.js _gcChipPayloads
+export function _ensureChipIdAndExternalize(c) {
+  const obj = typeof c === 'string' ? { label: c, action: 'chat' } : { ...c };
+  if (!obj.id) obj.id = generateUUID();
+  if (obj.payload && typeof obj.payload === 'object') {
+    const map = _readChipPayloads();
+    map[obj.id] = obj.payload;
+    _writeChipPayloads(map);
+    obj.payloadId = obj.id;
+    delete obj.payload;
+  }
+  return obj;
+}
 
 // === ВАЛІДНІ ЦІЛІ НАВІГАЦІЇ ===
 const VALID_NAV_TARGETS = ['tasks','notes','habits','finance','health','projects','evening','me','inbox'];
@@ -65,9 +96,9 @@ export const CHIP_JSON_FORMAT = `{"text":"повідомлення","topic":"к�
 // ============================================================
 export function normalizeChips(chips) {
   if (!Array.isArray(chips)) return [];
-  return chips.map(c =>
-    typeof c === 'string' ? { label: c, action: 'chat' } : c
-  );
+  // Phase 3 Шар 6: гарантуємо chip.id (UUID) + виносимо inline payload у map
+  // (nm_chip_payloads). Ідемпотентно — якщо id/payloadId уже є, не змінюємо.
+  return chips.map(_ensureChipIdAndExternalize);
 }
 
 // ============================================================
@@ -192,19 +223,24 @@ export function renderChips(containerEl, chips, tab, options = {}) {
   }
 
   const chipsHTML = normChips.map(c => {
+    const id = c.id || '';
     const label = c.label || '';
-    // 'clarify_save' — новий тип (BqTWF→mUpS8 02.05): локальне виконання save_note/save_moment
-    // через payload без round-trip до AI. Запобігає галюцинаціям типу B-115.
     const action = c.action === 'nav' ? 'nav'
                  : c.action === 'clarify_save' ? 'clarify_save'
                  : c.action === 'health_interview' ? 'health_interview'
                  : c.action === 'complete' ? 'complete'
                  : 'chat';
     const target = c.target || '';
-    const payload = c.payload ? JSON.stringify(c.payload) : '';
-    // escapeHtml не кодує `"` — payload з лапками ламає атрибут. Додаємо &quot; локально.
-    const payloadAttr = escapeHtml(payload).replace(/"/g, '&quot;');
-    return `<div class="owl-chip" data-chip-text="${escapeHtml(label)}" data-chip-action="${action}" data-chip-target="${escapeHtml(target)}" data-chip-payload="${payloadAttr}">${escapeHtml(label)}</div>`;
+    // Phase 3 Шар 6 (04.05): payload у nm_chip_payloads, у DOM тільки id.
+    // Backward-compat: legacy чіпи з inline c.payload (без id) — серіалізуємо
+    // у data-chip-payload щоб handleChipClick міг прочитати під час перехідного
+    // періоду до v10 міграції.
+    let payloadAttr = '';
+    if (c.payload && typeof c.payload === 'object') {
+      const payload = JSON.stringify(c.payload);
+      payloadAttr = escapeHtml(payload).replace(/"/g, '&quot;');
+    }
+    return `<div class="owl-chip" data-chip-id="${escapeHtml(id)}" data-chip-text="${escapeHtml(label)}" data-chip-action="${action}" data-chip-target="${escapeHtml(target)}" data-chip-payload="${payloadAttr}">${escapeHtml(label)}</div>`;
   });
 
   if (options.showSpeak) {
@@ -231,7 +267,16 @@ export function renderChips(containerEl, chips, tab, options = {}) {
     const text = chipEl.dataset.chipText || '';
     const action = chipEl.dataset.chipAction;
     const target = chipEl.dataset.chipTarget;
-    const payloadRaw = chipEl.dataset.chipPayload || '';
+    // Phase 3 Шар 6: пріоритет — payload з nm_chip_payloads по chipId.
+    // Fallback — inline data-chip-payload (legacy/перехідний період).
+    const chipId = chipEl.dataset.chipId || '';
+    let payloadRaw = chipEl.dataset.chipPayload || '';
+    if (chipId) {
+      try {
+        const map = _readChipPayloads();
+        if (map[chipId]) payloadRaw = JSON.stringify(map[chipId]);
+      } catch {}
+    }
 
     // Трекінг: записуємо клік
     trackChipClick(action, text);
