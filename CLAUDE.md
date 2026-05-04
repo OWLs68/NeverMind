@@ -83,7 +83,7 @@
 | «AI галюцинує / створив дубль / не зрозумів» / «промпт нечіткий» / нова tool | `prompt-engineer-auditor` |
 | «Supabase» / «backend» / «синхронізація» / «multi-device» / «офлайн» | `supabase-migration-scout` |
 | «дорого» / «OpenAI bill» / «витрати ростуть» / «кешувати» | `ai-cost-analyst` |
-| перед `/finish` / `/audit` / «перевір документи» / «синхронізуй» | `doc-consistency-checker` |
+| 3+ комітів підряд з src/ змінами / commit `fix(B-XXX)` / новий `localStorage.setItem('nm_*` / новий `export function` у src/ / перед `/finish` / перед `/audit` Pass 4 / тригери «глянь документи / порядок у репо / усе записано» | `doc-consistency-checker` (офіс-наглядач — авто без запиту, тихий) |
 
 **Правило:** коли симптом матчить тригер — Голова викликає агента, потім синтезує. Не чекає `/команди` від Романа.
 
