@@ -1083,10 +1083,18 @@ export function processUniversalAction(parsed, originalText, addMsg) {
 
   if (action === 'delete_task') {
     const tasks = getTasks();
-    const t = tasks.find(x => String(x.id) === String(parsed.task_id));
-    const nameQ = (parsed.title || parsed.query || '').toLowerCase();
-    const target = t || tasks.find(x => x.title.toLowerCase().includes(nameQ.slice(0, 8)));
-    if (!target) { addMsg('agent', 'Не знайшов цю задачу.'); return true; }
+    let target = tasks.find(x => String(x.id) === String(parsed.task_id));
+    if (!target) {
+      const nameQ = (parsed.title || parsed.query || '').toLowerCase().trim();
+      // QDIGl 04.05 SAFETY: пустий nameQ (AI забув title) → .includes('')=true
+      // → видаляли ПЕРШУ активну задачу при будь-якому невідомому task_id.
+      // Це був корінь «видали проект Х» → видалена випадкова задача. Тепер
+      // короткий query (<3 літери) → відмова + повідомлення юзеру.
+      if (nameQ.length >= 3) {
+        target = tasks.find(x => x.title.toLowerCase().includes(nameQ.slice(0, 8)));
+      }
+    }
+    if (!target) { addMsg('agent', 'Не знайшов цю задачу. Уточни назву.'); return true; }
     addToTrash('task', target, null);
     const remaining = tasks.filter(x => x.id !== target.id);
     saveTasks(remaining);

@@ -21,7 +21,7 @@ import { addNoteFromInbox, getNotes, saveNotes } from './notes.js';
 import { getFinance, saveFinance, renderFinance, formatMoney, processFinanceAction,
   createFinCategory, updateFinCategory, deleteFinCategory, mergeFinCategories, addFinSubcategory, findFinCatByName } from './finance.js';
 import { getMoments, saveMoments, generateMomentSummary } from './evening.js';
-import { getProjects, saveProjects, startProjectInboxInterview, createProjectProgrammatic } from './projects.js';
+import { getProjects, saveProjects, startProjectInboxInterview, createProjectProgrammatic, deleteProjectProgrammatic, findProjectByName } from './projects.js';
 import { getRoutine, saveRoutine } from './calendar.js';
 import { handleSurveyAnswer, maybeAskGuideQuestion, saveGuideTopicAnswer } from './onboarding.js';
 import { renderChips } from '../owl/chips.js';
@@ -371,6 +371,7 @@ function _toolCallToAction(name, args) {
     case 'edit_habit': return { action: 'edit_habit', habit_id: args.habit_id, name: args.name, days: args.days, details: args.details, comment: args.comment };
     case 'delete_task': return { action: 'delete_task', task_id: args.task_id };
     case 'delete_habit': return { action: 'delete_habit', habit_id: args.habit_id };
+    case 'delete_project': return { action: 'delete_project', project_id: args.project_id, project_name: args.project_name };
     case 'delete_folder': return { action: 'delete_folder', folder: args.folder };
     case 'move_note': return { action: 'move_note', query: args.query, folder: args.folder };
     case 'reopen_task': return { action: 'reopen_task', task_id: args.task_id };
@@ -597,6 +598,28 @@ ${aiContext}`;
           const newProject = createProjectProgrammatic(action.name || text, action.subtitle || '');
           addInboxChatMsg('agent', t('inbox.proj.created', '✅ Проект "{name}" створено', { name: newProject.name }));
           setTimeout(() => startProjectInboxInterview(newProject.name, newProject.subtitle), 600);
+        } else if (action.action === 'delete_project') {
+          // QDIGl 04.05: tool delete_project. Шукаємо за project_id (точний)
+          // або за project_name (fuzzy >=3 літер). Якщо нема — повідомляємо
+          // юзера БЕЗ підстановки delete_task fallback (фікс root причини
+          // wrong-target з тесту QDIGl).
+          let targetProj = null;
+          if (action.project_id) {
+            targetProj = getProjects().find(p => String(p.id) === String(action.project_id));
+          }
+          if (!targetProj && action.project_name) {
+            targetProj = findProjectByName(action.project_name);
+          }
+          if (!targetProj) {
+            addInboxChatMsg('agent', t('inbox.proj.not_found', 'Не знайшов проект "{name}". Уточни назву.', { name: action.project_name || '?' }));
+          } else {
+            const deleted = deleteProjectProgrammatic(targetProj.id);
+            if (deleted) {
+              addInboxChatMsg('agent', t('inbox.proj.deleted', '🗑️ Проект "{name}" видалено (можна відновити з кошика 7 днів).', { name: deleted.name }));
+            } else {
+              addInboxChatMsg('agent', t('inbox.proj.delete_failed', 'Не вдалося видалити проект "{name}".', { name: targetProj.name }));
+            }
+          }
         } else if (action.action === 'create_event') {
           let endTime = action.end_time || null;
           if (!action.time) endTime = null;

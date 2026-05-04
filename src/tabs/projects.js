@@ -26,6 +26,30 @@ export function saveProjects(arr) { localStorage.setItem('nm_projects', JSON.str
 // Створити проект програмно. Використовується у inbox.js (create_project tool flow)
 // та tool-dispatcher.js (create_project з будь-якого чату). Виносимо щоб не дублювати
 // 18-рядковий schema в кількох місцях.
+// QDIGl 04.05: програмне видалення проекту з кошиком + undo + interview cleanup.
+// Викликається з tool-dispatcher (delete_project tool). Повертає видалений
+// item або null якщо не знайдено. Без addMsg — caller сам пише підтвердження.
+export function deleteProjectProgrammatic(projectId) {
+  const projects = getProjects();
+  const idStr = String(projectId);
+  const item = projects.find(x => String(x.id) === idStr);
+  if (!item) return null;
+  addToTrash('project', item);
+  saveProjects(projects.filter(x => String(x.id) !== idStr));
+  _cleanupProjectInterviewIfMatches(item);
+  showUndoToast();
+  return item;
+}
+
+// Знаходить проект по name (case-insensitive, fuzzy через includes якщо ≥3 літер).
+// Повертає proj або null. Захист від empty-query (як D fix у habits.js delete_task).
+export function findProjectByName(query) {
+  const q = (query || '').toLowerCase().trim();
+  if (q.length < 3) return null;
+  const projects = getProjects();
+  return projects.find(p => (p.name || '').toLowerCase().includes(q.slice(0, 12))) || null;
+}
+
 export function createProjectProgrammatic(name, subtitle = '') {
   const projects = getProjects();
   const newProject = {
