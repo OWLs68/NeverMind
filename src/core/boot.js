@@ -491,7 +491,14 @@ function runMigrations() {
   // QuotaExceededError на iPhone (lesson UvEHE 03.05 повторювався з v7). Тепер:
   // якщо v10 завершено успішно >7 днів тому — видаляємо бекапи разом з timestamp.
   const v10Done = localStorage.getItem('nm_chips_v10_done');
-  const v10DoneTs = +(localStorage.getItem('nm_chips_v10_done_ts') || 0);
+  let v10DoneTs = +(localStorage.getItem('nm_chips_v10_done_ts') || 0);
+  // Phase 9 fallback: legacy юзери що мігрували між Phase 7 (f713667) і
+  // Phase 9 (0e280ff) мають v10_done='1' БЕЗ ts. Запускаємо 7-денний таймер
+  // зараз — інакше backup-ключі лишились би вічно для цього subset.
+  if (v10Done === '1' && v10DoneTs === 0) {
+    v10DoneTs = Date.now();
+    try { localStorage.setItem('nm_chips_v10_done_ts', String(v10DoneTs)); } catch {}
+  }
   if (v10Done === '1' && v10DoneTs > 0 && (Date.now() - v10DoneTs) > 7 * 24 * 60 * 60 * 1000) {
     try {
       ['nm_chat_inbox','nm_chat_tasks','nm_chat_notes','nm_chat_me',
