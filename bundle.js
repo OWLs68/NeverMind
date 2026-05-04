@@ -5895,7 +5895,7 @@ ${lines.join("\n\n")}`;
     const tasks = getTasks();
     const activeTasks = tasks.filter((t2) => t2.status === "active");
     if (phase === "morning" && owlCdExpired("morning_brief_ctx", 3 * 60 * 60 * 1e3)) {
-      const todayDow = now.getDay();
+      const todayDow = (now.getDay() + 6) % 7;
       const _morningLog = getHabitLog()[now.toDateString()] || {};
       const todayHabitsAll = getHabits().filter((h) => h.type !== "quit" && ((h.days || [0, 1, 2, 3, 4]).includes(todayDow) || !!_morningLog[h.id]));
       const briefParts = [];
@@ -5915,7 +5915,7 @@ ${briefParts.join("\n")}
     }
     if ((phase === "evening" || phase === "night") && owlCdExpired("evening_pulse_ctx", 4 * 60 * 60 * 1e3)) {
       const doneTasks = tasks.filter((t2) => t2.status === "done" && t2.updatedAt && Date.now() - t2.updatedAt < 24 * 60 * 60 * 1e3);
-      const todayDow = now.getDay();
+      const todayDow = (now.getDay() + 6) % 7;
       const todayLogAll = getHabitLog()[todayStr] || {};
       const todayHabitsAll = getHabits().filter((h) => h.type !== "quit" && ((h.days || [0, 1, 2, 3, 4]).includes(todayDow) || !!todayLogAll[h.id]));
       const doneH = todayHabitsAll.filter((h) => todayLogAll[h.id]).length;
@@ -5982,11 +5982,12 @@ ${pulseParts.join("\n")}
     const quitHabits = habits.filter((h) => h.type === "quit");
     const log = getHabitLog();
     const todayLog = log[todayStr] || {};
-    const todayHabits = buildHabits.filter((h) => h.days.includes(now.getDay()) || !!todayLog[h.id]);
+    const todayDowMon = (now.getDay() + 6) % 7;
+    const todayHabits = buildHabits.filter((h) => (h.days || [0, 1, 2, 3, 4]).includes(todayDowMon) || !!todayLog[h.id]);
     const doneHabits = todayHabits.filter((h) => todayLog[h.id]);
     const pendingHabits = todayHabits.filter((h) => !todayLog[h.id]);
-    if (todayHabits.length > 0 && pendingHabits.length === 0) {
-      important.push(`[\u0412\u0410\u0416\u041B\u0418\u0412\u041E] \u0412\u0441\u0456 ${todayHabits.length} \u0437\u0432\u0438\u0447\u043E\u043A \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456!`);
+    if (buildHabits.length > 0 && doneHabits.length === buildHabits.length) {
+      important.push(`[\u0412\u0410\u0416\u041B\u0418\u0412\u041E] \u0412\u0441\u0456 ${buildHabits.length} \u0437\u0432\u0438\u0447\u043E\u043A \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456!`);
     }
     if ((phase === "evening" || phase === "night") && pendingHabits.length > 0) {
       const atRisk = pendingHabits.filter((h) => {
@@ -9691,8 +9692,10 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
       if (buildHabits.length === 0) return false;
       const todayKey = (/* @__PURE__ */ new Date()).toDateString();
       const log = getHabitLog();
-      const allDoneToday = buildHabits.every((h) => !!log[todayKey]?.[h.id]);
-      return allDoneToday;
+      const doneCount = buildHabits.filter((h) => !!log[todayKey]?.[h.id]).length;
+      if (isHabitTextNegative && doneCount > 0) return true;
+      if (doneCount === buildHabits.length) return true;
+      return false;
     } catch (e) {
       return false;
     }
@@ -10916,10 +10919,9 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
     const tasksTotal = doneToday + stillActive;
     const tasksDone = doneToday;
     const buildHabits = getHabits().filter((h) => h.type !== "quit");
-    const todaysHabits = buildHabits.filter((h) => (h.days || [0, 1, 2, 3, 4]).includes(todayDow));
     const log = getHabitLog();
-    const habitsDone = todaysHabits.filter((h) => !!log[todayDS]?.[h.id]).length;
-    const habitsTotal = todaysHabits.length;
+    const habitsDone = buildHabits.filter((h) => !!log[todayDS]?.[h.id]).length;
+    const habitsTotal = buildHabits.length;
     const ringSVG = (done, total, color, label) => {
       const r = 38;
       const C = 2 * Math.PI * r;
@@ -13036,9 +13038,8 @@ ${UI_TOOLS_RULES}`;
       const cur = typeof rawVal === "boolean" ? rawVal ? 1 : 0 : rawVal || 0;
       return cur >= target;
     };
-    const todayHabits = habits.filter(
-      (h) => (h.days || [0, 1, 2, 3, 4]).includes(todayDow) || _isDone(h)
-    );
+    const buildHabitsForBar = habits.filter((h) => h.type !== "quit");
+    const todayHabits = buildHabitsForBar;
     const doneTodayCount = todayHabits.filter(_isDone).length;
     const countEl = document.getElementById("habits-today-count");
     const barEl = document.getElementById("habits-today-bar");
@@ -19182,16 +19183,19 @@ ${logLines}
         } catch (e) {
         }
       },
-      // B-117 fix (QDIGl 04.05): додано renderTabBoard щоб сова оновилася
-      // одразу після complete_task/habit. Без цього старе critical-повідомлення
-      // («не виконано звичку») висить у табло поки юзер не перейде на іншу
-      // вкладку і назад. Pruning через isMessageRelevant викине stale msg
-      // у наступному _pickMessageForTab.
+      // B-117 fix (QDIGl 04.05): renderTabBoard для всіх вкладок щоб сова
+      // оновилася одразу після complete_task/habit на БУДЬ-ЯКІЙ вкладці
+      // (раніше тільки 'tasks' → у Notes/Health/Me табло висіло stale).
+      // Pruning через isMessageRelevant викине stale msg у наступному _pickMessageForTab.
+      // renderTabBoard читає з localStorage, не йде в API → дешево для 7 вкладок.
       "nm_tasks": () => {
         if (currentTab === "tasks") try {
           renderTasks();
           updateProdTabCounters();
-          renderTabBoard("tasks");
+        } catch (e) {
+        }
+        try {
+          ["tasks", "notes", "me", "evening", "finance", "health", "projects"].forEach((t2) => renderTabBoard(t2));
         } catch (e) {
         }
       },
@@ -19199,7 +19203,10 @@ ${logLines}
         if (currentTab === "tasks") try {
           renderHabits();
           renderProdHabits();
-          renderTabBoard("tasks");
+        } catch (e) {
+        }
+        try {
+          ["tasks", "notes", "me", "evening", "finance", "health", "projects"].forEach((t2) => renderTabBoard(t2));
         } catch (e) {
         }
       },
@@ -19207,11 +19214,14 @@ ${logLines}
         if (currentTab === "tasks") try {
           renderHabits();
           renderProdHabits();
-          renderTabBoard("tasks");
         } catch (e) {
         }
         if (currentTab === "me") try {
           renderMe();
+        } catch (e) {
+        }
+        try {
+          ["tasks", "notes", "me", "evening", "finance", "health", "projects"].forEach((t2) => renderTabBoard(t2));
         } catch (e) {
         }
       },
