@@ -93,13 +93,16 @@
 24. **Ban-list синонімами** (`70237b7`): жорсткий список замінено на семантичне правило «дія що вимагає встати/рухатись/змінити позу». `(phase || 'unknown')` fallback з правилом «unknown — пиши обережно».
 25. **isDocOnlyPush merge-base fallback** (`70237b7`): той самий B1.5 fix що у getRealCodeDiff.
 
+### Phase 15 (`e596eb8`) — doc-consistency-checker upgrade
+26. **doc-consistency-checker → офіс-наглядач** (`e596eb8`): розширено агента з 7 правил до 12 (старі sync + нові: зміни src/ описані у SESSION_STATE, нові `localStorage.setItem('nm_*` у DATA_SCHEMA, нові `export function` у FILE_STRUCTURE, значимі фікси мають урок у lessons.md, міграційні прапори у DATA_SCHEMA). CLAUDE.md секція Council оновлено: Голова викликає сам за 7 тригерами без запиту Романа (3+ коміти, fix(B-XXX), новий nm_* ключ, новий export, перед /finish, перед /audit Pass 4, тригер-слова). Тихий за конструкцією — read-only, не блокує push, видає звіт з file:section + дією для Голови.
+
 ### Метрики (фінал)
-- Коміти: `1a41385` → `70237b7` = **24 чекпоінт-коміти**
+- Коміти: `1a41385` → `e596eb8` = **25 чекпоінт-комітів**
 - CACHE_NAME: `nm-20260504-0210` → `nm-20260504-1447` (~14 bumps)
 - Build: всі коміти `node --check` чисті, i18n baseline стабільний
 - Гілка: `claude/start-session-RGisY`
 - Council total: 8+5+5+4 = ~22 агентські запуски (~150K токенів)
-- Ризиків Critic закрито: всі 7 з фінального аудиту (4 critical + 3 medium)
+- Ризиків Critic закрито: всі 7 з фінального аудиту (4 critical + 3 medium) + 12 з пост-аудиту
 - Нові файли: `src/owl/chip-payload-store.js`
 
 ---
