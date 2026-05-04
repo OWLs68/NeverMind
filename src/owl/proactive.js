@@ -81,7 +81,12 @@ export function getTabBoardContext(tab) {
     const today = new Date().toDateString();
     const todayStr = new Date().toISOString().slice(0, 10);
     const todayDow = (new Date().getDay() + 6) % 7;
-    const todayH = buildHabits.filter(h => (h.days || [0,1,2,3,4]).includes(todayDow));
+    // QDIGl 04.05: «сьогодні» = scheduled на DOW АБО виконано вручну —
+    // інакше AI видає «2 з 3» хоч у юзера 4 звички (одна не у розкладі
+    // понеділка). Збігається зі шкалою у renderProdHabits.
+    const todayH = buildHabits.filter(h =>
+      (h.days || [0,1,2,3,4]).includes(todayDow) || !!log[today]?.[h.id]
+    );
     const doneToday = todayH.filter(h => !!log[today]?.[h.id]).length;
     if (buildHabits.length > 0) {
       const streaks = buildHabits.map(h => ({ id: h.id, name: h.name, streak: getHabitStreak(h.id), pct: getHabitPct(h.id) }));
@@ -208,7 +213,8 @@ function _getInboxBoardContext() {
   // === РАНКОВИЙ БРИФ ===
   if (phase === 'morning' && owlCdExpired('morning_brief_ctx', 3 * 60 * 60 * 1000)) {
     const todayDow = now.getDay();
-    const todayHabitsAll = getHabits().filter(h => h.type !== 'quit' && (h.days || [0,1,2,3,4]).includes(todayDow));
+    const _morningLog = getHabitLog()[now.toDateString()] || {};
+    const todayHabitsAll = getHabits().filter(h => h.type !== 'quit' && ((h.days || [0,1,2,3,4]).includes(todayDow) || !!_morningLog[h.id]));
     const briefParts = [];
     if (activeTasks.length > 0) briefParts.push(`Задачі на сьогодні: ${activeTasks.slice(0, 5).map(t => '"' + t.title + '" [task_' + t.id + ']').join(', ')}`);
     if (todayHabitsAll.length > 0) briefParts.push(`Звички: ${todayHabitsAll.map(h => h.name + ' [habit_' + h.id + ']').join(', ')}`);
@@ -224,8 +230,8 @@ function _getInboxBoardContext() {
   if ((phase === 'evening' || phase === 'night') && owlCdExpired('evening_pulse_ctx', 4 * 60 * 60 * 1000)) {
     const doneTasks = tasks.filter(t => t.status === 'done' && t.updatedAt && Date.now() - t.updatedAt < 24*60*60*1000);
     const todayDow = now.getDay();
-    const todayHabitsAll = getHabits().filter(h => h.type !== 'quit' && (h.days || [0,1,2,3,4]).includes(todayDow));
     const todayLogAll = getHabitLog()[todayStr] || {};
+    const todayHabitsAll = getHabits().filter(h => h.type !== 'quit' && ((h.days || [0,1,2,3,4]).includes(todayDow) || !!todayLogAll[h.id]));
     const doneH = todayHabitsAll.filter(h => todayLogAll[h.id]).length;
     const moments = JSON.parse(localStorage.getItem('nm_moments') || '[]');
     const todayMoments = moments.filter(m => new Date(m.ts).toDateString() === todayStr);
@@ -306,7 +312,7 @@ function _getInboxBoardContext() {
   const quitHabits = habits.filter(h => h.type === 'quit');
   const log = getHabitLog();
   const todayLog = log[todayStr] || {};
-  const todayHabits = buildHabits.filter(h => h.days.includes(now.getDay()));
+  const todayHabits = buildHabits.filter(h => h.days.includes(now.getDay()) || !!todayLog[h.id]);
   const doneHabits = todayHabits.filter(h => todayLog[h.id]);
   const pendingHabits = todayHabits.filter(h => !todayLog[h.id]);
 
