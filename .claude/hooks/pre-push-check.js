@@ -139,14 +139,26 @@ function getRealCodeDiff(repoRoot) {
     // B1.5 fix (RGisY 04.05): порівнюємо з upstream бранчем (@{u}), а не з
     // origin/main. Інакше для feature-гілок з 10+ комітами SMOKE_DIFF_TRIGGERS
     // ловлять зміни ВСІХ комітів феча-гілки → false positive у кожному push'і.
-    // Треба бачити ТІЛЬКИ нові коміти що зараз пушаться.
+    // Phase 11b (RGisY 04.05) — Регресія 5 fix: перший push гілки робив
+    // fallback на HEAD~1..HEAD → пропускав N-1 коміти якщо feature-branch
+    // має 5 комітів. Тепер fallback — merge-base з origin/main..HEAD: це
+    // ВСІ коміти що відрізняються від main, тобто реальний скоп нової роботи.
     let diffRange = null;
     try {
       execSync(`git -C "${repoRoot}" rev-parse @{u}`, { stdio: 'pipe' });
       diffRange = '@{u}..HEAD';
     } catch {
-      // Першoyzпуш гілки — upstream немає, дивимось останній коміт як fallback
-      diffRange = 'HEAD~1..HEAD';
+      // Перший push гілки — upstream немає. merge-base з origin/main =
+      // спільний предок → діапазон коміти ПІСЛЯ розгалуження = реальна нова робота.
+      try {
+        const mergeBase = execSync(`git -C "${repoRoot}" merge-base HEAD origin/main`, {
+          encoding: 'utf8', stdio: ['pipe', 'pipe', 'ignore']
+        }).trim();
+        if (mergeBase) diffRange = `${mergeBase}..HEAD`;
+        else diffRange = 'HEAD~1..HEAD';
+      } catch {
+        diffRange = 'HEAD~1..HEAD';
+      }
     }
     return execSync(
       `git -C "${repoRoot}" diff ${diffRange} -- src/ index.html sw.js`,

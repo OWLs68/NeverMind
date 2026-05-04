@@ -115,26 +115,33 @@ function _pickMessageForTab(tab) {
   // Pruning Engine (Фаза 2 UVKL1): викидаємо повідомлення з посиланнями на
   // неактивні сутності перед вибором. Якщо найсвіжіше критичне посилається
   // на вже-закриту задачу — воно зникає, наступне за пріоритетом виходить наперед.
-  const all = getUnifiedBoard().filter(isMessageRelevant);
-  if (all.length === 0) return null;
-  // 1. Найсвіжіше критичне пробиває фільтр — Jarvis-пуш.
-  // B-117 fix (RGisY 04.05): TTL 2 год для critical. Раніше брифінг 14 годин
-  // тому ще був priority='critical' і завжди вибирався → табло показувало
-  // застарілу інфу. Якщо critical >2 год — auto-downgrade у storage щоб не
-  // повторювалось + tabMsg fallback візьме своє повідомлення.
+  // Pruning Engine (Фаза 2 UVKL1) + Phase 11b (RGisY 04.05) — Регресія 3 fix:
+  // ЛОКАЛЬНО фільтруємо stale critical (>2 год) ДО будь-якого вибору. Раніше
+  // фікс B-117 v1 викликав downgradeBriefingPriority() але читав all[0] зі
+  // старим priority у локальній змінній → fallback повертав stale брифінг
+  // на іншому табі. Тепер: фільтр first → масив без stale critical →
+  // fallback all[0] вже свіжий. Auto-downgrade для майбутніх викликів.
   const CRITICAL_TTL = 2 * 60 * 60 * 1000;
-  const top = all[0];
-  const topAge = Date.now() - (top.ts || top.id || 0);
-  if (top.priority === 'critical' && topAge < CRITICAL_TTL) return top;
-  if (top.priority === 'critical' && topAge >= CRITICAL_TTL) {
-    try { downgradeBriefingPriority(); } catch(e) {}
-    // Після downgrade — продовжуємо до tabMsg fallback (не повертаємо stale critical)
+  const now = Date.now();
+  let raw = getUnifiedBoard().filter(isMessageRelevant);
+  let didDowngrade = false;
+  raw.forEach(m => {
+    if (m.priority === 'critical' && (now - (m.ts || m.id || 0)) >= CRITICAL_TTL) {
+      m.priority = 'normal'; // локальна правка для поточного виклику
+      didDowngrade = true;
+    }
+  });
+  if (didDowngrade) {
+    try { downgradeBriefingPriority(); } catch(e) { console.warn('[board] downgradeBriefingPriority failed', e); }
   }
+  if (raw.length === 0) return null;
+  // 1. Найсвіжіше критичне (свіже <2 год) пробиває фільтр — Jarvis-пуш.
+  if (raw[0].priority === 'critical') return raw[0];
   // 2. Найсвіжіше повідомлення для цієї вкладки
-  const tabMsg = all.find(m => m.forTab === tab);
+  const tabMsg = raw.find(m => m.forTab === tab);
   if (tabMsg) return tabMsg;
   // 3. Немає для вкладки — покажемо глобальне (краще щось ніж дефолт)
-  return all[0];
+  return raw[0];
 }
 
 // Рендер табло з призмою вкладки. При переключенні юзер бачить або своє повідомлення
