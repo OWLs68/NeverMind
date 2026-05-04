@@ -247,8 +247,11 @@ process.stdin.on('end', () => {
     const haystack = readRecentAssistantTexts(transcriptPath, N_RECENT_MESSAGES);
     if (!haystack || haystack.length < 30) process.exit(0);
 
-    // Універсальний bypass
-    if (UNIVERSAL_BYPASS.test(haystack)) process.exit(0);
+    // Універсальний bypass — обчислюємо ФЛАГ, але НЕ виходимо одразу.
+    // Якщо bypass використано АЛЕ жодного check не активувалось — попереджаємо
+    // про непотрібний ритуал (антипаттерн «pre-push: ok як звичка», знайдено
+    // RGisY 04.05 — Claude писав bypass у 12 з 12 комітів коли хук не блокував).
+    const bypassed = UNIVERSAL_BYPASS.test(haystack);
 
     const repoRoot = path.join(__dirname, '..', '..');
     const docOnly = isDocOnlyPush(repoRoot);
@@ -305,13 +308,20 @@ process.stdin.on('end', () => {
       );
     }
 
-    if (issues.length > 0) {
+    // Логіка bypass + issues:
+    // 1. issues є + bypass є → bypass виправдано, push пройде (exit 0)
+    // 2. issues є + bypass немає → блокуємо (exit 2)
+    // 3. issues немає + bypass є → попереджаємо про непотрібний bypass (exit 0)
+    // 4. issues немає + bypass немає → норма (exit 0)
+    if (issues.length > 0 && !bypassed) {
       console.error('\n=== ⚠️ PRE-PUSH ПЕРЕВІРКА (.claude/hooks/pre-push-check.js) ===\n');
       console.error(issues.join('\n\n'));
       console.error('\n=== Виправ і повтори push. ===\n');
       process.exit(2);
     }
-
+    if (issues.length === 0 && bypassed) {
+      console.error('\n⚠️  PRE-PUSH: фразу «pre-push: ok» написано, але хук НІЧОГО не блокував би. Bypass-ритуал замість реакції на проблему — антипаттерн (RGisY 04.05). На майбутнє: пиши тільки коли хук фактично заблокував і ти перевірив що це false positive.\n');
+    }
     process.exit(0);
   } catch (e) {
     // Не блокуємо push при помилках самого хука
