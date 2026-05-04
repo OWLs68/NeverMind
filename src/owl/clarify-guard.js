@@ -15,6 +15,7 @@
 
 import { t } from '../core/utils.js';
 import { dispatchChatToolCalls } from '../ai/tool-dispatcher.js';
+import { generateUUID } from '../core/uuid.js';
 
 // 20 типових українських дієслів минулого часу + ший/жив/ела/ала закінчення.
 // Не лінгвістично-точний морфологічний аналізатор — список покриває ~90%.
@@ -134,7 +135,10 @@ export function shouldClarify(text, toolCalls, tab) {
     },
   ];
 
-  return { question, chips };
+  // Phase 3 Шар 6 (04.05): додаємо стабільний UUID одразу при генерації.
+  // Без цього normalizeChips генерує новий UUID при кожному рендері → DOM-id
+  // нестабільний між reload, tracking analytics ламається.
+  return { question, chips: chips.map(c => ({ ...c, id: generateUUID() })) };
 }
 
 // Шар 2: збирає чіпи з реальних лікарів у картках Здоров'я. Читає
@@ -175,7 +179,7 @@ function _buildDoctorChips(text) {
     target: 'save_moment',
     payload: { text },
   });
-  return { question, chips };
+  return { question, chips: chips.map(c => ({ ...c, id: generateUUID() })) };
 }
 
 // Локальне виконання вибору юзера — без round-trip до AI.
