@@ -5789,7 +5789,9 @@ ${lines.join("\n\n")}`;
       const today = (/* @__PURE__ */ new Date()).toDateString();
       const todayStr = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
       const todayDow = ((/* @__PURE__ */ new Date()).getDay() + 6) % 7;
-      const todayH = buildHabits.filter((h) => (h.days || [0, 1, 2, 3, 4]).includes(todayDow));
+      const todayH = buildHabits.filter(
+        (h) => (h.days || [0, 1, 2, 3, 4]).includes(todayDow) || !!log[today]?.[h.id]
+      );
       const doneToday = todayH.filter((h) => !!log[today]?.[h.id]).length;
       if (buildHabits.length > 0) {
         const streaks = buildHabits.map((h) => ({ id: h.id, name: h.name, streak: getHabitStreak(h.id), pct: getHabitPct(h.id) }));
@@ -5894,7 +5896,8 @@ ${lines.join("\n\n")}`;
     const activeTasks = tasks.filter((t2) => t2.status === "active");
     if (phase === "morning" && owlCdExpired("morning_brief_ctx", 3 * 60 * 60 * 1e3)) {
       const todayDow = now.getDay();
-      const todayHabitsAll = getHabits().filter((h) => h.type !== "quit" && (h.days || [0, 1, 2, 3, 4]).includes(todayDow));
+      const _morningLog = getHabitLog()[now.toDateString()] || {};
+      const todayHabitsAll = getHabits().filter((h) => h.type !== "quit" && ((h.days || [0, 1, 2, 3, 4]).includes(todayDow) || !!_morningLog[h.id]));
       const briefParts = [];
       if (activeTasks.length > 0) briefParts.push(`\u0417\u0430\u0434\u0430\u0447\u0456 \u043D\u0430 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456: ${activeTasks.slice(0, 5).map((t2) => '"' + t2.title + '" [task_' + t2.id + "]").join(", ")}`);
       if (todayHabitsAll.length > 0) briefParts.push(`\u0417\u0432\u0438\u0447\u043A\u0438: ${todayHabitsAll.map((h) => h.name + " [habit_" + h.id + "]").join(", ")}`);
@@ -5913,8 +5916,8 @@ ${briefParts.join("\n")}
     if ((phase === "evening" || phase === "night") && owlCdExpired("evening_pulse_ctx", 4 * 60 * 60 * 1e3)) {
       const doneTasks = tasks.filter((t2) => t2.status === "done" && t2.updatedAt && Date.now() - t2.updatedAt < 24 * 60 * 60 * 1e3);
       const todayDow = now.getDay();
-      const todayHabitsAll = getHabits().filter((h) => h.type !== "quit" && (h.days || [0, 1, 2, 3, 4]).includes(todayDow));
       const todayLogAll = getHabitLog()[todayStr] || {};
+      const todayHabitsAll = getHabits().filter((h) => h.type !== "quit" && ((h.days || [0, 1, 2, 3, 4]).includes(todayDow) || !!todayLogAll[h.id]));
       const doneH = todayHabitsAll.filter((h) => todayLogAll[h.id]).length;
       const moments = JSON.parse(localStorage.getItem("nm_moments") || "[]");
       const todayMoments = moments.filter((m) => new Date(m.ts).toDateString() === todayStr);
@@ -5979,7 +5982,7 @@ ${pulseParts.join("\n")}
     const quitHabits = habits.filter((h) => h.type === "quit");
     const log = getHabitLog();
     const todayLog = log[todayStr] || {};
-    const todayHabits = buildHabits.filter((h) => h.days.includes(now.getDay()));
+    const todayHabits = buildHabits.filter((h) => h.days.includes(now.getDay()) || !!todayLog[h.id]);
     const doneHabits = todayHabits.filter((h) => todayLog[h.id]);
     const pendingHabits = todayHabits.filter((h) => !todayLog[h.id]);
     if (todayHabits.length > 0 && pendingHabits.length === 0) {
