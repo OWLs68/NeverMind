@@ -136,16 +136,18 @@ function isDocOnlyPush(repoRoot) {
 // а не слова у тексті асистента (false positive ×12 у UvEHE+rC4TO+NpBmN).
 function getRealCodeDiff(repoRoot) {
   try {
+    // B1.5 fix (RGisY 04.05): порівнюємо з upstream бранчем (@{u}), а не з
+    // origin/main. Інакше для feature-гілок з 10+ комітами SMOKE_DIFF_TRIGGERS
+    // ловлять зміни ВСІХ комітів феча-гілки → false positive у кожному push'і.
+    // Треба бачити ТІЛЬКИ нові коміти що зараз пушаться.
     let diffRange = null;
-    for (const candidate of ['origin/main...HEAD', '@{u}...HEAD', 'HEAD~1...HEAD']) {
-      try {
-        const left = candidate.split('...')[0];
-        execSync(`git -C "${repoRoot}" rev-parse "${left}"`, { stdio: 'pipe' });
-        diffRange = candidate;
-        break;
-      } catch {}
+    try {
+      execSync(`git -C "${repoRoot}" rev-parse @{u}`, { stdio: 'pipe' });
+      diffRange = '@{u}..HEAD';
+    } catch {
+      // Першoyzпуш гілки — upstream немає, дивимось останній коміт як fallback
+      diffRange = 'HEAD~1..HEAD';
     }
-    if (!diffRange) return '';
     return execSync(
       `git -C "${repoRoot}" diff ${diffRange} -- src/ index.html sw.js`,
       { encoding: 'utf8', stdio: ['pipe', 'pipe', 'ignore'], maxBuffer: 10 * 1024 * 1024 }
