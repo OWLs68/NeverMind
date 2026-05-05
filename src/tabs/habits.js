@@ -811,10 +811,10 @@ export function renderProdHabits() {
 
 // Рівень стійкості на основі кількості зривів за 30 днів
 function _quitResilienceLamp(relapses30) {
-  if (relapses30 === 0) return { color: '#16a34a', glow: 'rgba(22,163,74,0.35)', label: 'Стійкий' };
-  if (relapses30 <= 2)  return { color: '#ca8a04', glow: 'rgba(202,138,4,0.35)',  label: 'Тримається' };
-  if (relapses30 <= 5)  return { color: '#ea580c', glow: 'rgba(234,88,12,0.35)',  label: 'Відновлюється' };
-  return                       { color: '#dc2626', glow: 'rgba(220,38,38,0.4)',   label: 'Небезпека!' };
+  if (relapses30 === 0) return { color: '#16a34a', glow: 'rgba(22,163,74,0.35)', label: t('habits.quit.lamp.steady', 'Стійкий') };
+  if (relapses30 <= 2)  return { color: '#ca8a04', glow: 'rgba(202,138,4,0.35)',  label: t('habits.quit.lamp.holding', 'Тримається') };
+  if (relapses30 <= 5)  return { color: '#ea580c', glow: 'rgba(234,88,12,0.35)',  label: t('habits.quit.lamp.recovering', 'Відновлюється') };
+  return                       { color: '#dc2626', glow: 'rgba(220,38,38,0.4)',   label: t('habits.quit.lamp.danger', 'Небезпека!') };
 }
 
 // Тренд зривів: порівнюємо останні 14 днів з попередніми 14
@@ -825,9 +825,9 @@ function _quitTrend(relapses) {
   const arr = relapses || [];
   const recent = arr.filter(d => d >= d14).length;
   const prev   = arr.filter(d => d >= d28 && d < d14).length;
-  if (recent < prev)  return { arrow: '↓', color: '#16a34a', text: 'зривів менше' };
-  if (recent > prev)  return { arrow: '↑', color: '#dc2626', text: 'зривів більше' };
-  return                     { arrow: '→', color: 'rgba(30,16,64,0.4)', text: 'без змін' };
+  if (recent < prev)  return { arrow: '↓', color: '#16a34a', text: t('habits.quit.trend.less', 'зривів менше') };
+  if (recent > prev)  return { arrow: '↑', color: '#dc2626', text: t('habits.quit.trend.more', 'зривів більше') };
+  return                     { arrow: '→', color: 'rgba(30,16,64,0.4)', text: t('habits.quit.trend.same', 'без змін') };
 }
 
 function _renderQuitHabitCard(h) {
@@ -878,15 +878,15 @@ function _renderQuitHabitCard(h) {
     + '<div style="display:flex;align-items:baseline;gap:10px;margin-bottom:8px">'
       + '<div>'
         + '<span style="font-size:26px;font-weight:800;color:#1e1040;line-height:1">' + freedomDays + '</span>'
-        + '<span style="font-size:12px;font-weight:600;color:rgba(30,16,64,0.5);margin-left:4px">вільних ' + _dayWord(freedomDays) + '</span>'
+        + '<span style="font-size:12px;font-weight:600;color:rgba(30,16,64,0.5);margin-left:4px">' + t('habits.quit.label.free_days', 'вільних {word}', { word: _dayWord(freedomDays) }) + '</span>'
       + '</div>'
       + (streak > 0
         ? '<div style="font-size:11px;font-weight:600;color:' + streakColor + ';margin-left:auto">'
-          + '🔥 серія ' + streak + ' ' + _dayWord(streak)
-          + (longest > streak ? ' · рекорд ' + longest : '')
+          + t('habits.quit.label.streak', '🔥 серія {n} {word}', { n: streak, word: _dayWord(streak) })
+          + (longest > streak ? t('habits.quit.label.record_inline', ' · рекорд {n}', { n: longest }) : '')
           + '</div>'
         : (longest > 0
-          ? '<div style="font-size:11px;font-weight:500;color:rgba(30,16,64,0.35);margin-left:auto">рекорд ' + longest + ' ' + _dayWord(longest) + '</div>'
+          ? '<div style="font-size:11px;font-weight:500;color:rgba(30,16,64,0.35);margin-left:auto">' + t('habits.quit.label.record', 'рекорд {n} {word}', { n: longest, word: _dayWord(longest) }) + '</div>'
           : ''))
     + '</div>'
 
@@ -904,7 +904,7 @@ function _renderQuitHabitCard(h) {
 function confirmQuitRelapse(habitId) {
   const s = getQuitStatus(habitId);
   const fd = s.freedomDays || 0;
-  const fdText = fd > 0 ? '\n' + fd + ' вільних ' + _dayWord(fd) + ' залишаться твоїми.' : '';
+  const fdText = fd > 0 ? '\n' + t('habits.quit.confirm.kept', '{n} вільних {word} залишаться твоїми.', { n: fd, word: _dayWord(fd) }) : '';
   if (window.confirm(t('habits.quit.confirm.relapse', 'Важкий день? Відмітити зрив?') + fdText)) {
     relapseQuitHabit(habitId);
   }
