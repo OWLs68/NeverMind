@@ -902,7 +902,7 @@
   function _renderRoutineTimeline() {
     const el = document.getElementById("routine-timeline");
     if (!el) return;
-    const dateISO = _nearestDateForDayKey(_routineDay);
+    const dateISO = _lastDateForDayKey(_routineDay);
     const blocks = _routineDay === "default" ? getRoutineForDay("default").map((b, idx) => ({ time: b.time, activity: b.activity, kind: "routine", sourceIdx: idx, isPast: false })) : getCombinedTimelineForDate(dateISO);
     if (blocks.length === 0) {
       el.innerHTML = `<div style="text-align:center;padding:32px 0;color:rgba(30,16,64,0.3);font-size:14px">
