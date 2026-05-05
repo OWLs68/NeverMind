@@ -15662,7 +15662,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
     ${slide.body}
   `;
     const nextBtn = document.getElementById("slides-next-btn");
-    nextBtn.textContent = slide.isLast ? "\u041F\u043E\u0447\u0430\u0442\u0438 \u2192" : "\u0414\u0430\u043B\u0456 \u2192";
+    nextBtn.textContent = slide.isLast ? t("onb.btn.start", "\u041F\u043E\u0447\u0430\u0442\u0438 \u2192") : t("onb.btn.next", "\u0414\u0430\u043B\u0456 \u2192");
     nextBtn.style.background = slide.color;
     const skipBtn = document.getElementById("slides-skip-btn");
     skipBtn.textContent = slide.isLast ? "" : "\u041F\u0440\u043E\u043F\u0443\u0441\u0442\u0438\u0442\u0438";
@@ -16108,9 +16108,9 @@ ${userText}
       UPDATE_VERSION = "v065";
       UPDATE_SLIDES = [
         {
-          tag: "\u{1F941} \u041D\u043E\u0432\u0438\u0439 \u0431\u0430\u0440\u0430\u0431\u0430\u043D",
+          tag: t("onb.upd.s1_tag", "\u{1F941} \u041D\u043E\u0432\u0438\u0439 \u0431\u0430\u0440\u0430\u0431\u0430\u043D"),
           emoji: "\u{1F941}",
-          title: "\u041D\u0430\u0432\u0456\u0433\u0430\u0446\u0456\u044F \u043F\u0435\u0440\u0435\u043F\u0438\u0441\u0430\u043D\u0430 \u0437 \u043D\u0443\u043B\u044F",
+          title: t("onb.upd.s1_title", "\u041D\u0430\u0432\u0456\u0433\u0430\u0446\u0456\u044F \u043F\u0435\u0440\u0435\u043F\u0438\u0441\u0430\u043D\u0430 \u0437 \u043D\u0443\u043B\u044F"),
           body: `<div class="ob-list">
   <div class="ob-item">
     <div class="ob-icon-lg">\u{1F446}</div>
@@ -16130,7 +16130,7 @@ ${userText}
         {
           tag: "\u{1F989} OWL Board",
           emoji: "\u{1F989}",
-          title: "OWL \u0437\u0430\u0432\u0436\u0434\u0438 \u043F\u043E\u0440\u0443\u0447",
+          title: t("onb.upd.s2_title", "OWL \u0437\u0430\u0432\u0436\u0434\u0438 \u043F\u043E\u0440\u0443\u0447"),
           body: `<div class="ob-list">
   <div class="ob-item">
     <div class="ob-icon-lg">\u{1F4CB}</div>
@@ -16148,9 +16148,9 @@ ${userText}
           color: "linear-gradient(135deg,#fef9c3,#f59e0b)"
         },
         {
-          tag: "\u{1F4AC} \u041D\u043E\u0432\u0438\u0439 \u0447\u0430\u0442",
+          tag: t("onb.upd.s3_tag", "\u{1F4AC} \u041D\u043E\u0432\u0438\u0439 \u0447\u0430\u0442"),
           emoji: "\u{1F4AC}",
-          title: "3 \u0441\u0442\u0430\u043D\u0438 \u0447\u0430\u0442\u0443",
+          title: t("onb.upd.s3_title", "3 \u0441\u0442\u0430\u043D\u0438 \u0447\u0430\u0442\u0443"),
           body: `<div class="ob-list">
   <div class="ob-item">
     <div class="ob-icon-lg">\u2B07\uFE0F</div>
@@ -16168,9 +16168,9 @@ ${userText}
           color: "linear-gradient(135deg,#d1fae5,#16a34a)"
         },
         {
-          tag: "\u{1F195} \u041D\u043E\u0432\u0456 \u0432\u043A\u043B\u0430\u0434\u043A\u0438",
+          tag: t("onb.upd.s4_tag", "\u{1F195} \u041D\u043E\u0432\u0456 \u0432\u043A\u043B\u0430\u0434\u043A\u0438"),
           emoji: "\u{1F195}",
-          title: "\u0412\u0435\u0447\u0456\u0440 \xB7 \u042F \xB7 \u0417\u0434\u043E\u0440\u043E\u0432\u02BC\u044F \xB7 \u041F\u0440\u043E\u0435\u043A\u0442\u0438",
+          title: t("onb.upd.s4_title", "\u0412\u0435\u0447\u0456\u0440 \xB7 \u042F \xB7 \u0417\u0434\u043E\u0440\u043E\u0432\u02BC\u044F \xB7 \u041F\u0440\u043E\u0435\u043A\u0442\u0438"),
           body: `<div class="ob-list">
   <div class="ob-item">
     <div class="ob-icon-lg">\u{1F319}</div>
@@ -16192,9 +16192,9 @@ ${userText}
           color: "linear-gradient(135deg,#fce7f3,#db2777)"
         },
         {
-          tag: "\u{1F527} 25+ \u0444\u0456\u043A\u0441\u0456\u0432",
+          tag: t("onb.upd.s5_tag", "\u{1F527} 25+ \u0444\u0456\u043A\u0441\u0456\u0432"),
           emoji: "\u{1F527}",
-          title: "\u0411\u0456\u043B\u044C\u0448\u0435 \u0432\u0438\u043F\u0440\u0430\u0432\u043B\u0435\u043D\u044C \u043D\u0456\u0436 \u0431\u0443\u0434\u044C-\u043A\u043E\u043B\u0438",
+          title: t("onb.upd.s5_title", "\u0411\u0456\u043B\u044C\u0448\u0435 \u0432\u0438\u043F\u0440\u0430\u0432\u043B\u0435\u043D\u044C \u043D\u0456\u0436 \u0431\u0443\u0434\u044C-\u043A\u043E\u043B\u0438"),
           body: `<div class="ob-list">
   <div class="ob-item">
     <div class="ob-icon-lg">\u{1F522}</div>
@@ -16215,17 +16215,17 @@ ${userText}
       ];
       SLIDES = [
         {
-          tag: "\u0429\u043E \u0442\u0430\u043A\u0435 NeverMind",
+          tag: t("onb.tour.s1_tag", "\u0429\u043E \u0442\u0430\u043A\u0435 NeverMind"),
           emoji: "\u{1F9E0}",
-          title: "\u041E\u0434\u0438\u043D \u043F\u043E\u0442\u0456\u043A \u0434\u043B\u044F \u0432\u0441\u044C\u043E\u0433\u043E",
+          title: t("onb.tour.s1_title", "\u041E\u0434\u0438\u043D \u043F\u043E\u0442\u0456\u043A \u0434\u043B\u044F \u0432\u0441\u044C\u043E\u0433\u043E"),
           body: `<p class="ob-desc" style="margin-bottom:12px">\u0414\u0443\u043C\u043A\u0438 \u0437\u043D\u0438\u043A\u0430\u044E\u0442\u044C. \u0417\u0430\u043F\u0438\u0441\u0438 \u0433\u0443\u0431\u043B\u044F\u0442\u044C\u0441\u044F \u043F\u043E \u0440\u0456\u0437\u043D\u0438\u0445 \u0437\u0430\u0441\u0442\u043E\u0441\u0443\u043D\u043A\u0430\u0445. \u041D\u0456\u0447\u043E\u0433\u043E \u043D\u0435 \u0432\u0438\u043A\u043E\u043D\u0443\u0454\u0442\u044C\u0441\u044F \u0431\u043E \u043D\u0435\u043C\u0430\u0454 \u0441\u0438\u0441\u0442\u0435\u043C\u0438.</p>
 <p class="ob-desc">NeverMind \u2014 \u043E\u0434\u0438\u043D \u0440\u044F\u0434\u043E\u043A \u043A\u0443\u0434\u0438 \u0441\u043A\u0438\u0434\u0430\u0454\u0448 \u0432\u0441\u0435 \u0449\u043E \u0432 \u0433\u043E\u043B\u043E\u0432\u0456. OWL \u0441\u0430\u043C \u0440\u043E\u0437\u0431\u0435\u0440\u0435\u0442\u044C\u0441\u044F.</p>`,
           color: "linear-gradient(135deg,#f2d978,#f97316)"
         },
         {
-          tag: "Inbox",
+          tag: t("onb.tour.s2_tag", "Inbox"),
           emoji: "\u{1F4E5}",
-          title: "\u041F\u0438\u0448\u0438 \u2014 OWL \u0440\u043E\u0437\u0431\u0438\u0440\u0430\u0454",
+          title: t("onb.tour.s2_title", "\u041F\u0438\u0448\u0438 \u2014 OWL \u0440\u043E\u0437\u0431\u0438\u0440\u0430\u0454"),
           body: `<div class="ob-list">
   <div class="ob-example">"\u043A\u0443\u043F\u0438\u0442\u0438 \u0445\u043B\u0456\u0431" \u2192 <b>\u0437\u0430\u0434\u0430\u0447\u0430</b></div>
   <div class="ob-example">"\u0431\u0456\u0433\u0430\u0442\u0438 \u0449\u043E\u0440\u0430\u043D\u043A\u0443" \u2192 <b>\u0437\u0432\u0438\u0447\u043A\u0430</b></div>
@@ -16235,9 +16235,9 @@ ${userText}
           color: "linear-gradient(135deg,#f2d978,#f97316)"
         },
         {
-          tag: "\u041F\u0440\u043E\u0434\u0443\u043A\u0442\u0438\u0432\u043D\u0456\u0441\u0442\u044C",
+          tag: t("onb.tour.s3_tag", "\u041F\u0440\u043E\u0434\u0443\u043A\u0442\u0438\u0432\u043D\u0456\u0441\u0442\u044C"),
           emoji: "\u26A1",
-          title: "\u0417\u0430\u0434\u0430\u0447\u0456 \u0456 \u0437\u0432\u0438\u0447\u043A\u0438",
+          title: t("onb.tour.s3_title", "\u0417\u0430\u0434\u0430\u0447\u0456 \u0456 \u0437\u0432\u0438\u0447\u043A\u0438"),
           body: `<div class="ob-list">
   <div class="ob-item">
     <div class="ob-icon">\u2705</div>
@@ -16255,9 +16255,9 @@ ${userText}
           color: "linear-gradient(135deg,#fdb87a,#ea580c)"
         },
         {
-          tag: "\u0412\u0435\u0447\u0456\u0440 \u0456 \u042F",
+          tag: t("onb.tour.s4_tag", "\u0412\u0435\u0447\u0456\u0440 \u0456 \u042F"),
           emoji: "\u{1F319}",
-          title: "\u0417\u0430\u043A\u0440\u0438\u0442\u0442\u044F \u0434\u043D\u044F \u0456 \u0434\u0437\u0435\u0440\u043A\u0430\u043B\u043E",
+          title: t("onb.tour.s4_title", "\u0417\u0430\u043A\u0440\u0438\u0442\u0442\u044F \u0434\u043D\u044F \u0456 \u0434\u0437\u0435\u0440\u043A\u0430\u043B\u043E"),
           body: `<div class="ob-list">
   <div class="ob-item">
     <div class="ob-icon">\u{1F319}</div>
@@ -16275,9 +16275,9 @@ ${userText}
           color: "linear-gradient(135deg,#1e3350,#3a5a80)"
         },
         {
-          tag: "\u041D\u043E\u0432\u0456 \u0432\u043A\u043B\u0430\u0434\u043A\u0438",
+          tag: t("onb.tour.s5_tag", "\u041D\u043E\u0432\u0456 \u0432\u043A\u043B\u0430\u0434\u043A\u0438"),
           emoji: "\u{1F195}",
-          title: "\u0417\u0434\u043E\u0440\u043E\u0432'\u044F \u0456 \u041F\u0440\u043E\u0435\u043A\u0442\u0438",
+          title: t("onb.tour.s5_title", "\u0417\u0434\u043E\u0440\u043E\u0432'\u044F \u0456 \u041F\u0440\u043E\u0435\u043A\u0442\u0438"),
           body: `<div class="ob-list">
   <div class="ob-item">
     <div class="ob-icon">\u{1FAC0}</div>
