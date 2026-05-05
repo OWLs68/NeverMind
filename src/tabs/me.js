@@ -481,6 +481,23 @@ async function generateMonthlyReport() {
   }
 }
 
+// QDIGl 04.05: тимчасовий показ підсумку місяця після 5-го числа.
+// Юзер пише «покажи підсумок квітня» → AI tool show_monthly_summary
+// записує тут timestamp + 1 година. До цього часу renderMonthlyReport
+// ігнорує перевірку dayOfMonth і показує звіт.
+const MONTHLY_SHOW_UNTIL_KEY = 'nm_me_monthly_show_until';
+export function showMonthlyReportTemporarily(durationMs = 60 * 60 * 1000) {
+  try {
+    localStorage.setItem(MONTHLY_SHOW_UNTIL_KEY, String(Date.now() + durationMs));
+  } catch (e) {}
+}
+function _monthlyShowOverrideActive() {
+  try {
+    const until = parseInt(localStorage.getItem(MONTHLY_SHOW_UNTIL_KEY) || '0');
+    return until > Date.now();
+  } catch (e) { return false; }
+}
+
 function renderMonthlyReport() {
   const el = document.getElementById('me-monthly-report');
   if (!el) return;
@@ -489,8 +506,9 @@ function renderMonthlyReport() {
 
   // QDIGl 04.05: 3-4 дні після кінця місяця → ховати. Тобто 1-4 число
   // поточного місяця показуємо підсумок попереднього, з 5-го — ні.
-  // Раніше було 15 — занадто довго (Роман: «висить пару днів і дратує»).
-  if (dayOfMonth > 4) {
+  // ВИНЯТОК: якщо юзер активно попросив (override-timestamp активний) —
+  // показуємо незалежно від дати, до кінця 1 години.
+  if (dayOfMonth > 4 && !_monthlyShowOverrideActive()) {
     el.style.display = 'none';
     return;
   }

@@ -116,6 +116,8 @@ export function _toolCallToUniversalAction(name, args) {
       return [{ action: 'set_reminder', time: args.time, text: args.text, date: args.date }];
     case 'save_routine':
       return [{ action: 'save_routine', day: args.day, blocks: args.blocks }];
+    case 'show_monthly_summary':
+      return [{ action: 'show_monthly_summary', comment: args.comment }];
     default:
       return [];
   }
@@ -512,6 +514,20 @@ export function dispatchChatToolCalls(toolCalls, addMsg, originalText) {
 
     // 4. Project-specific CRUD (кроки, рішення, метрики, ресурси, темп, ризики)
     if (_handleProjectTool(name, args, addMsg)) { any = true; continue; }
+
+    // 4.4. show_monthly_summary (QDIGl 04.05) — універсальний для всіх 8 чатів
+    // (Один мозок). Юзер у будь-якому чаті каже «покажи підсумок квітня» →
+    // override на 1 годину + перехід на «Я» + ре-рендер.
+    if (name === 'show_monthly_summary') {
+      import('../tabs/me.js').then(m => {
+        if (m.showMonthlyReportTemporarily) m.showMonthlyReportTemporarily(60 * 60 * 1000);
+        switchTab('me');
+        setTimeout(() => { try { m.renderMe?.(); } catch(e) {} }, 200);
+      }).catch(e => console.warn('[dispatcher] show_monthly_summary load failed', e));
+      addMsg('agent', args.comment || '📆 Підсумок місяця у вкладці «Я» (зникне через годину).');
+      any = true;
+      continue;
+    }
 
     // 4.5. create_project — раніше тільки Inbox (rC4TO 04.05): тепер з будь-якого
     // чату. Без цього у Finance/Notes/etc. dispatcher silent skip → typing висне.
