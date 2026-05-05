@@ -481,21 +481,38 @@ async function generateMonthlyReport() {
   }
 }
 
-// QDIGl 04.05: тимчасовий показ підсумку місяця після 5-го числа.
-// Юзер пише «покажи підсумок квітня» → AI tool show_monthly_summary
-// записує тут timestamp + 1 година. До цього часу renderMonthlyReport
-// ігнорує перевірку dayOfMonth і показує звіт.
+// QDIGl 04.05: тимчасовий показ підсумку місяця.
+// 2 сценарії:
+//   А. Юзер просить ПОПЕРЕДНІЙ місяць після 5-го числа → bypass dayOfMonth>4
+//      перевірки, показуємо стандартний report з кешу. override=null.
+//   Б. Юзер просить ІСТОРИЧНИЙ місяць (березень коли травень) → AI генерує
+//      звіт у tool call, ми зберігаємо у override JSON. Через годину
+//      override expires → render знов стандартний попередній.
 const MONTHLY_SHOW_UNTIL_KEY = 'nm_me_monthly_show_until';
-export function showMonthlyReportTemporarily(durationMs = 60 * 60 * 1000) {
+const MONTHLY_OVERRIDE_KEY = 'nm_me_monthly_override';
+
+export function showMonthlyReportTemporarily(durationMs = 60 * 60 * 1000, override = null) {
   try {
     localStorage.setItem(MONTHLY_SHOW_UNTIL_KEY, String(Date.now() + durationMs));
+    if (override && typeof override === 'object') {
+      localStorage.setItem(MONTHLY_OVERRIDE_KEY, JSON.stringify(override));
+    } else {
+      localStorage.removeItem(MONTHLY_OVERRIDE_KEY);
+    }
   } catch (e) {}
 }
+
 function _monthlyShowOverrideActive() {
   try {
     const until = parseInt(localStorage.getItem(MONTHLY_SHOW_UNTIL_KEY) || '0');
     return until > Date.now();
   } catch (e) { return false; }
+}
+
+function _getMonthlyOverride() {
+  if (!_monthlyShowOverrideActive()) return null;
+  try { return JSON.parse(localStorage.getItem(MONTHLY_OVERRIDE_KEY) || 'null'); }
+  catch { return null; }
 }
 
 function renderMonthlyReport() {
@@ -513,8 +530,11 @@ function renderMonthlyReport() {
     return;
   }
 
-  const report = _getMonthlyReport();
-  const expectedMonth = _prevMonthKey();
+  // QDIGl: якщо AI override активний (юзер просив історичний місяць) —
+  // рендеримо override JSON. Інакше — стандартний звіт попереднього місяця.
+  const override = _getMonthlyOverride();
+  const report = override || _getMonthlyReport();
+  const expectedMonth = override ? override.month : _prevMonthKey();
 
   // Якщо немає звіту за попередній місяць — генеруємо
   if (!report || report.month !== expectedMonth) {

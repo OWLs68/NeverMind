@@ -516,11 +516,19 @@ export function dispatchChatToolCalls(toolCalls, addMsg, originalText) {
     if (_handleProjectTool(name, args, addMsg)) { any = true; continue; }
 
     // 4.4. show_monthly_summary (QDIGl 04.05) — універсальний для всіх 8 чатів
-    // (Один мозок). Юзер у будь-якому чаті каже «покажи підсумок квітня» →
-    // override на 1 годину + перехід на «Я» + ре-рендер.
+    // (Один мозок). 2 режими:
+    //   А. Без month → bypass dayOfMonth>4 і показуємо стандартний звіт
+    //      попереднього місяця з кешу. override=null.
+    //   Б. З month=YYYY-MM → AI вже згенерував oneliner на основі контексту,
+    //      зберігаємо як override JSON. Через годину auto-expire → стандарт.
     if (name === 'show_monthly_summary') {
+      const override = args.month ? {
+        month: args.month,
+        monthLabel: args.month_label || args.month,
+        oneliner: args.oneliner || '',
+      } : null;
       import('../tabs/me.js').then(m => {
-        if (m.showMonthlyReportTemporarily) m.showMonthlyReportTemporarily(60 * 60 * 1000);
+        if (m.showMonthlyReportTemporarily) m.showMonthlyReportTemporarily(60 * 60 * 1000, override);
         switchTab('me');
         setTimeout(() => { try { m.renderMe?.(); } catch(e) {} }, 200);
       }).catch(e => console.warn('[dispatcher] show_monthly_summary load failed', e));
