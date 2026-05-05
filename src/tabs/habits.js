@@ -1434,10 +1434,13 @@ export function processUniversalAction(parsed, originalText, addMsg) {
       source: 'reminder',
       reminderId
     });
-    // 3. nm_inbox — картка у стрічку з категорією "Нагадування" (⏰)
+    // 3. nm_inbox — картка у стрічку з категорією "Нагадування" (⏰).
+    // QDIGl 04.05: reminderId поле додано для синхронного видалення —
+    // свайп картки прибирає nm_reminders + nm_events за тим же ID.
     const items = getInbox();
     items.unshift({
       id: reminderId + 2,
+      reminderId: reminderId,
       text: `${time} — ${text}`,
       category: 'reminder',
       ts: Date.now(),

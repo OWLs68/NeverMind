@@ -323,12 +323,58 @@ export function renderInbox() {
       const item = allItems.find(i => String(i.id) === id);
       if (item) addToTrash('inbox', item);
       saveInbox(allItems.filter(i => String(i.id) !== id));
+
+      // QDIGl 04.05: для reminder-карток cleanup nm_reminders + nm_events
+      // одночасно — щоб після свайпу сова не нагадала о 22:00 і у Календарі
+      // подія зникла. Лінк через item.reminderId (нові картки) АБО fallback
+      // на парсинг "HH:MM — text" з item.text (старі картки до Q сесії).
+      let removedReminders = null;
+      let removedEvents = null;
+      if (item && item.category === 'reminder') {
+        try {
+          let rid = item.reminderId;
+          if (!rid && typeof item.text === 'string') {
+            // Backward compat: HH:MM — текст. Знаходимо у nm_reminders за time+text+date.
+            const match = item.text.match(/^(\d{2}:\d{2})\s*[—-]\s*(.+)$/);
+            if (match) {
+              const itemDay = new Date(item.ts).toISOString().slice(0, 10);
+              const reminders = JSON.parse(localStorage.getItem('nm_reminders') || '[]');
+              const found = reminders.find(r => r.time === match[1] && r.text === match[2].trim() && r.date === itemDay);
+              if (found) rid = found.id;
+            }
+          }
+          if (rid) {
+            const reminders = JSON.parse(localStorage.getItem('nm_reminders') || '[]');
+            removedReminders = reminders.filter(r => r.id === rid);
+            const remRest = reminders.filter(r => r.id !== rid);
+            if (remRest.length !== reminders.length) localStorage.setItem('nm_reminders', JSON.stringify(remRest));
+            const events = getEvents();
+            removedEvents = events.filter(e => e.reminderId === rid || (e.source === 'reminder' && e.id === rid + 1));
+            const evRest = events.filter(e => !(e.reminderId === rid || (e.source === 'reminder' && e.id === rid + 1)));
+            if (evRest.length !== events.length) saveEvents(evRest);
+          }
+        } catch (e) { console.warn('[inbox swipe] reminder cleanup failed', e); }
+      }
+
       renderInbox();
       if (item) showUndoToast('Видалено з Inbox', () => {
         const items = getInbox();
         const idx = Math.min(originalIdx, items.length);
         items.splice(idx, 0, item);
         saveInbox(items);
+        // Відновлюємо nm_reminders + nm_events якщо видалили
+        if (removedReminders && removedReminders.length > 0) {
+          try {
+            const reminders = JSON.parse(localStorage.getItem('nm_reminders') || '[]');
+            localStorage.setItem('nm_reminders', JSON.stringify([...removedReminders, ...reminders]));
+          } catch(e) {}
+        }
+        if (removedEvents && removedEvents.length > 0) {
+          try {
+            const events = getEvents();
+            saveEvents([...removedEvents, ...events]);
+          } catch(e) {}
+        }
         renderInbox();
       });
     });
