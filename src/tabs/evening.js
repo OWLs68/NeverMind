@@ -430,8 +430,8 @@ function _formatUnlockCountdown() {
   const diffMin = Math.max(1, Math.round((target - now) / 60000));
   const h = Math.floor(diffMin / 60);
   const m = diffMin % 60;
-  if (h > 0) return `до розблокування: ${h} год ${m} хв`;
-  return `до розблокування: ${m} хв`;
+  if (h > 0) return t('evening.lock.countdown_hm', 'до розблокування: {h} год {m} хв', { h, m });
+  return t('evening.lock.countdown_m', 'до розблокування: {m} хв', { m });
 }
 
 export function updateEveningLock() {
