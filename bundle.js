@@ -796,11 +796,12 @@
         isPast: _isBlockPast(b.time, dateISO)
       });
     });
+    const isHistoricDate = dateISO < _todayISO();
     getEvents().forEach((ev) => {
       if (ev.date !== dateISO) return;
       const isReminder = ev.source === "reminder";
       const isPast = _isBlockPast(ev.time, dateISO);
-      if (isReminder && isPast && ev.done) return;
+      if (isReminder && isPast && ev.done && !isHistoricDate) return;
       out.push({
         time: ev.time || null,
         activity: ev.title || "",
@@ -857,30 +858,46 @@
     const el = document.getElementById("routine-day-tabs");
     if (!el) return;
     const routine = getRoutine();
-    const todayIdx = (/* @__PURE__ */ new Date()).getDay();
-    el.innerHTML = DAY_KEYS.map((key, i) => {
+    const todayKey = DAY_KEYS[(/* @__PURE__ */ new Date()).getDay()];
+    el.style.justifyContent = "center";
+    el.style.gap = "6px";
+    el.innerHTML = ROUTINE_TAB_ORDER.map((key) => {
       const isActive = key === _routineDay;
-      const isToday = i === todayIdx;
+      const isToday = key === todayKey;
       const hasOwn = !!routine[key];
-      return `<div onclick="routineSelectDay('${key}')" style="padding:6px 10px;border-radius:10px;font-size:12px;font-weight:${isActive ? "800" : "600"};cursor:pointer;white-space:nowrap;
+      return `<div onclick="routineSelectDay('${key}')" style="padding:10px 14px;border-radius:12px;font-size:14px;font-weight:${isActive ? "800" : "600"};cursor:pointer;white-space:nowrap;min-width:42px;text-align:center;
       background:${isActive ? "#ea580c" : "rgba(255,255,255,0.5)"};
       color:${isActive ? "white" : isToday ? "#ea580c" : "rgba(30,16,64,0.5)"};
       border:1.5px solid ${isActive ? "#ea580c" : isToday ? "rgba(234,88,12,0.3)" : "rgba(30,16,64,0.08)"};
       ${hasOwn && !isActive ? "box-shadow:inset 0 -2px 0 rgba(234,88,12,0.3);" : ""}
-      ">${DAY_LABELS[i]}</div>`;
+      -webkit-tap-highlight-color:transparent
+      ">${ROUTINE_TAB_LABELS[key]}</div>`;
     }).join("");
     const label = document.getElementById("routine-day-label");
-    if (label) label.textContent = _routineDay === DAY_KEYS[todayIdx] ? "\u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456" : "";
+    if (label) {
+      if (_routineDay === todayKey) {
+        label.textContent = t("routine.day.today", "\u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456");
+      } else {
+        const dateISO = _lastDateForDayKey(_routineDay);
+        const [, m, d] = dateISO.split("-");
+        const diffDays = Math.round((new Date(_todayISO()) - new Date(dateISO)) / (24 * 60 * 60 * 1e3));
+        if (diffDays === 1) label.textContent = t("routine.day.yesterday", "\u0432\u0447\u043E\u0440\u0430");
+        else if (diffDays === 2) label.textContent = t("routine.day.day_before", "\u043F\u043E\u0437\u0430\u0432\u0447\u043E\u0440\u0430");
+        else if (diffDays === -1) label.textContent = t("routine.day.tomorrow", "\u0437\u0430\u0432\u0442\u0440\u0430");
+        else if (diffDays === -2) label.textContent = t("routine.day.day_after", "\u043F\u0456\u0441\u043B\u044F\u0437\u0430\u0432\u0442\u0440\u0430");
+        else label.textContent = `${parseInt(d)}.${m}`;
+      }
+    }
   }
-  function _nearestDateForDayKey(dayKey) {
+  function _lastDateForDayKey(dayKey) {
     if (dayKey === "default") return _todayISO();
-    const todayDayIdx = (/* @__PURE__ */ new Date()).getDay();
-    const targetDayIdx = DAY_KEYS.indexOf(dayKey);
-    if (targetDayIdx < 0) return _todayISO();
-    const diff = (targetDayIdx - todayDayIdx + 7) % 7;
-    const d = /* @__PURE__ */ new Date();
-    d.setDate(d.getDate() + diff);
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    const targetIdxMon = ROUTINE_TAB_ORDER.indexOf(dayKey);
+    if (targetIdxMon < 0) return _todayISO();
+    const today = /* @__PURE__ */ new Date();
+    const todayIdxMon = (today.getDay() + 6) % 7;
+    const target = new Date(today);
+    target.setDate(today.getDate() + (targetIdxMon - todayIdxMon));
+    return `${target.getFullYear()}-${String(target.getMonth() + 1).padStart(2, "0")}-${String(target.getDate()).padStart(2, "0")}`;
   }
   function _renderRoutineTimeline() {
     const el = document.getElementById("routine-timeline");
@@ -1167,7 +1184,7 @@
     const el = document.getElementById("cal-icon-day");
     if (el) el.textContent = (/* @__PURE__ */ new Date()).getDate();
   }
-  var _calYear, _calMonth, _selectedDay, DAYS_UA_FULL, NM_ROUTINE_KEY, DAY_KEYS, DAY_LABELS, _routineDay, _routineReturnTo, _editEventId, _editEventPriority, _drumValues, DRUM_H;
+  var _calYear, _calMonth, _selectedDay, DAYS_UA_FULL, NM_ROUTINE_KEY, DAY_KEYS, _routineDay, _routineReturnTo, ROUTINE_TAB_ORDER, ROUTINE_TAB_LABELS, _editEventId, _editEventPriority, _drumValues, DRUM_H;
   var init_calendar = __esm({
     "src/tabs/calendar.js"() {
       init_utils();
@@ -1178,9 +1195,10 @@
       DAYS_UA_FULL = ["\u041D\u0435\u0434\u0456\u043B\u044F", "\u041F\u043E\u043D\u0435\u0434\u0456\u043B\u043E\u043A", "\u0412\u0456\u0432\u0442\u043E\u0440\u043E\u043A", "\u0421\u0435\u0440\u0435\u0434\u0430", "\u0427\u0435\u0442\u0432\u0435\u0440", "\u041F'\u044F\u0442\u043D\u0438\u0446\u044F", "\u0421\u0443\u0431\u043E\u0442\u0430"];
       NM_ROUTINE_KEY = "nm_routine";
       DAY_KEYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
-      DAY_LABELS = ["\u041D\u0434", "\u041F\u043D", "\u0412\u0442", "\u0421\u0440", "\u0427\u0442", "\u041F\u0442", "\u0421\u0431"];
       _routineDay = DAY_KEYS[(/* @__PURE__ */ new Date()).getDay()];
       _routineReturnTo = null;
+      ROUTINE_TAB_ORDER = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
+      ROUTINE_TAB_LABELS = { mon: "\u041F\u043D", tue: "\u0412\u0442", wed: "\u0421\u0440", thu: "\u0427\u0442", fri: "\u041F\u0442", sat: "\u0421\u0431", sun: "\u041D\u0434" };
       _editEventId = null;
       _editEventPriority = "normal";
       _drumValues = { day: 1, month: 0, year: 2026, hour: -1, min: 0 };
