@@ -39,13 +39,13 @@ export function openAddTask() {
 
 function openEditTask(id) {
   const tasks = getTasks();
-  const t = tasks.find(x => String(x.id) === String(id));
-  if (!t) return;
+  const task = tasks.find(x => String(x.id) === String(id));
+  if (!task) return;
   editingTaskId = id;
-  tempSteps = [...(t.steps || [])];
+  tempSteps = [...(task.steps || [])];
   document.getElementById('task-modal-title').textContent = t('tasks.modal_edit', 'Редагувати задачу');
-  document.getElementById('task-input-title').value = t.title;
-  document.getElementById('task-input-desc').value = t.desc || '';
+  document.getElementById('task-input-title').value = task.title;
+  document.getElementById('task-input-desc').value = task.desc || '';
   document.getElementById('task-step-input').value = '';
   const delBtn = document.getElementById('task-delete-btn');
   if (delBtn) delBtn.style.display = 'inline-block';
@@ -109,7 +109,7 @@ function deleteTaskFromModal() {
   saveTasks(tasks.filter(x => x.id !== editingTaskId));
   closeTaskModal();
   renderTasks();
-  if (item) showUndoToast(t('tasks.deleted', 'Задачу видалено'), () => { const t = getTasks(); const idx = Math.min(taskOrigIdx, t.length); t.splice(idx, 0, item); saveTasks(t); renderTasks(); });
+  if (item) showUndoToast(t('tasks.deleted', 'Задачу видалено'), () => { const arr = getTasks(); const idx = Math.min(taskOrigIdx, arr.length); arr.splice(idx, 0, item); saveTasks(arr); renderTasks(); });
 }
 
 function addTaskStep() {
@@ -167,17 +167,17 @@ function saveTask() {
 
 function toggleTaskStep(taskId, stepId) {
   const tasks = getTasks();
-  const t = tasks.find(x => String(x.id) === String(taskId));
-  if (!t) return;
-  const s = (t.steps || []).find(x => String(x.id) === String(stepId));
+  const task = tasks.find(x => String(x.id) === String(taskId));
+  if (!task) return;
+  const s = (task.steps || []).find(x => String(x.id) === String(stepId));
   if (s) s.done = !s.done;
 
   // Перевіряємо чи всі кроки виконані
-  const allDone = t.steps.length > 0 && t.steps.every(x => x.done);
-  const wasDone = t.status === 'done';
+  const allDone = task.steps.length > 0 && task.steps.every(x => x.done);
+  const wasDone = task.status === 'done';
   const now = Date.now();
-  if (allDone && !wasDone) { t.status = 'done'; t.completedAt = now; t.updatedAt = now; }
-  else if (!allDone && wasDone) { t.status = 'active'; delete t.completedAt; t.updatedAt = now; }
+  if (allDone && !wasDone) { task.status = 'done'; task.completedAt = now; task.updatedAt = now; }
+  else if (!allDone && wasDone) { task.status = 'active'; delete task.completedAt; task.updatedAt = now; }
 
   saveTasks(tasks);
   renderTasks();
@@ -190,14 +190,14 @@ function deleteTask(id) {
   if (item) addToTrash('task', item);
   saveTasks(tasks.filter(x => x.id !== id));
   renderTasks();
-  if (item) showUndoToast(t('tasks.deleted', 'Задачу видалено'), () => { const t = getTasks(); const idx = Math.min(taskOrigIdx, t.length); t.splice(idx, 0, item); saveTasks(t); renderTasks(); });
+  if (item) showUndoToast(t('tasks.deleted', 'Задачу видалено'), () => { const arr = getTasks(); const idx = Math.min(taskOrigIdx, arr.length); arr.splice(idx, 0, item); saveTasks(arr); renderTasks(); });
 }
 
 export function toggleTaskStatus(id) {
   const tasks = getTasks();
-  const t = tasks.find(x => String(x.id) === String(id));
-  if (!t) return;
-  const isCompleting = t.status !== 'done';
+  const task = tasks.find(x => String(x.id) === String(id));
+  if (!task) return;
+  const isCompleting = task.status !== 'done';
   const now = Date.now();
 
   if (isCompleting) {
@@ -216,22 +216,22 @@ export function toggleTaskStatus(id) {
       setTimeout(() => { wrap.classList.add('task-completing'); }, 250);
     }
     setTimeout(() => {
-      t.status = 'done';
-      t.completedAt = now;
-      t.updatedAt = now;
+      task.status = 'done';
+      task.completedAt = now;
+      task.updatedAt = now;
       saveTasks(tasks);
-      logRecentAction('complete_task', t.title, 'tasks');
+      logRecentAction('complete_task', task.title, 'tasks');
       renderTasks();
     }, 620);
     return;
   }
 
   // Reopen — без анімації
-  t.status = 'active';
-  delete t.completedAt;
-  t.updatedAt = now;
+  task.status = 'active';
+  delete task.completedAt;
+  task.updatedAt = now;
   saveTasks(tasks);
-  logRecentAction('reopen_task', t.title, 'tasks');
+  logRecentAction('reopen_task', task.title, 'tasks');
   renderTasks();
 }
 
@@ -247,29 +247,29 @@ export function renderTasks() {
   }
   empty.style.display = 'none';
 
-  const active = tasks.filter(t => t.status !== 'done');
+  const active = tasks.filter(task => task.status !== 'done');
   // R5Ejr 24.04: виконані — найсвіжіше закриті ЗВЕРХУ (сортування за completedAt ↓)
-  const done = tasks.filter(t => t.status === 'done')
+  const done = tasks.filter(task => task.status === 'done')
     .sort((a, b) => (b.completedAt || b.updatedAt || 0) - (a.completedAt || a.updatedAt || 0));
   const sorted = [...active, ...done];
 
   updateProdTabCounters();
-  list.innerHTML = sorted.map(t => {
-    const steps = t.steps || [];
+  list.innerHTML = sorted.map(task => {
+    const steps = task.steps || [];
     const doneCount = steps.filter(s => s.done).length;
-    const pct = steps.length > 0 ? Math.round(doneCount / steps.length * 100) : (t.status === 'done' ? 100 : 0);
-    const isDone = t.status === 'done';
+    const pct = steps.length > 0 ? Math.round(doneCount / steps.length * 100) : (task.status === 'done' ? 100 : 0);
+    const isDone = task.status === 'done';
 
-    return `<div class="task-item-wrap" id="task-wrap-${t.id}" style="position:relative;margin:0 14px var(--card-gap);border-radius:16px">
-      <div id="task-item-${t.id}" onclick="taskCardClick('${t.id}', event)"
+    return `<div class="task-item-wrap" id="task-wrap-${task.id}" style="position:relative;margin:0 14px var(--card-gap);border-radius:16px">
+      <div id="task-item-${task.id}" onclick="taskCardClick('${task.id}', event)"
         style="background:linear-gradient(135deg,#c6f3fd,#a8ecfb);border:1.5px solid rgba(255,255,255,0.4);border-radius:16px;padding:var(--card-pad-y) var(--card-pad-x);box-shadow:0 2px 12px rgba(0,0,0,0.04);opacity:${isDone ? '0.5' : '1'};cursor:pointer;-webkit-tap-highlight-color:transparent;position:relative;z-index:1;touch-action:pan-y">
       <div style="display:flex;align-items:flex-start;gap:6px;margin-bottom:${steps.length ? '8px' : '0'}">
-        <div data-task-check="1" ontouchend="event.preventDefault();event.stopPropagation();toggleTaskStatus('${t.id}')" style="padding:8px;margin:-8px -4px -8px -8px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;-webkit-tap-highlight-color:transparent">
+        <div data-task-check="1" ontouchend="event.preventDefault();event.stopPropagation();toggleTaskStatus('${task.id}')" style="padding:8px;margin:-8px -4px -8px -8px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;-webkit-tap-highlight-color:transparent">
           <div style="width:28px;height:28px;border-radius:8px;border:2px solid ${isDone ? '#16a34a' : 'rgba(234,88,12,0.3)'};background:${isDone ? '#16a34a' : 'rgba(255,255,255,0.78)'};display:flex;align-items:center;justify-content:center;font-size:15px;color:white;transition:all 0.2s">${isDone ? '✓' : ''}</div>
         </div>
         <div style="flex:1">
-          <div style="font-size:16px;font-weight:700;color:#1e1040;${isDone ? 'text-decoration:line-through;opacity:0.5' : ''};line-height:1.4">${escapeHtml(t.title)}</div>
-          ${t.desc ? `<div style="font-size:14px;color:rgba(30,16,64,0.45);margin-top:2px">${escapeHtml(t.desc)}</div>` : ''}
+          <div style="font-size:16px;font-weight:700;color:#1e1040;${isDone ? 'text-decoration:line-through;opacity:0.5' : ''};line-height:1.4">${escapeHtml(task.title)}</div>
+          ${task.desc ? `<div style="font-size:14px;color:rgba(30,16,64,0.45);margin-top:2px">${escapeHtml(task.desc)}</div>` : ''}
         </div>
       </div>
       ${steps.length > 0 ? `
@@ -278,7 +278,7 @@ export function renderTasks() {
         </div>
         <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:10px">
           ${steps.map(s => `
-            <div data-step-check="1" ontouchstart="this._sx=event.touches[0].clientX;this._sy=event.touches[0].clientY" ontouchend="if(Math.abs(event.changedTouches[0].clientX-(this._sx||0))<10&&Math.abs(event.changedTouches[0].clientY-(this._sy||0))<10){event.preventDefault();toggleTaskStep('${t.id}',${s.id})}" style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:4px 0">
+            <div data-step-check="1" ontouchstart="this._sx=event.touches[0].clientX;this._sy=event.touches[0].clientY" ontouchend="if(Math.abs(event.changedTouches[0].clientX-(this._sx||0))<10&&Math.abs(event.changedTouches[0].clientY-(this._sy||0))<10){event.preventDefault();toggleTaskStep('${task.id}',${s.id})}" style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:4px 0">
               <div style="width:24px;height:24px;border-radius:7px;border:1.5px solid ${s.done ? '#ea580c' : 'rgba(30,16,64,0.18)'};background:rgba(255,255,255,0.6);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px;color:#ea580c">${s.done ? '✓' : ''}</div>
               <div style="flex:1;font-size:14px;color:rgba(30,16,64,0.65);${s.done ? 'text-decoration:line-through;opacity:0.4' : ''}">${escapeHtml(s.text)}</div>
             </div>
@@ -300,10 +300,10 @@ export function renderTasks() {
       saveTasks(tasks.filter(x => String(x.id) !== id));
       renderTasks();
       if (item) showUndoToast(t('tasks.deleted', 'Задачу видалено'), () => {
-        const t = getTasks();
-        const idx = Math.min(taskOrigIdx, t.length);
-        t.splice(idx, 0, item);
-        saveTasks(t);
+        const arr = getTasks();
+        const idx = Math.min(taskOrigIdx, arr.length);
+        arr.splice(idx, 0, item);
+        saveTasks(arr);
         renderTasks();
       });
     });
@@ -327,11 +327,11 @@ let taskChatLoading = false;
 
 function openTaskChat(id) {
   const tasks = getTasks();
-  const t = tasks.find(x => x.id === id);
-  if (!t) return;
+  const task = tasks.find(x => x.id === id);
+  if (!task) return;
   taskChatId = id;
 
-  document.getElementById('task-chat-title').textContent = t.title;
+  document.getElementById('task-chat-title').textContent = task.title;
   document.getElementById('task-chat-messages').innerHTML = '';
   document.getElementById('task-chat-input').value = '';
   document.getElementById('task-chat-modal').style.display = 'flex';
@@ -345,7 +345,7 @@ function openTaskChat(id) {
   }
 
   taskChatHistory = [];
-  const steps = (t.steps || []).map(s => `- ${s.text}${s.done ? ' ✓' : ''}`).join('\n');
+  const steps = (task.steps || []).map(s => `- ${s.text}${s.done ? ' ✓' : ''}`).join('\n');
   const key = localStorage.getItem('nm_gemini_key');
   if (!key) {
     addTaskChatMsg('agent', t('tasks.no_api_key_chat', 'Введи OpenAI ключ в налаштуваннях щоб спілкуватись з Агентом.'));
@@ -355,7 +355,7 @@ function openTaskChat(id) {
   addTaskChatMsg('agent', '…', 'task-chat-intro');
   const aiContext = getAIContext();
   const systemPrompt = `${getOWLPersonality()} Допомагаєш реально виконати задачу. НЕ хвали задачу і не кажи що вона "чудова" чи "чітка" — це лестощі. Перше повідомлення: оціни задачу чесно (1 речення) — чи вона конкретна, чи є дедлайн, чи є підводні камені. Потім запитай один конкретний уточнюючий факт або що вже зроблено. Максимум 3 речення. Відповідай українською.${aiContext ? '\n\n' + aiContext : ''}`;
-  const taskInfo = `Задача: ${t.title}${t.desc ? '\nОпис: ' + t.desc : ''}${steps ? '\nКроки:\n' + steps : ''}`;
+  const taskInfo = `Задача: ${task.title}${task.desc ? '\nОпис: ' + task.desc : ''}${steps ? '\nКроки:\n' + steps : ''}`;
 
   callAI(systemPrompt, taskInfo, {}, 'tasks-background').then(reply => {
     const el = document.getElementById('task-chat-intro');
@@ -417,12 +417,12 @@ async function sendTaskChatMessage() {
   btn.disabled = true;
 
   const tasks = getTasks();
-  const t = tasks.find(x => x.id === taskChatId);
-  const steps = t ? (t.steps || []).map(s => `- ${s.text}${s.done ? ' ✓' : ''}`).join('\n') : '';
+  const task = tasks.find(x => x.id === taskChatId);
+  const steps = task ? (task.steps || []).map(s => `- ${s.text}${s.done ? ' ✓' : ''}`).join('\n') : '';
   const aiContext = getAIContext();
   const wantsSteps = /додай кроки|створи кроки|розбий на кроки|які кроки|план дій|крок за кроком|додай пункти|пункти|кроки/i.test(text);
   const stepInstruction = wantsSteps ? ' ВАЖЛИВО: користувач просить кроки. Відповідай ТІЛЬКИ валідним JSON і нічим іншим: {"steps":["крок 1","крок 2","крок 3"]}. Жодного тексту до або після JSON.' : '';
-  const systemPrompt = `${getOWLPersonality()} Обговорюєш задачу: "${t?.title || ''}". ${t?.desc ? 'Опис: ' + t.desc + '.' : ''} ${steps ? 'Кроки:\n' + steps : ''} Говориш конкретно. Короткі відповіді (2-4 речення). Фокус на наступних конкретних кроках.${stepInstruction}
+  const systemPrompt = `${getOWLPersonality()} Обговорюєш задачу: "${task?.title || ''}". ${task?.desc ? 'Опис: ' + task.desc + '.' : ''} ${steps ? 'Кроки:\n' + steps : ''} Говориш конкретно. Короткі відповіді (2-4 речення). Фокус на наступних конкретних кроках.${stepInstruction}
 Якщо юзер просить кроки — {"steps":["крок 1","крок 2"]}
 Якщо юзер просить щось НЕ про цю задачу (нова задача, подія, нотатка, звичка, витрата) — відповідай відповідним JSON:
 - Задача: {"action":"create_task","title":"назва","steps":[]}
