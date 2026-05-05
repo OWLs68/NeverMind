@@ -2322,7 +2322,7 @@ ${lines.join("\n")}`;
     cards[idx] = { ...cards[idx], status, progress };
     if (oldStatus !== status) {
       cards[idx].history = cards[idx].history || [];
-      cards[idx].history.unshift({ ts: Date.now(), type: "status_change", text: `${_statusDef(oldStatus).label} \u2192 ${_statusDef(status).label}` });
+      cards[idx].history.unshift({ ts: Date.now(), type: "status_change", text: t("health.history.status_change_text", "{from} \u2192 {to}", { from: _statusDef(oldStatus).label, to: _statusDef(status).label }) });
     }
     saveHealthCards(cards);
     return cards[idx];
@@ -2400,7 +2400,7 @@ ${lines.join("\n")}`;
     if (!Array.isArray(med.log)) med.log = [];
     med.log.push(Date.now());
     if (!Array.isArray(cards[idx].history)) cards[idx].history = [];
-    cards[idx].history.unshift({ ts: Date.now(), type: "dose_log", text: `\u041F\u0440\u0438\u0439\u043D\u044F\u0432 ${med.name}` });
+    cards[idx].history.unshift({ ts: Date.now(), type: "dose_log", text: t("health.history.dose_taken", "\u041F\u0440\u0438\u0439\u043D\u044F\u0432 {name}", { name: med.name }) });
     saveHealthCards(cards);
     return med;
   }
@@ -2570,7 +2570,7 @@ ${lines.join("\n")}`;
     if (!med || !med.createTasks) return;
     try {
       const tasks = JSON.parse(localStorage.getItem("nm_tasks") || "[]");
-      const title = `\u041F\u0440\u0438\u0439\u043D\u044F\u0442\u0438 ${med.name}${med.dosage ? " " + med.dosage : ""}`;
+      const title = t("health.task.take_med_title", "\u041F\u0440\u0438\u0439\u043D\u044F\u0442\u0438 {name}{dosage}", { name: med.name, dosage: med.dosage ? " " + med.dosage : "" });
       const existing = tasks.find((t2) => t2.title === title && t2.status === "active");
       if (existing) return;
       const schedule = Array.isArray(med.schedule) ? med.schedule : [];
@@ -2578,7 +2578,7 @@ ${lines.join("\n")}`;
       const newTask = {
         id: Date.now() + Math.floor(Math.random() * 1e3),
         title,
-        text: `[${cardName}] ${med.name}${med.dosage ? " " + med.dosage : ""}${med.courseDuration ? " \xB7 \u043A\u0443\u0440\u0441 " + med.courseDuration : ""}`,
+        text: t("health.task.take_med_step", "[{card}] {name}{dosage}{course}", { card: cardName, name: med.name, dosage: med.dosage ? " " + med.dosage : "", course: med.courseDuration ? " \xB7 \u043A\u0443\u0440\u0441 " + med.courseDuration : "" }),
         status: "active",
         steps,
         priority: "important",
@@ -2623,7 +2623,7 @@ ${lines.join("\n")}`;
       target.history.unshift({
         ts: Date.now(),
         type: "auto",
-        text: `\u0412\u0438\u0442\u0440\u0430\u0442\u0430: ${amount}\u20AC \u2014 ${comment || "\u043B\u0456\u043A\u0438"}`
+        text: t("health.history.expense", "\u0412\u0438\u0442\u0440\u0430\u0442\u0430: {amount}\u20AC \u2014 {comment}", { amount, comment: comment || t("health.history.expense_default", "\u043B\u0456\u043A\u0438") })
       });
       saveHealthCards(cards);
       return true;
@@ -2699,7 +2699,7 @@ ${lines.join("\n")}`;
     cards[idx].history.unshift({
       ts: Date.now(),
       type: "auto",
-      text: `\u041F\u0440\u043E\u043F\u0443\u0441\u0442\u0438\u0432 \u0434\u043E\u0437\u0443 ${med.name} (${scheduledTime})`
+      text: t("health.history.dose_skipped", "\u041F\u0440\u043E\u043F\u0443\u0441\u0442\u0438\u0432 \u0434\u043E\u0437\u0443 {name} ({time})", { name: med.name, time: scheduledTime })
     });
     const m = /^(\d{1,2}):(\d{2})$/.exec(String(scheduledTime));
     if (m) {
@@ -2932,7 +2932,7 @@ ${lines.join("\n")}`;
       cards[idx] = { ...cards[idx], status, progress };
       if (oldStatus !== status) {
         cards[idx].history = cards[idx].history || [];
-        cards[idx].history.unshift({ ts: Date.now(), type: "status_change", text: `${_statusDef(oldStatus).label} \u2192 ${_statusDef(status).label}` });
+        cards[idx].history.unshift({ ts: Date.now(), type: "status_change", text: t("health.history.status_change_text", "{from} \u2192 {to}", { from: _statusDef(oldStatus).label, to: _statusDef(status).label }) });
       }
       saveHealthCards(cards);
       renderHealthWorkspace(id);
@@ -3160,7 +3160,7 @@ ${lines.join("\n")}`;
       return null;
     }
     if (!hasNewAppt) return null;
-    const title = `\u041F\u0440\u0438\u0439\u043E\u043C: ${cardName}`;
+    const title = t("health.event.appt_title", "\u041F\u0440\u0438\u0439\u043E\u043C: {name}", { name: cardName });
     if (oldEventId) {
       const idx = events.findIndex((e) => e.id === oldEventId);
       if (idx !== -1) {
@@ -3209,7 +3209,7 @@ ${lines.join("\n")}`;
       card.history.unshift({
         ts: Date.now(),
         type: "doctor_visit",
-        text: `\u041F\u0440\u0438\u0439\u043E\u043C \u0432\u0456\u0434\u0431\u0443\u0432\u0441\u044F ${appt.date}${appt.time ? " \u043E " + appt.time : ""}`
+        text: t("health.history.visit_done", "\u041F\u0440\u0438\u0439\u043E\u043C \u0432\u0456\u0434\u0431\u0443\u0432\u0441\u044F {date}{time}", { date: appt.date, time: appt.time ? " \u043E " + appt.time : "" })
       });
       card.nextAppointment = null;
       cardsChanged = true;
@@ -3743,12 +3743,12 @@ ${lines.join("\n")}`;
       init_swipe_delete();
       init_nav();
       HEALTH_STATUS_DEFS = {
-        acute: { icon: "\u{1F195}", label: "\u0413\u043E\u0441\u0442\u0440\u0430", bg: "rgba(239,68,68,0.10)", color: "#ef4444", bar: "#ef4444", isActive: true, opacity: 1 },
-        treatment: { icon: "\u{1F48A}", label: "\u041B\u0456\u043A\u0443\u0432\u0430\u043D\u043D\u044F", bg: "rgba(234,88,12,0.10)", color: "#ea580c", bar: "#ea580c", isActive: true, opacity: 1 },
-        improving: { icon: "\u{1F4C8}", label: "\u041F\u043E\u043A\u0440\u0430\u0449\u0435\u043D\u043D\u044F", bg: "rgba(217,119,6,0.10)", color: "#d97706", bar: "#d97706", isActive: true, opacity: 1 },
-        remission: { icon: "\u{1F7E2}", label: "\u041A\u043E\u043D\u0442\u0440\u043E\u043B\u044C", bg: "rgba(22,163,74,0.10)", color: "#16a34a", bar: "#16a34a", isActive: true, opacity: 1 },
-        chronic: { icon: "\u267E\uFE0F", label: "\u0425\u0440\u043E\u043D\u0456\u0447\u043D\u0430", bg: "rgba(30,16,64,0.10)", color: "#1e1040", bar: "#1e1040", isActive: true, opacity: 1 },
-        done: { icon: "\u2705", label: "\u0417\u0430\u0432\u0435\u0440\u0448\u0435\u043D\u043E", bg: "rgba(100,116,139,0.10)", color: "#64748b", bar: "#64748b", isActive: false, opacity: 0.5 }
+        acute: { icon: "\u{1F195}", label: t("health.status.acute", "\u0413\u043E\u0441\u0442\u0440\u0430"), bg: "rgba(239,68,68,0.10)", color: "#ef4444", bar: "#ef4444", isActive: true, opacity: 1 },
+        treatment: { icon: "\u{1F48A}", label: t("health.status.treatment", "\u041B\u0456\u043A\u0443\u0432\u0430\u043D\u043D\u044F"), bg: "rgba(234,88,12,0.10)", color: "#ea580c", bar: "#ea580c", isActive: true, opacity: 1 },
+        improving: { icon: "\u{1F4C8}", label: t("health.status.improving", "\u041F\u043E\u043A\u0440\u0430\u0449\u0435\u043D\u043D\u044F"), bg: "rgba(217,119,6,0.10)", color: "#d97706", bar: "#d97706", isActive: true, opacity: 1 },
+        remission: { icon: "\u{1F7E2}", label: t("health.status.remission", "\u041A\u043E\u043D\u0442\u0440\u043E\u043B\u044C"), bg: "rgba(22,163,74,0.10)", color: "#16a34a", bar: "#16a34a", isActive: true, opacity: 1 },
+        chronic: { icon: "\u267E\uFE0F", label: t("health.status.chronic", "\u0425\u0440\u043E\u043D\u0456\u0447\u043D\u0430"), bg: "rgba(30,16,64,0.10)", color: "#1e1040", bar: "#1e1040", isActive: true, opacity: 1 },
+        done: { icon: "\u2705", label: t("health.status.done", "\u0417\u0430\u0432\u0435\u0440\u0448\u0435\u043D\u043E"), bg: "rgba(100,116,139,0.10)", color: "#64748b", bar: "#64748b", isActive: false, opacity: 0.5 }
       };
       HEALTH_STATUS_KEYS = Object.keys(HEALTH_STATUS_DEFS);
       activeHealthCardId = null;
