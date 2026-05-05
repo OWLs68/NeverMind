@@ -489,6 +489,96 @@ export function getTodayRoutine() {
   return getRoutineForDay(DAY_KEYS[new Date().getDay()]);
 }
 
+// ============================================================
+// QDIGl 04.05 — Combined timeline для модалки Розпорядку.
+// Об'єднує 3 джерела на конкретну ДАТУ (не день тижня):
+//   - nm_routine[dayKey] — recurring blocks (recurring weekly schedule)
+//   - nm_events.filter(date===dateISO) — one-off events
+//   - nm_events.filter(date===dateISO && source==='reminder') — нагадування
+// nm_routine storage НЕ змінюємо — AI tool save_routine + ai-context
+// зав'язані на dayKey enum, тому per-date overrides — окремий шар у v2.
+// ============================================================
+
+// Локальний (не UTC) маппінг ISO дати на dayKey. Уникаємо new Date(iso)
+// бо у TZ<0 UTC midnight зміщує день на попередній.
+function _dateToKey(dateISO) {
+  if (!dateISO || typeof dateISO !== 'string') return DAY_KEYS[new Date().getDay()];
+  const m = dateISO.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return DAY_KEYS[new Date().getDay()];
+  const [, y, mo, d] = m;
+  return DAY_KEYS[new Date(+y, +mo - 1, +d).getDay()];
+}
+
+function _todayISO() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function _toMin(time) {
+  if (!time || typeof time !== 'string') return -1;
+  const [h, m] = time.split(':').map(Number);
+  return (h || 0) * 60 + (m || 0);
+}
+
+// Чи блок у минулому ЛИШЕ якщо це сьогодні І час уже пройшов.
+function _isBlockPast(time, dateISO) {
+  if (!time) return false;
+  const today = _todayISO();
+  if (dateISO < today) return true;   // вся минула дата
+  if (dateISO > today) return false;  // майбутня
+  const now = new Date();
+  return _toMin(time) <= now.getHours() * 60 + now.getMinutes();
+}
+
+// Повертає масив блоків відсортованих за часом, потім за kind (routine→event→reminder).
+// Кожен блок: {time, activity, kind, sourceId|sourceIdx, isPast, reminderId?, _ev?}
+// Виконані прострочені reminders (event.done && minute<now) — фільтруються out.
+export function getCombinedTimelineForDate(dateISO) {
+  const out = [];
+  const dayKey = _dateToKey(dateISO);
+
+  // 1. Routine — recurring блоки
+  getRoutineForDay(dayKey).forEach((b, idx) => {
+    out.push({
+      time: b.time || null,
+      activity: b.activity || '',
+      kind: 'routine',
+      sourceIdx: idx,
+      isPast: _isBlockPast(b.time, dateISO),
+    });
+  });
+
+  // 2. Events + reminders на конкретну дату
+  getEvents().forEach(ev => {
+    if (ev.date !== dateISO) return;
+    const isReminder = ev.source === 'reminder';
+    // Виконані прострочені reminders — приховуємо щоб не засмічувати timeline
+    const isPast = _isBlockPast(ev.time, dateISO);
+    if (isReminder && isPast && ev.done) return;
+    out.push({
+      time: ev.time || null,
+      activity: ev.title || '',
+      kind: isReminder ? 'reminder' : 'event',
+      sourceId: ev.id,
+      reminderId: isReminder ? (ev.reminderId || ev.id) : undefined,
+      isPast,
+      _ev: ev,
+    });
+  });
+
+  // Sort: time asc (null=кінець), потім за kind (routine→event→reminder)
+  const KIND_ORDER = { routine: 0, event: 1, reminder: 2 };
+  out.sort((a, b) => {
+    const ta = a.time || '99:99';
+    const tb = b.time || '99:99';
+    const cmp = ta.localeCompare(tb);
+    if (cmp !== 0) return cmp;
+    return (KIND_ORDER[a.kind] || 9) - (KIND_ORDER[b.kind] || 9);
+  });
+
+  return out;
+}
+
 function openRoutineFromCalendar(dayKey) {
   closeDayScheduleModal();
   _routineReturnTo = 'calendar';
