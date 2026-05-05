@@ -7259,10 +7259,10 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
       nextMonday.setDate(monday.getDate() + 7);
       from = monday.getTime();
       to = nextMonday.getTime();
-      if (offset === 0) label = "\u0426\u0435\u0439 \u0442\u0438\u0436\u0434\u0435\u043D\u044C";
-      else if (offset === -1) label = "\u041C\u0438\u043D\u0443\u043B\u0438\u0439 \u0442\u0438\u0436\u0434\u0435\u043D\u044C";
-      else if (offset === 1) label = "\u041D\u0430\u0441\u0442\u0443\u043F\u043D\u0438\u0439 \u0442\u0438\u0436\u0434\u0435\u043D\u044C";
-      else label = offset < 0 ? `${-offset} \u0442\u0438\u0436\u043D\u0456\u0432 \u0442\u043E\u043C\u0443` : `+${offset} \u0442\u0438\u0436\u043D\u0456\u0432`;
+      if (offset === 0) label = t("finance.period.this_week", "\u0426\u0435\u0439 \u0442\u0438\u0436\u0434\u0435\u043D\u044C");
+      else if (offset === -1) label = t("finance.period.last_week", "\u041C\u0438\u043D\u0443\u043B\u0438\u0439 \u0442\u0438\u0436\u0434\u0435\u043D\u044C");
+      else if (offset === 1) label = t("finance.period.next_week", "\u041D\u0430\u0441\u0442\u0443\u043F\u043D\u0438\u0439 \u0442\u0438\u0436\u0434\u0435\u043D\u044C");
+      else label = offset < 0 ? t("finance.period.weeks_ago", "{n} \u0442\u0438\u0436\u043D\u0456\u0432 \u0442\u043E\u043C\u0443", { n: -offset }) : t("finance.period.weeks_ahead", "+{n} \u0442\u0438\u0436\u043D\u0456\u0432", { n: offset });
     } else if (period === "month") {
       const baseMonth = now.getMonth() + offset;
       const start = new Date(now.getFullYear(), baseMonth, 1);
@@ -7276,9 +7276,9 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
       const end = new Date(now.getFullYear(), startMonth + 3, 1);
       from = start.getTime();
       to = end.getTime();
-      if (offset === 0) label = "\u041E\u0441\u0442\u0430\u043D\u043D\u0456 3 \u043C\u0456\u0441\u044F\u0446\u0456";
-      else if (offset === -1) label = "\u041F\u043E\u043F\u0435\u0440\u0435\u0434\u043D\u0456 3 \u043C\u0456\u0441\u044F\u0446\u0456";
-      else label = offset < 0 ? `${-offset * 3} \u043C\u0456\u0441\u044F\u0446\u0456\u0432 \u0442\u043E\u043C\u0443` : `+${offset * 3} \u043C\u0456\u0441\u044F\u0446\u0456\u0432`;
+      if (offset === 0) label = t("finance.period.last_3_months", "\u041E\u0441\u0442\u0430\u043D\u043D\u0456 3 \u043C\u0456\u0441\u044F\u0446\u0456");
+      else if (offset === -1) label = t("finance.period.prev_3_months", "\u041F\u043E\u043F\u0435\u0440\u0435\u0434\u043D\u0456 3 \u043C\u0456\u0441\u044F\u0446\u0456");
+      else label = offset < 0 ? t("finance.period.months_ago", "{n} \u043C\u0456\u0441\u044F\u0446\u0456\u0432 \u0442\u043E\u043C\u0443", { n: -offset * 3 }) : t("finance.period.months_ahead", "+{n} \u043C\u0456\u0441\u044F\u0446\u0456\u0432", { n: offset * 3 });
     }
     return { from, to, label };
   }
@@ -7354,7 +7354,7 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
       tryBoardUpdate("finance");
     } catch (e) {
     }
-    if (item) showUndoToast("\u041E\u043F\u0435\u0440\u0430\u0446\u0456\u044E \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E", () => {
+    if (item) showUndoToast(t("finance.toast.tx_deleted", "\u041E\u043F\u0435\u0440\u0430\u0446\u0456\u044E \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E"), () => {
       const txs = getFinance();
       txs.unshift(item);
       saveFinance(txs);
@@ -7373,8 +7373,8 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
   }
   function _finEmptyTxsHint() {
     return `<div style="background:rgba(255,255,255,0.5);border:1.5px dashed rgba(30,16,64,0.12);border-radius:16px;padding:16px;text-align:center;margin-bottom:12px">
-    <div style="font-size:13px;color:rgba(30,16,64,0.45);font-weight:600">\u0423 \u0446\u044C\u043E\u043C\u0443 \u043F\u0435\u0440\u0456\u043E\u0434\u0456 \u043E\u043F\u0435\u0440\u0430\u0446\u0456\u0439 \u043D\u0435\u043C\u0430\u0454</div>
-    <div style="font-size:11px;color:rgba(30,16,64,0.35);font-weight:500;margin-top:4px">\u0422\u0430\u043F\u043D\u0438 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E \u0449\u043E\u0431 \u0434\u043E\u0434\u0430\u0442\u0438 \u0430\u0431\u043E \u0441\u0432\u0430\u0439\u043F\u043D\u0438 \u2190\u2192 \u0434\u043B\u044F \u0456\u043D\u0448\u043E\u0433\u043E \u043F\u0435\u0440\u0456\u043E\u0434\u0443</div>
+    <div style="font-size:13px;color:rgba(30,16,64,0.45);font-weight:600">${t("finance.empty.no_tx_period", "\u0423 \u0446\u044C\u043E\u043C\u0443 \u043F\u0435\u0440\u0456\u043E\u0434\u0456 \u043E\u043F\u0435\u0440\u0430\u0446\u0456\u0439 \u043D\u0435\u043C\u0430\u0454")}</div>
+    <div style="font-size:11px;color:rgba(30,16,64,0.35);font-weight:500;margin-top:4px">${t("finance.empty.hint_swipe", "\u0422\u0430\u043F\u043D\u0438 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E \u0449\u043E\u0431 \u0434\u043E\u0434\u0430\u0442\u0438 \u0430\u0431\u043E \u0441\u0432\u0430\u0439\u043F\u043D\u0438 \u2190\u2192 \u0434\u043B\u044F \u0456\u043D\u0448\u043E\u0433\u043E \u043F\u0435\u0440\u0456\u043E\u0434\u0443")}</div>
   </div>`;
   }
   function _attachFinSwipe() {
@@ -7422,8 +7422,8 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
       const levitShadow = `box-shadow:0 4px 10px rgba(0,0,0,0.32), 0 2px 4px rgba(0,0,0,0.22);`;
       const editStyle = _finEditMode ? `box-shadow:0 4px 10px rgba(0,0,0,0.32), 0 2px 4px rgba(0,0,0,0.22), 0 0 0 2px ${cat.color}55;` : levitShadow;
       const arrows = _finEditMode ? `
-      <button onclick="event.stopPropagation();moveFinCategory('${escapeHtml(cat.id)}',-1);renderFinance()" aria-label="\u0412\u043B\u0456\u0432\u043E" style="position:absolute;left:-6px;top:50%;transform:translateY(-50%);width:22px;height:22px;border-radius:50%;border:none;background:rgba(255,255,255,0.95);color:#1e1040;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;padding:0;box-shadow:0 2px 6px rgba(30,16,64,0.18);z-index:2">\u2039</button>
-      <button onclick="event.stopPropagation();moveFinCategory('${escapeHtml(cat.id)}',+1);renderFinance()" aria-label="\u0412\u043F\u0440\u0430\u0432\u043E" style="position:absolute;right:-6px;top:50%;transform:translateY(-50%);width:22px;height:22px;border-radius:50%;border:none;background:rgba(255,255,255,0.95);color:#1e1040;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;padding:0;box-shadow:0 2px 6px rgba(30,16,64,0.18);z-index:2">\u203A</button>` : "";
+      <button onclick="event.stopPropagation();moveFinCategory('${escapeHtml(cat.id)}',-1);renderFinance()" aria-label="${t("finance.cat.move_left", "\u0412\u043B\u0456\u0432\u043E")}" style="position:absolute;left:-6px;top:50%;transform:translateY(-50%);width:22px;height:22px;border-radius:50%;border:none;background:rgba(255,255,255,0.95);color:#1e1040;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;padding:0;box-shadow:0 2px 6px rgba(30,16,64,0.18);z-index:2">\u2039</button>
+      <button onclick="event.stopPropagation();moveFinCategory('${escapeHtml(cat.id)}',+1);renderFinance()" aria-label="${t("finance.cat.move_right", "\u0412\u043F\u0440\u0430\u0432\u043E")}" style="position:absolute;right:-6px;top:50%;transform:translateY(-50%);width:22px;height:22px;border-radius:50%;border:none;background:rgba(255,255,255,0.95);color:#1e1040;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;padding:0;box-shadow:0 2px 6px rgba(30,16,64,0.18);z-index:2">\u203A</button>` : "";
       return `<div onclick="${onClick}" style="display:flex;flex-direction:column;align-items:center;cursor:pointer;padding:4px 0;min-width:0;position:relative">
       <div style="font-size:11px;font-weight:600;color:rgba(30,16,64,0.55);margin-bottom:4px;text-align:center;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(cat.name)}</div>
       <div style="position:relative;width:48px;height:48px">
@@ -7436,7 +7436,7 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     </div>`;
     };
     const renderAddCell = () => `<div onclick="openCategoryEditModal('new')" style="display:flex;flex-direction:column;align-items:center;cursor:pointer;padding:4px 0;min-width:0">
-    <div style="font-size:11px;font-weight:600;color:rgba(30,16,64,0.4);margin-bottom:4px">\u0414\u043E\u0434\u0430\u0442\u0438</div>
+    <div style="font-size:11px;font-weight:600;color:rgba(30,16,64,0.4);margin-bottom:4px">${t("finance.cat.add", "\u0414\u043E\u0434\u0430\u0442\u0438")}</div>
     <div style="width:48px;height:48px;border-radius:50%;background:rgba(194,65,12,0.08);border:2px dashed rgba(194,65,12,0.35);display:flex;align-items:center;justify-content:center">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#c2410c" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
     </div>
@@ -7444,7 +7444,7 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
   </div>`;
     const gridCells = inGrid.map(renderCell).join("") + (_finEditMode && inGrid.length < 12 ? renderAddCell() : "");
     const overflowCells = overflow.map(renderCell).join("") + (_finEditMode && inGrid.length >= 12 ? renderAddCell() : "");
-    const heroLabel = isExpense ? "\u0412\u0438\u0442\u0440\u0430\u0442\u0438" : "\u0414\u043E\u0445\u043E\u0434\u0438";
+    const heroLabel = isExpense ? t("finance.hero.expenses", "\u0412\u0438\u0442\u0440\u0430\u0442\u0438") : t("finance.hero.incomes", "\u0414\u043E\u0445\u043E\u0434\u0438");
     const heroCol = isExpense ? "#c2410c" : "#16a34a";
     const donutR = 42;
     const donutCirc = 2 * Math.PI * donutR;
@@ -7480,15 +7480,15 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     const headerHtml = _finEditMode ? `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;user-select:none">
         <div style="width:32px"></div>
         <div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex:1">
-          <div style="font-size:14px;font-weight:800;color:#c2410c">\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u043D\u043D\u044F \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0439</div>
-          <div style="font-size:10px;font-weight:600;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em">\u0442\u0430\u043F\u043D\u0438 \u0449\u043E\u0431 \u0440\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0430\u0431\u043E +</div>
+          <div style="font-size:14px;font-weight:800;color:#c2410c">${t("finance.edit.title", "\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u043D\u043D\u044F \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0439")}</div>
+          <div style="font-size:10px;font-weight:600;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em">${t("finance.edit.hint", "\u0442\u0430\u043F\u043D\u0438 \u0449\u043E\u0431 \u0440\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0430\u0431\u043E +")}</div>
         </div>
-        <button onclick="toggleFinEditMode()" aria-label="\u0413\u043E\u0442\u043E\u0432\u043E" style="padding:6px 14px;border-radius:14px;border:none;background:#c2410c;color:white;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">\u0413\u043E\u0442\u043E\u0432\u043E</button>
+        <button onclick="toggleFinEditMode()" aria-label="${t("finance.edit.done", "\u0413\u043E\u0442\u043E\u0432\u043E")}" style="padding:6px 14px;border-radius:14px;border:none;background:#c2410c;color:white;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">${t("finance.edit.done", "\u0413\u043E\u0442\u043E\u0432\u043E")}</button>
       </div>` : `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;user-select:none">
         <button onclick="shiftFinPeriod(-1)" aria-label="\u041F\u043E\u043F\u0435\u0440\u0435\u0434\u043D\u0456\u0439 \u043F\u0435\u0440\u0456\u043E\u0434" style="width:32px;height:32px;border-radius:50%;border:none;background:rgba(30,16,64,0.05);color:rgba(30,16,64,0.55);box-shadow:0 4px 10px rgba(0,0,0,0.32), 0 2px 4px rgba(0,0,0,0.22);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit">\u2039</button>
         <div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex:1">
           <div style="font-size:14px;font-weight:800;color:#1e1040">${escapeHtml(periodLabel)}</div>
-          ${!isCurrent ? `<div onclick="shiftFinPeriod(${-currentFinPeriodOffset})" style="font-size:10px;font-weight:700;color:#c2410c;cursor:pointer;text-transform:uppercase;letter-spacing:0.06em">\u21BA \u0434\u043E \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456</div>` : `<div style="font-size:10px;font-weight:600;color:rgba(30,16,64,0.3);text-transform:uppercase;letter-spacing:0.06em">\u0441\u0432\u0430\u0439\u043F \u2190\u2192 \u0434\u043B\u044F \u043D\u0430\u0432\u0456\u0433\u0430\u0446\u0456\u0457</div>`}
+          ${!isCurrent ? `<div onclick="shiftFinPeriod(${-currentFinPeriodOffset})" style="font-size:10px;font-weight:700;color:#c2410c;cursor:pointer;text-transform:uppercase;letter-spacing:0.06em">${t("finance.period.back_to_today", "\u21BA \u0434\u043E \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456")}</div>` : `<div style="font-size:10px;font-weight:600;color:rgba(30,16,64,0.3);text-transform:uppercase;letter-spacing:0.06em">${t("finance.period.swipe_hint", "\u0441\u0432\u0430\u0439\u043F \u2190\u2192 \u0434\u043B\u044F \u043D\u0430\u0432\u0456\u0433\u0430\u0446\u0456\u0457")}</div>`}
         </div>
         <div style="display:flex;align-items:center;gap:4px">
           <button onclick="toggleFinEditMode()" aria-label="\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457" title="\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457" style="width:32px;height:32px;border-radius:50%;border:none;background:rgba(30,16,64,0.05);color:rgba(30,16,64,0.55);box-shadow:0 4px 10px rgba(0,0,0,0.32), 0 2px 4px rgba(0,0,0,0.22);cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit">
@@ -7532,7 +7532,7 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     const moreBtn = allTxs.length > 8 ? `<div onclick="openAllTransactions()" style="text-align:center;margin-top:10px;font-size:13px;font-weight:700;color:#c2410c;cursor:pointer">\u0412\u0441\u0456 \u043E\u043F\u0435\u0440\u0430\u0446\u0456\u0457 (${allTxs.length}) <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#c2410c" stroke-width="2.5" stroke-linecap="round" style="vertical-align:middle"><polyline points="9 18 15 12 9 6"/></svg></div>` : "";
     return `<div class="card-glass-blur">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-      <div class="fin-section-label">\u041E\u0441\u0442\u0430\u043D\u043D\u0456 \u043E\u043F\u0435\u0440\u0430\u0446\u0456\u0457</div>
+      <div class="fin-section-label">${t("finance.tx.recent_title", "\u041E\u0441\u0442\u0430\u043D\u043D\u0456 \u043E\u043F\u0435\u0440\u0430\u0446\u0456\u0457")}</div>
       <button onclick="openAddTransaction()" style="background:rgba(194,65,12,0.08);border:none;border-radius:8px;padding:4px 10px;font-size:12px;font-weight:700;color:#c2410c;cursor:pointer;font-family:inherit">+ \u0434\u043E\u0434\u0430\u0442\u0438</button>
     </div>
     ${rows || '<div style="font-size:13px;color:rgba(30,16,64,0.3);text-align:center;padding:8px">\u041D\u0435\u043C\u0430\u0454 \u043E\u043F\u0435\u0440\u0430\u0446\u0456\u0439 \u0437\u0430 \u0446\u0435\u0439 \u043F\u0435\u0440\u0456\u043E\u0434</div>'}
