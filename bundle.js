@@ -465,12 +465,12 @@
       return ba === 2 ? tb.localeCompare(ta) : ta.localeCompare(tb);
     });
     const prioIcons = { critical: "\u{1F534} ", important: "\u{1F7E0} ", normal: "" };
-    let html = `<div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px">\u041F\u043E\u0434\u0456\u0457 \xB7 ${monthNominative(_calMonth)}</div>`;
+    let html = `<div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px">${t("calendar.section.events_in_month", "\u041F\u043E\u0434\u0456\u0457")} \xB7 ${monthNominative(_calMonth)}</div>`;
     items.forEach((item) => {
       const d = /* @__PURE__ */ new Date(item.date + "T00:00:00");
       const isPast = item.date < todayStr;
       const isToday = item.date === todayStr;
-      const dayLabel = isToday ? "\u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456" : `${d.getDate()} ${monthGenitive(d.getMonth())}`;
+      const dayLabel = isToday ? t("calendar.day.today", "\u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456") : `${d.getDate()} ${monthGenitive(d.getMonth())}`;
       const icon = item.type === "event" ? "\u{1F4C5}" : "\u23F0";
       const prio = prioIcons[item.priority] || "";
       const timeStr = item.time ? ` \xB7 ${item.time}${item.endTime ? "\u2013" + item.endTime : ""}` : "";
@@ -535,9 +535,9 @@
     const prioColors = { critical: "#ef4444", important: "#ea580c", normal: "rgba(30,16,64,0.4)" };
     const prioIcons = { critical: "\u{1F534}", important: "\u{1F7E0}", normal: "" };
     el.style.display = "block";
-    el.innerHTML = `<div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px">\u041D\u0430\u0439\u0431\u043B\u0438\u0436\u0447\u0435</div>` + items.map((item) => {
+    el.innerHTML = `<div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px">${t("calendar.section.upcoming", "\u041D\u0430\u0439\u0431\u043B\u0438\u0436\u0447\u0435")}</div>` + items.map((item) => {
       const isToday = item.date.toDateString() === todayStr;
-      const dayLabel = isToday ? "\u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456" : `${item.date.getDate()} ${monthGenitive(item.date.getMonth())}`;
+      const dayLabel = isToday ? t("calendar.day.today", "\u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456") : `${item.date.getDate()} ${monthGenitive(item.date.getMonth())}`;
       const icon = item.type === "event" ? "\u{1F4C5}" : "\u2611\uFE0F";
       const prio = prioIcons[item.priority] || "";
       const timeStr = item.time ? ` \xB7 ${item.time}${item.endTime ? "\u2013" + item.endTime : ""}` : "";
@@ -667,7 +667,7 @@
           return `<div onclick="openEventEditModal(${ev.id})" style="display:flex;align-items:center;gap:10px;padding:8px 4px;cursor:pointer;border-radius:10px;background:rgba(59,130,246,0.10)">
           <div style="font-size:15px;flex-shrink:0">\u{1F4C5}</div>
           <div style="flex:1;font-size:14px;font-weight:600;color:#3b82f6">${prio}${escapeHtml(ev.title)}</div>
-          <div style="font-size:11px;color:rgba(30,16,64,0.35);font-weight:600">\u0432\u0435\u0441\u044C \u0434\u0435\u043D\u044C</div>
+          <div style="font-size:11px;color:rgba(30,16,64,0.35);font-weight:600">${t("calendar.event.all_day", "\u0432\u0435\u0441\u044C \u0434\u0435\u043D\u044C")}</div>
         </div>`;
         }).join("");
       } else {
@@ -690,7 +690,7 @@
     const timelineEl = document.getElementById("day-schedule-timeline");
     if (timelineEl) {
       if (timedItems.length === 0 && untimedTasks.length === 0 && allDayEvents.length === 0) {
-        timelineEl.innerHTML = `<div style="text-align:center;font-size:14px;color:rgba(30,16,64,0.3);padding:24px 0">\u041D\u0435\u043C\u0430\u0454 \u043F\u043E\u0434\u0456\u0439</div>`;
+        timelineEl.innerHTML = `<div style="text-align:center;font-size:14px;color:rgba(30,16,64,0.3);padding:24px 0">${t("calendar.empty.no_events", "\u041D\u0435\u043C\u0430\u0454 \u043F\u043E\u0434\u0456\u0439")}</div>`;
       } else {
         let html = "";
         timedItems.forEach((item, i) => {
@@ -720,7 +720,7 @@
         });
         if (untimedTasks.length > 0) {
           html += `<div style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(30,16,64,0.08)">`;
-          html += `<div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px">\u0417\u0430\u0434\u0430\u0447\u0456</div>`;
+          html += `<div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px">${t("calendar.section.tasks", "\u0417\u0430\u0434\u0430\u0447\u0456")}</div>`;
           untimedTasks.forEach((t2) => {
             const prio = t2.priority === "critical" ? "\u{1F534} " : t2.priority === "important" ? "\u{1F7E0} " : "";
             const doneStyle = t2.done ? "color:rgba(30,16,64,0.3);text-decoration:line-through;" : "color:#1e1040;";
@@ -906,8 +906,8 @@
     const blocks = _routineDay === "default" ? getRoutineForDay("default").map((b, idx) => ({ time: b.time, activity: b.activity, kind: "routine", sourceIdx: idx, isPast: false })) : getCombinedTimelineForDate(dateISO);
     if (blocks.length === 0) {
       el.innerHTML = `<div style="text-align:center;padding:32px 0;color:rgba(30,16,64,0.3);font-size:14px">
-      \u0420\u043E\u0437\u043F\u043E\u0440\u044F\u0434\u043E\u043A \u043F\u043E\u0440\u043E\u0436\u043D\u0456\u0439.<br>\u041D\u0430\u0442\u0438\u0441\u043D\u0438 \xAB+ \u0414\u043E\u0434\u0430\u0442\u0438 \u0431\u043B\u043E\u043A\xBB \u0430\u0431\u043E \u043D\u0430\u043F\u0438\u0448\u0438 \u0432 \u0447\u0430\u0442:<br>
-      <span style="color:rgba(234,88,12,0.6);font-weight:600">"\u041C\u0456\u0439 \u0440\u043E\u0437\u043A\u043B\u0430\u0434: 7 \u043F\u0456\u0434\u0439\u043E\u043C, 9 \u0440\u043E\u0431\u043E\u0442\u0430, 18 \u0437\u0430\u043B"</span>
+      ${t("calendar.routine.empty_title", "\u0420\u043E\u0437\u043F\u043E\u0440\u044F\u0434\u043E\u043A \u043F\u043E\u0440\u043E\u0436\u043D\u0456\u0439.")}<br>${t("calendar.routine.empty_hint", "\u041D\u0430\u0442\u0438\u0441\u043D\u0438 \xAB+ \u0414\u043E\u0434\u0430\u0442\u0438 \u0431\u043B\u043E\u043A\xBB \u0430\u0431\u043E \u043D\u0430\u043F\u0438\u0448\u0438 \u0432 \u0447\u0430\u0442:")}<br>
+      <span style="color:rgba(234,88,12,0.6);font-weight:600">${t("calendar.routine.empty_example", '"\u041C\u0456\u0439 \u0440\u043E\u0437\u043A\u043B\u0430\u0434: 7 \u043F\u0456\u0434\u0439\u043E\u043C, 9 \u0440\u043E\u0431\u043E\u0442\u0430, 18 \u0437\u0430\u043B"')}</span>
     </div>`;
       return;
     }
@@ -980,12 +980,12 @@
       <div style="display:flex;gap:10px;margin-bottom:10px">
         <input type="time" id="routine-add-time" value="09:00"
           style="flex:0 0 110px;padding:10px 8px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.15);font-size:16px;font-weight:600;color:#1e1040;background:white;-webkit-appearance:none">
-        <input type="text" id="routine-add-activity" placeholder="\u0429\u043E \u0440\u043E\u0431\u0438\u0442\u0438..." maxlength="40"
+        <input type="text" id="routine-add-activity" placeholder="${t("calendar.routine.activity_placeholder", "\u0429\u043E \u0440\u043E\u0431\u0438\u0442\u0438...")}" maxlength="40"
           style="flex:1;min-width:0;padding:10px 12px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.15);font-size:15px;color:#1e1040;background:white">
       </div>
       <div style="display:flex;gap:8px">
-        <button onclick="routineSaveNewBlock()" style="flex:1;padding:10px;border-radius:12px;border:none;background:#ea580c;color:white;font-size:14px;font-weight:700;cursor:pointer">\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438</button>
-        <button onclick="routineCancelAdd()" style="flex:1;padding:10px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.12);background:none;color:rgba(30,16,64,0.5);font-size:14px;font-weight:600;cursor:pointer">\u0421\u043A\u0430\u0441\u0443\u0432\u0430\u0442\u0438</button>
+        <button onclick="routineSaveNewBlock()" style="flex:1;padding:10px;border-radius:12px;border:none;background:#ea580c;color:white;font-size:14px;font-weight:700;cursor:pointer">${t("calendar.btn.save", "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438")}</button>
+        <button onclick="routineCancelAdd()" style="flex:1;padding:10px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.12);background:none;color:rgba(30,16,64,0.5);font-size:14px;font-weight:600;cursor:pointer">${t("calendar.btn.cancel", "\u0421\u043A\u0430\u0441\u0443\u0432\u0430\u0442\u0438")}</button>
       </div>
     </div>`;
     setTimeout(() => document.getElementById("routine-add-activity")?.focus(), 100);
@@ -1007,7 +1007,7 @@
   function routineCancelAdd() {
     const wrap = document.getElementById("routine-add-wrap");
     if (!wrap) return;
-    wrap.innerHTML = `<button onclick="routineAddBlock()" style="width:100%;padding:12px;border-radius:14px;border:2px dashed rgba(234,88,12,0.25);background:none;font-size:14px;font-weight:600;color:rgba(234,88,12,0.6);cursor:pointer">+ \u0414\u043E\u0434\u0430\u0442\u0438 \u0431\u043B\u043E\u043A</button>`;
+    wrap.innerHTML = `<button onclick="routineAddBlock()" style="width:100%;padding:12px;border-radius:14px;border:2px dashed rgba(234,88,12,0.25);background:none;font-size:14px;font-weight:600;color:rgba(234,88,12,0.6);cursor:pointer">${t("calendar.routine.add_block", "+ \u0414\u043E\u0434\u0430\u0442\u0438 \u0431\u043B\u043E\u043A")}</button>`;
   }
   function routineDeleteBlock(idx) {
     const routine = getRoutine();
@@ -1174,7 +1174,7 @@
     const removed = events.splice(idx, 1)[0];
     saveEvents(events);
     addToTrash("event", removed);
-    showUndoToast("\u041F\u043E\u0434\u0456\u044E \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E");
+    showUndoToast(t("calendar.toast.event_deleted", "\u041F\u043E\u0434\u0456\u044E \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E"));
     closeEventEditModal();
     renderCalendar();
     renderUpcoming();
