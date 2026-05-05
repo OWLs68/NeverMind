@@ -9658,7 +9658,7 @@ ${recent}`;
           <div onclick="openNoteView(${n.id})" style="cursor:pointer">
             <div style="font-size:15px;line-height:1.55;color:#1e1040;font-weight:500;margin-bottom:5px">${escapeHtml(preview)}</div>
             <div style="display:flex;align-items:center;justify-content:space-between">
-              <div style="font-size:12px;color:rgba(30,16,64,0.3)">${formatTime(n.ts)}${n.source === "inbox" ? " \xB7 \u0437 Inbox" : n.source === "agent" ? " \xB7 \u0447\u0435\u0440\u0435\u0437 OWL" : ""}</div>
+              <div style="font-size:12px;color:rgba(30,16,64,0.3)">${formatTime(n.ts)}${n.source === "inbox" ? t("notes.source.from_inbox", " \xB7 \u0437 Inbox") : n.source === "agent" ? t("notes.source.from_owl", " \xB7 \u0447\u0435\u0440\u0435\u0437 OWL") : ""}</div>
               <div onclick="event.stopPropagation();openNoteMenu(${n.id})" style="padding:4px 8px;cursor:pointer;color:rgba(30,16,64,0.4);font-size:22px;line-height:1;min-width:32px;text-align:center">\xB7\xB7\xB7</div>
             </div>
           </div>
@@ -9717,7 +9717,7 @@ ${recent}`;
           if (folderNotes.length > 0) addToTrash("folder", { folder }, folderNotes);
           saveNotes(remaining);
           renderNotes();
-          if (folderNotes.length > 0) showUndoToast('\u041F\u0430\u043F\u043A\u0443 "' + folder + '" \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E (' + folderNotes.length + ")", () => {
+          if (folderNotes.length > 0) showUndoToast(t("notes.toast.folder_deleted", '\u041F\u0430\u043F\u043A\u0443 "{folder}" \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E ({n})', { folder, n: folderNotes.length }), () => {
             const n = getNotes();
             folderNotes.forEach((note) => n.push(note));
             saveNotes(n);
@@ -9767,7 +9767,7 @@ ${recent}`;
     if (navigator.clipboard) {
       navigator.clipboard.writeText(n.text);
     } else {
-      showToast("\u041A\u043E\u043F\u0456\u044E\u0432\u0430\u043D\u043D\u044F \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0435");
+      showToast(t("notes.toast.copy_unavailable", "\u041A\u043E\u043F\u0456\u044E\u0432\u0430\u043D\u043D\u044F \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0435"));
     }
   }
   function noteMenuMove() {
@@ -9780,14 +9780,10 @@ ${recent}`;
     const current = n.folder || t("notes.default_folder", "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435");
     const folderList = folders.filter((f) => f !== current);
     if (folderList.length === 0) {
-      showToast("\u041D\u0435\u043C\u0430\u0454 \u0456\u043D\u0448\u0438\u0445 \u043F\u0430\u043F\u043E\u043A");
+      showToast(t("notes.toast.no_other_folders", "\u041D\u0435\u043C\u0430\u0454 \u0456\u043D\u0448\u0438\u0445 \u043F\u0430\u043F\u043E\u043A"));
       return;
     }
-    const newFolder = prompt(`\u041F\u0435\u0440\u0435\u043C\u0456\u0441\u0442\u0438\u0442\u0438 \u0432 \u043F\u0430\u043F\u043A\u0443:
-${folderList.join(", ")}
-
-\u041F\u043E\u0442\u043E\u0447\u043D\u0430: ${current}
-\u0412\u0432\u0435\u0434\u0456\u0442\u044C \u043D\u0430\u0437\u0432\u0443:`, current);
+    const newFolder = prompt(t("notes.prompt.move_to_folder", "\u041F\u0435\u0440\u0435\u043C\u0456\u0441\u0442\u0438\u0442\u0438 \u0432 \u043F\u0430\u043F\u043A\u0443:\n{list}\n\n\u041F\u043E\u0442\u043E\u0447\u043D\u0430: {current}\n\u0412\u0432\u0435\u0434\u0456\u0442\u044C \u043D\u0430\u0437\u0432\u0443:", { list: folderList.join(", "), current }), current);
     if (newFolder && newFolder.trim() && newFolder.trim() !== current) {
       const idx = notes.findIndex((x) => x.id === id);
       if (idx !== -1) notes[idx].folder = newFolder.trim();
@@ -10124,7 +10120,7 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
       const pinnedCount = Object.values(meta).filter((m) => m.pinned).length;
       const wasAlreadyPinned = getFolderMeta(_editingFolder).pinned;
       if (!wasAlreadyPinned && pinnedCount >= 5) {
-        showToast("\u041C\u0430\u043A\u0441\u0438\u043C\u0443\u043C 5 \u0437\u0430\u043A\u0440\u0456\u043F\u043B\u0435\u043D\u0438\u0445 \u043F\u0430\u043F\u043E\u043A");
+        showToast(t("notes.toast.max_pinned", "\u041C\u0430\u043A\u0441\u0438\u043C\u0443\u043C 5 \u0437\u0430\u043A\u0440\u0456\u043F\u043B\u0435\u043D\u0438\u0445 \u043F\u0430\u043F\u043E\u043A"));
         return;
       }
     }
