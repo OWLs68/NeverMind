@@ -16783,7 +16783,7 @@ ${userText}
           }
         }
         renderInbox();
-        if (item) showUndoToast("\u0412\u0438\u0434\u0430\u043B\u0435\u043D\u043E \u0437 Inbox", () => {
+        if (item) showUndoToast(t("inbox.undo.deleted", "\u0412\u0438\u0434\u0430\u043B\u0435\u043D\u043E \u0437 Inbox"), () => {
           const items2 = getInbox();
           const idx = Math.min(originalIdx, items2.length);
           items2.splice(idx, 0, item);
@@ -17662,11 +17662,11 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
         const ev = { id: Date.now(), title: eventDetected.title || savedText, date: eventDetected.date, time: null, priority: "normal", createdAt: Date.now() };
         const res = addEventDedup(ev);
         if (!res.added) {
-          addInboxChatMsg("agent", `\u0422\u0430\u043A\u0430 \u043F\u043E\u0434\u0456\u044F "${ev.title}" \u0432\u0436\u0435 \u0454 \u0432 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440\u0456.`);
+          addInboxChatMsg("agent", t("inbox.chat.event_dupe", '\u0422\u0430\u043A\u0430 \u043F\u043E\u0434\u0456\u044F "{title}" \u0432\u0436\u0435 \u0454 \u0432 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440\u0456.', { title: ev.title }));
         } else {
           const dateObj = new Date(eventDetected.date);
           const dayStr = `${dateObj.getDate()} ${monthGenitive(dateObj.getMonth())}`;
-          addInboxChatMsg("agent", `\u{1F4C5} \u041F\u043E\u0434\u0456\u044E "${ev.title}" \u0434\u043E\u0434\u0430\u043D\u043E \u0432 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440 \u043D\u0430 ${dayStr}`);
+          addInboxChatMsg("agent", t("inbox.event.added_simple", '\u{1F4C5} \u041F\u043E\u0434\u0456\u044E "{title}" \u0434\u043E\u0434\u0430\u043D\u043E \u0432 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440 \u043D\u0430 {day}', { title: ev.title, day: dayStr }));
         }
       } else {
         const mood = parsed.mood || (/добре|чудово|супер|відмінно|весело|щасли/i.test(savedText) ? "positive" : /погано|жахливо|сумно|нудно|важко|втомив/i.test(savedText) ? "negative" : "neutral");
@@ -17678,13 +17678,13 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       }
     }
     const catConfirm2 = {
-      task: "\u2705 \u0417\u0430\u0434\u0430\u0447\u0443 \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E",
-      habit: "\u{1F331} \u0417\u0432\u0438\u0447\u043A\u0443 \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E",
-      note: "\u{1F4DD} \u041D\u043E\u0442\u0430\u0442\u043A\u0443 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E",
-      idea: "\u{1F4A1} \u0406\u0434\u0435\u044E \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E",
-      event: "\u{1F4C5} \u041F\u043E\u0434\u0456\u044E \u0434\u043E\u0434\u0430\u043D\u043E"
+      task: t("inbox.confirm.task", "\u2705 \u0417\u0430\u0434\u0430\u0447\u0443 \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E"),
+      habit: t("inbox.confirm.habit", "\u{1F331} \u0417\u0432\u0438\u0447\u043A\u0443 \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E"),
+      note: t("inbox.confirm.note", "\u{1F4DD} \u041D\u043E\u0442\u0430\u0442\u043A\u0443 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E"),
+      idea: t("inbox.confirm.idea", "\u{1F4A1} \u0406\u0434\u0435\u044E \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E"),
+      event: t("inbox.confirm.event", "\u{1F4C5} \u041F\u043E\u0434\u0456\u044E \u0434\u043E\u0434\u0430\u043D\u043E")
     };
-    const confirmMsg2 = parsed.comment ? `${parsed.comment} ${catConfirm2[cat] ? "/ " + catConfirm2[cat] : ""}` : catConfirm2[cat] || "\u2713 \u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E";
+    const confirmMsg2 = parsed.comment ? `${parsed.comment} ${catConfirm2[cat] ? "/ " + catConfirm2[cat] : ""}` : catConfirm2[cat] || t("inbox.chat.saved", "\u2713 \u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E");
     addInboxChatMsg("agent", confirmMsg2);
     if (parsed.ask_after) {
       setTimeout(() => addInboxChatMsg("agent", parsed.ask_after), 600);
@@ -17705,7 +17705,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
   function processCompleteHabit(parsed, originalText) {
     const ids = parsed.habit_ids || (parsed.habit_id ? [parsed.habit_id] : []);
     if (ids.length === 0) {
-      addInboxChatMsg("agent", "\u041D\u0435 \u0437\u0440\u043E\u0437\u0443\u043C\u0456\u0432 \u044F\u043A\u0443 \u0437\u0432\u0438\u0447\u043A\u0443 \u0432\u0456\u0434\u043C\u0456\u0442\u0438\u0442\u0438.");
+      addInboxChatMsg("agent", t("inbox.chat.habit_unclear", "\u041D\u0435 \u0437\u0440\u043E\u0437\u0443\u043C\u0456\u0432 \u044F\u043A\u0443 \u0437\u0432\u0438\u0447\u043A\u0443 \u0432\u0456\u0434\u043C\u0456\u0442\u0438\u0442\u0438."));
       return;
     }
     const habits = getHabits();
@@ -17721,7 +17721,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       }
     });
     if (completed.length === 0) {
-      addInboxChatMsg("agent", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u0442\u0430\u043A\u0456 \u0437\u0432\u0438\u0447\u043A\u0438.");
+      addInboxChatMsg("agent", t("inbox.chat.habits_not_found", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u0442\u0430\u043A\u0456 \u0437\u0432\u0438\u0447\u043A\u0438."));
       return;
     }
     saveHabitLog(log);
@@ -17731,13 +17731,13 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
     items.unshift({ id: Date.now(), text: originalText, category: "habit", ts: Date.now(), processed: true });
     saveInbox(items);
     renderInbox();
-    const msg = parsed.comment || (completed.length === 1 ? `\u2705 \u0412\u0456\u0434\u043C\u0456\u0442\u0438\u0432 \u0437\u0432\u0438\u0447\u043A\u0443 "${completed[0]}" \u044F\u043A \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u0443` : `\u2705 \u0412\u0456\u0434\u043C\u0456\u0442\u0438\u0432 ${completed.length} \u0437\u0432\u0438\u0447\u043A\u0438: ${completed.join(", ")}`);
+    const msg = parsed.comment || (completed.length === 1 ? t("inbox.habit.marked_one", '\u2705 \u0412\u0456\u0434\u043C\u0456\u0442\u0438\u0432 \u0437\u0432\u0438\u0447\u043A\u0443 "{name}" \u044F\u043A \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u0443', { name: completed[0] }) : t("inbox.habit.marked_many", "\u2705 \u0412\u0456\u0434\u043C\u0456\u0442\u0438\u0432 {n} \u0437\u0432\u0438\u0447\u043A\u0438: {list}", { n: completed.length, list: completed.join(", ") }));
     addInboxChatMsg("agent", msg);
   }
   function processCompleteTask(parsed, originalText) {
     const ids = parsed.task_ids || (parsed.task_id ? [parsed.task_id] : []);
     if (ids.length === 0) {
-      addInboxChatMsg("agent", "\u041D\u0435 \u0437\u0440\u043E\u0437\u0443\u043C\u0456\u0432 \u044F\u043A\u0443 \u0437\u0430\u0434\u0430\u0447\u0443 \u0437\u0430\u043A\u0440\u0438\u0442\u0438.");
+      addInboxChatMsg("agent", t("inbox.chat.task_unclear", "\u041D\u0435 \u0437\u0440\u043E\u0437\u0443\u043C\u0456\u0432 \u044F\u043A\u0443 \u0437\u0430\u0434\u0430\u0447\u0443 \u0437\u0430\u043A\u0440\u0438\u0442\u0438."));
       return;
     }
     const tasks = getTasks();
@@ -17750,7 +17750,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       }
     });
     if (completed.length === 0) {
-      addInboxChatMsg("agent", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u0442\u0430\u043A\u0456 \u0437\u0430\u0434\u0430\u0447\u0456.");
+      addInboxChatMsg("agent", t("inbox.chat.tasks_not_found", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u0442\u0430\u043A\u0456 \u0437\u0430\u0434\u0430\u0447\u0456."));
       return;
     }
     saveTasks(tasks);
@@ -17759,7 +17759,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
     items.unshift({ id: Date.now(), text: originalText, category: "task", ts: Date.now(), processed: true });
     saveInbox(items);
     renderInbox();
-    const msg = parsed.comment || (completed.length === 1 ? `\u2705 \u0417\u0430\u0434\u0430\u0447\u0443 "${completed[0]}" \u0437\u0430\u043A\u0440\u0438\u0442\u043E` : `\u2705 \u0417\u0430\u043A\u0440\u0438\u0432 ${completed.length} \u0437\u0430\u0434\u0430\u0447\u0456: ${completed.join(", ")}`);
+    const msg = parsed.comment || (completed.length === 1 ? t("inbox.task.closed_one", '\u2705 \u0417\u0430\u0434\u0430\u0447\u0443 "{title}" \u0437\u0430\u043A\u0440\u0438\u0442\u043E', { title: completed[0] }) : t("inbox.task.closed_many", "\u2705 \u0417\u0430\u043A\u0440\u0438\u0432 {n} \u0437\u0430\u0434\u0430\u0447\u0456: {list}", { n: completed.length, list: completed.join(", ") }));
     addInboxChatMsg("agent", msg);
   }
   function getTabbarHeight() {
