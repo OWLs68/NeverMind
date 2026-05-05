@@ -18024,13 +18024,13 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       const testKey = "__nm_health_test__";
       localStorage.setItem(testKey, "1");
       localStorage.removeItem(testKey);
-      checks.push({ name: "\u0421\u0445\u043E\u0432\u0438\u0449\u0435", status: "ok", message: "\u0414\u043E\u0441\u0442\u0443\u043F\u043D\u0435" });
+      checks.push({ name: t("diag.health.storage", "\u0421\u0445\u043E\u0432\u0438\u0449\u0435"), status: "ok", message: t("diag.health.storage_ok", "\u0414\u043E\u0441\u0442\u0443\u043F\u043D\u0435") });
     } catch (e) {
       checks.push({
-        name: "\u0421\u0445\u043E\u0432\u0438\u0449\u0435",
+        name: t("diag.health.storage", "\u0421\u0445\u043E\u0432\u0438\u0449\u0435"),
         status: "fail",
-        message: "\u041D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0435",
-        hint: "Safari \u0443 \u043F\u0440\u0438\u0432\u0430\u0442\u043D\u043E\u043C\u0443 \u0440\u0435\u0436\u0438\u043C\u0456 \u0430\u0431\u043E \u043A\u0432\u043E\u0442\u0443 \u0432\u0438\u0447\u0435\u0440\u043F\u0430\u043D\u043E"
+        message: t("diag.health.storage_fail", "\u041D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0435"),
+        hint: t("diag.health.storage_hint", "Safari \u0443 \u043F\u0440\u0438\u0432\u0430\u0442\u043D\u043E\u043C\u0443 \u0440\u0435\u0436\u0438\u043C\u0456 \u0430\u0431\u043E \u043A\u0432\u043E\u0442\u0443 \u0432\u0438\u0447\u0435\u0440\u043F\u0430\u043D\u043E")
       });
     }
     try {
@@ -18038,62 +18038,62 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       const sizeMB = (size / 1024 / 1024).toFixed(2);
       if (size > 4 * 1024 * 1024) {
         checks.push({
-          name: "\u041E\u0431\u0441\u044F\u0433",
+          name: t("diag.health.size", "\u041E\u0431\u0441\u044F\u0433"),
           status: "warn",
-          message: `${sizeMB} \u041C\u0411 \u2014 \u0431\u043B\u0438\u0437\u044C\u043A\u043E \u0434\u043E \u043B\u0456\u043C\u0456\u0442\u0443 5 \u041C\u0411`,
-          hint: "\u041E\u0447\u0438\u0441\u0442\u0438 \u043A\u043E\u0448\u0438\u043A \u0456 \u0441\u0442\u0430\u0440\u0456 \u043B\u043E\u0433\u0438"
+          message: t("diag.health.size_near_limit", "{sizeMB} \u041C\u0411 \u2014 \u0431\u043B\u0438\u0437\u044C\u043A\u043E \u0434\u043E \u043B\u0456\u043C\u0456\u0442\u0443 5 \u041C\u0411", { sizeMB }),
+          hint: t("diag.health.size_hint", "\u041E\u0447\u0438\u0441\u0442\u0438 \u043A\u043E\u0448\u0438\u043A \u0456 \u0441\u0442\u0430\u0440\u0456 \u043B\u043E\u0433\u0438")
         });
       } else if (size > 2 * 1024 * 1024) {
-        checks.push({ name: "\u041E\u0431\u0441\u044F\u0433", status: "warn", message: `${sizeMB} \u041C\u0411` });
+        checks.push({ name: t("diag.health.size", "\u041E\u0431\u0441\u044F\u0433"), status: "warn", message: t("diag.health.size_mb", "{sizeMB} \u041C\u0411", { sizeMB }) });
       } else {
-        checks.push({ name: "\u041E\u0431\u0441\u044F\u0433", status: "ok", message: `${sizeMB} \u041C\u0411` });
+        checks.push({ name: t("diag.health.size", "\u041E\u0431\u0441\u044F\u0433"), status: "ok", message: t("diag.health.size_mb", "{sizeMB} \u041C\u0411", { sizeMB }) });
       }
     } catch (e) {
-      checks.push({ name: "\u041E\u0431\u0441\u044F\u0433", status: "warn", message: "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0432\u0438\u043C\u0456\u0440\u044F\u0442\u0438" });
+      checks.push({ name: t("diag.health.size", "\u041E\u0431\u0441\u044F\u0433"), status: "warn", message: t("diag.health.size_unmeasured", "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0432\u0438\u043C\u0456\u0440\u044F\u0442\u0438") });
     }
     const hasKey = !!localStorage.getItem("nm_gemini_key");
     checks.push({
-      name: "API \u043A\u043B\u044E\u0447",
+      name: t("diag.health.api_key", "API \u043A\u043B\u044E\u0447"),
       status: hasKey ? "ok" : "fail",
-      message: hasKey ? "\u041F\u0440\u0438\u0441\u0443\u0442\u043D\u0456\u0439" : "\u0412\u0456\u0434\u0441\u0443\u0442\u043D\u0456\u0439",
-      hint: hasKey ? null : "\u041D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F \u2192 OpenAI API \u043A\u043B\u044E\u0447"
+      message: hasKey ? t("diag.health.api_present", "\u041F\u0440\u0438\u0441\u0443\u0442\u043D\u0456\u0439") : t("diag.health.api_missing", "\u0412\u0456\u0434\u0441\u0443\u0442\u043D\u0456\u0439"),
+      hint: hasKey ? null : t("diag.health.api_hint", "\u041D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F \u2192 OpenAI API \u043A\u043B\u044E\u0447")
     });
     const swActive = !!(navigator.serviceWorker && navigator.serviceWorker.controller);
     checks.push({
-      name: "Service Worker",
+      name: t("diag.health.sw", "Service Worker"),
       status: swActive ? "ok" : "warn",
-      message: swActive ? "\u0410\u043A\u0442\u0438\u0432\u043D\u0438\u0439" : "\u041D\u0435 \u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0439",
-      hint: swActive ? null : "\u0417\u0430\u0441\u0442\u043E\u0441\u0443\u043D\u043E\u043A \u043D\u0435 \u043F\u0440\u0430\u0446\u044E\u0432\u0430\u0442\u0438\u043C\u0435 \u043E\u0444\u043B\u0430\u0439\u043D"
+      message: swActive ? t("diag.health.sw_active", "\u0410\u043A\u0442\u0438\u0432\u043D\u0438\u0439") : t("diag.health.sw_inactive", "\u041D\u0435 \u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0439"),
+      hint: swActive ? null : t("diag.health.sw_hint", "\u0417\u0430\u0441\u0442\u043E\u0441\u0443\u043D\u043E\u043A \u043D\u0435 \u043F\u0440\u0430\u0446\u044E\u0432\u0430\u0442\u0438\u043C\u0435 \u043E\u0444\u043B\u0430\u0439\u043D")
     });
     const onboardingDone = !!localStorage.getItem("nm_onboarding_done");
     checks.push({
-      name: "\u041E\u043D\u0431\u043E\u0440\u0434\u0438\u043D\u0433",
+      name: t("diag.health.onboarding", "\u041E\u043D\u0431\u043E\u0440\u0434\u0438\u043D\u0433"),
       status: onboardingDone ? "ok" : "warn",
-      message: onboardingDone ? "\u041F\u0440\u043E\u0439\u0434\u0435\u043D\u043E" : "\u041D\u0435 \u043F\u0440\u043E\u0439\u0434\u0435\u043D\u043E",
-      hint: onboardingDone ? null : "\u041F\u043E\u043A\u0430\u0436\u0435\u0442\u044C\u0441\u044F \u043F\u0440\u0438 \u043D\u0430\u0441\u0442\u0443\u043F\u043D\u043E\u043C\u0443 \u0437\u0430\u043F\u0443\u0441\u043A\u0443"
+      message: onboardingDone ? t("diag.health.onboarding_done", "\u041F\u0440\u043E\u0439\u0434\u0435\u043D\u043E") : t("diag.health.onboarding_pending", "\u041D\u0435 \u043F\u0440\u043E\u0439\u0434\u0435\u043D\u043E"),
+      hint: onboardingDone ? null : t("diag.health.onboarding_hint", "\u041F\u043E\u043A\u0430\u0436\u0435\u0442\u044C\u0441\u044F \u043F\u0440\u0438 \u043D\u0430\u0441\u0442\u0443\u043F\u043D\u043E\u043C\u0443 \u0437\u0430\u043F\u0443\u0441\u043A\u0443")
     });
     const dataKeys = [
-      { key: "nm_tasks", label: "\u0417\u0430\u0434\u0430\u0447\u0456" },
-      { key: "nm_notes", label: "\u041D\u043E\u0442\u0430\u0442\u043A\u0438" },
-      { key: "nm_habits2", label: "\u0417\u0432\u0438\u0447\u043A\u0438" },
-      { key: "nm_finance", label: "\u041E\u043F\u0435\u0440\u0430\u0446\u0456\u0457" }
+      { key: "nm_tasks", label: t("diag.health.tasks", "\u0417\u0430\u0434\u0430\u0447\u0456") },
+      { key: "nm_notes", label: t("diag.health.notes", "\u041D\u043E\u0442\u0430\u0442\u043A\u0438") },
+      { key: "nm_habits2", label: t("diag.health.habits", "\u0417\u0432\u0438\u0447\u043A\u0438") },
+      { key: "nm_finance", label: t("diag.health.finance", "\u041E\u043F\u0435\u0440\u0430\u0446\u0456\u0457") }
     ];
     for (const { key, label } of dataKeys) {
       const raw = localStorage.getItem(key);
       if (!raw) {
-        checks.push({ name: label, status: "ok", message: "0 \u0437\u0430\u043F\u0438\u0441\u0456\u0432" });
+        checks.push({ name: label, status: "ok", message: t("diag.health.records_zero", "0 \u0437\u0430\u043F\u0438\u0441\u0456\u0432") });
         continue;
       }
       try {
         const arr = JSON.parse(raw);
         const n = Array.isArray(arr) ? arr.length : 0;
-        checks.push({ name: label, status: "ok", message: `${n} \u0437\u0430\u043F\u0438\u0441\u0456\u0432` });
+        checks.push({ name: label, status: "ok", message: t("diag.health.records_n", "{n} \u0437\u0430\u043F\u0438\u0441\u0456\u0432", { n }) });
       } catch (e) {
         checks.push({
           name: label,
           status: "fail",
-          message: "\u0417\u043B\u0430\u043C\u0430\u043D\u0438\u0439 JSON",
-          hint: `\u041A\u043B\u044E\u0447 ${key} \u043F\u043E\u0448\u043A\u043E\u0434\u0436\u0435\u043D\u0438\u0439 \u2014 \u0435\u043A\u0441\u043F\u043E\u0440\u0442\u0443\u0439 \u043B\u043E\u0433\u0438 \u0414\u041E \u0434\u0456\u0439`
+          message: t("diag.health.json_broken", "\u0417\u043B\u0430\u043C\u0430\u043D\u0438\u0439 JSON"),
+          hint: t("diag.health.json_broken_hint", "\u041A\u043B\u044E\u0447 {key} \u043F\u043E\u0448\u043A\u043E\u0434\u0436\u0435\u043D\u0438\u0439 \u2014 \u0435\u043A\u0441\u043F\u043E\u0440\u0442\u0443\u0439 \u043B\u043E\u0433\u0438 \u0414\u041E \u0434\u0456\u0439", { key })
         });
       }
     }
@@ -18102,10 +18102,10 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       if (silenceUntil > Date.now()) {
         const mins = Math.ceil((silenceUntil - Date.now()) / 6e4);
         checks.push({
-          name: "OWL Auto-silence",
+          name: t("diag.health.owl_silence", "OWL Auto-silence"),
           status: "warn",
-          message: `\u0410\u043A\u0442\u0438\u0432\u043D\u0438\u0439 \u0449\u0435 ${mins} \u0445\u0432`,
-          hint: "\u041D\u0430\u0442\u0438\u0441\u043D\u0438 \u0447\u0456\u043F \u0449\u043E\u0431 \u0441\u043A\u0438\u043D\u0443\u0442\u0438, \u0430\u0431\u043E \u043E\u0447\u0438\u0441\u0442\u0438 \u0443 \u043A\u043E\u043D\u0441\u043E\u043B\u0456"
+          message: t("diag.health.owl_silence_active", "\u0410\u043A\u0442\u0438\u0432\u043D\u0438\u0439 \u0449\u0435 {mins} \u0445\u0432", { mins }),
+          hint: t("diag.health.owl_silence_hint", "\u041D\u0430\u0442\u0438\u0441\u043D\u0438 \u0447\u0456\u043F \u0449\u043E\u0431 \u0441\u043A\u0438\u043D\u0443\u0442\u0438, \u0430\u0431\u043E \u043E\u0447\u0438\u0441\u0442\u0438 \u0443 \u043A\u043E\u043D\u0441\u043E\u043B\u0456")
         });
       }
     } catch (e) {
@@ -18118,10 +18118,10 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       const sinceMsg = Date.now() - msgTs;
       if (attemptTs > 0 && sinceAttempt > 2 * 60 * 60 * 1e3 && sinceMsg > 2 * 60 * 60 * 1e3) {
         checks.push({
-          name: "OWL \u0442\u0430\u0431\u043B\u043E",
+          name: t("diag.health.owl_board", "OWL \u0442\u0430\u0431\u043B\u043E"),
           status: "warn",
-          message: `\u041D\u0435 \u043E\u043D\u043E\u0432\u043B\u044E\u0454\u0442\u044C\u0441\u044F ${Math.round(sinceAttempt / 36e5)} \u0433\u043E\u0434`,
-          hint: "\u041C\u043E\u0436\u043B\u0438\u0432\u043E \u043F\u0440\u0430\u043F\u043E\u0440\u0435\u0446\u044C \u0433\u0435\u043D\u0435\u0440\u0430\u0446\u0456\u0457 \u0437\u0430\u043B\u0438\u043F. \u041F\u0435\u0440\u0435\u0437\u0430\u043F\u0443\u0441\u0442\u0438 \u0437\u0430\u0441\u0442\u043E\u0441\u0443\u043D\u043E\u043A."
+          message: t("diag.health.owl_board_stale", "\u041D\u0435 \u043E\u043D\u043E\u0432\u043B\u044E\u0454\u0442\u044C\u0441\u044F {hours} \u0433\u043E\u0434", { hours: Math.round(sinceAttempt / 36e5) }),
+          hint: t("diag.health.owl_board_hint", "\u041C\u043E\u0436\u043B\u0438\u0432\u043E \u043F\u0440\u0430\u043F\u043E\u0440\u0435\u0446\u044C \u0433\u0435\u043D\u0435\u0440\u0430\u0446\u0456\u0457 \u0437\u0430\u043B\u0438\u043F. \u041F\u0435\u0440\u0435\u0437\u0430\u043F\u0443\u0441\u0442\u0438 \u0437\u0430\u0441\u0442\u043E\u0441\u0443\u043D\u043E\u043A.")
         });
       }
     } catch (e) {
@@ -18130,13 +18130,13 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
     const missing = criticalGlobals.filter((g) => typeof window[g] !== "function");
     if (missing.length > 0) {
       checks.push({
-        name: "\u041C\u043E\u0434\u0443\u043B\u0456",
+        name: t("diag.health.modules", "\u041C\u043E\u0434\u0443\u043B\u0456"),
         status: "fail",
-        message: `\u041D\u0435 \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043E: ${missing.join(", ")}`,
-        hint: "Bundle \u043D\u0435 \u0437\u0456\u0431\u0440\u0430\u0432\u0441\u044F. \u0417\u0440\u043E\u0431\u0438 hard refresh."
+        message: t("diag.health.modules_missing", "\u041D\u0435 \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043E: {list}", { list: missing.join(", ") }),
+        hint: t("diag.health.modules_hint", "Bundle \u043D\u0435 \u0437\u0456\u0431\u0440\u0430\u0432\u0441\u044F. \u0417\u0440\u043E\u0431\u0438 hard refresh.")
       });
     } else {
-      checks.push({ name: "\u041C\u043E\u0434\u0443\u043B\u0456", status: "ok", message: "\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u0456" });
+      checks.push({ name: t("diag.health.modules", "\u041C\u043E\u0434\u0443\u043B\u0456"), status: "ok", message: t("diag.health.modules_ok", "\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u0456") });
     }
     return checks;
   }
@@ -18146,7 +18146,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
     const warns = checks.filter((c) => c.status === "warn").length;
     const overall = fails > 0 ? "fail" : warns > 0 ? "warn" : "ok";
     const overallIcon = { ok: "\u2713", warn: "\u26A0", fail: "\u2717" }[overall];
-    const overallText = fails > 0 ? `${fails} \u043A\u0440\u0438\u0442\u0438\u0447\u043D\u0438\u0445 ${fails === 1 ? "\u043F\u0440\u043E\u0431\u043B\u0435\u043C\u0430" : "\u043F\u0440\u043E\u0431\u043B\u0435\u043C"}` : warns > 0 ? `${warns} ${warns === 1 ? "\u043F\u043E\u043F\u0435\u0440\u0435\u0434\u0436\u0435\u043D\u043D\u044F" : "\u043F\u043E\u043F\u0435\u0440\u0435\u0434\u0436\u0435\u043D\u044C"}` : "\u0423\u0441\u0435 \u0433\u0430\u0440\u0430\u0437\u0434";
+    const overallText = fails > 0 ? fails === 1 ? t("diag.overall.fail_1", "{fails} \u043A\u0440\u0438\u0442\u0438\u0447\u043D\u0430 \u043F\u0440\u043E\u0431\u043B\u0435\u043C\u0430", { fails }) : t("diag.overall.fail_n", "{fails} \u043A\u0440\u0438\u0442\u0438\u0447\u043D\u0438\u0445 \u043F\u0440\u043E\u0431\u043B\u0435\u043C", { fails }) : warns > 0 ? warns === 1 ? t("diag.overall.warn_1", "{warns} \u043F\u043E\u043F\u0435\u0440\u0435\u0434\u0436\u0435\u043D\u043D\u044F", { warns }) : t("diag.overall.warn_n", "{warns} \u043F\u043E\u043F\u0435\u0440\u0435\u0434\u0436\u0435\u043D\u044C", { warns }) : t("diag.overall.ok", "\u0423\u0441\u0435 \u0433\u0430\u0440\u0430\u0437\u0434");
     const overallColor = { ok: "#16a34a", warn: "#b45309", fail: "#dc2626" }[overall];
     const overallBg = { ok: "rgba(34,197,94,0.08)", warn: "rgba(251,191,36,0.12)", fail: "rgba(239,68,68,0.08)" }[overall];
     const overallBorder = { ok: "rgba(34,197,94,0.25)", warn: "rgba(251,191,36,0.35)", fail: "rgba(239,68,68,0.3)" }[overall];
@@ -18156,7 +18156,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
     <div onclick="toggleHealthDetails()" style="display:flex;align-items:center;gap:12px;cursor:pointer;-webkit-tap-highlight-color:transparent">
       <span style="font-size:22px;color:${overallColor};line-height:1;flex-shrink:0">${overallIcon}</span>
       <div style="flex:1;min-width:0">
-        <div style="font-size:11px;font-weight:800;color:${overallColor};text-transform:uppercase;letter-spacing:0.5px">\u0421\u0442\u0430\u043D \u0441\u0438\u0441\u0442\u0435\u043C</div>
+        <div style="font-size:11px;font-weight:800;color:${overallColor};text-transform:uppercase;letter-spacing:0.5px">${t("diag.overall.label", "\u0421\u0442\u0430\u043D \u0441\u0438\u0441\u0442\u0435\u043C")}</div>
         <div style="font-size:14px;color:#1e1040;font-weight:700;margin-top:1px">${overallText}</div>
       </div>
       <span id="health-expand-arrow" style="font-size:14px;color:rgba(30,16,64,0.5);flex-shrink:0">\u25B8</span>
@@ -18523,6 +18523,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
   var SMOKE_TEST_KEY, _perfData, MAX_FETCHES, MAX_LONGTASKS;
   var init_diagnostics = __esm({
     "src/core/diagnostics.js"() {
+      init_utils();
       SMOKE_TEST_KEY = "__nm_smoke_test__";
       _perfData = {
         longTasks: [],
