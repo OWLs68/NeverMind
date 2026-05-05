@@ -107,10 +107,12 @@ export function parseContentChips(content) {
     if (c === '\\' && inStr) { esc = true; continue; }
     if (c === '"') { inStr = !inStr; continue; }
     if (inStr) continue;
-    if (c === '{') {
+    // Трекаємо і об'єкти {...}, і масиви [...] — голий масив теж валідний chip-формат (захист
+    // від промпт-помилок типу REMINDER_RULES до MPVly 05.05, де AI вчили генерувати [{...}] без обгортки).
+    if (c === '{' || c === '[') {
       if (depth === 0) start = i;
       depth++;
-    } else if (c === '}') {
+    } else if (c === '}' || c === ']') {
       depth--;
       if (depth === 0 && start !== -1) { ranges.push([start, i + 1]); start = -1; }
     }
@@ -119,7 +121,14 @@ export function parseContentChips(content) {
   for (const [s, e] of ranges) {
     try {
       const obj = JSON.parse(content.slice(s, e));
+      // Формат A: канонічна обгортка {"chips":[...]}.
       if (obj && Array.isArray(obj.chips)) { chips = obj.chips; cutRange = [s, e]; break; }
+      // Формат B (fallback): голий масив [{label, action}, ...]. Пройде тільки якщо ВСІ елементи
+      // мають label+action — інакше це випадковий масив, не чіпи.
+      if (Array.isArray(obj) && obj.length > 0 && obj.every(it => it && typeof it === 'object'
+          && typeof it.label === 'string' && typeof it.action === 'string')) {
+        chips = obj; cutRange = [s, e]; break;
+      }
     } catch {}
   }
   if (cutRange) {
