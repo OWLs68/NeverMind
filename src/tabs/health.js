@@ -172,9 +172,9 @@ function renderHealthList() {
   const cardsHtml = cards.length === 0
     ? `<div style="text-align:center;padding:32px 0">
         <div style="font-size:36px;margin-bottom:10px">🫀</div>
-        <div style="font-size:15px;font-weight:700;color:rgba(30,16,64,0.5)">Немає карток здоров'я</div>
-        <div style="font-size:13px;color:rgba(30,16,64,0.3);margin-top:4px">Додай першу — хворобу, стан або мету</div>
-        <button onclick="openAddHealthCard()" style="margin-top:14px;font-size:13px;font-weight:700;color:white;background:#1a5c2a;border:none;border-radius:12px;padding:10px 20px;cursor:pointer">+ Додати картку</button>
+        <div style="font-size:15px;font-weight:700;color:rgba(30,16,64,0.5)">${t('health.empty.title', "Немає карток здоров'я")}</div>
+        <div style="font-size:13px;color:rgba(30,16,64,0.3);margin-top:4px">${t('health.empty.hint', 'Додай першу — хворобу, стан або мету')}</div>
+        <button onclick="openAddHealthCard()" style="margin-top:14px;font-size:13px;font-weight:700;color:white;background:#1a5c2a;border:none;border-radius:12px;padding:10px 20px;cursor:pointer">${t('health.empty.add_btn', '+ Додати картку')}</button>
       </div>`
     : cards.map(card => {
       const st = _statusDef(card.status);
@@ -204,7 +204,7 @@ function renderHealthList() {
 
   const disclaimerHtml = `<div style="background:rgba(249,115,22,0.07);border:1px solid rgba(249,115,22,0.15);border-radius:12px;padding:8px 12px;display:flex;gap:7px;align-items:flex-start;margin-bottom:10px">
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ea580c" stroke-width="2.5" style="flex-shrink:0;margin-top:2px"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-    <div style="font-size:11px;color:rgba(234,88,12,0.75);font-weight:600;line-height:1.45">NeverMind не є медичним сервісом. OWL не ставить діагнози. Завжди консультуйся з лікарем.</div>
+    <div style="font-size:11px;color:rgba(234,88,12,0.75);font-weight:600;line-height:1.45">${t('health.disclaimer.main', 'NeverMind не є медичним сервісом. OWL не ставить діагнози. Завжди консультуйся з лікарем.')}</div>
   </div>`;
 
   // Фаза 4 (15.04 6v2eR): банер пропущених доз — жовтий блок під алергіями
@@ -623,11 +623,11 @@ async function copyHealthExport() {
     }
     if (btn) {
       const orig = btn.textContent;
-      btn.textContent = '✓ Скопійовано';
+      btn.textContent = t('health.export.copied', '✓ Скопійовано');
       setTimeout(() => { btn.textContent = orig; }, 1500);
     }
   } catch (e) {
-    showToast('⚠️ Не вдалось скопіювати — виділи текст вручну');
+    showToast(t('health.export.copy_fail', '⚠️ Не вдалось скопіювати — виділи текст вручну'));
   }
 }
 
@@ -782,8 +782,8 @@ function _buildMissedDosesBannerHtml() {
         <div style="font-size:12px;font-weight:800;color:#1e1040">${escapeHtml(d.medName)}${d.dosage ? ' ' + escapeHtml(d.dosage) : ''}</div>
         <div style="font-size:10px;color:rgba(30,16,64,0.5);font-weight:600;margin-top:1px">${escapeHtml(d.cardName)} · ${escapeHtml(d.scheduledTime)}</div>
       </div>
-      <button onclick="logHealthMedDose(${d.cardId},${d.medId})" style="font-size:11px;font-weight:800;padding:5px 10px;border-radius:8px;border:none;background:#16a34a;color:white;cursor:pointer;white-space:nowrap">✓ Прийняв</button>
-      <button onclick="skipHealthMedDose(${d.cardId},${d.medId},'${escapeHtml(d.scheduledTime)}')" style="font-size:11px;font-weight:700;padding:5px 10px;border-radius:8px;border:1.5px solid rgba(30,16,64,0.15);background:white;color:rgba(30,16,64,0.55);cursor:pointer;white-space:nowrap">Пропущу</button>
+      <button onclick="logHealthMedDose(${d.cardId},${d.medId})" style="font-size:11px;font-weight:800;padding:5px 10px;border-radius:8px;border:none;background:#16a34a;color:white;cursor:pointer;white-space:nowrap">${t('health.dose.took_btn', '✓ Прийняв')}</button>
+      <button onclick="skipHealthMedDose(${d.cardId},${d.medId},'${escapeHtml(d.scheduledTime)}')" style="font-size:11px;font-weight:700;padding:5px 10px;border-radius:8px;border:1.5px solid rgba(30,16,64,0.15);background:white;color:rgba(30,16,64,0.55);cursor:pointer;white-space:nowrap">${t('health.dose.skip_btn', 'Пропущу')}</button>
     </div>`).join('')}
     ${missed.length > 5 ? `<div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:600;text-align:center">+ ще ${missed.length - 5} пропущених</div>` : ''}
   </div>`;
@@ -876,7 +876,7 @@ function renderHealthWorkspace(id) {
     <!-- Назад -->
     <div onclick="closeHealthCard()" style="display:flex;align-items:center;gap:6px;margin-bottom:12px;cursor:pointer">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1a5c2a" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
-      <span style="font-size:13px;font-weight:700;color:#1a5c2a">Назад</span>
+      <span style="font-size:13px;font-weight:700;color:#1a5c2a">${t('health.card.back', 'Назад')}</span>
     </div>
 
     <!-- Прогрес + статус (Фаза 3: + бейдж "Курс X% · тренд") -->
@@ -887,7 +887,7 @@ function renderHealthWorkspace(id) {
           <div style="font-size:11px;color:rgba(30,16,64,0.4);font-weight:600;margin-top:2px">${escapeHtml(card.subtitle || '')}</div>
         </div>
         <div style="display:flex;align-items:center;gap:10px;flex-shrink:0">
-          <button onclick="openEditHealthCard(${id})" title="Редагувати" style="background:rgba(30,16,64,0.06);border:none;border-radius:8px;padding:6px 10px;font-size:11px;font-weight:700;color:rgba(30,16,64,0.65);cursor:pointer">Ред.</button>
+          <button onclick="openEditHealthCard(${id})" title="${t('health.card.edit_title', 'Редагувати')}" style="background:rgba(30,16,64,0.06);border:none;border-radius:8px;padding:6px 10px;font-size:11px;font-weight:700;color:rgba(30,16,64,0.65);cursor:pointer">${t('health.card.edit_btn', 'Ред.')}</button>
           <div style="font-size:20px;font-weight:900;color:${st.color};line-height:1">${pct}%</div>
         </div>
       </div>
@@ -910,15 +910,15 @@ function renderHealthWorkspace(id) {
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a5c2a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
       </div>
       <div style="flex:1">
-        <div style="font-size:13px;font-weight:800;color:#1a5c2a">Запитати OWL про цей стан</div>
-        <div style="font-size:10px;color:rgba(30,16,64,0.45);font-weight:600;margin-top:1px">OWL знає всі деталі картки → пиши питання</div>
+        <div style="font-size:13px;font-weight:800;color:#1a5c2a">${t('health.card.ask_owl_title', 'Запитати OWL про цей стан')}</div>
+        <div style="font-size:10px;color:rgba(30,16,64,0.45);font-weight:600;margin-top:1px">${t('health.card.ask_owl_hint', 'OWL знає всі деталі картки → пиши питання')}</div>
       </div>
       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="rgba(26,92,42,0.4)" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
     </div>
 
     <!-- Препарати (Фаза 3: лог прийому + кнопка "Прийняти зараз") -->
     ${meds.length > 0 ? `<div class="card-glass">
-      <div class="section-label">Препарати</div>
+      <div class="section-label">${t('health.card.meds_label', 'Препарати')}</div>
       ${meds.map((m,i) => {
         const takenToday = isMedTakenToday(m);
         const schedArr = Array.isArray(m.schedule) ? m.schedule : [];
@@ -954,7 +954,7 @@ function renderHealthWorkspace(id) {
 
     <!-- Лікар + рекомендації + наступний прийом -->
     ${(card.doctor || card.doctorRecommendations || card.doctorConclusion || (card.nextAppointment && card.nextAppointment.date)) ? `<div class="card-glass">
-      <div class="section-label">Лікування</div>
+      <div class="section-label">${t('health.card.treatment_label', 'Лікування')}</div>
       ${card.doctor ? `<div style="font-size:11px;color:rgba(30,16,64,0.5);font-weight:600;margin-bottom:4px"><b style="color:#1e1040">Лікар:</b> ${escapeHtml(card.doctor)}</div>` : ''}
       ${card.doctorRecommendations ? `<div style="font-size:11px;color:rgba(30,16,64,0.55);font-weight:600;margin-bottom:4px;line-height:1.45"><b style="color:#1e1040">Рекомендації:</b> ${escapeHtml(card.doctorRecommendations)}</div>` : ''}
       ${card.doctorConclusion ? `<div style="font-size:11px;color:rgba(30,16,64,0.55);font-weight:600;margin-bottom:4px;line-height:1.45"><b style="color:#1e1040">Висновок:</b> ${escapeHtml(card.doctorConclusion)}</div>` : ''}
@@ -963,7 +963,7 @@ function renderHealthWorkspace(id) {
 
     <!-- Історія (Фаза 3: повний timeline всіх типів з іконками — замінює "Записи лікаря") -->
     ${historyAll.length > 0 ? `<div class="card-glass">
-      <div class="section-label">Історія</div>
+      <div class="section-label">${t('health.card.history_label', 'Історія')}</div>
       ${historyAll.slice(0, 15).map(h => {
         const d = new Date(h.ts);
         const dateStr = isNaN(d) ? '' : d.toLocaleDateString('uk-UA') + ' ' + d.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' });
@@ -1009,7 +1009,7 @@ function renderHealthWorkspace(id) {
     <!-- Дисклеймер -->
     <div style="background:rgba(249,115,22,0.07);border:1px solid rgba(249,115,22,0.15);border-radius:10px;padding:7px 10px;display:flex;gap:6px;align-items:flex-start;margin-bottom:10px">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ea580c" stroke-width="2.5" style="flex-shrink:0;margin-top:2px"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/></svg>
-      <div style="font-size:10px;color:rgba(234,88,12,0.7);font-weight:600;line-height:1.45">Для діагностики і лікування консультуйся з лікарем.</div>
+      <div style="font-size:10px;color:rgba(234,88,12,0.7);font-weight:600;line-height:1.45">${t('health.disclaimer.short', 'Для діагностики і лікування консультуйся з лікарем.')}</div>
     </div>
   `;
 }
@@ -1024,7 +1024,7 @@ function askOwlAboutHealthCard(id) {
   try { openChatBar('health'); } catch (e) {}
   // Pre-loaded повідомлення (без виклику AI) — щоб юзер бачив що OWL "у контексті"
   setTimeout(() => {
-    addHealthChatMsg('agent', `OWL у контексті стану "${card.name}". Що хочеш дізнатись?`);
+    addHealthChatMsg('agent', t('health.owl.focus_intro', 'OWL у контексті стану "{name}". Що хочеш дізнатись?', { name: card.name }));
   }, 200);
 }
 
@@ -1562,19 +1562,19 @@ function deleteHealthCardFromModal() {
 
 // === ДОДАТИ АЛЕРГІЮ (Фаза 1, простий UI з prompt — розширити у Фазі 3) ===
 function openAddAllergy() {
-  const name = prompt('Назва алергену (наприклад: горіхи, пеніцилін, лактоза):');
+  const name = prompt(t('health.allergy.name_prompt', 'Назва алергену (наприклад: горіхи, пеніцилін, лактоза):'));
   if (!name || !name.trim()) return;
-  const notes = prompt('Нотатки (необов\'язково — симптоми, деталі реакції):') || '';
+  const notes = prompt(t('health.allergy.notes_prompt', "Нотатки (необов'язково — симптоми, деталі реакції):")) || '';
   const added = addAllergy(name, notes);
   if (added) {
     renderHealth();
   } else {
-    showToast('Така алергія вже є');
+    showToast(t('health.allergy.duplicate', 'Така алергія вже є'));
   }
 }
 
 function deleteAllergyById(id) {
-  if (!confirm('Видалити алергію?')) return;
+  if (!confirm(t('health.allergy.delete_confirm', 'Видалити алергію?'))) return;
   if (deleteAllergy(id)) {
     renderHealth();
   }
@@ -1743,7 +1743,7 @@ export async function sendHealthBarMessage() {
   const text = input.value.trim();
   if (!text) return;
   const key = localStorage.getItem('nm_gemini_key');
-  if (!key) { addHealthChatMsg('agent', 'Введи OpenAI ключ в налаштуваннях.'); return; }
+  if (!key) { addHealthChatMsg('agent', t('health.chat.no_key', 'Введи OpenAI ключ в налаштуваннях.')); return; }
   input.value = ''; input.style.height = 'auto';
   input.focus();
   addHealthChatMsg('user', text);
@@ -1782,10 +1782,10 @@ export async function sendHealthBarMessage() {
     const { text: replyText, chips } = parseContentChips(reply);
     if (replyText) {
       const looksLikeJson = (replyText.startsWith('{') && replyText.endsWith('}')) || (replyText.startsWith('[') && replyText.endsWith(']'));
-      if (looksLikeJson) { try { JSON.parse(replyText); addHealthChatMsg('agent', 'Зроблено ✓'); } catch { addHealthChatMsg('agent', replyText, false, chips); } }
+      if (looksLikeJson) { try { JSON.parse(replyText); addHealthChatMsg('agent', t('health.chat.done', 'Зроблено ✓')); } catch { addHealthChatMsg('agent', replyText, false, chips); } }
       else addHealthChatMsg('agent', replyText, false, chips);
     }
-  } catch { addHealthChatMsg('agent', 'Мережева помилка.'); }
+  } catch { addHealthChatMsg('agent', t('health.chat.network_err', 'Мережева помилка.')); }
   healthBarLoading = false;
 }
 
