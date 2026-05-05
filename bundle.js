@@ -18185,13 +18185,13 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
   function runSmokeTests() {
     const tests = [];
     const start = performance.now();
-    tests.push(_runTest("\u0421\u0445\u043E\u0432\u0438\u0449\u0435 write/read", () => {
+    tests.push(_runTest(t("diag.smoke.storage_rw", "\u0421\u0445\u043E\u0432\u0438\u0449\u0435 write/read"), () => {
       const payload = { v: "ok", ts: Date.now() };
       localStorage.setItem(SMOKE_TEST_KEY, JSON.stringify(payload));
       const read = JSON.parse(localStorage.getItem(SMOKE_TEST_KEY));
-      if (read.v !== "ok") throw new Error("Read value mismatch");
+      if (read.v !== "ok") throw new Error(t("diag.smoke.read_mismatch", "Read value mismatch"));
       localStorage.removeItem(SMOKE_TEST_KEY);
-      if (localStorage.getItem(SMOKE_TEST_KEY) !== null) throw new Error("Remove \u043D\u0435 \u0441\u043F\u0440\u0430\u0446\u044E\u0432\u0430\u0432");
+      if (localStorage.getItem(SMOKE_TEST_KEY) !== null) throw new Error(t("diag.smoke.remove_failed", "Remove \u043D\u0435 \u0441\u043F\u0440\u0430\u0446\u044E\u0432\u0430\u0432"));
     }));
     const arrayKeys = [
       "nm_tasks",
@@ -18205,7 +18205,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       "nm_health_cards",
       "nm_inbox"
     ];
-    tests.push(_runTest("JSON \u0446\u0456\u043B\u0456\u0441\u043D\u0456\u0441\u0442\u044C (\u043C\u0430\u0441\u0438\u0432\u0438)", () => {
+    tests.push(_runTest(t("diag.smoke.json_arrays", "JSON \u0446\u0456\u043B\u0456\u0441\u043D\u0456\u0441\u0442\u044C (\u043C\u0430\u0441\u0438\u0432\u0438)"), () => {
       const broken = [];
       for (const k of arrayKeys) {
         const raw = localStorage.getItem(k);
@@ -18227,7 +18227,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       "nm_finance_cats",
       "nm_folders_meta"
     ];
-    tests.push(_runTest("JSON \u0446\u0456\u043B\u0456\u0441\u043D\u0456\u0441\u0442\u044C (\u043E\u0431'\u0454\u043A\u0442\u0438)", () => {
+    tests.push(_runTest(t("diag.smoke.json_objects", "JSON \u0446\u0456\u043B\u0456\u0441\u043D\u0456\u0441\u0442\u044C (\u043E\u0431'\u0454\u043A\u0442\u0438)"), () => {
       const broken = [];
       for (const k of objectKeys) {
         const raw = localStorage.getItem(k);
@@ -18241,18 +18241,18 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       }
       if (broken.length) throw new Error(broken.join(", "));
     }));
-    tests.push(_runTest("\u0424\u043E\u0440\u043C\u0430\u0442 \u0434\u0430\u0442", () => {
+    tests.push(_runTest(t("diag.smoke.date_format", "\u0424\u043E\u0440\u043C\u0430\u0442 \u0434\u0430\u0442"), () => {
       const iso = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
       if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) throw new Error(`ISO date broken: ${iso}`);
       const utc = (/* @__PURE__ */ new Date()).toDateString();
       if (!utc || utc.length < 10) throw new Error(`toDateString broken: ${utc}`);
     }));
-    tests.push(_runTest("DOM \u0441\u0442\u0440\u0443\u043A\u0442\u0443\u0440\u0430", () => {
+    tests.push(_runTest(t("diag.smoke.dom_struct", "DOM \u0441\u0442\u0440\u0443\u043A\u0442\u0443\u0440\u0430"), () => {
       const required = ["log-panel", "toast", "tab-bar", "onboarding", "splash"];
       const missing = required.filter((id) => !document.getElementById(id));
-      if (missing.length) throw new Error("\u0432\u0456\u0434\u0441\u0443\u0442\u043D\u0456: " + missing.join(", "));
+      if (missing.length) throw new Error(t("diag.smoke.missing", "\u0432\u0456\u0434\u0441\u0443\u0442\u043D\u0456: {list}", { list: missing.join(", ") }));
     }));
-    tests.push(_runTest("\u0413\u043B\u043E\u0431\u0430\u043B\u044C\u043D\u0456 \u0444\u0443\u043D\u043A\u0446\u0456\u0457", () => {
+    tests.push(_runTest(t("diag.smoke.globals", "\u0413\u043B\u043E\u0431\u0430\u043B\u044C\u043D\u0456 \u0444\u0443\u043D\u043A\u0446\u0456\u0457"), () => {
       const required = [
         "switchTab",
         "showErrorLog",
@@ -18263,13 +18263,13 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
         "copyLogForClaude"
       ];
       const missing = required.filter((g) => typeof window[g] !== "function");
-      if (missing.length) throw new Error("\u0432\u0456\u0434\u0441\u0443\u0442\u043D\u0456: " + missing.join(", "));
+      if (missing.length) throw new Error(t("diag.smoke.missing", "\u0432\u0456\u0434\u0441\u0443\u0442\u043D\u0456: {list}", { list: missing.join(", ") }));
     }));
-    tests.push(_runTest("CSS --tabbar-h", () => {
+    tests.push(_runTest(t("diag.smoke.tabbar_var", "CSS --tabbar-h"), () => {
       const val = getComputedStyle(document.documentElement).getPropertyValue("--tabbar-h");
-      if (!val || val.trim() === "") throw new Error("\u043D\u0435 \u0432\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u0430");
+      if (!val || val.trim() === "") throw new Error(t("diag.smoke.not_set", "\u043D\u0435 \u0432\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u0430"));
     }));
-    tests.push(_runTest("Event \u0441\u0438\u0441\u0442\u0435\u043C\u0430", () => {
+    tests.push(_runTest(t("diag.smoke.events", "Event \u0441\u0438\u0441\u0442\u0435\u043C\u0430"), () => {
       let received = false;
       const handler = (e) => {
         if (e.detail === "smoke-test") received = true;
@@ -18277,11 +18277,11 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       window.addEventListener("nm-data-changed", handler);
       window.dispatchEvent(new CustomEvent("nm-data-changed", { detail: "smoke-test" }));
       window.removeEventListener("nm-data-changed", handler);
-      if (!received) throw new Error("nm-data-changed \u043D\u0435 \u043E\u0442\u0440\u0438\u043C\u0430\u043D\u043E");
+      if (!received) throw new Error(t("diag.smoke.event_not_received", "nm-data-changed \u043D\u0435 \u043E\u0442\u0440\u0438\u043C\u0430\u043D\u043E"));
     }));
-    tests.push(_runTest("Clipboard API", () => {
+    tests.push(_runTest(t("diag.smoke.clipboard", "Clipboard API"), () => {
       if (!navigator.clipboard || typeof navigator.clipboard.writeText !== "function") {
-        throw new Error("\u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0438\u0439");
+        throw new Error(t("diag.smoke.unavailable", "\u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0438\u0439"));
       }
     }));
     const totalMs = Math.round(performance.now() - start);
@@ -18304,7 +18304,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
     const passes = tests.length - fails;
     const overall = fails > 0 ? "fail" : "ok";
     const overallIcon = fails > 0 ? "\u2717" : "\u2713";
-    const overallText = fails > 0 ? `${passes}/${tests.length} \u043F\u0440\u043E\u0439\u0448\u043B\u0438 \xB7 ${fails} \u043F\u0440\u043E\u0432\u0430\u043B` : `${tests.length}/${tests.length} \u043F\u0440\u043E\u0439\u0448\u043B\u0438 \xB7 ${totalMs}\u043C\u0441`;
+    const overallText = fails > 0 ? t("diag.smoke.summary_fail", "{passes}/{total} \u043F\u0440\u043E\u0439\u0448\u043B\u0438 \xB7 {fails} \u043F\u0440\u043E\u0432\u0430\u043B", { passes, total: tests.length, fails }) : t("diag.smoke.summary_ok", "{total}/{total} \u043F\u0440\u043E\u0439\u0448\u043B\u0438 \xB7 {ms}\u043C\u0441", { total: tests.length, ms: totalMs });
     const overallColor = fails > 0 ? "#dc2626" : "#16a34a";
     const overallBg = fails > 0 ? "rgba(239,68,68,0.08)" : "rgba(34,197,94,0.08)";
     const overallBorder = fails > 0 ? "rgba(239,68,68,0.3)" : "rgba(34,197,94,0.25)";
@@ -18314,7 +18314,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
     <div onclick="toggleSmokeDetails()" style="display:flex;align-items:center;gap:12px;cursor:pointer;-webkit-tap-highlight-color:transparent">
       <span style="font-size:22px;color:${overallColor};line-height:1;flex-shrink:0">${overallIcon}</span>
       <div style="flex:1;min-width:0">
-        <div style="font-size:11px;font-weight:800;color:${overallColor};text-transform:uppercase;letter-spacing:0.5px">Smoke \u0442\u0435\u0441\u0442\u0438</div>
+        <div style="font-size:11px;font-weight:800;color:${overallColor};text-transform:uppercase;letter-spacing:0.5px">${t("diag.smoke.title", "Smoke \u0442\u0435\u0441\u0442\u0438")}</div>
         <div style="font-size:14px;color:#1e1040;font-weight:700;margin-top:1px">${overallText}</div>
       </div>
       <span id="smoke-expand-arrow" style="font-size:14px;color:rgba(30,16,64,0.5);flex-shrink:0">\u25B8</span>
@@ -18428,7 +18428,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
   }
   function renderPerformance() {
     const data = getPerformanceData();
-    const startupStr = data.startupMs != null ? `${data.startupMs}\u043C\u0441` : "\u043D\u0435\u0432\u0456\u0434\u043E\u043C\u043E";
+    const startupStr = data.startupMs != null ? `${data.startupMs}\u043C\u0441` : t("diag.perf.unknown", "\u043D\u0435\u0432\u0456\u0434\u043E\u043C\u043E");
     const startupStatus = data.startupMs == null ? "unknown" : data.startupMs < 1500 ? "ok" : data.startupMs < 3e3 ? "warn" : "fail";
     const longTasksCount = data.longTasks.length;
     const worstLongTask = data.longTasks.reduce((max, t2) => t2.duration > max ? t2.duration : max, 0);
@@ -18445,10 +18445,10 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
     const overallBg = { ok: "rgba(34,197,94,0.08)", warn: "rgba(251,191,36,0.12)", fail: "rgba(239,68,68,0.08)" }[overall];
     const overallBorder = { ok: "rgba(34,197,94,0.25)", warn: "rgba(251,191,36,0.35)", fail: "rgba(239,68,68,0.3)" }[overall];
     const summaryParts = [];
-    summaryParts.push(`\u0421\u0442\u0430\u0440\u0442 ${startupStr}`);
-    if (data.longTaskSupported) summaryParts.push(`${longTasksCount} \u043B\u0430\u0433\u0456\u0432`);
-    summaryParts.push(`${data.fetches.length} \u0437\u0430\u043F\u0438\u0442\u0456\u0432`);
-    if (failedFetches.length > 0) summaryParts.push(`${failedFetches.length} \u0437 \u043F\u043E\u043C\u0438\u043B\u043A\u043E\u044E`);
+    summaryParts.push(t("diag.perf.startup_short", "\u0421\u0442\u0430\u0440\u0442 {v}", { v: startupStr }));
+    if (data.longTaskSupported) summaryParts.push(t("diag.perf.lags_short", "{n} \u043B\u0430\u0433\u0456\u0432", { n: longTasksCount }));
+    summaryParts.push(t("diag.perf.requests_short", "{n} \u0437\u0430\u043F\u0438\u0442\u0456\u0432", { n: data.fetches.length }));
+    if (failedFetches.length > 0) summaryParts.push(t("diag.perf.with_error", "{n} \u0437 \u043F\u043E\u043C\u0438\u043B\u043A\u043E\u044E", { n: failedFetches.length }));
     const overallText = summaryParts.join(" \xB7 ");
     const statusIcon = { ok: "\u2713", warn: "\u26A0", fail: "\u2717", unknown: "\xB7" };
     const statusColor = { ok: "#16a34a", warn: "#b45309", fail: "#dc2626", unknown: "rgba(30,16,64,0.45)" };
@@ -18456,16 +18456,16 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
     rows.push(`<div style="display:flex;align-items:center;gap:10px;font-size:13px;line-height:1.4">
     <span style="color:${statusColor[startupStatus]};font-weight:800;flex-shrink:0;width:14px">${statusIcon[startupStatus]}</span>
     <div style="flex:1;min-width:0">
-      <span style="color:#1e1040;font-weight:600">\u0427\u0430\u0441 \u0437\u0430\u043F\u0443\u0441\u043A\u0443</span>
+      <span style="color:#1e1040;font-weight:600">${t("diag.perf.startup_time", "\u0427\u0430\u0441 \u0437\u0430\u043F\u0443\u0441\u043A\u0443")}</span>
       <span style="color:rgba(30,16,64,0.7)">: ${startupStr}</span>
     </div>
   </div>`);
     if (data.longTaskSupported) {
-      const msg = longTasksCount === 0 ? "\u043D\u0435\u043C\u0430\u0454" : `${longTasksCount} (\u043D\u0430\u0439\u0434\u043E\u0432\u0448\u0438\u0439 ${worstLongTask}\u043C\u0441)`;
+      const msg = longTasksCount === 0 ? t("diag.perf.none", "\u043D\u0435\u043C\u0430\u0454") : t("diag.perf.worst", "{n} (\u043D\u0430\u0439\u0434\u043E\u0432\u0448\u0438\u0439 {ms}\u043C\u0441)", { n: longTasksCount, ms: worstLongTask });
       rows.push(`<div style="display:flex;align-items:center;gap:10px;font-size:13px;line-height:1.4">
       <span style="color:${statusColor[longTasksStatus]};font-weight:800;flex-shrink:0;width:14px">${statusIcon[longTasksStatus]}</span>
       <div style="flex:1;min-width:0">
-        <span style="color:#1e1040;font-weight:600">\u041B\u0430\u0433\u0438 UI >50\u043C\u0441</span>
+        <span style="color:#1e1040;font-weight:600">${t("diag.perf.lags_50", "\u041B\u0430\u0433\u0438 UI >50\u043C\u0441")}</span>
         <span style="color:rgba(30,16,64,0.7)">: ${msg}</span>
       </div>
     </div>`);
@@ -18473,22 +18473,22 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       rows.push(`<div style="display:flex;align-items:center;gap:10px;font-size:13px;line-height:1.4">
       <span style="color:${statusColor.unknown};font-weight:800;flex-shrink:0;width:14px">\xB7</span>
       <div style="flex:1;min-width:0">
-        <span style="color:rgba(30,16,64,0.6);font-weight:600">\u041B\u0430\u0433\u0438 UI</span>
-        <span style="color:rgba(30,16,64,0.55);font-style:italic">: Safari \u043D\u0435 \u043F\u0456\u0434\u0442\u0440\u0438\u043C\u0443\u0454 \u0446\u0435\u0439 API</span>
+        <span style="color:rgba(30,16,64,0.6);font-weight:600">${t("diag.perf.lags", "\u041B\u0430\u0433\u0438 UI")}</span>
+        <span style="color:rgba(30,16,64,0.55);font-style:italic">: ${t("diag.perf.safari_no_api", "Safari \u043D\u0435 \u043F\u0456\u0434\u0442\u0440\u0438\u043C\u0443\u0454 \u0446\u0435\u0439 API")}</span>
       </div>
     </div>`);
     }
-    const fetchMsg = data.fetches.length === 0 ? "\u0449\u0435 \u043D\u0435 \u0431\u0443\u043B\u043E" : `${data.fetches.length} \u0437\u0430\u043F\u0438\u0442\u0456\u0432 \xB7 \u0441\u0435\u0440\u0435\u0434\u043D\u0456\u0439 ${avgFetchMs}\u043C\u0441` + (failedFetches.length > 0 ? ` \xB7 ${failedFetches.length} \u0437 \u043F\u043E\u043C\u0438\u043B\u043A\u043E\u044E` : "");
+    const fetchMsg = data.fetches.length === 0 ? t("diag.perf.no_requests", "\u0449\u0435 \u043D\u0435 \u0431\u0443\u043B\u043E") : t("diag.perf.requests_avg", "{n} \u0437\u0430\u043F\u0438\u0442\u0456\u0432 \xB7 \u0441\u0435\u0440\u0435\u0434\u043D\u0456\u0439 {ms}\u043C\u0441", { n: data.fetches.length, ms: avgFetchMs }) + (failedFetches.length > 0 ? t("diag.perf.with_error_suffix", " \xB7 {n} \u0437 \u043F\u043E\u043C\u0438\u043B\u043A\u043E\u044E", { n: failedFetches.length }) : "");
     rows.push(`<div style="display:flex;align-items:center;gap:10px;font-size:13px;line-height:1.4">
     <span style="color:${statusColor[fetchStatus]};font-weight:800;flex-shrink:0;width:14px">${statusIcon[fetchStatus]}</span>
     <div style="flex:1;min-width:0">
-      <span style="color:#1e1040;font-weight:600">HTTP \u0437\u0430\u043F\u0438\u0442\u0438</span>
+      <span style="color:#1e1040;font-weight:600">${t("diag.perf.http", "HTTP \u0437\u0430\u043F\u0438\u0442\u0438")}</span>
       <span style="color:rgba(30,16,64,0.7)">: ${fetchMsg}</span>
     </div>
   </div>`);
     if (data.fetches.length > 0) {
       const recent = data.fetches.slice(-5).reverse();
-      rows.push('<div style="margin-top:8px;padding-top:8px;border-top:1px dashed rgba(30,16,64,0.1)"><div style="font-size:10px;font-weight:800;color:rgba(30,16,64,0.55);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">\u041E\u0441\u0442\u0430\u043D\u043D\u0456 \u0437\u0430\u043F\u0438\u0442\u0438</div>' + recent.map((f) => {
+      rows.push('<div style="margin-top:8px;padding-top:8px;border-top:1px dashed rgba(30,16,64,0.1)"><div style="font-size:10px;font-weight:800;color:rgba(30,16,64,0.55);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">' + t("diag.perf.recent", "\u041E\u0441\u0442\u0430\u043D\u043D\u0456 \u0437\u0430\u043F\u0438\u0442\u0438") + "</div>" + recent.map((f) => {
         const col = f.status === 0 || f.status >= 400 ? "#dc2626" : f.duration > 3e3 ? "#b45309" : "#16a34a";
         const statusStr = f.status === 0 ? "FAIL" : String(f.status);
         return `<div style="font-size:11px;line-height:1.5;font-family:ui-monospace,Menlo,monospace;color:rgba(30,16,64,0.85);display:flex;gap:8px;align-items:baseline">
@@ -18502,7 +18502,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
     <div onclick="togglePerfDetails()" style="display:flex;align-items:center;gap:12px;cursor:pointer;-webkit-tap-highlight-color:transparent">
       <span style="font-size:22px;color:${overallColor};line-height:1;flex-shrink:0">${overallIcon}</span>
       <div style="flex:1;min-width:0">
-        <div style="font-size:11px;font-weight:800;color:${overallColor};text-transform:uppercase;letter-spacing:0.5px">Performance</div>
+        <div style="font-size:11px;font-weight:800;color:${overallColor};text-transform:uppercase;letter-spacing:0.5px">${t("diag.perf.title", "Performance")}</div>
         <div style="font-size:13px;color:#1e1040;font-weight:700;margin-top:1px">${overallText}</div>
       </div>
       <span id="perf-expand-arrow" style="font-size:14px;color:rgba(30,16,64,0.5);flex-shrink:0">\u25B8</span>
