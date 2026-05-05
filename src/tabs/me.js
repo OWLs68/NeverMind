@@ -487,8 +487,10 @@ function renderMonthlyReport() {
   const now = new Date();
   const dayOfMonth = now.getDate();
 
-  // Показуємо тільки з 1-го по 15-те число поточного місяця
-  if (dayOfMonth > 15) {
+  // QDIGl 04.05: 3-4 дні після кінця місяця → ховати. Тобто 1-4 число
+  // поточного місяця показуємо підсумок попереднього, з 5-го — ні.
+  // Раніше було 15 — занадто довго (Роман: «висить пару днів і дратує»).
+  if (dayOfMonth > 4) {
     el.style.display = 'none';
     return;
   }
