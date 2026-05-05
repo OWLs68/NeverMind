@@ -760,6 +760,67 @@
     const r = getRoutine();
     return r[dayKey] || r["default"] || [];
   }
+  function _dateToKey(dateISO) {
+    if (!dateISO || typeof dateISO !== "string") return DAY_KEYS[(/* @__PURE__ */ new Date()).getDay()];
+    const m = dateISO.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!m) return DAY_KEYS[(/* @__PURE__ */ new Date()).getDay()];
+    const [, y, mo, d] = m;
+    return DAY_KEYS[new Date(+y, +mo - 1, +d).getDay()];
+  }
+  function _todayISO() {
+    const d = /* @__PURE__ */ new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  }
+  function _toMin(time) {
+    if (!time || typeof time !== "string") return -1;
+    const [h, m] = time.split(":").map(Number);
+    return (h || 0) * 60 + (m || 0);
+  }
+  function _isBlockPast(time, dateISO) {
+    if (!time) return false;
+    const today = _todayISO();
+    if (dateISO < today) return true;
+    if (dateISO > today) return false;
+    const now = /* @__PURE__ */ new Date();
+    return _toMin(time) <= now.getHours() * 60 + now.getMinutes();
+  }
+  function getCombinedTimelineForDate(dateISO) {
+    const out = [];
+    const dayKey = _dateToKey(dateISO);
+    getRoutineForDay(dayKey).forEach((b, idx) => {
+      out.push({
+        time: b.time || null,
+        activity: b.activity || "",
+        kind: "routine",
+        sourceIdx: idx,
+        isPast: _isBlockPast(b.time, dateISO)
+      });
+    });
+    getEvents().forEach((ev) => {
+      if (ev.date !== dateISO) return;
+      const isReminder = ev.source === "reminder";
+      const isPast = _isBlockPast(ev.time, dateISO);
+      if (isReminder && isPast && ev.done) return;
+      out.push({
+        time: ev.time || null,
+        activity: ev.title || "",
+        kind: isReminder ? "reminder" : "event",
+        sourceId: ev.id,
+        reminderId: isReminder ? ev.reminderId || ev.id : void 0,
+        isPast,
+        _ev: ev
+      });
+    });
+    const KIND_ORDER = { routine: 0, event: 1, reminder: 2 };
+    out.sort((a, b) => {
+      const ta = a.time || "99:99";
+      const tb = b.time || "99:99";
+      const cmp = ta.localeCompare(tb);
+      if (cmp !== 0) return cmp;
+      return (KIND_ORDER[a.kind] || 9) - (KIND_ORDER[b.kind] || 9);
+    });
+    return out;
+  }
   function openRoutineFromCalendar(dayKey) {
     closeDayScheduleModal();
     _routineReturnTo = "calendar";
@@ -811,13 +872,21 @@
     const label = document.getElementById("routine-day-label");
     if (label) label.textContent = _routineDay === DAY_KEYS[todayIdx] ? "\u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456" : "";
   }
+  function _nearestDateForDayKey(dayKey) {
+    if (dayKey === "default") return _todayISO();
+    const todayDayIdx = (/* @__PURE__ */ new Date()).getDay();
+    const targetDayIdx = DAY_KEYS.indexOf(dayKey);
+    if (targetDayIdx < 0) return _todayISO();
+    const diff = (targetDayIdx - todayDayIdx + 7) % 7;
+    const d = /* @__PURE__ */ new Date();
+    d.setDate(d.getDate() + diff);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  }
   function _renderRoutineTimeline() {
     const el = document.getElementById("routine-timeline");
     if (!el) return;
-    const blocks = getRoutineForDay(_routineDay);
-    const now = /* @__PURE__ */ new Date();
-    const nowMin = now.getHours() * 60 + now.getMinutes();
-    const isToday = DAY_KEYS[now.getDay()] === _routineDay;
+    const dateISO = _nearestDateForDayKey(_routineDay);
+    const blocks = _routineDay === "default" ? getRoutineForDay("default").map((b, idx) => ({ time: b.time, activity: b.activity, kind: "routine", sourceIdx: idx, isPast: false })) : getCombinedTimelineForDate(dateISO);
     if (blocks.length === 0) {
       el.innerHTML = `<div style="text-align:center;padding:32px 0;color:rgba(30,16,64,0.3);font-size:14px">
       \u0420\u043E\u0437\u043F\u043E\u0440\u044F\u0434\u043E\u043A \u043F\u043E\u0440\u043E\u0436\u043D\u0456\u0439.<br>\u041D\u0430\u0442\u0438\u0441\u043D\u0438 \xAB+ \u0414\u043E\u0434\u0430\u0442\u0438 \u0431\u043B\u043E\u043A\xBB \u0430\u0431\u043E \u043D\u0430\u043F\u0438\u0448\u0438 \u0432 \u0447\u0430\u0442:<br>
@@ -825,23 +894,61 @@
     </div>`;
       return;
     }
-    const sorted = [...blocks].sort((a, b) => a.time.localeCompare(b.time));
-    el.innerHTML = sorted.map((b, i) => {
-      const [h, m] = b.time.split(":").map(Number);
-      const blockMin = h * 60 + (m || 0);
-      const nextBlock = sorted[i + 1];
-      const nextMin = nextBlock ? parseInt(nextBlock.time.split(":")[0]) * 60 + (parseInt(nextBlock.time.split(":")[1]) || 0) : 24 * 60;
-      const isCurrent = isToday && nowMin >= blockMin && nowMin < nextMin;
-      const isPast = isToday && nowMin >= nextMin;
+    const now = /* @__PURE__ */ new Date();
+    const nowMin = now.getHours() * 60 + now.getMinutes();
+    const isViewingToday = dateISO === _todayISO();
+    const KIND_STYLE = {
+      routine: { icon: "", color: "rgba(234,88,12,0.35)", text: "#1e1040" },
+      event: { icon: "\u{1F4C5} ", color: "#3b82f6", text: "#1e3a8a" },
+      reminder: { icon: "\u23F0 ", color: "#ea580c", text: "#7c2d12" }
+    };
+    el.innerHTML = blocks.map((b, i) => {
+      const time = b.time || "\u2014";
+      const blockMin = b.time ? (() => {
+        const [h, m] = b.time.split(":").map(Number);
+        return h * 60 + (m || 0);
+      })() : -1;
+      const nextBlock = blocks.slice(i + 1).find((x) => x.time);
+      const nextMin = nextBlock ? (() => {
+        const [h, m] = nextBlock.time.split(":").map(Number);
+        return h * 60 + (m || 0);
+      })() : 24 * 60;
+      const isCurrent = isViewingToday && b.kind === "routine" && blockMin >= 0 && nowMin >= blockMin && nowMin < nextMin;
+      const isPast = b.isPast || isViewingToday && blockMin >= 0 && nowMin >= nextMin && b.kind === "routine";
+      const style = KIND_STYLE[b.kind] || KIND_STYLE.routine;
+      const delAttr = b.kind === "routine" ? `onclick="routineDeleteBlock(${b.sourceIdx})"` : `onclick="routineDeleteFromTimeline('${b.kind}', ${b.sourceId}, ${b.reminderId || "null"})"`;
+      const dot = b.kind === "routine" ? `<div style="width:8px;height:8px;border-radius:50%;margin-top:5px;flex-shrink:0;background:${isCurrent ? "#ea580c" : isPast ? "rgba(30,16,64,0.15)" : style.color}"></div>` : `<div style="width:8px;height:8px;border-radius:50%;margin-top:5px;flex-shrink:0;background:${style.color};box-shadow:0 0 0 2px ${style.color}33"></div>`;
       return `<div style="display:flex;align-items:flex-start;gap:12px;padding:10px 0;${isPast ? "opacity:0.4;" : ""}${isCurrent ? "background:rgba(234,88,12,0.06);border-radius:12px;padding:10px 8px;margin:0 -8px;" : ""}">
-      <div style="width:46px;flex-shrink:0;font-size:14px;font-weight:700;color:${isCurrent ? "#ea580c" : "#1e1040"};text-align:right">${b.time}</div>
-      <div style="width:8px;height:8px;border-radius:50%;margin-top:5px;flex-shrink:0;background:${isCurrent ? "#ea580c" : isPast ? "rgba(30,16,64,0.15)" : "rgba(234,88,12,0.35)"}"></div>
+      <div style="width:46px;flex-shrink:0;font-size:14px;font-weight:700;color:${isCurrent ? "#ea580c" : style.text};text-align:right">${time}</div>
+      ${dot}
       <div style="flex:1;display:flex;align-items:center;justify-content:space-between">
-        <div style="font-size:14px;font-weight:${isCurrent ? "700" : "500"};color:${isCurrent ? "#ea580c" : "#1e1040"}">${escapeHtml(b.activity)}${isCurrent ? " \u2190" : ""}</div>
-        <div onclick="routineDeleteBlock(${i})" style="font-size:16px;color:rgba(30,16,64,0.2);cursor:pointer;padding:0 4px">\xD7</div>
+        <div style="font-size:14px;font-weight:${isCurrent ? "700" : "500"};color:${isCurrent ? "#ea580c" : style.text}">${style.icon}${escapeHtml(b.activity)}${isCurrent ? " \u2190" : ""}</div>
+        <div ${delAttr} style="font-size:16px;color:rgba(30,16,64,0.2);cursor:pointer;padding:0 4px">\xD7</div>
       </div>
     </div>`;
     }).join("");
+  }
+  function routineDeleteFromTimeline(kind, sourceId, reminderId) {
+    if (kind === "event" || kind === "reminder") {
+      const events = getEvents();
+      const ev = events.find((e) => e.id === sourceId);
+      if (!ev) {
+        _renderRoutineTimeline();
+        return;
+      }
+      saveEvents(events.filter((e) => e.id !== sourceId));
+      if (kind === "reminder") {
+        try {
+          const rid = reminderId || ev.reminderId || ev.id;
+          const reminders = JSON.parse(localStorage.getItem("nm_reminders") || "[]");
+          const filtered = reminders.filter((r) => r.id !== rid);
+          if (filtered.length !== reminders.length) localStorage.setItem("nm_reminders", JSON.stringify(filtered));
+        } catch (e) {
+          console.warn("[routine] reminder cleanup failed", e);
+        }
+      }
+    }
+    _renderRoutineTimeline();
   }
   function routineSelectDay(dayKey) {
     _routineDay = dayKey;
@@ -1091,6 +1198,7 @@
         routineSelectDay,
         routineAddBlock,
         routineDeleteBlock,
+        routineDeleteFromTimeline,
         routineSaveNewBlock,
         routineCancelAdd,
         openEventEditModal,
