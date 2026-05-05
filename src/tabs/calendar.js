@@ -151,13 +151,13 @@ function renderMonthEventsList() {
 
   const prioIcons = { critical: '🔴 ', important: '🟠 ', normal: '' };
 
-  let html = `<div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px">Події · ${monthNominative(_calMonth)}</div>`;
+  let html = `<div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px">${t('calendar.section.events_in_month', 'Події')} · ${monthNominative(_calMonth)}</div>`;
 
   items.forEach(item => {
     const d = new Date(item.date + 'T00:00:00');
     const isPast = item.date < todayStr;
     const isToday = item.date === todayStr;
-    const dayLabel = isToday ? 'Сьогодні' : `${d.getDate()} ${monthGenitive(d.getMonth())}`;
+    const dayLabel = isToday ? t('calendar.day.today', 'Сьогодні') : `${d.getDate()} ${monthGenitive(d.getMonth())}`;
     const icon = item.type === 'event' ? '📅' : '⏰';
     const prio = prioIcons[item.priority] || '';
     const timeStr = item.time ? ` · ${item.time}${item.endTime ? '–' + item.endTime : ''}` : '';
@@ -219,10 +219,10 @@ function renderUpcoming() {
   const prioIcons = { critical: '🔴', important: '🟠', normal: '' };
 
   el.style.display = 'block';
-  el.innerHTML = `<div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px">Найближче</div>` +
+  el.innerHTML = `<div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px">${t('calendar.section.upcoming', 'Найближче')}</div>` +
     items.map(item => {
       const isToday = item.date.toDateString() === todayStr;
-      const dayLabel = isToday ? 'Сьогодні' : `${item.date.getDate()} ${monthGenitive(item.date.getMonth())}`;
+      const dayLabel = isToday ? t('calendar.day.today', 'Сьогодні') : `${item.date.getDate()} ${monthGenitive(item.date.getMonth())}`;
       const icon = item.type === 'event' ? '📅' : '☑️';
       const prio = prioIcons[item.priority] || '';
       const timeStr = item.time ? ` · ${item.time}${item.endTime ? '–' + item.endTime : ''}` : '';
@@ -368,7 +368,7 @@ function _openDayScheduleModal(day) {
         return `<div onclick="openEventEditModal(${ev.id})" style="display:flex;align-items:center;gap:10px;padding:8px 4px;cursor:pointer;border-radius:10px;background:rgba(59,130,246,0.10)">
           <div style="font-size:15px;flex-shrink:0">📅</div>
           <div style="flex:1;font-size:14px;font-weight:600;color:#3b82f6">${prio}${escapeHtml(ev.title)}</div>
-          <div style="font-size:11px;color:rgba(30,16,64,0.35);font-weight:600">весь день</div>
+          <div style="font-size:11px;color:rgba(30,16,64,0.35);font-weight:600">${t('calendar.event.all_day', 'весь день')}</div>
         </div>`;
       }).join('');
     } else {
@@ -397,7 +397,7 @@ function _openDayScheduleModal(day) {
   const timelineEl = document.getElementById('day-schedule-timeline');
   if (timelineEl) {
     if (timedItems.length === 0 && untimedTasks.length === 0 && allDayEvents.length === 0) {
-      timelineEl.innerHTML = `<div style="text-align:center;font-size:14px;color:rgba(30,16,64,0.3);padding:24px 0">Немає подій</div>`;
+      timelineEl.innerHTML = `<div style="text-align:center;font-size:14px;color:rgba(30,16,64,0.3);padding:24px 0">${t('calendar.empty.no_events', 'Немає подій')}</div>`;
     } else {
       let html = '';
       timedItems.forEach((item, i) => {
@@ -431,7 +431,7 @@ function _openDayScheduleModal(day) {
       // Задачі без часу — внизу
       if (untimedTasks.length > 0) {
         html += `<div style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(30,16,64,0.08)">`;
-        html += `<div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px">Задачі</div>`;
+        html += `<div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px">${t('calendar.section.tasks', 'Задачі')}</div>`;
         untimedTasks.forEach(t => {
           const prio = (t.priority === 'critical') ? '🔴 ' : (t.priority === 'important') ? '🟠 ' : '';
           const doneStyle = t.done ? 'color:rgba(30,16,64,0.3);text-decoration:line-through;' : 'color:#1e1040;';
@@ -694,8 +694,8 @@ function _renderRoutineTimeline() {
 
   if (blocks.length === 0) {
     el.innerHTML = `<div style="text-align:center;padding:32px 0;color:rgba(30,16,64,0.3);font-size:14px">
-      Розпорядок порожній.<br>Натисни «+ Додати блок» або напиши в чат:<br>
-      <span style="color:rgba(234,88,12,0.6);font-weight:600">"Мій розклад: 7 підйом, 9 робота, 18 зал"</span>
+      ${t('calendar.routine.empty_title', 'Розпорядок порожній.')}<br>${t('calendar.routine.empty_hint', 'Натисни «+ Додати блок» або напиши в чат:')}<br>
+      <span style="color:rgba(234,88,12,0.6);font-weight:600">${t('calendar.routine.empty_example', '"Мій розклад: 7 підйом, 9 робота, 18 зал"')}</span>
     </div>`;
     return;
   }
@@ -773,12 +773,12 @@ function routineAddBlock() {
       <div style="display:flex;gap:10px;margin-bottom:10px">
         <input type="time" id="routine-add-time" value="09:00"
           style="flex:0 0 110px;padding:10px 8px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.15);font-size:16px;font-weight:600;color:#1e1040;background:white;-webkit-appearance:none">
-        <input type="text" id="routine-add-activity" placeholder="Що робити..." maxlength="40"
+        <input type="text" id="routine-add-activity" placeholder="${t('calendar.routine.activity_placeholder', 'Що робити...')}" maxlength="40"
           style="flex:1;min-width:0;padding:10px 12px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.15);font-size:15px;color:#1e1040;background:white">
       </div>
       <div style="display:flex;gap:8px">
-        <button onclick="routineSaveNewBlock()" style="flex:1;padding:10px;border-radius:12px;border:none;background:#ea580c;color:white;font-size:14px;font-weight:700;cursor:pointer">Зберегти</button>
-        <button onclick="routineCancelAdd()" style="flex:1;padding:10px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.12);background:none;color:rgba(30,16,64,0.5);font-size:14px;font-weight:600;cursor:pointer">Скасувати</button>
+        <button onclick="routineSaveNewBlock()" style="flex:1;padding:10px;border-radius:12px;border:none;background:#ea580c;color:white;font-size:14px;font-weight:700;cursor:pointer">${t('calendar.btn.save', 'Зберегти')}</button>
+        <button onclick="routineCancelAdd()" style="flex:1;padding:10px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.12);background:none;color:rgba(30,16,64,0.5);font-size:14px;font-weight:600;cursor:pointer">${t('calendar.btn.cancel', 'Скасувати')}</button>
       </div>
     </div>`;
   // Фокус на поле активності
@@ -803,7 +803,7 @@ function routineSaveNewBlock() {
 function routineCancelAdd() {
   const wrap = document.getElementById('routine-add-wrap');
   if (!wrap) return;
-  wrap.innerHTML = `<button onclick="routineAddBlock()" style="width:100%;padding:12px;border-radius:14px;border:2px dashed rgba(234,88,12,0.25);background:none;font-size:14px;font-weight:600;color:rgba(234,88,12,0.6);cursor:pointer">+ Додати блок</button>`;
+  wrap.innerHTML = `<button onclick="routineAddBlock()" style="width:100%;padding:12px;border-radius:14px;border:2px dashed rgba(234,88,12,0.25);background:none;font-size:14px;font-weight:600;color:rgba(234,88,12,0.6);cursor:pointer">${t('calendar.routine.add_block', '+ Додати блок')}</button>`;
 }
 
 function routineDeleteBlock(idx) {
@@ -996,7 +996,7 @@ function deleteEventFromModal() {
   const removed = events.splice(idx, 1)[0];
   saveEvents(events);
   addToTrash('event', removed);
-  showUndoToast('Подію видалено');
+  showUndoToast(t('calendar.toast.event_deleted', 'Подію видалено'));
   closeEventEditModal();
   renderCalendar();
   renderUpcoming();
