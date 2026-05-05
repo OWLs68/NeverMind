@@ -26,12 +26,12 @@ import { currentTab } from '../core/nav.js';
 // реальний стан хвороби». Міграція legacy → у boot.js runMigrations прапором
 // `nm_health_status_v2_done`. Без фіолету (заборонений колір — у chronic темно-індиго).
 export const HEALTH_STATUS_DEFS = {
-  acute:     { icon: '🆕',  label: 'Гостра',     bg: 'rgba(239,68,68,0.10)',  color: '#ef4444', bar: '#ef4444', isActive: true,  opacity: 1 },
-  treatment: { icon: '💊',  label: 'Лікування',  bg: 'rgba(234,88,12,0.10)',  color: '#ea580c', bar: '#ea580c', isActive: true,  opacity: 1 },
-  improving: { icon: '📈',  label: 'Покращення', bg: 'rgba(217,119,6,0.10)',  color: '#d97706', bar: '#d97706', isActive: true,  opacity: 1 },
-  remission: { icon: '🟢',  label: 'Контроль',   bg: 'rgba(22,163,74,0.10)',  color: '#16a34a', bar: '#16a34a', isActive: true,  opacity: 1 },
-  chronic:   { icon: '♾️', label: 'Хронічна',   bg: 'rgba(30,16,64,0.10)',   color: '#1e1040', bar: '#1e1040', isActive: true,  opacity: 1 },
-  done:      { icon: '✅',  label: 'Завершено',  bg: 'rgba(100,116,139,0.10)', color: '#64748b', bar: '#64748b', isActive: false, opacity: 0.5 },
+  acute:     { icon: '🆕',  label: t('health.status.acute', 'Гостра'),     bg: 'rgba(239,68,68,0.10)',  color: '#ef4444', bar: '#ef4444', isActive: true,  opacity: 1 },
+  treatment: { icon: '💊',  label: t('health.status.treatment', 'Лікування'),  bg: 'rgba(234,88,12,0.10)',  color: '#ea580c', bar: '#ea580c', isActive: true,  opacity: 1 },
+  improving: { icon: '📈',  label: t('health.status.improving', 'Покращення'), bg: 'rgba(217,119,6,0.10)',  color: '#d97706', bar: '#d97706', isActive: true,  opacity: 1 },
+  remission: { icon: '🟢',  label: t('health.status.remission', 'Контроль'),   bg: 'rgba(22,163,74,0.10)',  color: '#16a34a', bar: '#16a34a', isActive: true,  opacity: 1 },
+  chronic:   { icon: '♾️', label: t('health.status.chronic', 'Хронічна'),   bg: 'rgba(30,16,64,0.10)',   color: '#1e1040', bar: '#1e1040', isActive: true,  opacity: 1 },
+  done:      { icon: '✅',  label: t('health.status.done', 'Завершено'),  bg: 'rgba(100,116,139,0.10)', color: '#64748b', bar: '#64748b', isActive: false, opacity: 0.5 },
 };
 export const HEALTH_STATUS_KEYS = Object.keys(HEALTH_STATUS_DEFS);
 function _statusDef(s) { return HEALTH_STATUS_DEFS[s] || HEALTH_STATUS_DEFS.treatment; }
@@ -350,7 +350,7 @@ export function updateHealthCardStatusProgrammatic(cardId, status) {
   cards[idx] = { ...cards[idx], status, progress };
   if (oldStatus !== status) {
     cards[idx].history = cards[idx].history || [];
-    cards[idx].history.unshift({ ts: Date.now(), type: 'status_change', text: `${_statusDef(oldStatus).label} → ${_statusDef(status).label}` });
+    cards[idx].history.unshift({ ts: Date.now(), type: 'status_change', text: t('health.history.status_change_text', '{from} → {to}', { from: _statusDef(oldStatus).label, to: _statusDef(status).label }) });
   }
   saveHealthCards(cards);
   return cards[idx];
@@ -441,7 +441,7 @@ export function logMedicationDose(cardId, medQuery) {
   med.log.push(Date.now());
   // Дублюємо у history картки для timeline
   if (!Array.isArray(cards[idx].history)) cards[idx].history = [];
-  cards[idx].history.unshift({ ts: Date.now(), type: 'dose_log', text: `Прийняв ${med.name}` });
+  cards[idx].history.unshift({ ts: Date.now(), type: 'dose_log', text: t('health.history.dose_taken', 'Прийняв {name}', { name: med.name }) });
   saveHealthCards(cards);
   return med;
 }
@@ -638,7 +638,7 @@ function _syncMedicationToTask(cardName, med) {
   if (!med || !med.createTasks) return;
   try {
     const tasks = JSON.parse(localStorage.getItem('nm_tasks') || '[]');
-    const title = `Прийняти ${med.name}${med.dosage ? ' ' + med.dosage : ''}`;
+    const title = t('health.task.take_med_title', 'Прийняти {name}{dosage}', { name: med.name, dosage: med.dosage ? ' ' + med.dosage : '' });
     // Перевірка на дубль
     const existing = tasks.find(t => t.title === title && t.status === 'active');
     if (existing) return;
@@ -647,7 +647,7 @@ function _syncMedicationToTask(cardName, med) {
     const newTask = {
       id: Date.now() + Math.floor(Math.random() * 1000),
       title,
-      text: `[${cardName}] ${med.name}${med.dosage ? ' ' + med.dosage : ''}${med.courseDuration ? ' · курс ' + med.courseDuration : ''}`,
+      text: t('health.task.take_med_step', '[{card}] {name}{dosage}{course}', { card: cardName, name: med.name, dosage: med.dosage ? ' ' + med.dosage : '', course: med.courseDuration ? ' · курс ' + med.courseDuration : '' }),
       status: 'active',
       steps,
       priority: 'important',
@@ -693,7 +693,7 @@ export function syncHealthFinanceToHistory(amount, category, comment) {
     target.history.unshift({
       ts: Date.now(),
       type: 'auto',
-      text: `Витрата: ${amount}€ — ${comment || 'ліки'}`,
+      text: t('health.history.expense', 'Витрата: {amount}€ — {comment}', { amount, comment: comment || t('health.history.expense_default', 'ліки') }),
     });
     saveHealthCards(cards);
     return true;
@@ -802,7 +802,7 @@ function skipHealthMedDose(cardId, medId, scheduledTime) {
   cards[idx].history.unshift({
     ts: Date.now(),
     type: 'auto',
-    text: `Пропустив дозу ${med.name} (${scheduledTime})`,
+    text: t('health.history.dose_skipped', 'Пропустив дозу {name} ({time})', { name: med.name, time: scheduledTime }),
   });
   // Трюк: додаємо псевдо-лог запис зі ts=scheduledTs що поза вікном слоту
   // щоб _getMissedDoses не показував цю дозу знову. Використовуємо ts_scheduled+1мс
@@ -1047,7 +1047,7 @@ function setHealthCardStatus(id, status) {
     cards[idx] = { ...cards[idx], status, progress };
     if (oldStatus !== status) {
       cards[idx].history = cards[idx].history || [];
-      cards[idx].history.unshift({ ts: Date.now(), type: 'status_change', text: `${_statusDef(oldStatus).label} → ${_statusDef(status).label}` });
+      cards[idx].history.unshift({ ts: Date.now(), type: 'status_change', text: t('health.history.status_change_text', '{from} → {to}', { from: _statusDef(oldStatus).label, to: _statusDef(status).label }) });
     }
     saveHealthCards(cards);
     renderHealthWorkspace(id);
@@ -1325,7 +1325,7 @@ function _syncCardAppointmentToEvent(cardId, cardName, newAppointment, oldEventI
   }
   if (!hasNewAppt) return null;
 
-  const title = `Прийом: ${cardName}`;
+  const title = t('health.event.appt_title', 'Прийом: {name}', { name: cardName });
 
   // Оновити існуючу
   if (oldEventId) {
@@ -1390,7 +1390,7 @@ function _archivePastAppointments() {
     card.history.unshift({
       ts: Date.now(),
       type: 'doctor_visit',
-      text: `Прийом відбувся ${appt.date}${appt.time ? ' о ' + appt.time : ''}`,
+      text: t('health.history.visit_done', 'Прийом відбувся {date}{time}', { date: appt.date, time: appt.time ? ' о ' + appt.time : '' }),
     });
     card.nextAppointment = null;
     cardsChanged = true;
