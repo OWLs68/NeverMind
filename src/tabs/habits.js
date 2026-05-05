@@ -1453,6 +1453,54 @@ export function processUniversalAction(parsed, originalText, addMsg) {
     return true;
   }
 
+  if (action === 'delete_reminder') {
+    // B-126 fix MPVly 05.05: AI викликає при коригуванні часу свіжого reminder.
+    // Шукаємо у nm_reminders за text (нечіткий) + опційно time/date для уточнення.
+    // Cleanup трисховищний: nm_reminders + nm_events (за reminderId) + nm_inbox (за reminderId).
+    const qText = (parsed.text || '').trim().toLowerCase();
+    const qTime = parsed.time || null;
+    const qDate = parsed.date || null;
+    if (!qText && !qTime && !qDate) { addMsg('agent', t('habits.reminder.del.unclear', 'Не зрозумів яке нагадування видалити.')); return true; }
+
+    const reminders = JSON.parse(localStorage.getItem('nm_reminders') || '[]');
+    const idx = reminders.findIndex(r => {
+      const rText = (r.text || '').toLowerCase();
+      const tMatch = !qText || rText.includes(qText) || qText.includes(rText);
+      const timeMatch = !qTime || r.time === qTime;
+      const dateMatch = !qDate || r.date === qDate;
+      return tMatch && timeMatch && dateMatch;
+    });
+    if (idx === -1) {
+      const atTime = qTime ? t('habits.reminder.del.at_time', ' на {time}', { time: qTime }) : '';
+      addMsg('agent', t('habits.reminder.del.not_found', 'Не знайшов нагадування "{text}"{atTime}.', { text: parsed.text || '', atTime }));
+      return true;
+    }
+
+    const removed = reminders[idx];
+    const reminderId = removed.id;
+    reminders.splice(idx, 1);
+    localStorage.setItem('nm_reminders', JSON.stringify(reminders));
+
+    // nm_events — видаляємо event пов'язаний з reminder (id+1 або поле reminderId)
+    try {
+      const events = JSON.parse(localStorage.getItem('nm_events') || '[]');
+      const eventsRest = events.filter(e => e.reminderId !== reminderId && e.id !== reminderId + 1);
+      if (eventsRest.length !== events.length) localStorage.setItem('nm_events', JSON.stringify(eventsRest));
+    } catch(e) {}
+
+    // nm_inbox — видаляємо картку (id+2 або поле reminderId)
+    try {
+      const inbox = getInbox();
+      const inboxRest = inbox.filter(it => it.reminderId !== reminderId && it.id !== reminderId + 2);
+      if (inboxRest.length !== inbox.length) saveInbox(inboxRest);
+    } catch(e) {}
+
+    try { renderInbox(); } catch(e) {}
+    window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'reminder' }));
+    addMsg('agent', t('habits.reminder.del.ok', '🗑️ Видалив нагадування "{text}" о {time}.', { text: removed.text, time: removed.time }));
+    return true;
+  }
+
   return false;
 }
 

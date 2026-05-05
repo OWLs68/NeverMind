@@ -114,6 +114,8 @@ export function _toolCallToUniversalAction(name, args) {
       return [{ action: 'move_note', query: args.query, folder: args.folder }];
     case 'set_reminder':
       return [{ action: 'set_reminder', time: args.time, text: args.text, date: args.date }];
+    case 'delete_reminder':
+      return [{ action: 'delete_reminder', text: args.text, time: args.time, date: args.date }];
     case 'save_routine':
       return [{ action: 'save_routine', day: args.day, blocks: args.blocks }];
     case 'show_monthly_summary':
