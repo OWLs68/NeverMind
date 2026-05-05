@@ -8,6 +8,13 @@
 
 ## ✅ Закриті баги (хронологічно, нові зверху)
 
+### Сесія UvEHE (03.05.2026) — фінал модалок + drum-picker + Settings 4-ітерац
+
+| ID | Файл | Симптом | Корінь + фікс |
+|---|---|---|---|
+| **B-120** ✅ | `index.html` `#health-card-modal` | iOS rubber-band у модалці Health картки. | Calendar-pattern: top-level `#health-card-modal-overlay` як sibling (НЕ дитячий backdrop-div) + onclick на root з `event.target===this`. Окремий swipe-handler на root через `setupModalSwipeClose`. iOS rubber-band усунуто бо overlay не у transformed-context. |
+| **B-121** ✅ | `index.html` Health картка | Native iOS picker для дати/часу — горизонтальний scroll + перекриття. | Заміна на власний drum-picker mini-модалку (`#health-dt-picker-modal`) з 3-кол date drum + 2-кол time drum. Native iOS picker більше не відкривається. Поля-trigger показують форматовану дату «3 трав. 2026» / «09:00». `_initDrumCol` експортовано з calendar.js. |
+
 ### Сесія 4xJ7n (03.05.2026) — iPhone smoke-test + B-118/B-119 фікси
 
 | ID | Файл | Симптом | Корінь + фікс |
