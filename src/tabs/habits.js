@@ -4,7 +4,7 @@
 // ============================================================
 
 import { currentTab, showToast } from '../core/nav.js';
-import { escapeHtml, logRecentAction, extractJsonBlocks } from '../core/utils.js';
+import { escapeHtml, logRecentAction, extractJsonBlocks, t } from '../core/utils.js';
 import { logUsage } from '../core/usage-meter.js';
 import { generateUUID } from '../core/uuid.js';
 import { addToTrash, showUndoToast } from '../core/trash.js';
@@ -62,7 +62,7 @@ function holdQuitHabit(habitId) {
   saveQuitLog(log);
   renderProdHabits();
   const fd = s.freedomDays;
-  showToast('💪 +1 вільний день! Всього: ' + fd + ' ' + _dayWord(fd));
+  showToast(t('habits.quit.toast.held', '💪 +1 вільний день! Всього: {fd} {dayWord}', { fd, dayWord: _dayWord(fd) }));
 }
 
 // Відмітити зрив
@@ -74,7 +74,7 @@ function relapseQuitHabit(habitId) {
   if (!s.relapses) s.relapses = [];
   // Не дозволяємо два зриви в один день
   if (s.relapses[s.relapses.length - 1] === today) {
-    showToast('Зрив вже відмічено сьогодні');
+    showToast(t('habits.quit.toast.relapse_dup', 'Зрив вже відмічено сьогодні'));
     return;
   }
   s.relapses.push(today);
@@ -101,11 +101,11 @@ function _dayWord(n) {
 function _owlQuitRelapse(habitId, prevStreak, freedomDays) {
   const habits = getHabits();
   const h = habits.find(x => x.id === habitId);
-  const name = h ? h.name : 'звичку';
-  const fdText = freedomDays > 0 ? ` Твої ${freedomDays} вільних ${_dayWord(freedomDays)} — назавжди твої.` : '';
+  const name = h ? h.name : t('habits.quit.fallback_name', 'звичку');
+  const fdText = freedomDays > 0 ? t('habits.quit.freedom_kept', ' Твої {fd} вільних {dayWord} — назавжди твої.', { fd: freedomDays, dayWord: _dayWord(freedomDays) }) : '';
   const key = localStorage.getItem('nm_gemini_key');
   if (!key) {
-    addInboxChatMsg('agent', `Сьогодні важкий день з "${name}".${fdText} Завтра новий шанс.`);
+    addInboxChatMsg('agent', t('habits.quit.msg.hard_day_offline', 'Сьогодні важкий день з "{name}".{fdText} Завтра новий шанс.', { name, fdText }));
     return;
   }
   const settings = JSON.parse(localStorage.getItem('nm_settings') || '{}');
@@ -130,7 +130,7 @@ function _owlQuitRelapse(habitId, prevStreak, freedomDays) {
     const reply = d.choices?.[0]?.message?.content;
     if (reply) addInboxChatMsg('agent', reply);
   }).catch(() => {
-    addInboxChatMsg('agent', `Сьогодні важкий день з "${name}".${fdText} Завтра — новий шанс.`);
+    addInboxChatMsg('agent', t('habits.quit.msg.hard_day_fallback', 'Сьогодні важкий день з "{name}".{fdText} Завтра — новий шанс.', { name, fdText }));
   });
 }
 
@@ -175,7 +175,7 @@ function openEditHabit(id) {
   const h = habits.find(x => x.id === id);
   if (!h) return;
   editingHabitId = id;
-  document.getElementById('habit-modal-title').textContent = 'Редагувати звичку';
+  document.getElementById('habit-modal-title').textContent = t('habits.modal.title_edit', 'Редагувати звичку');
   document.getElementById('habit-input-name').value = h.name;
   let details = h.details || '';
   if (!details && h.name) {
@@ -213,7 +213,7 @@ function openEditHabit(id) {
 
 function openAddHabit() {
   editingHabitId = null;
-  document.getElementById('habit-modal-title').textContent = 'Нова звичка';
+  document.getElementById('habit-modal-title').textContent = t('habits.modal.title_new', 'Нова звичка');
   document.getElementById('habit-input-name').value = '';
   document.getElementById('habit-input-details').value = '';
   document.getElementById('habit-input-emoji').value = '';
@@ -241,7 +241,7 @@ document.addEventListener('click', e => {
 
 function saveHabit() {
   const name = document.getElementById('habit-input-name').value.trim();
-  if (!name) { showToast('Введи назву звички'); return; }
+  if (!name) { showToast(t('habits.modal.err.empty_name', 'Введи назву звички')); return; }
   const details = document.getElementById('habit-input-details').value.trim();
   const emoji = document.getElementById('habit-input-emoji').value.trim() || (_habitModalType === 'quit' ? '🚫' : '⭕');
   const days = [...document.querySelectorAll('.habit-day-btn.active')].map(b => parseInt(b.dataset.day));
@@ -259,11 +259,11 @@ function saveHabit() {
   closeHabitModal();
   renderHabits();
   renderProdHabits();
-  showToast(editingHabitId ? '✓ Звичку оновлено' : (type === 'quit' ? '🚫 Челендж створено' : '✓ Звичку додано'));
+  showToast(editingHabitId ? t('habits.toast.updated', '✓ Звичку оновлено') : (type === 'quit' ? t('habits.toast.quit_created', '🚫 Челендж створено') : t('habits.toast.added', '✓ Звичку додано')));
 }
 
 function deleteHabit(id) {
-  if (!confirm('Видалити звичку?')) return;
+  if (!confirm(t('habits.confirm.delete', 'Видалити звичку?'))) return;
   saveHabits(getHabits().filter(h => h.id !== id));
   renderHabits();
   renderProdHabits();
@@ -276,7 +276,7 @@ function deleteHabitFromModal() {
   saveHabits(getHabits().filter(h => h.id !== id));
   renderHabits(); renderProdHabits();
   closeHabitModal();
-  if (item) showUndoToast('Звичку видалено', () => { const habits = getHabits(); habits.push(item); saveHabits(habits); renderHabits(); renderProdHabits(); });
+  if (item) showUndoToast(t('habits.toast.deleted', 'Звичку видалено'), () => { const habits = getHabits(); habits.push(item); saveHabits(habits); renderHabits(); renderProdHabits(); });
 }
 
 // Хелпер — чи вважається звичка виконаною за день
@@ -402,7 +402,7 @@ export function renderHabits() {
   const todayDow = (new Date().getDay() + 6) % 7;
 
   if (habits.length === 0) {
-    el.innerHTML = '<div style="text-align:center;padding:20px 0;color:rgba(30,16,64,0.3);font-size:15px">Додай першу звичку</div>';
+    el.innerHTML = '<div style="text-align:center;padding:20px 0;color:rgba(30,16,64,0.3);font-size:15px">' + t('habits.empty.me_list', 'Додай першу звичку') + '</div>';
     return;
   }
 
@@ -491,7 +491,7 @@ export function updateProdTabCounters() {
   const taskCountEl = document.getElementById('prod-tab-tasks-count');
   const taskSubEl = document.getElementById('prod-tab-tasks-sub');
   if (taskCountEl) taskCountEl.textContent = taskCount;
-  if (taskSubEl) taskSubEl.textContent = taskCount === 1 ? 'активна' : 'активних';
+  if (taskSubEl) taskSubEl.textContent = taskCount === 1 ? t('tasks.counter.active_one', 'активна') : t('tasks.counter.active_many', 'активних');
 
   // Лічильник звичок — загальна кількість (build + quit). QDIGl 04.05:
   // прибрано підпис «X з Y сьогодні» — створював невідповідність з великим
@@ -504,7 +504,7 @@ export function updateProdTabCounters() {
   const habitSubEl = document.getElementById('prod-tab-habits-sub');
   const totalHabits = buildHabitsAll.length + quitHabitsAll.length;
   if (habitCountEl) habitCountEl.textContent = totalHabits;
-  if (habitSubEl) habitSubEl.textContent = totalHabits === 1 ? 'звичка' : 'звичок';
+  if (habitSubEl) habitSubEl.textContent = totalHabits === 1 ? t('habits.counter.one', 'звичка') : t('habits.counter.many', 'звичок');
 
   // QDIGl 04.05 — lazy attach swipe handler. Викликається при кожному показі
   // вкладки Tasks через nav.js:136. Idempotent через _prodSwipeAttached.
@@ -718,7 +718,7 @@ export function renderProdHabits() {
   if (barEl) barEl.style.width = todayHabits.length > 0 ? `${Math.round(doneTodayCount/todayHabits.length*100)}%` : '0%';
 
   if (habits.length === 0) {
-    el.innerHTML = '<div style="text-align:center;padding:40px 20px;color:rgba(30,16,64,0.3);font-size:15px">Ще немає звичок<br>Натисни + щоб додати</div>';
+    el.innerHTML = '<div style="text-align:center;padding:40px 20px;color:rgba(30,16,64,0.3);font-size:15px">' + t('habits.empty.prod_list', 'Ще немає звичок<br>Натисни + щоб додати') + '</div>';
     return;
   }
 
@@ -801,7 +801,7 @@ export function renderProdHabits() {
 
   // Челенджі "Кинути"
   if (quitHabits.length > 0) {
-    html += '<div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.08em;margin:14px 14px 8px">🚫 Челенджі</div>';
+    html += '<div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.08em;margin:14px 14px 8px">' + t('habits.quit.section_title', '🚫 Челенджі') + '</div>';
     html += quitHabits.map(h => _renderQuitHabitCard(h)).join('');
   }
 
@@ -894,8 +894,8 @@ function _renderQuitHabitCard(h) {
     + '<div style="display:flex;gap:8px" onclick="event.stopPropagation()">'
       + '<button ontouchend="event.preventDefault();event.stopPropagation();holdQuitHabit(' + h.id + ')" onclick="holdQuitHabit(' + h.id + ')" style="flex:2;padding:10px;border-radius:12px;border:none;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;'
         + (heldToday ? 'background:rgba(22,163,74,0.15);color:#16a34a' : 'background:rgba(22,163,74,0.1);color:#16a34a')
-        + '">' + (heldToday ? '✅ Тримаюсь сьогодні' : '✓ Тримаюсь') + '</button>'
-      + '<button ontouchend="event.preventDefault();event.stopPropagation();confirmQuitRelapse(' + h.id + ')" onclick="confirmQuitRelapse(' + h.id + ')" style="flex:1;padding:10px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.1);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;background:rgba(30,16,64,0.03);color:rgba(30,16,64,0.35)">Зірвався</button>'
+        + '">' + (heldToday ? t('habits.quit.btn.held_today', '✅ Тримаюсь сьогодні') : t('habits.quit.btn.hold', '✓ Тримаюсь')) + '</button>'
+      + '<button ontouchend="event.preventDefault();event.stopPropagation();confirmQuitRelapse(' + h.id + ')" onclick="confirmQuitRelapse(' + h.id + ')" style="flex:1;padding:10px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.1);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;background:rgba(30,16,64,0.03);color:rgba(30,16,64,0.35)">' + t('habits.quit.btn.relapse', 'Зірвався') + '</button>'
     + '</div>'
     + '</div>'
   + '</div>';
@@ -905,7 +905,7 @@ function confirmQuitRelapse(habitId) {
   const s = getQuitStatus(habitId);
   const fd = s.freedomDays || 0;
   const fdText = fd > 0 ? '\n' + fd + ' вільних ' + _dayWord(fd) + ' залишаться твоїми.' : '';
-  if (window.confirm('Важкий день? Відмітити зрив?' + fdText)) {
+  if (window.confirm(t('habits.quit.confirm.relapse', 'Важкий день? Відмітити зрив?') + fdText)) {
     relapseQuitHabit(habitId);
   }
 }
@@ -926,7 +926,7 @@ function _attachHabitsSwipeDelete() {
       saveHabits(allHabits.filter(h => String(h.id) !== id));
       renderHabits();
       renderProdHabits();
-      if (item) showUndoToast('Звичку видалено', () => {
+      if (item) showUndoToast(t('habits.toast.deleted', 'Звичку видалено'), () => {
         const habits = getHabits();
         const idx = Math.min(habitOrigIdx, habits.length);
         habits.splice(idx, 0, item);
