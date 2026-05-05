@@ -6781,6 +6781,11 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
     const latestMsg = tabMsgs[0];
     const latestAge = latestMsg ? Date.now() - (latestMsg.ts || latestMsg.id || 0) : Infinity;
     if (latestAge < 5 * 60 * 1e3) return;
+    if (latestAge > 60 * 60 * 1e3) {
+      console.log("[OWL board] tab=" + tab + " stale > 60min, forcing generation");
+      generateBoardMessage(tab);
+      return;
+    }
     const lastTs = parseInt(localStorage.getItem(getOwlTabTsKey(tab)) || "0");
     const elapsed = Date.now() - lastTs;
     const isNewDay = lastTs > 0 && new Date(lastTs).toDateString() !== (/* @__PURE__ */ new Date()).toDateString();
@@ -10524,7 +10529,29 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
       return msg.entityRefs.some(isEntityRelevant);
     }
     if (_isStaleHabitGeneralization(msg)) return false;
+    if (_isStaleTaskGeneralization(msg)) return false;
     return true;
+  }
+  function _isStaleTaskGeneralization(msg) {
+    const topic = (msg.topic || "").toLowerCase();
+    const text = msg.text || "";
+    const lower = text.toLowerCase();
+    const isTaskTopic = /task|задач/.test(topic);
+    const isTaskTextRelevant = /(активн[іе].*задач|чекают.*виконан|що\s+закрива|закрива[єе]мо)/.test(lower);
+    if (!isTaskTopic && !isTaskTextRelevant) return false;
+    try {
+      const tasks = getTasks();
+      if (!tasks.length) return false;
+      const matches = text.match(/['"„«]([^'"„«»\n]{2,80})['"”»]/g) || [];
+      const cited = matches.map((m) => m.replace(/^['"„«]|['"”»]$/g, "").trim().toLowerCase()).filter(Boolean);
+      if (cited.length === 0) return false;
+      return cited.some((name) => {
+        const task = tasks.find((x) => (x.title || "").toLowerCase() === name);
+        return task && task.status === "done";
+      });
+    } catch (e) {
+      return false;
+    }
   }
   function _isStaleHabitGeneralization(msg) {
     const topic = (msg.topic || "").toLowerCase();
