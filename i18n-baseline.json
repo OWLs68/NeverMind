@@ -1,5 +1,5 @@
 {
-  "src/core/diagnostics.js": 81,
+  "src/core/diagnostics.js": 35,
   "src/core/logger.js": 16,
   "src/core/nav.js": 65,
   "src/core/usage-meter.js": 2,
