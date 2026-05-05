@@ -407,6 +407,7 @@ function _toolCallToAction(name, args) {
     case 'update_transaction': return { action: 'update_transaction', id: args.id, category: args.category, amount: args.amount, comment: args.comment };
     case 'restore_deleted': return { action: 'restore_deleted', query: args.query, type: args.type || null };
     case 'save_routine': return { action: 'save_routine', day: args.day, blocks: args.blocks };
+    case 'show_monthly_summary': return { action: 'show_monthly_summary', comment: args.comment };
     case 'clarify': return { action: 'clarify', question: args.question, options: args.options };
     case 'save_memory_fact': return { action: 'save_memory_fact', fact: args.fact, category: args.category, ttl_days: args.ttl_days };
     case 'set_reminder': return { action: 'set_reminder', text: args.text, time: args.time, date: args.date };
