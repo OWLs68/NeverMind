@@ -2,7 +2,7 @@
 // calendar.js — Календар, події (nm_events), блок "Найближче"
 // ============================================================
 
-import { escapeHtml } from '../core/utils.js';
+import { escapeHtml, t } from '../core/utils.js';
 import { getTasks, setupModalSwipeClose } from './tasks.js';
 import { addToTrash, showUndoToast } from '../core/trash.js';
 import { monthNominative, monthGenitive, monthShort } from '../data/months.js';
@@ -549,12 +549,15 @@ export function getCombinedTimelineForDate(dateISO) {
   });
 
   // 2. Events + reminders на конкретну дату
+  const isHistoricDate = dateISO < _todayISO();
   getEvents().forEach(ev => {
     if (ev.date !== dateISO) return;
     const isReminder = ev.source === 'reminder';
-    // Виконані прострочені reminders — приховуємо щоб не засмічувати timeline
     const isPast = _isBlockPast(ev.time, dateISO);
-    if (isReminder && isPast && ev.done) return;
+    // QDIGl 04.05: для today приховуємо виконані прострочені reminders
+    // (щоб не засмічувати timeline). Для МИНУЛИХ днів — показуємо все
+    // (історія: юзер хоче бачити що вчора зробив о 22:00).
+    if (isReminder && isPast && ev.done && !isHistoricDate) return;
     out.push({
       time: ev.time || null,
       activity: ev.title || '',
@@ -617,37 +620,65 @@ function closeRoutineModal() {
   });
 }
 
+// QDIGl 04.05: render-order Пн-Нд (тижень починається з понеділка),
+// центрування + більший розмір. Storage DAY_KEYS лишається ['sun','mon',...]
+// бо AI tool save_routine + ai-context зав'язані на цьому enum.
+const ROUTINE_TAB_ORDER = ['mon','tue','wed','thu','fri','sat','sun'];
+const ROUTINE_TAB_LABELS = { mon:'Пн', tue:'Вт', wed:'Ср', thu:'Чт', fri:'Пт', sat:'Сб', sun:'Нд' };
+
 function _renderRoutineDayTabs() {
   const el = document.getElementById('routine-day-tabs');
   if (!el) return;
   const routine = getRoutine();
-  const todayIdx = new Date().getDay();
-  el.innerHTML = DAY_KEYS.map((key, i) => {
+  const todayKey = DAY_KEYS[new Date().getDay()];
+  // Центрування + збільшено padding/font для тач-області (~44pt)
+  el.style.justifyContent = 'center';
+  el.style.gap = '6px';
+  el.innerHTML = ROUTINE_TAB_ORDER.map(key => {
     const isActive = key === _routineDay;
-    const isToday = i === todayIdx;
+    const isToday = key === todayKey;
     const hasOwn = !!routine[key];
-    return `<div onclick="routineSelectDay('${key}')" style="padding:6px 10px;border-radius:10px;font-size:12px;font-weight:${isActive ? '800' : '600'};cursor:pointer;white-space:nowrap;
+    return `<div onclick="routineSelectDay('${key}')" style="padding:10px 14px;border-radius:12px;font-size:14px;font-weight:${isActive ? '800' : '600'};cursor:pointer;white-space:nowrap;min-width:42px;text-align:center;
       background:${isActive ? '#ea580c' : 'rgba(255,255,255,0.5)'};
       color:${isActive ? 'white' : isToday ? '#ea580c' : 'rgba(30,16,64,0.5)'};
       border:1.5px solid ${isActive ? '#ea580c' : isToday ? 'rgba(234,88,12,0.3)' : 'rgba(30,16,64,0.08)'};
       ${hasOwn && !isActive ? 'box-shadow:inset 0 -2px 0 rgba(234,88,12,0.3);' : ''}
-      ">${DAY_LABELS[i]}</div>`;
+      -webkit-tap-highlight-color:transparent
+      ">${ROUTINE_TAB_LABELS[key]}</div>`;
   }).join('');
+  // Лейбл «сьогодні» / «вчора» / дата
   const label = document.getElementById('routine-day-label');
-  if (label) label.textContent = _routineDay === DAY_KEYS[todayIdx] ? 'сьогодні' : '';
+  if (label) {
+    if (_routineDay === todayKey) {
+      label.textContent = t('routine.day.today', 'сьогодні');
+    } else {
+      const dateISO = _lastDateForDayKey(_routineDay);
+      const [, m, d] = dateISO.split('-');
+      const diffDays = Math.round((new Date(_todayISO()) - new Date(dateISO)) / (24*60*60*1000));
+      if (diffDays === 1) label.textContent = t('routine.day.yesterday', 'вчора');
+      else if (diffDays === 2) label.textContent = t('routine.day.day_before', 'позавчора');
+      else if (diffDays === -1) label.textContent = t('routine.day.tomorrow', 'завтра');
+      else if (diffDays === -2) label.textContent = t('routine.day.day_after', 'післязавтра');
+      else label.textContent = `${parseInt(d)}.${m}`;
+    }
+  }
 }
 
-// QDIGl 04.05: для day-tab → найближча дата того ж дня тижня (включно з today).
-// 'default' не має конкретної дати — фолбек на today (без додавання events).
-function _nearestDateForDayKey(dayKey) {
+// QDIGl 04.05: для day-tab → дата ПОТОЧНОГО ТИЖНЯ (Пн-Нд від цього понеділка).
+// Так модалка показує саме поточний тиждень як юзер бачить календар:
+// Сьогодні Вт 05.05 → Пн=04.05, Вт=05.05 (today), Ср=06.05, Сб=09.05, Нд=10.05.
+// Минулий тиждень (вчора-Пн) автоматично є — Пн понеділка тижня = вчорашня дата.
+// Майбутні дні поточного тижня (Ср-Нд після Вт-today) теж видимі для планування.
+// 'default' не має конкретної дати — фолбек на today (без events).
+function _lastDateForDayKey(dayKey) {
   if (dayKey === 'default') return _todayISO();
-  const todayDayIdx = new Date().getDay();
-  const targetDayIdx = DAY_KEYS.indexOf(dayKey);
-  if (targetDayIdx < 0) return _todayISO();
-  const diff = (targetDayIdx - todayDayIdx + 7) % 7;
-  const d = new Date();
-  d.setDate(d.getDate() + diff);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const targetIdxMon = ROUTINE_TAB_ORDER.indexOf(dayKey); // 0=Пн, 6=Нд
+  if (targetIdxMon < 0) return _todayISO();
+  const today = new Date();
+  const todayIdxMon = (today.getDay() + 6) % 7; // 0=Пн, 6=Нд
+  const target = new Date(today);
+  target.setDate(today.getDate() + (targetIdxMon - todayIdxMon));
+  return `${target.getFullYear()}-${String(target.getMonth() + 1).padStart(2, '0')}-${String(target.getDate()).padStart(2, '0')}`;
 }
 
 function _renderRoutineTimeline() {
