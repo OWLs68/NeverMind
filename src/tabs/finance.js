@@ -414,16 +414,16 @@ function _finCatsGrid(allTxs, win) {
         <button onclick="toggleFinEditMode()" aria-label="${t('finance.edit.done', 'Готово')}" style="padding:6px 14px;border-radius:14px;border:none;background:#c2410c;color:white;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">${t('finance.edit.done', 'Готово')}</button>
       </div>`
     : `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;user-select:none">
-        <button onclick="shiftFinPeriod(-1)" aria-label="Попередній період" style="width:32px;height:32px;border-radius:50%;border:none;background:rgba(30,16,64,0.05);color:rgba(30,16,64,0.55);box-shadow:0 4px 10px rgba(0,0,0,0.32), 0 2px 4px rgba(0,0,0,0.22);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit">‹</button>
+        <button onclick="shiftFinPeriod(-1)" aria-label="${t('finance.nav.prev_period', 'Попередній період')}" style="width:32px;height:32px;border-radius:50%;border:none;background:rgba(30,16,64,0.05);color:rgba(30,16,64,0.55);box-shadow:0 4px 10px rgba(0,0,0,0.32), 0 2px 4px rgba(0,0,0,0.22);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit">‹</button>
         <div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex:1">
           <div style="font-size:14px;font-weight:800;color:#1e1040">${escapeHtml(periodLabel)}</div>
           ${!isCurrent ? `<div onclick="shiftFinPeriod(${-currentFinPeriodOffset})" style="font-size:10px;font-weight:700;color:#c2410c;cursor:pointer;text-transform:uppercase;letter-spacing:0.06em">${t('finance.period.back_to_today', '↺ до сьогодні')}</div>` : `<div style="font-size:10px;font-weight:600;color:rgba(30,16,64,0.3);text-transform:uppercase;letter-spacing:0.06em">${t('finance.period.swipe_hint', 'свайп ←→ для навігації')}</div>`}
         </div>
         <div style="display:flex;align-items:center;gap:4px">
-          <button onclick="toggleFinEditMode()" aria-label="Редагувати категорії" title="Редагувати категорії" style="width:32px;height:32px;border-radius:50%;border:none;background:rgba(30,16,64,0.05);color:rgba(30,16,64,0.55);box-shadow:0 4px 10px rgba(0,0,0,0.32), 0 2px 4px rgba(0,0,0,0.22);cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit">
+          <button onclick="toggleFinEditMode()" aria-label="${t('finance.nav.edit_cats', 'Редагувати категорії')}" title="${t('finance.nav.edit_cats', 'Редагувати категорії')}" style="width:32px;height:32px;border-radius:50%;border:none;background:rgba(30,16,64,0.05);color:rgba(30,16,64,0.55);box-shadow:0 4px 10px rgba(0,0,0,0.32), 0 2px 4px rgba(0,0,0,0.22);cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
           </button>
-          <button onclick="shiftFinPeriod(1)" aria-label="Наступний період" style="width:32px;height:32px;border-radius:50%;border:none;background:rgba(30,16,64,0.05);color:rgba(30,16,64,0.55);box-shadow:0 4px 10px rgba(0,0,0,0.32), 0 2px 4px rgba(0,0,0,0.22);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit">›</button>
+          <button onclick="shiftFinPeriod(1)" aria-label="${t('finance.nav.next_period', 'Наступний період')}" style="width:32px;height:32px;border-radius:50%;border:none;background:rgba(30,16,64,0.05);color:rgba(30,16,64,0.55);box-shadow:0 4px 10px rgba(0,0,0,0.32), 0 2px 4px rgba(0,0,0,0.22);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit">›</button>
         </div>
       </div>`;
 
@@ -450,9 +450,9 @@ function _finEmptyState() {
     <div style="width:48px;height:48px;border-radius:16px;background:rgba(194,65,12,0.1);display:flex;align-items:center;justify-content:center;margin:0 auto 12px">
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#c2410c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 6v2m0 8v2M9.5 9.5A2.5 2.5 0 0 1 12 8h.5a2.5 2.5 0 0 1 0 5h-1a2.5 2.5 0 0 0 0 5H12a2.5 2.5 0 0 0 2.5-1.5"/></svg>
     </div>
-    <div style="font-size:16px;font-weight:800;color:#1e1040;margin-bottom:6px">Поки порожньо</div>
-    <div style="font-size:14px;color:rgba(30,16,64,0.45);line-height:1.5;margin-bottom:16px">Додай перші операції через Inbox або кнопку нижче</div>
-    <button onclick="openAddTransaction()" style="background:linear-gradient(135deg,#f97316,#c2410c);color:white;border:none;border-radius:14px;padding:12px 24px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit">+ Додати операцію</button>
+    <div style="font-size:16px;font-weight:800;color:#1e1040;margin-bottom:6px">${t('finance.empty.title', 'Поки порожньо')}</div>
+    <div style="font-size:14px;color:rgba(30,16,64,0.45);line-height:1.5;margin-bottom:16px">${t('finance.empty.hint', 'Додай перші операції через Inbox або кнопку нижче')}</div>
+    <button onclick="openAddTransaction()" style="background:linear-gradient(135deg,#f97316,#c2410c);color:white;border:none;border-radius:14px;padding:12px 24px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit">${t('finance.empty.add_btn', '+ Додати операцію')}</button>
   </div>`;
 }
 
@@ -481,15 +481,15 @@ function _finTxsBlock(allTxs) {
   }).join('');
 
   const moreBtn = allTxs.length > 8
-    ? `<div onclick="openAllTransactions()" style="text-align:center;margin-top:10px;font-size:13px;font-weight:700;color:#c2410c;cursor:pointer">Всі операції (${allTxs.length}) <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#c2410c" stroke-width="2.5" stroke-linecap="round" style="vertical-align:middle"><polyline points="9 18 15 12 9 6"/></svg></div>`
+    ? `<div onclick="openAllTransactions()" style="text-align:center;margin-top:10px;font-size:13px;font-weight:700;color:#c2410c;cursor:pointer">${t('finance.tx.all_count', 'Всі операції ({n})', { n: allTxs.length })} <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#c2410c" stroke-width="2.5" stroke-linecap="round" style="vertical-align:middle"><polyline points="9 18 15 12 9 6"/></svg></div>`
     : '';
 
   return `<div class="card-glass-blur">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
       <div class="fin-section-label">${t('finance.tx.recent_title', 'Останні операції')}</div>
-      <button onclick="openAddTransaction()" style="background:rgba(194,65,12,0.08);border:none;border-radius:8px;padding:4px 10px;font-size:12px;font-weight:700;color:#c2410c;cursor:pointer;font-family:inherit">+ додати</button>
+      <button onclick="openAddTransaction()" style="background:rgba(194,65,12,0.08);border:none;border-radius:8px;padding:4px 10px;font-size:12px;font-weight:700;color:#c2410c;cursor:pointer;font-family:inherit">${t('finance.tx.add_short', '+ додати')}</button>
     </div>
-    ${rows || '<div style="font-size:13px;color:rgba(30,16,64,0.3);text-align:center;padding:8px">Немає операцій за цей період</div>'}
+    ${rows || `<div style="font-size:13px;color:rgba(30,16,64,0.3);text-align:center;padding:8px">${t('finance.tx.empty_period', 'Немає операцій за цей період')}</div>`}
     ${moreBtn}
   </div>`;
 }
@@ -524,8 +524,8 @@ function openAllTransactions() {
     <div onclick="document.getElementById('fin-all-txs-modal').remove()" class="modal-backdrop"></div>
     <div style="position:relative;width:100%;max-width:480px;background:rgba(255,255,255,0.95);backdrop-filter:blur(24px);border-radius:24px;margin:0 16px 16px;z-index:1;padding:16px 16px calc(env(safe-area-inset-bottom) + 16px);max-height:80vh;overflow-y:auto;box-sizing:border-box">
       <div class="modal-handle"></div>
-      <div style="font-size:16px;font-weight:800;color:#1e1040;margin-bottom:12px">Всі операції (${allTxs.length})</div>
-      ${rows || '<div style="font-size:14px;color:rgba(30,16,64,0.3);text-align:center;padding:16px">Немає операцій</div>'}
+      <div style="font-size:16px;font-weight:800;color:#1e1040;margin-bottom:12px">${t('finance.modal.all_title', 'Всі операції ({n})', { n: allTxs.length })}</div>
+      ${rows || `<div style="font-size:14px;color:rgba(30,16,64,0.3);text-align:center;padding:16px">${t('finance.modal.no_tx', 'Немає операцій')}</div>`}
     </div>`;
   document.body.appendChild(modal);
 }
@@ -564,7 +564,7 @@ export function processFinanceAction(parsed, originalText) {
   const comment = parsed.comment || originalText;
 
   if (!amount || amount <= 0) {
-    addInboxChatMsg('agent', 'Не вдалось розпізнати суму. Спробуй написати чіткіше: "витратив 50 на їжу"');
+    addInboxChatMsg('agent', t('finance.err.no_amount', 'Не вдалось розпізнати суму. Спробуй написати чіткіше: "витратив 50 на їжу"'));
     return;
   }
 
@@ -604,15 +604,15 @@ function checkFinBudgetWarning(type, category, amount) {
   const totalSpent = txs.reduce((s, t) => s + t.amount, 0);
   if (budget.total > 0) {
     const pct = totalSpent / budget.total;
-    if (pct >= 1) addInboxChatMsg('agent', `⚠️ Загальний бюджет на місяць перевищено. Витрачено ${formatMoney(totalSpent)} з ${formatMoney(budget.total)}.`);
-    else if (pct >= 0.8) addInboxChatMsg('agent', `💡 До ліміту місяця залишилось ${formatMoney(budget.total - totalSpent)}.`);
+    if (pct >= 1) addInboxChatMsg('agent', t('finance.budget.month_over', '⚠️ Загальний бюджет на місяць перевищено. Витрачено {spent} з {total}.', { spent: formatMoney(totalSpent), total: formatMoney(budget.total) }));
+    else if (pct >= 0.8) addInboxChatMsg('agent', t('finance.budget.month_left', '💡 До ліміту місяця залишилось {left}.', { left: formatMoney(budget.total - totalSpent) }));
   }
   const catLimit = budget.categories?.[category];
   if (catLimit > 0) {
     const catSpent = txs.filter(t => t.category === category).reduce((s, t) => s + t.amount, 0);
     const pct = catSpent / catLimit;
-    if (pct >= 1) addInboxChatMsg('agent', `⚠️ Ліміт по "${category}" перевищено: ${formatMoney(catSpent)} з ${formatMoney(catLimit)}.`);
-    else if (pct >= 0.8) addInboxChatMsg('agent', `💡 По "${category}" залишилось ${formatMoney(catLimit - catSpent)}.`);
+    if (pct >= 1) addInboxChatMsg('agent', t('finance.budget.cat_over', '⚠️ Ліміт по "{cat}" перевищено: {spent} з {limit}.', { cat: category, spent: formatMoney(catSpent), limit: formatMoney(catLimit) }));
+    else if (pct >= 0.8) addInboxChatMsg('agent', t('finance.budget.cat_left', '💡 По "{cat}" залишилось {left}.', { cat: category, left: formatMoney(catLimit - catSpent) }));
   }
 }
 
