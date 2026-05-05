@@ -3,7 +3,7 @@
   "src/core/logger.js": 16,
   "src/core/nav.js": 65,
   "src/core/usage-meter.js": 2,
-  "src/tabs/calendar.js": 32,
+  "src/tabs/calendar.js": 21,
   "src/tabs/evening-actions.js": 3,
   "src/tabs/evening-chat.js": 4,
   "src/tabs/evening.js": 24,
