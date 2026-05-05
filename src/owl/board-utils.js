@@ -135,8 +135,11 @@ function _isStaleHabitGeneralization(msg) {
     // Якщо текст негативний («жодну / не виконано / активізуйся») але реально
     // хоча б одну виконано → стале (повідомлення «жодну» вже неактуальне).
     if (isHabitTextNegative && doneCount > 0) return true;
-    // Якщо все виконано — будь-яке нагадування про звички стале.
-    if (doneCount === buildHabits.length) return true;
+    // Якщо все виконано — стале ТІЛЬКИ якщо текст негативний (нагадує).
+    // QDIGl audit fix: раніше ловило позитивні «3/3 чудово!» — викидало
+    // legitimne похвалу. Тепер позитивні habit_streak/daily_habits з
+    // нейтральним/позитивним текстом залишаються, навіть якщо все done.
+    if (doneCount === buildHabits.length && isHabitTextNegative) return true;
     return false;
   } catch (e) {
     return false;
