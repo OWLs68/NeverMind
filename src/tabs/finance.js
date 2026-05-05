@@ -10,7 +10,7 @@
 // ============================================================
 
 import { currentTab, showToast } from '../core/nav.js';
-import { escapeHtml } from '../core/utils.js';
+import { escapeHtml, t } from '../core/utils.js';
 import { addToTrash, showUndoToast } from '../core/trash.js';
 import { SWIPE_DELETE_THRESHOLD, applySwipeTrail, clearSwipeTrail, attachSwipeDelete } from '../ui/swipe-delete.js';
 import { getAIContext, getOWLPersonality, openChatBar, safeAgentReply, saveChatMsg } from '../ai/core.js';
@@ -113,10 +113,10 @@ function _getFinPeriodWindow(period, offset) {
     nextMonday.setDate(monday.getDate() + 7);
     from = monday.getTime();
     to = nextMonday.getTime();
-    if (offset === 0) label = 'Цей тиждень';
-    else if (offset === -1) label = 'Минулий тиждень';
-    else if (offset === 1) label = 'Наступний тиждень';
-    else label = offset < 0 ? `${-offset} тижнів тому` : `+${offset} тижнів`;
+    if (offset === 0) label = t('finance.period.this_week', 'Цей тиждень');
+    else if (offset === -1) label = t('finance.period.last_week', 'Минулий тиждень');
+    else if (offset === 1) label = t('finance.period.next_week', 'Наступний тиждень');
+    else label = offset < 0 ? t('finance.period.weeks_ago', '{n} тижнів тому', { n: -offset }) : t('finance.period.weeks_ahead', '+{n} тижнів', { n: offset });
   } else if (period === 'month') {
     const baseMonth = now.getMonth() + offset;
     const start = new Date(now.getFullYear(), baseMonth, 1);
@@ -131,9 +131,9 @@ function _getFinPeriodWindow(period, offset) {
     const end   = new Date(now.getFullYear(), startMonth + 3, 1);
     from = start.getTime();
     to = end.getTime();
-    if (offset === 0) label = 'Останні 3 місяці';
-    else if (offset === -1) label = 'Попередні 3 місяці';
-    else label = offset < 0 ? `${-offset * 3} місяців тому` : `+${offset * 3} місяців`;
+    if (offset === 0) label = t('finance.period.last_3_months', 'Останні 3 місяці');
+    else if (offset === -1) label = t('finance.period.prev_3_months', 'Попередні 3 місяці');
+    else label = offset < 0 ? t('finance.period.months_ago', '{n} місяців тому', { n: -offset * 3 }) : t('finance.period.months_ahead', '+{n} місяців', { n: offset * 3 });
   }
   return { from, to, label };
 }
@@ -239,7 +239,7 @@ function _deleteFinTxById(txId) {
   if (item) addToTrash('finance', item);
   renderFinance();
   try { localStorage.setItem('nm_owl_tab_ts_finance', '0'); tryBoardUpdate('finance'); } catch(e) {}
-  if (item) showUndoToast('Операцію видалено', () => {
+  if (item) showUndoToast(t('finance.toast.tx_deleted', 'Операцію видалено'), () => {
     const txs = getFinance(); txs.unshift(item); saveFinance(txs); renderFinance();
   });
 }
@@ -260,8 +260,8 @@ function _attachFinTxSwipeDelete() {
 
 function _finEmptyTxsHint() {
   return `<div style="background:rgba(255,255,255,0.5);border:1.5px dashed rgba(30,16,64,0.12);border-radius:16px;padding:16px;text-align:center;margin-bottom:12px">
-    <div style="font-size:13px;color:rgba(30,16,64,0.45);font-weight:600">У цьому періоді операцій немає</div>
-    <div style="font-size:11px;color:rgba(30,16,64,0.35);font-weight:500;margin-top:4px">Тапни категорію щоб додати або свайпни ←→ для іншого періоду</div>
+    <div style="font-size:13px;color:rgba(30,16,64,0.45);font-weight:600">${t('finance.empty.no_tx_period', 'У цьому періоді операцій немає')}</div>
+    <div style="font-size:11px;color:rgba(30,16,64,0.35);font-weight:500;margin-top:4px">${t('finance.empty.hint_swipe', 'Тапни категорію щоб додати або свайпни ←→ для іншого періоду')}</div>
   </div>`;
 }
 
@@ -338,8 +338,8 @@ function _finCatsGrid(allTxs, win) {
     const editStyle = _finEditMode ? `box-shadow:0 4px 10px rgba(0,0,0,0.32), 0 2px 4px rgba(0,0,0,0.22), 0 0 0 2px ${cat.color}55;` : levitShadow;
     // B-57: стрілки ‹ › у edit-режимі для переміщення категорії.
     const arrows = _finEditMode ? `
-      <button onclick="event.stopPropagation();moveFinCategory('${escapeHtml(cat.id)}',-1);renderFinance()" aria-label="Вліво" style="position:absolute;left:-6px;top:50%;transform:translateY(-50%);width:22px;height:22px;border-radius:50%;border:none;background:rgba(255,255,255,0.95);color:#1e1040;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;padding:0;box-shadow:0 2px 6px rgba(30,16,64,0.18);z-index:2">‹</button>
-      <button onclick="event.stopPropagation();moveFinCategory('${escapeHtml(cat.id)}',+1);renderFinance()" aria-label="Вправо" style="position:absolute;right:-6px;top:50%;transform:translateY(-50%);width:22px;height:22px;border-radius:50%;border:none;background:rgba(255,255,255,0.95);color:#1e1040;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;padding:0;box-shadow:0 2px 6px rgba(30,16,64,0.18);z-index:2">›</button>` : '';
+      <button onclick="event.stopPropagation();moveFinCategory('${escapeHtml(cat.id)}',-1);renderFinance()" aria-label="${t('finance.cat.move_left', 'Вліво')}" style="position:absolute;left:-6px;top:50%;transform:translateY(-50%);width:22px;height:22px;border-radius:50%;border:none;background:rgba(255,255,255,0.95);color:#1e1040;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;padding:0;box-shadow:0 2px 6px rgba(30,16,64,0.18);z-index:2">‹</button>
+      <button onclick="event.stopPropagation();moveFinCategory('${escapeHtml(cat.id)}',+1);renderFinance()" aria-label="${t('finance.cat.move_right', 'Вправо')}" style="position:absolute;right:-6px;top:50%;transform:translateY(-50%);width:22px;height:22px;border-radius:50%;border:none;background:rgba(255,255,255,0.95);color:#1e1040;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;padding:0;box-shadow:0 2px 6px rgba(30,16,64,0.18);z-index:2">›</button>` : '';
     return `<div onclick="${onClick}" style="display:flex;flex-direction:column;align-items:center;cursor:pointer;padding:4px 0;min-width:0;position:relative">
       <div style="font-size:11px;font-weight:600;color:rgba(30,16,64,0.55);margin-bottom:4px;text-align:center;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(cat.name)}</div>
       <div style="position:relative;width:48px;height:48px">
@@ -354,7 +354,7 @@ function _finCatsGrid(allTxs, win) {
 
   // У edit-режимі — додаткова комірка "+" як остання категорія
   const renderAddCell = () => `<div onclick="openCategoryEditModal('new')" style="display:flex;flex-direction:column;align-items:center;cursor:pointer;padding:4px 0;min-width:0">
-    <div style="font-size:11px;font-weight:600;color:rgba(30,16,64,0.4);margin-bottom:4px">Додати</div>
+    <div style="font-size:11px;font-weight:600;color:rgba(30,16,64,0.4);margin-bottom:4px">${t('finance.cat.add', 'Додати')}</div>
     <div style="width:48px;height:48px;border-radius:50%;background:rgba(194,65,12,0.08);border:2px dashed rgba(194,65,12,0.35);display:flex;align-items:center;justify-content:center">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#c2410c" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
     </div>
@@ -366,7 +366,7 @@ function _finCatsGrid(allTxs, win) {
 
   // Центральний круг-Hero (grid-item, займає колонки 2-3 і ряди 2-3)
   // B-60: товстий donut-chart з кольоровими сегментами по категоріях (пропорційно витратам)
-  const heroLabel = isExpense ? 'Витрати' : 'Доходи';
+  const heroLabel = isExpense ? t('finance.hero.expenses', 'Витрати') : t('finance.hero.incomes', 'Доходи');
   const heroCol = isExpense ? '#c2410c' : '#16a34a';
   const donutR = 42;
   const donutCirc = 2 * Math.PI * donutR; // ~263.9
@@ -408,16 +408,16 @@ function _finCatsGrid(allTxs, win) {
     ? `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;user-select:none">
         <div style="width:32px"></div>
         <div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex:1">
-          <div style="font-size:14px;font-weight:800;color:#c2410c">Редагування категорій</div>
-          <div style="font-size:10px;font-weight:600;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em">тапни щоб редагувати або +</div>
+          <div style="font-size:14px;font-weight:800;color:#c2410c">${t('finance.edit.title', 'Редагування категорій')}</div>
+          <div style="font-size:10px;font-weight:600;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em">${t('finance.edit.hint', 'тапни щоб редагувати або +')}</div>
         </div>
-        <button onclick="toggleFinEditMode()" aria-label="Готово" style="padding:6px 14px;border-radius:14px;border:none;background:#c2410c;color:white;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">Готово</button>
+        <button onclick="toggleFinEditMode()" aria-label="${t('finance.edit.done', 'Готово')}" style="padding:6px 14px;border-radius:14px;border:none;background:#c2410c;color:white;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">${t('finance.edit.done', 'Готово')}</button>
       </div>`
     : `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;user-select:none">
         <button onclick="shiftFinPeriod(-1)" aria-label="Попередній період" style="width:32px;height:32px;border-radius:50%;border:none;background:rgba(30,16,64,0.05);color:rgba(30,16,64,0.55);box-shadow:0 4px 10px rgba(0,0,0,0.32), 0 2px 4px rgba(0,0,0,0.22);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit">‹</button>
         <div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex:1">
           <div style="font-size:14px;font-weight:800;color:#1e1040">${escapeHtml(periodLabel)}</div>
-          ${!isCurrent ? `<div onclick="shiftFinPeriod(${-currentFinPeriodOffset})" style="font-size:10px;font-weight:700;color:#c2410c;cursor:pointer;text-transform:uppercase;letter-spacing:0.06em">↺ до сьогодні</div>` : `<div style="font-size:10px;font-weight:600;color:rgba(30,16,64,0.3);text-transform:uppercase;letter-spacing:0.06em">свайп ←→ для навігації</div>`}
+          ${!isCurrent ? `<div onclick="shiftFinPeriod(${-currentFinPeriodOffset})" style="font-size:10px;font-weight:700;color:#c2410c;cursor:pointer;text-transform:uppercase;letter-spacing:0.06em">${t('finance.period.back_to_today', '↺ до сьогодні')}</div>` : `<div style="font-size:10px;font-weight:600;color:rgba(30,16,64,0.3);text-transform:uppercase;letter-spacing:0.06em">${t('finance.period.swipe_hint', 'свайп ←→ для навігації')}</div>`}
         </div>
         <div style="display:flex;align-items:center;gap:4px">
           <button onclick="toggleFinEditMode()" aria-label="Редагувати категорії" title="Редагувати категорії" style="width:32px;height:32px;border-radius:50%;border:none;background:rgba(30,16,64,0.05);color:rgba(30,16,64,0.55);box-shadow:0 4px 10px rgba(0,0,0,0.32), 0 2px 4px rgba(0,0,0,0.22);cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit">
@@ -486,7 +486,7 @@ function _finTxsBlock(allTxs) {
 
   return `<div class="card-glass-blur">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-      <div class="fin-section-label">Останні операції</div>
+      <div class="fin-section-label">${t('finance.tx.recent_title', 'Останні операції')}</div>
       <button onclick="openAddTransaction()" style="background:rgba(194,65,12,0.08);border:none;border-radius:8px;padding:4px 10px;font-size:12px;font-weight:700;color:#c2410c;cursor:pointer;font-family:inherit">+ додати</button>
     </div>
     ${rows || '<div style="font-size:13px;color:rgba(30,16,64,0.3);text-align:center;padding:8px">Немає операцій за цей період</div>'}
