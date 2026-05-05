@@ -5,7 +5,7 @@
 // розподілом доходу 50/30/20 з кастомними %.
 // ============================================================
 
-import { escapeHtml } from '../core/utils.js';
+import { escapeHtml, t } from '../core/utils.js';
 import { getFinance, formatMoney } from './finance.js';
 import { setupModalSwipeClose } from './tasks.js';
 
@@ -52,9 +52,9 @@ function _analyticsChart(allTxs) {
   weeks.forEach(w => { cumBalance += w.inc - w.exp; balances.push(cumBalance); });
 
   const modes = [
-    { id: 'balance',          label: 'Капітал',  desc: 'Накопичувальний баланс' },
-    { id: 'expenses-weekly',  label: 'Витрати',  desc: 'Сума витрат по тижнях' },
-    { id: 'income-vs-expense',label: 'Доходи',   desc: 'Доходи vs витрати' },
+    { id: 'balance',          label: t('finstat.chart.balance_label', 'Капітал'),  desc: t('finstat.chart.balance_desc', 'Накопичувальний баланс') },
+    { id: 'expenses-weekly',  label: t('finstat.chart.expenses_label', 'Витрати'),  desc: t('finstat.chart.expenses_desc', 'Сума витрат по тижнях') },
+    { id: 'income-vs-expense',label: t('finstat.chart.income_label', 'Доходи'),   desc: t('finstat.chart.income_vs_exp', 'Доходи vs витрати') },
   ];
   const toggleHtml = `<div style="display:flex;gap:4px;background:rgba(30,16,64,0.04);border-radius:10px;padding:3px;margin-bottom:10px">
     ${modes.map(m => {
@@ -85,7 +85,7 @@ function _analyticsChart(allTxs) {
       }).join('')}
     </svg>
     <div style="display:flex;gap:2px;margin-top:4px">${weeks.map(w => `<div style="flex:1;font-size:9px;font-weight:${w.isCurrent?'700':'500'};color:${w.isCurrent?'#c2410c':'rgba(30,16,64,0.35)'};text-align:center">${w.label}</div>`).join('')}</div>
-    <div style="font-size:10px;color:rgba(30,16,64,0.4);margin-top:6px;text-align:center">Поточний: <span style="color:#0ea5e9;font-weight:700">${formatMoney(cumBalance)}</span></div>`;
+    <div style="font-size:10px;color:rgba(30,16,64,0.4);margin-top:6px;text-align:center">${t('finstat.chart.current', 'Поточний')}: <span style="color:#0ea5e9;font-weight:700">${formatMoney(cumBalance)}</span></div>`;
   } else if (_analyticsChartMode === 'expenses-weekly') {
     const maxVal = Math.max(1, ...weeks.map(w => w.exp));
     const barsHtml = weeks.map(w => {
@@ -115,14 +115,14 @@ function _analyticsChart(allTxs) {
     }).join('');
     chartHtml = `<div style="display:flex;gap:4px;align-items:flex-end;height:100px">${barsHtml}</div>
     <div style="display:flex;gap:10px;justify-content:center;margin-top:6px">
-      <div style="display:flex;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:50%;background:#f97316"></div><span style="font-size:10px;font-weight:600;color:rgba(30,16,64,0.4)">Витрати</span></div>
-      <div style="display:flex;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:50%;background:#16a34a"></div><span style="font-size:10px;font-weight:600;color:rgba(30,16,64,0.4)">Доходи</span></div>
+      <div style="display:flex;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:50%;background:#f97316"></div><span style="font-size:10px;font-weight:600;color:rgba(30,16,64,0.4)">${t('finstat.legend.expenses', 'Витрати')}</span></div>
+      <div style="display:flex;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:50%;background:#16a34a"></div><span style="font-size:10px;font-weight:600;color:rgba(30,16,64,0.4)">${t('finstat.legend.income', 'Доходи')}</span></div>
     </div>`;
   }
 
   return `<div style="background:white;border-radius:20px;box-shadow:0 2px 12px rgba(30,16,64,0.06);padding:14px;margin-bottom:12px">
     ${toggleHtml}
-    <div style="font-size:11px;color:rgba(30,16,64,0.4);margin-bottom:8px">${escapeHtml(modeObj.desc)} · 8 тижнів</div>
+    <div style="font-size:11px;color:rgba(30,16,64,0.4);margin-bottom:8px">${escapeHtml(modeObj.desc)} · ${t('finstat.chart.weeks_suffix', '8 тижнів')}</div>
     ${chartHtml}
   </div>`;
 }
@@ -160,22 +160,22 @@ function _analyticsMiniMetrics(allTxs) {
   const forecastEnd = daysPassed > 0 ? (curExp / daysPassed) * daysInMonth : 0;
 
   const metrics = [
-    { label: 'Витрати місяця', value: formatMoney(curExp),
-      desc: prevExp > 0 ? `${curExp >= prevExp ? '+' : ''}${Math.round((curExp - prevExp) / prevExp * 100)}% vs минулий місяць` : 'перший місяць з даними',
+    { label: t('finstat.metric.month_exp', 'Витрати місяця'), value: formatMoney(curExp),
+      desc: prevExp > 0 ? t('finstat.metric.vs_prev', '{sign}{pct}% vs минулий місяць', { sign: curExp >= prevExp ? '+' : '', pct: Math.round((curExp - prevExp) / prevExp * 100) }) : t('finstat.metric.first_month', 'перший місяць з даними'),
       color: '#c2410c' },
-    { label: 'В середньому/день', value: formatMoney(Math.round(curExp / daysPassed)),
-      desc: `за ${daysPassed} ${daysPassed === 1 ? 'день' : daysPassed < 5 ? 'дні' : 'днів'} місяця`,
+    { label: t('finstat.metric.avg_day', 'В середньому/день'), value: formatMoney(Math.round(curExp / daysPassed)),
+      desc: t('finstat.metric.days_of_month', 'за {n} {word} місяця', { n: daysPassed, word: daysPassed === 1 ? t('finstat.word.day1','день') : daysPassed < 5 ? t('finstat.word.day2','дні') : t('finstat.word.day5','днів') }),
       color: '#1e1040' },
-    { label: 'Топ категорія', value: topCats.length > 0 ? topCats[0][0] : '—',
-      desc: topCats.length > 0 ? `${formatMoney(topCats[0][1])} · ${Math.round(topCats[0][1] / curExp * 100)}% витрат` : 'немає даних',
+    { label: t('finstat.metric.top_cat', 'Топ категорія'), value: topCats.length > 0 ? topCats[0][0] : '—',
+      desc: topCats.length > 0 ? t('finstat.metric.top_cat_desc', '{sum} · {pct}% витрат', { sum: formatMoney(topCats[0][1]), pct: Math.round(topCats[0][1] / curExp * 100) }) : t('finstat.metric.no_data', 'немає даних'),
       color: '#c2410c' },
-    { label: 'Заощадження', value: curInc > 0 ? Math.round((curInc - curExp) / curInc * 100) + '%' : '—',
-      desc: curInc > 0 ? `${formatMoney(curInc - curExp)} з ${formatMoney(curInc)}` : 'додай дохід',
+    { label: t('finstat.metric.savings', 'Заощадження'), value: curInc > 0 ? Math.round((curInc - curExp) / curInc * 100) + '%' : '—',
+      desc: curInc > 0 ? t('finstat.metric.savings_desc', '{saved} з {inc}', { saved: formatMoney(curInc - curExp), inc: formatMoney(curInc) }) : t('finstat.metric.add_income', 'додай дохід'),
       color: curInc > 0 && curInc > curExp ? '#16a34a' : '#c2410c' },
-    { label: 'Операцій', value: monthExp.length,
-      desc: `середня ${formatMoney(Math.round(avgTx))}`,
+    { label: t('finstat.metric.ops', 'Операцій'), value: monthExp.length,
+      desc: t('finstat.metric.ops_avg', 'середня {sum}', { sum: formatMoney(Math.round(avgTx)) }),
       color: '#0ea5e9' },
-    { label: 'Максимум за день', value: formatMoney(Math.round(maxDay)),
+    { label: t('finstat.metric.max_day', 'Максимум за день'), value: formatMoney(Math.round(maxDay)),
       desc: dayTotals.length > 0 ? `найдорожчий з ${dayTotals.length} активних днів` : 'немає даних',
       color: '#c2410c' },
     { label: 'Найбільша операція', value: formatMoney(Math.round(maxTx)),
@@ -231,7 +231,7 @@ function _analyticsBenchmark(allTxs) {
   if (curInc <= 0 && !_analyticsBenchmarkEdit) {
     return `<div style="background:white;border-radius:20px;box-shadow:0 2px 12px rgba(30,16,64,0.06);padding:16px;margin-bottom:12px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <div class="fin-section-label">Розподіл доходу</div>
+        <div class="fin-section-label">${t('finstat.bench.title', 'Розподіл доходу')}</div>
         <button onclick="toggleAnalyticsBenchmarkEdit()" aria-label="Редагувати" style="width:28px;height:28px;border-radius:50%;border:none;background:rgba(30,16,64,0.05);color:rgba(30,16,64,0.5);cursor:pointer;font-family:inherit"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></button>
       </div>
       <div style="font-size:13px;color:rgba(30,16,64,0.45)">Додай дохід щоб побачити розподіл</div>
@@ -296,7 +296,7 @@ function _analyticsBenchmark(allTxs) {
 
   return `<div style="background:white;border-radius:20px;box-shadow:0 2px 12px rgba(30,16,64,0.06);padding:16px;margin-bottom:12px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-      <div class="fin-section-label">Розподіл доходу</div>
+      <div class="fin-section-label">${t('finstat.bench.title', 'Розподіл доходу')}</div>
       <button onclick="toggleAnalyticsBenchmarkEdit()" aria-label="Редагувати" style="width:28px;height:28px;border-radius:50%;border:none;background:rgba(30,16,64,0.05);color:rgba(30,16,64,0.5);cursor:pointer;font-family:inherit"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></button>
     </div>
     ${bar(cfg.needs, needsPct, '#f97316')}
