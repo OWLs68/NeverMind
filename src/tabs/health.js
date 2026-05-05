@@ -776,7 +776,7 @@ function _buildMissedDosesBannerHtml() {
   const yellowText = '#b45309';
 
   return `<div style="background:${yellow};border:1.5px solid ${yellowBorder};border-radius:12px;padding:10px 12px;margin-bottom:10px">
-    <div style="font-size:10px;font-weight:800;color:${yellowText};text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">⏰ Пропустив дозу (${missed.length})</div>
+    <div style="font-size:10px;font-weight:800;color:${yellowText};text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">${t('health.dose.missed_title', '⏰ Пропустив дозу ({n})', { n: missed.length })}</div>
     ${missed.slice(0, 5).map(d => `<div style="background:white;border:1px solid ${yellowBorder};border-radius:10px;padding:8px 10px;margin-bottom:6px;display:flex;align-items:center;gap:8px">
       <div style="flex:1;min-width:0">
         <div style="font-size:12px;font-weight:800;color:#1e1040">${escapeHtml(d.medName)}${d.dosage ? ' ' + escapeHtml(d.dosage) : ''}</div>
@@ -785,7 +785,7 @@ function _buildMissedDosesBannerHtml() {
       <button onclick="logHealthMedDose(${d.cardId},${d.medId})" style="font-size:11px;font-weight:800;padding:5px 10px;border-radius:8px;border:none;background:#16a34a;color:white;cursor:pointer;white-space:nowrap">${t('health.dose.took_btn', '✓ Прийняв')}</button>
       <button onclick="skipHealthMedDose(${d.cardId},${d.medId},'${escapeHtml(d.scheduledTime)}')" style="font-size:11px;font-weight:700;padding:5px 10px;border-radius:8px;border:1.5px solid rgba(30,16,64,0.15);background:white;color:rgba(30,16,64,0.55);cursor:pointer;white-space:nowrap">${t('health.dose.skip_btn', 'Пропущу')}</button>
     </div>`).join('')}
-    ${missed.length > 5 ? `<div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:600;text-align:center">+ ще ${missed.length - 5} пропущених</div>` : ''}
+    ${missed.length > 5 ? `<div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:600;text-align:center">${t('health.dose.more_missed', '+ ще {n} пропущених', { n: missed.length - 5 })}</div>` : ''}
   </div>`;
 }
 
@@ -862,10 +862,10 @@ function renderHealthWorkspace(id) {
   const lastTrend = (card.history || []).find(h => h.type === 'status_change');
   let trendLabel = '', trendColor = 'rgba(30,16,64,0.4)';
   if (lastTrend && lastTrend.text) {
-    const t = lastTrend.text.toLowerCase();
-    if (t.includes('покращ')) { trendLabel = 'покращення'; trendColor = '#16a34a'; }
-    else if (t.includes('погірш')) { trendLabel = 'погіршення'; trendColor = '#ef4444'; }
-    else if (t.includes('стабіл')) { trendLabel = 'стабільно'; trendColor = '#d97706'; }
+    const txt = lastTrend.text.toLowerCase();
+    if (txt.includes('покращ')) { trendLabel = t('health.trend.improving', 'покращення'); trendColor = '#16a34a'; }
+    else if (txt.includes('погірш')) { trendLabel = t('health.trend.worsening', 'погіршення'); trendColor = '#ef4444'; }
+    else if (txt.includes('стабіл')) { trendLabel = t('health.trend.stable', 'стабільно'); trendColor = '#d97706'; }
   }
   // Фаза 3: повна історія всіх типів (manual/dose_log/status_change/doctor_visit/auto)
   // Сортована за ts (свіжіше зверху). Іконки за типом.
@@ -896,7 +896,7 @@ function renderHealthWorkspace(id) {
       </div>
       <!-- Бейдж "Курс X% · тренд" -->
       <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.5);margin-bottom:8px">
-        Курс ${pct}%${trendLabel ? ` · <span style="color:${trendColor};font-weight:800">${trendLabel}</span>` : ''}
+        ${t('health.card.course_label', 'Курс {pct}%', { pct })}${trendLabel ? ` · <span style="color:${trendColor};font-weight:800">${trendLabel}</span>` : ''}
       </div>
       <div style="font-size:11px;font-weight:800;padding:3px 10px;border-radius:20px;background:${st.bg};color:${st.color};display:inline-block;margin-bottom:8px">${st.icon} ${st.label}</div>
       <div style="display:flex;gap:5px;flex-wrap:wrap">
@@ -941,10 +941,10 @@ function renderHealthWorkspace(id) {
               <div style="font-size:13px;font-weight:700;color:#1e1040">${escapeHtml(m.name)}</div>
               <div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:600;margin-top:1px">${escapeHtml(m.dosage || '')}${course}${schedStr ? ' · ' + escapeHtml(schedStr) : ''}</div>
             </div>
-            <button onclick="logHealthMedDose(${id},${m.id})" style="font-size:10px;font-weight:800;padding:5px 10px;border-radius:8px;border:1.5px solid ${takenToday && todayDosesCount >= expectedToday ? 'rgba(22,163,74,0.3)' : '#1a5c2a'};background:${takenToday && todayDosesCount >= expectedToday ? 'rgba(22,163,74,0.08)' : '#1a5c2a'};color:${takenToday && todayDosesCount >= expectedToday ? '#16a34a' : 'white'};cursor:pointer;white-space:nowrap">${takenToday && todayDosesCount >= expectedToday ? '✓ прийнято' : '+ Прийняти'}</button>
+            <button onclick="logHealthMedDose(${id},${m.id})" style="font-size:10px;font-weight:800;padding:5px 10px;border-radius:8px;border:1.5px solid ${takenToday && todayDosesCount >= expectedToday ? 'rgba(22,163,74,0.3)' : '#1a5c2a'};background:${takenToday && todayDosesCount >= expectedToday ? 'rgba(22,163,74,0.08)' : '#1a5c2a'};color:${takenToday && todayDosesCount >= expectedToday ? '#16a34a' : 'white'};cursor:pointer;white-space:nowrap">${takenToday && todayDosesCount >= expectedToday ? t('health.dose.taken_label', '✓ прийнято') : t('health.dose.take_now_btn', '+ Прийняти')}</button>
           </div>
           ${schedArr.length > 0 ? `<div style="display:flex;align-items:center;gap:8px;padding-left:38px">
-            <div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:700">Сьогодні:</div>
+            <div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:700">${t('health.dose.today_label', 'Сьогодні:')}</div>
             <div>${dotsHtml}</div>
             <div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:700">${todayDosesCount}/${expectedToday}</div>
           </div>` : ''}
@@ -955,10 +955,10 @@ function renderHealthWorkspace(id) {
     <!-- Лікар + рекомендації + наступний прийом -->
     ${(card.doctor || card.doctorRecommendations || card.doctorConclusion || (card.nextAppointment && card.nextAppointment.date)) ? `<div class="card-glass">
       <div class="section-label">${t('health.card.treatment_label', 'Лікування')}</div>
-      ${card.doctor ? `<div style="font-size:11px;color:rgba(30,16,64,0.5);font-weight:600;margin-bottom:4px"><b style="color:#1e1040">Лікар:</b> ${escapeHtml(card.doctor)}</div>` : ''}
-      ${card.doctorRecommendations ? `<div style="font-size:11px;color:rgba(30,16,64,0.55);font-weight:600;margin-bottom:4px;line-height:1.45"><b style="color:#1e1040">Рекомендації:</b> ${escapeHtml(card.doctorRecommendations)}</div>` : ''}
-      ${card.doctorConclusion ? `<div style="font-size:11px;color:rgba(30,16,64,0.55);font-weight:600;margin-bottom:4px;line-height:1.45"><b style="color:#1e1040">Висновок:</b> ${escapeHtml(card.doctorConclusion)}</div>` : ''}
-      ${(card.nextAppointment && card.nextAppointment.date) ? `<div style="font-size:11px;color:#ea580c;font-weight:700;margin-top:6px">📅 Наступний прийом: ${escapeHtml(card.nextAppointment.date)}${card.nextAppointment.time ? ' о ' + escapeHtml(card.nextAppointment.time) : ''}</div>` : ''}
+      ${card.doctor ? `<div style="font-size:11px;color:rgba(30,16,64,0.5);font-weight:600;margin-bottom:4px"><b style="color:#1e1040">${t('health.card.doctor_label', 'Лікар:')}</b> ${escapeHtml(card.doctor)}</div>` : ''}
+      ${card.doctorRecommendations ? `<div style="font-size:11px;color:rgba(30,16,64,0.55);font-weight:600;margin-bottom:4px;line-height:1.45"><b style="color:#1e1040">${t('health.card.recommendations_label', 'Рекомендації:')}</b> ${escapeHtml(card.doctorRecommendations)}</div>` : ''}
+      ${card.doctorConclusion ? `<div style="font-size:11px;color:rgba(30,16,64,0.55);font-weight:600;margin-bottom:4px;line-height:1.45"><b style="color:#1e1040">${t('health.card.conclusion_label', 'Висновок:')}</b> ${escapeHtml(card.doctorConclusion)}</div>` : ''}
+      ${(card.nextAppointment && card.nextAppointment.date) ? `<div style="font-size:11px;color:#ea580c;font-weight:700;margin-top:6px">${t('health.card.next_appt', '📅 Наступний прийом: {date}{time}', { date: escapeHtml(card.nextAppointment.date), time: card.nextAppointment.time ? ' о ' + escapeHtml(card.nextAppointment.time) : '' })}</div>` : ''}
     </div>` : ''}
 
     <!-- Історія (Фаза 3: повний timeline всіх типів з іконками — замінює "Записи лікаря") -->
@@ -968,11 +968,11 @@ function renderHealthWorkspace(id) {
         const d = new Date(h.ts);
         const dateStr = isNaN(d) ? '' : d.toLocaleDateString('uk-UA') + ' ' + d.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' });
         const typeMeta = {
-          'manual':         { icon: '📝', color: '#6366f1', label: 'Запис' },
-          'dose_log':       { icon: '💊', color: '#16a34a', label: 'Прийом' },
-          'status_change':  { icon: '📈', color: '#d97706', label: 'Стан' },
-          'doctor_visit':   { icon: '🩺', color: '#0891b2', label: 'Візит' },
-          'auto':           { icon: '🤖', color: 'rgba(30,16,64,0.5)', label: 'Авто' },
+          'manual':         { icon: '📝', color: '#6366f1', label: t('health.history.manual', 'Запис') },
+          'dose_log':       { icon: '💊', color: '#16a34a', label: t('health.history.dose_log', 'Прийом') },
+          'status_change':  { icon: '📈', color: '#d97706', label: t('health.history.status_change', 'Стан') },
+          'doctor_visit':   { icon: '🩺', color: '#0891b2', label: t('health.history.doctor_visit', 'Візит') },
+          'auto':           { icon: '🤖', color: 'rgba(30,16,64,0.5)', label: t('health.history.auto', 'Авто') },
         }[h.type] || { icon: '•', color: 'rgba(30,16,64,0.5)', label: '' };
         return `<div style="display:flex;gap:10px;padding:7px 0;${historyAll.indexOf(h) < Math.min(historyAll.length, 15) - 1 ? 'border-bottom:1px solid rgba(30,16,64,0.05)' : ''}">
           <div style="font-size:14px;line-height:1.3;flex-shrink:0">${typeMeta.icon}</div>
@@ -985,12 +985,12 @@ function renderHealthWorkspace(id) {
           </div>
         </div>`;
       }).join('')}
-      ${historyAll.length > 15 ? `<div style="font-size:10px;color:rgba(30,16,64,0.35);font-weight:600;text-align:center;margin-top:6px">+ ще ${historyAll.length - 15} записів</div>` : ''}
+      ${historyAll.length > 15 ? `<div style="font-size:10px;color:rgba(30,16,64,0.35);font-weight:600;text-align:center;margin-top:6px">${t('health.history.more', '+ ще {n} записів', { n: historyAll.length - 15 })}</div>` : ''}
     </div>` : ''}
 
     <!-- OWL аналіз -->
     ${owlAnalysis ? `<div style="background:rgba(12,6,28,0.78);border-radius:14px;padding:11px 13px;margin-bottom:10px">
-      <div style="font-size:9px;font-weight:800;color:rgba(255,255,255,0.28);text-transform:uppercase;letter-spacing:0.09em;margin-bottom:5px">OWL · аналіз</div>
+      <div style="font-size:9px;font-weight:800;color:rgba(255,255,255,0.28);text-transform:uppercase;letter-spacing:0.09em;margin-bottom:5px">${t('health.card.owl_analysis_label', 'OWL · аналіз')}</div>
       <div style="font-size:12px;font-weight:600;color:white;line-height:1.55">${escapeHtml(owlAnalysis)}</div>
     </div>` : ''}
 
@@ -1000,8 +1000,8 @@ function renderHealthWorkspace(id) {
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1a5c2a" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
       </div>
       <div style="flex:1">
-        <div style="font-size:13px;font-weight:700;color:#1e1040">Нотатки · ${escapeHtml(card.name)}</div>
-        <div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:600;margin-top:1px">Перейти у вкладку Нотатки →</div>
+        <div style="font-size:13px;font-weight:700;color:#1e1040">${t('health.card.notes_link_title', 'Нотатки · {name}', { name: escapeHtml(card.name) })}</div>
+        <div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:600;margin-top:1px">${t('health.card.notes_link_hint', 'Перейти у вкладку Нотатки →')}</div>
       </div>
       <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.25)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
     </div>
@@ -1592,17 +1592,17 @@ function _buildAllergiesCardHtml() {
   if (allergies.length === 0) {
     return `<div style="background:${coralBg};border:1.5px solid ${coralBorder};border-radius:12px;padding:10px 12px;display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px">
       <div style="flex:1;min-width:0">
-        <div style="font-size:10px;font-weight:800;color:${coralText};text-transform:uppercase;letter-spacing:0.08em;margin-bottom:2px">Алергії</div>
-        <div style="font-size:11px;color:rgba(30,16,64,0.5);font-weight:600">Немає записаних. OWL не знає про що попереджати.</div>
+        <div style="font-size:10px;font-weight:800;color:${coralText};text-transform:uppercase;letter-spacing:0.08em;margin-bottom:2px">${t('health.allergy.label', 'Алергії')}</div>
+        <div style="font-size:11px;color:rgba(30,16,64,0.5);font-weight:600">${t('health.allergy.empty_hint', 'Немає записаних. OWL не знає про що попереджати.')}</div>
       </div>
-      <button onclick="openAddAllergy()" style="font-size:11px;font-weight:800;padding:6px 11px;border-radius:8px;border:1.5px solid ${coralBorder};background:white;color:${coralText};cursor:pointer;white-space:nowrap;flex-shrink:0">+ Додати</button>
+      <button onclick="openAddAllergy()" style="font-size:11px;font-weight:800;padding:6px 11px;border-radius:8px;border:1.5px solid ${coralBorder};background:white;color:${coralText};cursor:pointer;white-space:nowrap;flex-shrink:0">${t('health.allergy.add_btn', '+ Додати')}</button>
     </div>`;
   }
 
   return `<div style="background:${coralBg};border:1.5px solid ${coralBorder};border-radius:12px;padding:10px 12px;margin-bottom:10px">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px">
-      <div style="font-size:10px;font-weight:800;color:${coralText};text-transform:uppercase;letter-spacing:0.08em">🚨 Алергії (${allergies.length})</div>
-      <button onclick="openAddAllergy()" style="font-size:10px;font-weight:800;padding:4px 10px;border-radius:7px;border:1.5px solid ${coralBorder};background:white;color:${coralText};cursor:pointer">+ Додати</button>
+      <div style="font-size:10px;font-weight:800;color:${coralText};text-transform:uppercase;letter-spacing:0.08em">${t('health.allergy.label_with_count', '🚨 Алергії ({n})', { n: allergies.length })}</div>
+      <button onclick="openAddAllergy()" style="font-size:10px;font-weight:800;padding:4px 10px;border-radius:7px;border:1.5px solid ${coralBorder};background:white;color:${coralText};cursor:pointer">${t('health.allergy.add_btn', '+ Додати')}</button>
     </div>
     <div style="display:flex;flex-wrap:wrap;gap:6px">
       ${allergies.map(a => `<div style="background:white;border:1.5px solid ${coralBorder};border-radius:8px;padding:5px 8px 5px 10px;display:flex;align-items:center;gap:8px">
@@ -1610,7 +1610,7 @@ function _buildAllergiesCardHtml() {
           <div style="font-size:12px;font-weight:800;color:${coralText};line-height:1.2">${escapeHtml(a.name)}</div>
           ${a.notes ? `<div style="font-size:9px;color:rgba(30,16,64,0.45);font-weight:600;margin-top:1px">${escapeHtml(a.notes)}</div>` : ''}
         </div>
-        <div onclick="deleteAllergyById(${a.id})" style="cursor:pointer;font-size:16px;color:rgba(30,16,64,0.35);line-height:1;padding:0 2px" title="Видалити">×</div>
+        <div onclick="deleteAllergyById(${a.id})" style="cursor:pointer;font-size:16px;color:rgba(30,16,64,0.35);line-height:1;padding:0 2px" title="${t('health.allergy.delete_title', 'Видалити')}">×</div>
       </div>`).join('')}
     </div>
   </div>`;
