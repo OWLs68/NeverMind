@@ -16,7 +16,7 @@ _Немає відкритих критичних багів станом на 0
 ## 🟡 Середні (є обхідний шлях або рідко трапляється)
 
 | B-125 | `src/ai/prompts.js:252` REMINDER_RULES + `src/ai/tool-dispatcher.js:115` set_reminder | Чіп «Завтра вранці» створює reminder на **сьогодні 09:00** замість завтра 08:00. Юзер тапнув [Завтра вранці] → AI викликав set_reminder без `date` → dispatcher поставив дефолт = сьогодні. Час уже минув на момент створення (22:30 → 09:00 СЬОГОДНІ це -13 годин). Виявлено MPVly 05.05 під час smoke-test після фіксу raw-JSON. Workaround: ввести вручну «завтра в 8 ранку». |
-| B-126 | `src/ai/prompts.js` REMINDER_RULES + відсутність tool `delete_reminder`/`update_reminder` | При коригуванні часу свіжого reminder («Нє не в 10 а в 09:30») AI створює **другий** reminder замість оновити перший. На скріні видно дублі 10:00 + 09:30 у Розпорядку. Корінь архітектурний: tool `delete_reminder`/`update_reminder` НЕ існує у dispatcher → AI може тільки `set_reminder` (create). Workaround: свайп вліво по старій reminder-картці у Inbox → видаляє з `nm_reminders`. Фікс потребує нової tool + dispatcher case + REMINDER_RULES правила «коригуєш час → delete + create». |
+_B-126 закрито у MPVly 05.05 — див. секцію "✅ Закриті" нижче._
 
 ---
 
@@ -29,6 +29,11 @@ _Немає відкритих дрібних багів._
 ## ✅ Закриті (активні сесії)
 
 _Зберігаються закриті у 2 останніх активних сесіях (QDIGl + rC4TO). Старіші (UvEHE з B-120/B-121, MIeXK, iWyjU, 4xJ7n, mUpS8, BqTWF) перенесено у [`_archive/BUGS_HISTORY.md`](_archive/BUGS_HISTORY.md)._
+
+_Сесія **MPVly** (05.05.2026) — chip render Inbox + B-125 + B-126 + правило Sonnet:_
+- **Inbox чіпи raw-JSON закрито** (`63223f2`) — REMINDER_RULES навчав голий масив `[{...}]` замість `{"chips":[...]}`. Парсер `parseContentChips` не розпізнавав → JSON виходив як текст. Фікс: 2 точки відмови (промпт обгортка + парсер fallback на голий масив де всі елементи мають label+action).
+- **B-125 закрито** (`4082a0c`) — чіп «Завтра вранці» створював reminder на сьогодні замість завтра (AI не передав `date`, dispatcher ставив дефолт). Фікс REMINDER_RULES: лейбл `[Завтра 08:00]` (явний час) + критичне правило «слово 'завтра' → date=YYYY-MM-DD завтрашня обов'язково».
+- **B-126 закрито** (нова tool `delete_reminder`) — при коригуванні часу свіжого reminder («не на 10 а на 9») AI створював дубль. Корінь архітектурний: відсутня tool. Фікс: `delete_reminder(text, time?, date?)` у INBOX_TOOLS + handler у `processUniversalAction` (`habits.js`) з 3-сховищним cleanup (nm_reminders + nm_events + nm_inbox за reminderId) + правило REMINDER_RULES «коригуєш час → 1) delete_reminder старого 2) set_reminder нового».
 
 _Сесія **QDIGl** (05.05.2026) — Розпорядок merge + delete_project + B-117 audit fix остаточно + 19 раундів i18n + 4 audit фікси:_
 - **B-117 закрито остаточно** (`923ae80` + `9e30379`) — табло звичок stale. **Перша спроба** (`923ae80`): Pruning content fallback у `_isStaleHabitGeneralization` (board-utils.js) + `renderTabBoard` у boot.js listener для habit/task ключів. Сова оновлюється миттєво після complete_habit. **Друга спроба** (audit `9e30379` #2): фікс позитивних повідомлень — раніше умова `doneCount === buildHabits.length` ловила позитивні «3/3 чудово!» → додав `&& isHabitTextNegative` гард. Тепер тільки негативні «не виконано/жодну/активізуйся» викидаються. + audit fix #1 — DOW Mon=0 у proactive.js:982 (5-та точка пропущена при попередньому уніфікуванні): `dow = (getDay()+6)%7`. + audit fix #3 — TTL прострочених mark `done:true` ТІЛЬКИ для expired (>180хв). Раніше done ставилось ДО показу → race condition з AI fetch fail втрачав reminder. + audit fix #5 — `findProjectByName` exact > startsWith > unique-fuzzy (не видалить «Хімчистка-А» при запиті «Хімчистка-Б»).

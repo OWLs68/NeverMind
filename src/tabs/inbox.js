@@ -411,6 +411,7 @@ function _toolCallToAction(name, args) {
     case 'clarify': return { action: 'clarify', question: args.question, options: args.options };
     case 'save_memory_fact': return { action: 'save_memory_fact', fact: args.fact, category: args.category, ttl_days: args.ttl_days };
     case 'set_reminder': return { action: 'set_reminder', text: args.text, time: args.time, date: args.date };
+    case 'delete_reminder': return { action: 'delete_reminder', text: args.text, time: args.time, date: args.date };
     case 'edit_event': return { action: 'edit_event', event_id: args.event_id, title: args.title, date: args.date, time: args.time, end_time: args.end_time, priority: args.priority, comment: args.comment };
     case 'delete_event': return { action: 'delete_event', event_id: args.event_id };
     case 'edit_note': return { action: 'edit_note', note_id: args.note_id, text: args.text, folder: args.folder, comment: args.comment };
