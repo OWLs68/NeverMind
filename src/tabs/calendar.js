@@ -637,13 +637,29 @@ function _renderRoutineDayTabs() {
   if (label) label.textContent = _routineDay === DAY_KEYS[todayIdx] ? 'сьогодні' : '';
 }
 
+// QDIGl 04.05: для day-tab → найближча дата того ж дня тижня (включно з today).
+// 'default' не має конкретної дати — фолбек на today (без додавання events).
+function _nearestDateForDayKey(dayKey) {
+  if (dayKey === 'default') return _todayISO();
+  const todayDayIdx = new Date().getDay();
+  const targetDayIdx = DAY_KEYS.indexOf(dayKey);
+  if (targetDayIdx < 0) return _todayISO();
+  const diff = (targetDayIdx - todayDayIdx + 7) % 7;
+  const d = new Date();
+  d.setDate(d.getDate() + diff);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 function _renderRoutineTimeline() {
   const el = document.getElementById('routine-timeline');
   if (!el) return;
-  const blocks = getRoutineForDay(_routineDay);
-  const now = new Date();
-  const nowMin = now.getHours() * 60 + now.getMinutes();
-  const isToday = DAY_KEYS[now.getDay()] === _routineDay;
+  // QDIGl 04.05: combined timeline — routine + events + reminders на конкретну дату.
+  // Для default (legacy fallback dayKey без конкретного дня) — тільки routine блоки
+  // бо немає дати для filtering events.
+  const dateISO = _nearestDateForDayKey(_routineDay);
+  const blocks = _routineDay === 'default'
+    ? getRoutineForDay('default').map((b, idx) => ({ time: b.time, activity: b.activity, kind: 'routine', sourceIdx: idx, isPast: false }))
+    : getCombinedTimelineForDate(dateISO);
 
   if (blocks.length === 0) {
     el.innerHTML = `<div style="text-align:center;padding:32px 0;color:rgba(30,16,64,0.3);font-size:14px">
@@ -653,23 +669,62 @@ function _renderRoutineTimeline() {
     return;
   }
 
-  const sorted = [...blocks].sort((a, b) => a.time.localeCompare(b.time));
-  el.innerHTML = sorted.map((b, i) => {
-    const [h, m] = b.time.split(':').map(Number);
-    const blockMin = h * 60 + (m || 0);
-    const nextBlock = sorted[i + 1];
-    const nextMin = nextBlock ? parseInt(nextBlock.time.split(':')[0]) * 60 + (parseInt(nextBlock.time.split(':')[1]) || 0) : 24 * 60;
-    const isCurrent = isToday && nowMin >= blockMin && nowMin < nextMin;
-    const isPast = isToday && nowMin >= nextMin;
+  const now = new Date();
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+  const isViewingToday = dateISO === _todayISO();
+
+  // Іконки + кольори за kind. routine — нейтральний помаранчевий (як зараз).
+  // event — синій (calendar accent). reminder — жовтий (⏰).
+  const KIND_STYLE = {
+    routine:  { icon: '', color: 'rgba(234,88,12,0.35)', text: '#1e1040' },
+    event:    { icon: '📅 ', color: '#3b82f6',           text: '#1e3a8a' },
+    reminder: { icon: '⏰ ', color: '#ea580c',           text: '#7c2d12' },
+  };
+
+  el.innerHTML = blocks.map((b, i) => {
+    const time = b.time || '—';
+    const blockMin = b.time ? (() => { const [h, m] = b.time.split(':').map(Number); return h * 60 + (m || 0); })() : -1;
+    const nextBlock = blocks.slice(i + 1).find(x => x.time);
+    const nextMin = nextBlock ? (() => { const [h, m] = nextBlock.time.split(':').map(Number); return h * 60 + (m || 0); })() : 24 * 60;
+    const isCurrent = isViewingToday && b.kind === 'routine' && blockMin >= 0 && nowMin >= blockMin && nowMin < nextMin;
+    const isPast = b.isPast || (isViewingToday && blockMin >= 0 && nowMin >= nextMin && b.kind === 'routine');
+    const style = KIND_STYLE[b.kind] || KIND_STYLE.routine;
+    // delete-routing залежить від kind
+    const delAttr = b.kind === 'routine'
+      ? `onclick="routineDeleteBlock(${b.sourceIdx})"`
+      : `onclick="routineDeleteFromTimeline('${b.kind}', ${b.sourceId}, ${b.reminderId || 'null'})"`;
+    const dot = b.kind === 'routine'
+      ? `<div style="width:8px;height:8px;border-radius:50%;margin-top:5px;flex-shrink:0;background:${isCurrent ? '#ea580c' : isPast ? 'rgba(30,16,64,0.15)' : style.color}"></div>`
+      : `<div style="width:8px;height:8px;border-radius:50%;margin-top:5px;flex-shrink:0;background:${style.color};box-shadow:0 0 0 2px ${style.color}33"></div>`;
     return `<div style="display:flex;align-items:flex-start;gap:12px;padding:10px 0;${isPast ? 'opacity:0.4;' : ''}${isCurrent ? 'background:rgba(234,88,12,0.06);border-radius:12px;padding:10px 8px;margin:0 -8px;' : ''}">
-      <div style="width:46px;flex-shrink:0;font-size:14px;font-weight:700;color:${isCurrent ? '#ea580c' : '#1e1040'};text-align:right">${b.time}</div>
-      <div style="width:8px;height:8px;border-radius:50%;margin-top:5px;flex-shrink:0;background:${isCurrent ? '#ea580c' : isPast ? 'rgba(30,16,64,0.15)' : 'rgba(234,88,12,0.35)'}"></div>
+      <div style="width:46px;flex-shrink:0;font-size:14px;font-weight:700;color:${isCurrent ? '#ea580c' : style.text};text-align:right">${time}</div>
+      ${dot}
       <div style="flex:1;display:flex;align-items:center;justify-content:space-between">
-        <div style="font-size:14px;font-weight:${isCurrent ? '700' : '500'};color:${isCurrent ? '#ea580c' : '#1e1040'}">${escapeHtml(b.activity)}${isCurrent ? ' ←' : ''}</div>
-        <div onclick="routineDeleteBlock(${i})" style="font-size:16px;color:rgba(30,16,64,0.2);cursor:pointer;padding:0 4px">×</div>
+        <div style="font-size:14px;font-weight:${isCurrent ? '700' : '500'};color:${isCurrent ? '#ea580c' : style.text}">${style.icon}${escapeHtml(b.activity)}${isCurrent ? ' ←' : ''}</div>
+        <div ${delAttr} style="font-size:16px;color:rgba(30,16,64,0.2);cursor:pointer;padding:0 4px">×</div>
       </div>
     </div>`;
   }).join('');
+}
+
+// QDIGl 04.05: видалення event/reminder з timeline. Routine має свій
+// routineDeleteBlock(idx) — тут обробляємо тільки kind='event'|'reminder'.
+function routineDeleteFromTimeline(kind, sourceId, reminderId) {
+  if (kind === 'event' || kind === 'reminder') {
+    const events = getEvents();
+    const ev = events.find(e => e.id === sourceId);
+    if (!ev) { _renderRoutineTimeline(); return; }
+    saveEvents(events.filter(e => e.id !== sourceId));
+    if (kind === 'reminder') {
+      try {
+        const rid = reminderId || ev.reminderId || ev.id;
+        const reminders = JSON.parse(localStorage.getItem('nm_reminders') || '[]');
+        const filtered = reminders.filter(r => r.id !== rid);
+        if (filtered.length !== reminders.length) localStorage.setItem('nm_reminders', JSON.stringify(filtered));
+      } catch(e) { console.warn('[routine] reminder cleanup failed', e); }
+    }
+  }
+  _renderRoutineTimeline();
 }
 
 function routineSelectDay(dayKey) {
@@ -929,7 +984,7 @@ setInterval(_updateCalIconDay, 60 * 1000);
 
 Object.assign(window, {
   openCalendarModal, closeCalendarModal, calendarPrevMonth, calendarNextMonth, calendarDayTap,
-  openRoutineModal, closeRoutineModal, routineSelectDay, routineAddBlock, routineDeleteBlock, routineSaveNewBlock, routineCancelAdd,
+  openRoutineModal, closeRoutineModal, routineSelectDay, routineAddBlock, routineDeleteBlock, routineDeleteFromTimeline, routineSaveNewBlock, routineCancelAdd,
   openEventEditModal, closeEventEditModal, saveEventFromModal, deleteEventFromModal, setEventPriority, clearEventEndTime,
   closeDayScheduleModal, openRoutineFromCalendar,
   highlightEventDays,
