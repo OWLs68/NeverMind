@@ -10950,7 +10950,7 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
     if (!el) return;
     const now = /* @__PURE__ */ new Date();
     const dayOfMonth = now.getDate();
-    if (dayOfMonth > 15) {
+    if (dayOfMonth > 4) {
       el.style.display = "none";
       return;
     }
