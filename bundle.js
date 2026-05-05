@@ -4796,7 +4796,12 @@ ${lines.join("\n")}`;
     const q = (query || "").toLowerCase().trim();
     if (q.length < 3) return null;
     const projects = getProjects();
-    return projects.find((p) => (p.name || "").toLowerCase().includes(q.slice(0, 12))) || null;
+    const exact = projects.find((p) => (p.name || "").toLowerCase() === q);
+    if (exact) return exact;
+    const starts = projects.find((p) => (p.name || "").toLowerCase().startsWith(q));
+    if (starts) return starts;
+    const matches = projects.filter((p) => (p.name || "").toLowerCase().includes(q.slice(0, 12)));
+    return matches.length === 1 ? matches[0] : null;
   }
   function createProjectProgrammatic(name, subtitle = "") {
     const projects = getProjects();
@@ -6008,9 +6013,9 @@ ${lines.join("\n\n")}`;
       });
       stillRelevant.forEach((r) => critical.push(`[\u041A\u0420\u0418\u0422\u0418\u0427\u041D\u041E] \u23F0 \u041D\u0410\u0413\u0410\u0414\u0423\u0412\u0410\u041D\u041D\u042F (${r.time}): "${r.text}". \u0421\u043A\u0430\u0436\u0438 \u0446\u0435 \u044E\u0437\u0435\u0440\u0443 \u0417\u0410\u0420\u0410\u0417!`));
       fading.forEach((r) => important.push(`[\u041F\u041E\u041C'\u042F\u041A\u0428\u0415\u041D\u0415] \u041D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F \u043E ${r.time} \u0449\u0435 \u0430\u043A\u0442\u0443\u0430\u043B\u044C\u043D\u0435? "${r.text}". \u0417\u0430\u043F\u0438\u0442\u0430\u0439 \u044E\u0437\u0435\u0440\u0430: "\u0429\u0435 \u0430\u043A\u0442\u0443\u0430\u043B\u044C\u043D\u043E \u0447\u0438 \u0432\u0436\u0435 \u043D\u0435 \u0442\u0440\u0435\u0431\u0430?" \u0437 \u0447\u0456\u043F\u0430\u043C\u0438 [{"label":"\u0412\u0438\u043A\u043E\u043D\u0430\u0432 \u2714\uFE0F","action":"chat"},{"label":"\u0421\u043A\u0430\u0441\u0443\u0432\u0430\u0442\u0438","action":"chat"},{"label":"\u041F\u0435\u0440\u0435\u043D\u0435\u0441\u0442\u0438","action":"chat"}]`));
-      const showedOrExpired = [...stillRelevant, ...fading, ...expired];
-      if (showedOrExpired.length > 0) {
-        const updated = reminders.map((r) => showedOrExpired.find((d) => d.id === r.id) ? { ...r, done: true } : r);
+      if (expired.length > 0) {
+        const expIds = new Set(expired.map((d) => d.id));
+        const updated = reminders.map((r) => expIds.has(r.id) ? { ...r, done: true } : r);
         localStorage.setItem("nm_reminders", JSON.stringify(updated));
       }
       const upcoming = reminders.filter((r) => !r.done && r.date === todayISO2 && r.time > `${String(hour).padStart(2, "0")}:${String(min).padStart(2, "0")}`).sort((a, b) => a.time.localeCompare(b.time));
@@ -6665,7 +6670,7 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
       const todayStr = (/* @__PURE__ */ new Date()).toDateString();
       const habitLog = getHabitLog();
       const todayLog = habitLog[todayStr] || {};
-      const dow = (/* @__PURE__ */ new Date()).getDay();
+      const dow = ((/* @__PURE__ */ new Date()).getDay() + 6) % 7;
       const todayHabits = habits.filter((h) => h.type !== "quit" && (h.days || []).includes(dow));
       const doneH = todayHabits.filter((h) => todayLog[h.id]);
       const pendingH = todayHabits.filter((h) => !todayLog[h.id]);
@@ -10533,7 +10538,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
       const log = getHabitLog();
       const doneCount = buildHabits.filter((h) => !!log[todayKey]?.[h.id]).length;
       if (isHabitTextNegative && doneCount > 0) return true;
-      if (doneCount === buildHabits.length) return true;
+      if (doneCount === buildHabits.length && isHabitTextNegative) return true;
       return false;
     } catch (e) {
       return false;
