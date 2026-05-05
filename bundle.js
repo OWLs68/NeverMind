@@ -20297,10 +20297,10 @@ ${logLines}
       var iconColor = isActive ? "white" : "rgba(30,16,64,0.4)";
       var labelColor = isActive ? t2.accent : "rgba(30,16,64,0.45)";
       var onclickAttr = isLocked ? "" : "toggleTabSelection('" + t2.id + "')";
-      var checkHtml = isLocked ? '<div style="position:absolute;top:10px;right:10px;font-size:10px;font-weight:700;color:rgba(30,16,64,0.3);background:rgba(30,16,64,0.06);padding:2px 7px;border-radius:6px">\u0437\u0430\u0432\u0436\u0434\u0438</div>' : '<div id="tab-sel-check-' + t2.id + '" style="position:absolute;top:10px;right:10px;width:20px;height:20px;border-radius:6px;border:2px solid ' + (isActive ? t2.accent : "rgba(30,16,64,0.15)") + ";background:" + (isActive ? t2.accent : "transparent") + ';display:flex;align-items:center;justify-content:center;transition:all 0.18s">' + (isActive ? '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg>' : "") + "</div>";
+      var checkHtml = isLocked ? '<div style="position:absolute;top:10px;right:10px;font-size:10px;font-weight:700;color:rgba(30,16,64,0.3);background:rgba(30,16,64,0.06);padding:2px 7px;border-radius:6px">' + t2("nav.tabsel.always", "\u0437\u0430\u0432\u0436\u0434\u0438") + "</div>" : '<div id="tab-sel-check-' + t2.id + '" style="position:absolute;top:10px;right:10px;width:20px;height:20px;border-radius:6px;border:2px solid ' + (isActive ? t2.accent : "rgba(30,16,64,0.15)") + ";background:" + (isActive ? t2.accent : "transparent") + ';display:flex;align-items:center;justify-content:center;transition:all 0.18s">' + (isActive ? '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg>' : "") + "</div>";
       return '<div id="tab-sel-card-' + t2.id + '" onclick="' + onclickAttr + '" style="border-radius:18px;padding:14px;background:' + cardBg + ";border:2px solid " + borderColor + ";cursor:" + (isLocked ? "default" : "pointer") + ';transition:all 0.18s;position:relative;-webkit-tap-highlight-color:transparent"><div style="width:40px;height:40px;border-radius:12px;background:' + iconBg + ";display:flex;align-items:center;justify-content:center;margin-bottom:8px;color:" + iconColor + ';transition:all 0.18s">' + t2.svg + '</div><div style="font-size:14px;font-weight:700;color:' + labelColor + ';line-height:1.2">' + t2.label + "</div>" + checkHtml + "</div>";
     }).join("");
-    overlay.innerHTML = '<div onclick="event.stopPropagation()" id="tab-sel-sheet" style="width:100%;max-width:480px;background:rgba(250,249,255,0.97);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border-radius:28px 28px 0 0;padding:0 0 calc(env(safe-area-inset-bottom) + 20px);border-top:1.5px solid rgba(255,255,255,0.8);box-shadow:0 -8px 40px rgba(0,0,0,0.15);transform:translateY(100%);transition:transform 0.35s cubic-bezier(0.32,0.72,0,1)"><div style="padding:14px 20px 10px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(30,16,64,0.06)"><div><div class="modal-handle"></div><div style="font-size:18px;font-weight:800;color:#1e1040">\u0412\u043A\u043B\u0430\u0434\u043A\u0438</div><div style="font-size:12px;color:rgba(30,16,64,0.38);font-weight:500;margin-top:2px">\u0412\u0438\u0431\u0435\u0440\u0438 \u0449\u043E \u043F\u043E\u043A\u0430\u0437\u0443\u0432\u0430\u0442\u0438 \u0432 \u0431\u0430\u0440\u0430\u0431\u0430\u043D\u0456</div></div><button onclick="applyTabSelection()" style="background:#1e1040;border:none;border-radius:14px;padding:9px 18px;font-size:14px;font-weight:700;color:white;cursor:pointer">\u0413\u043E\u0442\u043E\u0432\u043E</button></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:16px 16px 8px">' + cardsHtml + '</div><div style="padding:0 16px 8px"><div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">\u041F\u043E\u0440\u044F\u0434\u043E\u043A</div><div id="tab-order-list" style="display:flex;flex-direction:row;gap:8px;overflow-x:auto;padding:4px 0 8px;-webkit-overflow-scrolling:touch;scrollbar-width:none"></div><div style="font-size:12px;color:rgba(30,16,64,0.3);font-weight:500;text-align:center">\u0422\u0430\u043F\u043D\u0438 \u0432\u043A\u043B\u0430\u0434\u043A\u0443 \u2192 \u2039 \u203A \u0434\u043B\u044F \u043F\u0435\u0440\u0435\u043C\u0456\u0449\u0435\u043D\u043D\u044F</div></div></div>';
+    overlay.innerHTML = '<div onclick="event.stopPropagation()" id="tab-sel-sheet" style="width:100%;max-width:480px;background:rgba(250,249,255,0.97);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border-radius:28px 28px 0 0;padding:0 0 calc(env(safe-area-inset-bottom) + 20px);border-top:1.5px solid rgba(255,255,255,0.8);box-shadow:0 -8px 40px rgba(0,0,0,0.15);transform:translateY(100%);transition:transform 0.35s cubic-bezier(0.32,0.72,0,1)"><div style="padding:14px 20px 10px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(30,16,64,0.06)"><div><div class="modal-handle"></div><div style="font-size:18px;font-weight:800;color:#1e1040">' + t("nav.tabsel.title", "\u0412\u043A\u043B\u0430\u0434\u043A\u0438") + '</div><div style="font-size:12px;color:rgba(30,16,64,0.38);font-weight:500;margin-top:2px">' + t("nav.tabsel.subtitle", "\u0412\u0438\u0431\u0435\u0440\u0438 \u0449\u043E \u043F\u043E\u043A\u0430\u0437\u0443\u0432\u0430\u0442\u0438 \u0432 \u0431\u0430\u0440\u0430\u0431\u0430\u043D\u0456") + '</div></div><button onclick="applyTabSelection()" style="background:#1e1040;border:none;border-radius:14px;padding:9px 18px;font-size:14px;font-weight:700;color:white;cursor:pointer">' + t("nav.tabsel.done", "\u0413\u043E\u0442\u043E\u0432\u043E") + '</button></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:16px 16px 8px">' + cardsHtml + '</div><div style="padding:0 16px 8px"><div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">' + t("nav.tabsel.order", "\u041F\u043E\u0440\u044F\u0434\u043E\u043A") + '</div><div id="tab-order-list" style="display:flex;flex-direction:row;gap:8px;overflow-x:auto;padding:4px 0 8px;-webkit-overflow-scrolling:touch;scrollbar-width:none"></div><div style="font-size:12px;color:rgba(30,16,64,0.3);font-weight:500;text-align:center">' + t("nav.tabsel.hint", "\u0422\u0430\u043F\u043D\u0438 \u0432\u043A\u043B\u0430\u0434\u043A\u0443 \u2192 \u2039 \u203A \u0434\u043B\u044F \u043F\u0435\u0440\u0435\u043C\u0456\u0449\u0435\u043D\u043D\u044F") + "</div></div></div>";
     overlay.addEventListener("click", (e) => {
       if (e.target === overlay) closeTabSelector();
     });
@@ -20411,7 +20411,7 @@ ${logLines}
       if (isLocked) {
         return `<div style="display:flex;align-items:center;gap:6px;padding:8px 10px;border-radius:20px;background:rgba(30,16,64,0.04);border:1.5px solid transparent;flex-shrink:0;cursor:default;-webkit-tap-highlight-color:transparent">
         ${dot}${label}
-        <span style="font-size:10px;font-weight:700;color:rgba(30,16,64,0.3);background:rgba(30,16,64,0.06);padding:2px 6px;border-radius:6px">\u043F\u0435\u0440\u0448\u0438\u0439</span>
+        <span style="font-size:10px;font-weight:700;color:rgba(30,16,64,0.3);background:rgba(30,16,64,0.06);padding:2px 6px;border-radius:6px">${t("nav.taborder.first", "\u043F\u0435\u0440\u0448\u0438\u0439")}</span>
       </div>`;
       }
       if (isSelected) {
@@ -20778,9 +20778,9 @@ ${logLines}
     const tsEl = document.getElementById("memory-last-updated");
     if (memoryTs && tsEl) {
       const d = new Date(parseInt(memoryTs));
-      tsEl.textContent = `\u041E\u0441\u0442\u0430\u043D\u043D\u0454 \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043D\u044F: ${d.toLocaleDateString("uk-UA")} \u043E ${d.toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" })}`;
+      tsEl.textContent = t("nav.mem.last_updated", "\u041E\u0441\u0442\u0430\u043D\u043D\u0454 \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043D\u044F: {date} \u043E {time}", { date: d.toLocaleDateString("uk-UA"), time: d.toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" }) });
     } else if (tsEl) {
-      tsEl.textContent = "\u0429\u0435 \u043D\u0435 \u043E\u043D\u043E\u0432\u043B\u044E\u0432\u0430\u043B\u0430\u0441\u044C";
+      tsEl.textContent = t("nav.mem.never_updated", "\u0429\u0435 \u043D\u0435 \u043E\u043D\u043E\u0432\u043B\u044E\u0432\u0430\u043B\u0430\u0441\u044C");
     }
     const sc = settings.schedule || {};
     const wakeEl = document.getElementById("input-wake-up");
@@ -20814,7 +20814,7 @@ ${logLines}
     settings.owl_mode = mode;
     localStorage.setItem("nm_settings", JSON.stringify(settings));
     updateOwlModeUI(mode);
-    showToast("\u0421\u0442\u0438\u043B\u044C OWL \u0437\u043C\u0456\u043D\u0435\u043D\u043E");
+    showToast(t("nav.toast.owl_mode_changed", "\u0421\u0442\u0438\u043B\u044C OWL \u0437\u043C\u0456\u043D\u0435\u043D\u043E"));
   }
   function updateOwlModeUI(mode) {
     ["coach", "partner", "mentor"].forEach((m) => {
@@ -20858,7 +20858,7 @@ ${logLines}
         else btn.classList.remove("active");
       }
     });
-    showToast(lang === "uk" ? "\u041C\u043E\u0432\u0430: \u0423\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u0430" : lang === "en" ? "Language: English" : "Taal: Nederlands");
+    showToast(lang === "uk" ? t("nav.toast.lang_uk", "\u041C\u043E\u0432\u0430: \u0423\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u0430") : lang === "en" ? t("nav.toast.lang_en", "Language: English") : t("nav.toast.lang_nl", "Taal: Nederlands"));
   }
   function openMemoryModal() {
     const modal = document.getElementById("memory-modal");
@@ -20875,7 +20875,7 @@ ${logLines}
     if (!list) return;
     const facts = getFactsRaw().filter((f) => f && f.text);
     if (!facts.length) {
-      list.innerHTML = '<div style="text-align:center;padding:40px 20px;color:rgba(30,16,64,0.3);font-size:15px">\u0429\u0435 \u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E.<br>\u041D\u0430\u043F\u0438\u0448\u0438 \u043A\u0456\u043B\u044C\u043A\u0430 \u0437\u0430\u043F\u0438\u0441\u0456\u0432 \u0432 Inbox \u0456 \u043D\u0430\u0442\u0438\u0441\u043D\u0438 "\u041E\u043D\u043E\u0432\u0438\u0442\u0438 \u0447\u0435\u0440\u0435\u0437 OWL".<br><br>\u0410\u0431\u043E \u0434\u043E\u0434\u0430\u0439 \u0444\u0430\u043A\u0442 \u0432\u0440\u0443\u0447\u043D\u0443 \u0447\u0435\u0440\u0435\u0437 \u043F\u043E\u043B\u0435 \u0432\u0438\u0449\u0435.</div>';
+      list.innerHTML = '<div style="text-align:center;padding:40px 20px;color:rgba(30,16,64,0.3);font-size:15px">' + t("nav.mem.empty", '\u0429\u0435 \u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E.<br>\u041D\u0430\u043F\u0438\u0448\u0438 \u043A\u0456\u043B\u044C\u043A\u0430 \u0437\u0430\u043F\u0438\u0441\u0456\u0432 \u0432 Inbox \u0456 \u043D\u0430\u0442\u0438\u0441\u043D\u0438 "\u041E\u043D\u043E\u0432\u0438\u0442\u0438 \u0447\u0435\u0440\u0435\u0437 OWL".<br><br>\u0410\u0431\u043E \u0434\u043E\u0434\u0430\u0439 \u0444\u0430\u043A\u0442 \u0432\u0440\u0443\u0447\u043D\u0443 \u0447\u0435\u0440\u0435\u0437 \u043F\u043E\u043B\u0435 \u0432\u0438\u0449\u0435.') + "</div>";
       return;
     }
     const grouped = {};
@@ -20950,25 +20950,25 @@ ${logLines}
   function saveMemoryCards() {
     renderMemoryCards();
     const tsEl = document.getElementById("memory-last-updated");
-    if (tsEl) tsEl.textContent = "\u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E \u0449\u043E\u0439\u043D\u043E";
+    if (tsEl) tsEl.textContent = t("nav.mem.saved_now", "\u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E \u0449\u043E\u0439\u043D\u043E");
   }
   function openPrivacyPolicy() {
-    showToast("\u041A\u043E\u043D\u0444\u0456\u0434\u0435\u043D\u0446\u0456\u0439\u043D\u0456\u0441\u0442\u044C \u2014 \u043D\u0435\u0437\u0430\u0431\u0430\u0440\u043E\u043C");
+    showToast(t("nav.toast.privacy_soon", "\u041A\u043E\u043D\u0444\u0456\u0434\u0435\u043D\u0446\u0456\u0439\u043D\u0456\u0441\u0442\u044C \u2014 \u043D\u0435\u0437\u0430\u0431\u0430\u0440\u043E\u043C"));
   }
   function openTerms() {
-    showToast("\u0423\u043C\u043E\u0432\u0438 \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u0430\u043D\u043D\u044F \u2014 \u043D\u0435\u0437\u0430\u0431\u0430\u0440\u043E\u043C");
+    showToast(t("nav.toast.terms_soon", "\u0423\u043C\u043E\u0432\u0438 \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u0430\u043D\u043D\u044F \u2014 \u043D\u0435\u0437\u0430\u0431\u0430\u0440\u043E\u043C"));
   }
   function openFeedback() {
-    showToast("\u041D\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u0430\u0432\u0442\u043E\u0440\u0443 \u2014 \u043D\u0435\u0437\u0430\u0431\u0430\u0440\u043E\u043C");
+    showToast(t("nav.toast.feedback_soon", "\u041D\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u0430\u0432\u0442\u043E\u0440\u0443 \u2014 \u043D\u0435\u0437\u0430\u0431\u0430\u0440\u043E\u043C"));
   }
   function updateKeyStatus(hasKey) {
     const el = document.getElementById("key-status");
     if (hasKey) {
       el.className = "key-status has-key";
-      el.textContent = "\u2713 API \u043A\u043B\u044E\u0447 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E";
+      el.textContent = t("nav.key.saved", "\u2713 API \u043A\u043B\u044E\u0447 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E");
     } else {
       el.className = "key-status no-key";
-      el.textContent = "\u26A0\uFE0F \u041A\u043B\u044E\u0447 \u043D\u0435 \u0432\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u043E";
+      el.textContent = t("nav.key.missing", "\u26A0\uFE0F \u041A\u043B\u044E\u0447 \u043D\u0435 \u0432\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u043E");
     }
   }
   function saveSettings() {
@@ -21012,16 +21012,16 @@ ${logLines}
     a.download = `nevermind-backup-${(/* @__PURE__ */ new Date()).toISOString().split("T")[0]}.json`;
     a.click();
     URL.revokeObjectURL(url);
-    showToast("\u{1F4E4} \u0414\u0430\u043D\u0456 \u0435\u043A\u0441\u043F\u043E\u0440\u0442\u043E\u0432\u0430\u043D\u043E");
+    showToast(t("nav.toast.exported", "\u{1F4E4} \u0414\u0430\u043D\u0456 \u0435\u043A\u0441\u043F\u043E\u0440\u0442\u043E\u0432\u0430\u043D\u043E"));
   }
   function clearAllData() {
-    if (!confirm("\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0432\u0441\u0456 \u0434\u0430\u043D\u0456 NeverMind? \u0426\u044E \u0434\u0456\u044E \u043D\u0435 \u043C\u043E\u0436\u043D\u0430 \u0432\u0456\u0434\u043C\u0456\u043D\u0438\u0442\u0438.")) return;
+    if (!confirm(t("nav.confirm.clear_all", "\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0432\u0441\u0456 \u0434\u0430\u043D\u0456 NeverMind? \u0426\u044E \u0434\u0456\u044E \u043D\u0435 \u043C\u043E\u0436\u043D\u0430 \u0432\u0456\u0434\u043C\u0456\u043D\u0438\u0442\u0438."))) return;
     const allKeys = [...NM_KEYS.data, ...NM_KEYS.settings, ...NM_KEYS.chat, ...NM_KEYS.cache];
     allKeys.forEach((k) => localStorage.removeItem(k));
     NM_KEYS.patterns.forEach(
       (p) => Object.keys(localStorage).filter((k) => k.startsWith(p)).forEach((k) => localStorage.removeItem(k))
     );
-    showToast("\u{1F5D1}\uFE0F \u0412\u0441\u0456 \u0434\u0430\u043D\u0456 \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E");
+    showToast(t("nav.toast.all_cleared", "\u{1F5D1}\uFE0F \u0412\u0441\u0456 \u0434\u0430\u043D\u0456 \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E"));
     setTimeout(() => window.location.reload(), 800);
   }
   function saveFinanceSettings() {
@@ -21031,12 +21031,12 @@ ${logLines}
     saveFinBudget(bdg);
   }
   function clearFinanceData() {
-    if (!confirm("\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0432\u0441\u0456 \u0444\u0456\u043D\u0430\u043D\u0441\u043E\u0432\u0456 \u0434\u0430\u043D\u0456?")) return;
+    if (!confirm(t("nav.confirm.clear_finance", "\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0432\u0441\u0456 \u0444\u0456\u043D\u0430\u043D\u0441\u043E\u0432\u0456 \u0434\u0430\u043D\u0456?"))) return;
     localStorage.removeItem("nm_finance");
     localStorage.removeItem("nm_finance_budget");
     localStorage.removeItem("nm_finance_cats");
     if (currentTab === "finance") renderFinance();
-    showToast("\u{1F5D1}\uFE0F \u0424\u0456\u043D\u0430\u043D\u0441\u043E\u0432\u0456 \u0434\u0430\u043D\u0456 \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E");
+    showToast(t("nav.toast.finance_cleared", "\u{1F5D1}\uFE0F \u0424\u0456\u043D\u0430\u043D\u0441\u043E\u0432\u0456 \u0434\u0430\u043D\u0456 \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E"));
   }
   function getProfile() {
     const s = JSON.parse(localStorage.getItem("nm_settings") || "{}");
@@ -21076,7 +21076,7 @@ ${logLines}
     }
     await doRefreshMemory(true);
     if (btn) {
-      btn.textContent = "\u21BB \u041E\u043D\u043E\u0432\u0438\u0442\u0438 \u0447\u0435\u0440\u0435\u0437 OWL";
+      btn.textContent = t("nav.mem.refresh_btn", "\u21BB \u041E\u043D\u043E\u0432\u0438\u0442\u0438 \u0447\u0435\u0440\u0435\u0437 OWL");
       btn.disabled = false;
     }
     if (document.getElementById("memory-modal")?.style.display !== "none") {
@@ -21100,9 +21100,9 @@ ${logLines}
     const tsEl = document.getElementById("memory-last-updated");
     if (tsEl) {
       const d = /* @__PURE__ */ new Date();
-      tsEl.textContent = `\u041E\u0441\u0442\u0430\u043D\u043D\u0454 \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043D\u044F: ${d.toLocaleDateString("uk-UA")} \u043E ${d.toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" })}`;
+      tsEl.textContent = t("nav.mem.last_updated", "\u041E\u0441\u0442\u0430\u043D\u043D\u0454 \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043D\u044F: {date} \u043E {time}", { date: d.toLocaleDateString("uk-UA"), time: d.toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" }) });
     }
-    if (showResult) showToast("\u2713 \u041F\u0430\u043C'\u044F\u0442\u044C \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043E");
+    if (showResult) showToast(t("nav.toast.mem_refreshed", "\u2713 \u041F\u0430\u043C'\u044F\u0442\u044C \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043E"));
   }
   async function _migrateLegacyMemoryToFacts() {
     const legacy = (getLegacyMemoryText() || "").trim();
@@ -21184,29 +21184,29 @@ ${legacy}`;
     modal.innerHTML = `
     <div style="background:#fef8ec;border-radius:22px;padding:22px 20px 18px;width:100%;max-width:380px;box-shadow:0 20px 60px rgba(30,16,64,0.3)">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-        <div style="font-size:17px;font-weight:800;color:#1e1040">\u0406\u043D\u0444\u043E \u043F\u0440\u043E \u0434\u0435\u043F\u043B\u043E\u0439</div>
+        <div style="font-size:17px;font-weight:800;color:#1e1040">${t("nav.deploy.title", "\u0406\u043D\u0444\u043E \u043F\u0440\u043E \u0434\u0435\u043F\u043B\u043E\u0439")}</div>
         <button onclick="closeDeployInfo()" style="background:none;border:none;font-size:22px;line-height:1;color:rgba(30,16,64,0.5);cursor:pointer;padding:4px 8px">\xD7</button>
       </div>
       <div style="display:flex;flex-direction:column;gap:10px;font-size:13px">
         <div style="display:flex;justify-content:space-between;gap:12px;padding:8px 12px;background:rgba(139,105,20,0.08);border-radius:10px">
-          <div style="color:rgba(30,16,64,0.55);font-weight:600">\u0412\u0435\u0440\u0441\u0456\u044F</div>
+          <div style="color:rgba(30,16,64,0.55);font-weight:600">${t("nav.deploy.version", "\u0412\u0435\u0440\u0441\u0456\u044F")}</div>
           <div style="color:#1e1040;font-weight:700;font-family:monospace">${version}</div>
         </div>
         <div style="display:flex;justify-content:space-between;gap:12px;padding:8px 12px;background:rgba(139,105,20,0.08);border-radius:10px">
-          <div style="color:rgba(30,16,64,0.55);font-weight:600">\u041A\u043E\u043C\u0456\u0442</div>
+          <div style="color:rgba(30,16,64,0.55);font-weight:600">${t("nav.deploy.commit", "\u041A\u043E\u043C\u0456\u0442")}</div>
           <div style="color:#1e1040;font-weight:700;font-family:monospace">${commitLink ? `<a href="${commitLink}" target="_blank" rel="noopener" style="color:#c2790a;text-decoration:none">${commit}</a>` : commit}</div>
         </div>
         <div style="display:flex;justify-content:space-between;gap:12px;padding:8px 12px;background:rgba(139,105,20,0.08);border-radius:10px">
-          <div style="color:rgba(30,16,64,0.55);font-weight:600">\u0413\u0456\u043B\u043A\u0430 \u0437\u0432\u0456\u0434\u043A\u0438</div>
+          <div style="color:rgba(30,16,64,0.55);font-weight:600">${t("nav.deploy.branch_from", "\u0413\u0456\u043B\u043A\u0430 \u0437\u0432\u0456\u0434\u043A\u0438")}</div>
           <div style="color:#1e1040;font-weight:700;font-family:monospace;text-align:right;word-break:break-all">${sourceLink ? `<a href="${sourceLink}" target="_blank" rel="noopener" style="color:#c2790a;text-decoration:none">${source}</a>` : source}</div>
         </div>
         <div style="display:flex;justify-content:space-between;gap:12px;padding:8px 12px;background:rgba(139,105,20,0.08);border-radius:10px">
-          <div style="color:rgba(30,16,64,0.55);font-weight:600">\u0413\u0456\u043B\u043A\u0430 \u0443 main</div>
+          <div style="color:rgba(30,16,64,0.55);font-weight:600">${t("nav.deploy.branch_main", "\u0413\u0456\u043B\u043A\u0430 \u0443 main")}</div>
           <div style="color:#1e1040;font-weight:700;font-family:monospace">${branch}</div>
         </div>
       </div>
       <div style="margin-top:14px;padding-top:12px;border-top:1px solid rgba(30,16,64,0.08);font-size:11px;color:rgba(30,16,64,0.45);line-height:1.45">
-        \u042F\u043A\u0449\u043E \u0431\u0435\u0439\u0434\u0436 \u043D\u0435 \u043E\u043D\u043E\u0432\u0438\u0432\u0441\u044F \u043F\u0456\u0441\u043B\u044F \u043F\u0443\u0448\u0443 \u2014 CI \u0449\u0435 \u043D\u0435 \u0434\u043E\u0440\u043E\u0431\u0438\u0432. \u041F\u043E\u0442\u044F\u0433\u043D\u0438 \u0437\u0430\u0441\u0442\u043E\u0441\u0443\u043D\u043E\u043A \u0432\u043D\u0438\u0437 \u0437\u0430 2 \u0445\u0432.
+        ${t("nav.deploy.hint", "\u042F\u043A\u0449\u043E \u0431\u0435\u0439\u0434\u0436 \u043D\u0435 \u043E\u043D\u043E\u0432\u0438\u0432\u0441\u044F \u043F\u0456\u0441\u043B\u044F \u043F\u0443\u0448\u0443 \u2014 CI \u0449\u0435 \u043D\u0435 \u0434\u043E\u0440\u043E\u0431\u0438\u0432. \u041F\u043E\u0442\u044F\u0433\u043D\u0438 \u0437\u0430\u0441\u0442\u043E\u0441\u0443\u043D\u043E\u043A \u0432\u043D\u0438\u0437 \u0437\u0430 2 \u0445\u0432.")}
       </div>
     </div>
   `;
