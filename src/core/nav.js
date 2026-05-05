@@ -2,7 +2,7 @@
 // app-core-nav.js — Теми, навігація між вкладками, налаштування, памʼять
 // ============================================================
 import { updateErrorLogBtn } from './logger.js';
-import { escapeHtml } from './utils.js';
+import { escapeHtml, t } from './utils.js';
 import { animateTabSwitch, NM_KEYS, applyBoardOverlays } from './boot.js';
 import { setupModalSwipeClose } from '../tabs/tasks.js';
 import { callAI, callAIWithTools, INBOX_TOOLS, closeAllChatBars } from '../ai/core.js';
@@ -209,7 +209,7 @@ function openTabSelector() {
     var labelColor = isActive ? t.accent : 'rgba(30,16,64,0.45)';
     var onclickAttr = isLocked ? '' : "toggleTabSelection('" + t.id + "')";
     var checkHtml = isLocked
-      ? '<div style="position:absolute;top:10px;right:10px;font-size:10px;font-weight:700;color:rgba(30,16,64,0.3);background:rgba(30,16,64,0.06);padding:2px 7px;border-radius:6px">завжди</div>'
+      ? '<div style="position:absolute;top:10px;right:10px;font-size:10px;font-weight:700;color:rgba(30,16,64,0.3);background:rgba(30,16,64,0.06);padding:2px 7px;border-radius:6px">' + t('nav.tabsel.always', 'завжди') + '</div>'
       : '<div id="tab-sel-check-' + t.id + '" style="position:absolute;top:10px;right:10px;width:20px;height:20px;border-radius:6px;border:2px solid ' + (isActive ? t.accent : 'rgba(30,16,64,0.15)') + ';background:' + (isActive ? t.accent : 'transparent') + ';display:flex;align-items:center;justify-content:center;transition:all 0.18s">'
         + (isActive ? '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg>' : '')
         + '</div>';
@@ -222,15 +222,15 @@ function openTabSelector() {
   overlay.innerHTML = '<div onclick="event.stopPropagation()" id="tab-sel-sheet" style="width:100%;max-width:480px;background:rgba(250,249,255,0.97);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border-radius:28px 28px 0 0;padding:0 0 calc(env(safe-area-inset-bottom) + 20px);border-top:1.5px solid rgba(255,255,255,0.8);box-shadow:0 -8px 40px rgba(0,0,0,0.15);transform:translateY(100%);transition:transform 0.35s cubic-bezier(0.32,0.72,0,1)">'
     + '<div style="padding:14px 20px 10px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(30,16,64,0.06)">'
     + '<div><div class="modal-handle"></div>'
-    + '<div style="font-size:18px;font-weight:800;color:#1e1040">Вкладки</div>'
-    + '<div style="font-size:12px;color:rgba(30,16,64,0.38);font-weight:500;margin-top:2px">Вибери що показувати в барабані</div></div>'
-    + '<button onclick="applyTabSelection()" style="background:#1e1040;border:none;border-radius:14px;padding:9px 18px;font-size:14px;font-weight:700;color:white;cursor:pointer">Готово</button>'
+    + '<div style="font-size:18px;font-weight:800;color:#1e1040">' + t('nav.tabsel.title', 'Вкладки') + '</div>'
+    + '<div style="font-size:12px;color:rgba(30,16,64,0.38);font-weight:500;margin-top:2px">' + t('nav.tabsel.subtitle', 'Вибери що показувати в барабані') + '</div></div>'
+    + '<button onclick="applyTabSelection()" style="background:#1e1040;border:none;border-radius:14px;padding:9px 18px;font-size:14px;font-weight:700;color:white;cursor:pointer">' + t('nav.tabsel.done', 'Готово') + '</button>'
     + '</div>'
     + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:16px 16px 8px">' + cardsHtml + '</div>'
     + '<div style="padding:0 16px 8px">'
-    + '<div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">Порядок</div>'
+    + '<div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">' + t('nav.tabsel.order', 'Порядок') + '</div>'
     + '<div id="tab-order-list" style="display:flex;flex-direction:row;gap:8px;overflow-x:auto;padding:4px 0 8px;-webkit-overflow-scrolling:touch;scrollbar-width:none"></div>'
-    + '<div style="font-size:12px;color:rgba(30,16,64,0.3);font-weight:500;text-align:center">Тапни вкладку → ‹ › для переміщення</div>'
+    + '<div style="font-size:12px;color:rgba(30,16,64,0.3);font-weight:500;text-align:center">' + t('nav.tabsel.hint', 'Тапни вкладку → ‹ › для переміщення') + '</div>'
     + '</div></div>';
 
   overlay.addEventListener('click', e => { if (e.target === overlay) closeTabSelector(); });
@@ -347,7 +347,7 @@ function renderTabOrderList() {
     if (isLocked) {
       return `<div style="display:flex;align-items:center;gap:6px;padding:8px 10px;border-radius:20px;background:rgba(30,16,64,0.04);border:1.5px solid transparent;flex-shrink:0;cursor:default;-webkit-tap-highlight-color:transparent">
         ${dot}${label}
-        <span style="font-size:10px;font-weight:700;color:rgba(30,16,64,0.3);background:rgba(30,16,64,0.06);padding:2px 6px;border-radius:6px">перший</span>
+        <span style="font-size:10px;font-weight:700;color:rgba(30,16,64,0.3);background:rgba(30,16,64,0.06);padding:2px 6px;border-radius:6px">${t('nav.taborder.first', 'перший')}</span>
       </div>`;
     }
     if (isSelected) {
@@ -744,9 +744,9 @@ export function openSettings() {
   const tsEl = document.getElementById('memory-last-updated');
   if (memoryTs && tsEl) {
     const d = new Date(parseInt(memoryTs));
-    tsEl.textContent = `Останнє оновлення: ${d.toLocaleDateString('uk-UA')} о ${d.toLocaleTimeString('uk-UA', {hour:'2-digit',minute:'2-digit'})}`;
+    tsEl.textContent = t('nav.mem.last_updated', 'Останнє оновлення: {date} о {time}', { date: d.toLocaleDateString('uk-UA'), time: d.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' }) });
   } else if (tsEl) {
-    tsEl.textContent = 'Ще не оновлювалась';
+    tsEl.textContent = t('nav.mem.never_updated', 'Ще не оновлювалась');
   }
 
   // Розклад дня
@@ -783,7 +783,7 @@ function setOwlModeSetting(mode) {
   settings.owl_mode = mode;
   localStorage.setItem('nm_settings', JSON.stringify(settings));
   updateOwlModeUI(mode);
-  showToast('Стиль OWL змінено');
+  showToast(t('nav.toast.owl_mode_changed', 'Стиль OWL змінено'));
 }
 
 function updateOwlModeUI(mode) {
@@ -828,7 +828,7 @@ function setLanguage(lang) {
       else btn.classList.remove('active');
     }
   });
-  showToast(lang === 'uk' ? 'Мова: Українська' : lang === 'en' ? 'Language: English' : 'Taal: Nederlands');
+  showToast(lang === 'uk' ? t('nav.toast.lang_uk', 'Мова: Українська') : lang === 'en' ? t('nav.toast.lang_en', 'Language: English') : t('nav.toast.lang_nl', 'Taal: Nederlands'));
 }
 
 function openMemoryModal() {
@@ -853,7 +853,7 @@ function renderMemoryCards() {
   const facts = getFactsRaw().filter(f => f && f.text); // навіть прострочені показуємо (видно джерело)
 
   if (!facts.length) {
-    list.innerHTML = '<div style="text-align:center;padding:40px 20px;color:rgba(30,16,64,0.3);font-size:15px">Ще порожньо.<br>Напиши кілька записів в Inbox і натисни "Оновити через OWL".<br><br>Або додай факт вручну через поле вище.</div>';
+    list.innerHTML = '<div style="text-align:center;padding:40px 20px;color:rgba(30,16,64,0.3);font-size:15px">' + t('nav.mem.empty', 'Ще порожньо.<br>Напиши кілька записів в Inbox і натисни "Оновити через OWL".<br><br>Або додай факт вручну через поле вище.') + '</div>';
     return;
   }
 
@@ -943,29 +943,29 @@ function saveMemoryFactEdit(id, newText) {
 function saveMemoryCards() {
   renderMemoryCards();
   const tsEl = document.getElementById('memory-last-updated');
-  if (tsEl) tsEl.textContent = 'Збережено щойно';
+  if (tsEl) tsEl.textContent = t('nav.mem.saved_now', 'Збережено щойно');
 }
 
 function openPrivacyPolicy() {
-  showToast('Конфіденційність — незабаром');
+  showToast(t('nav.toast.privacy_soon', 'Конфіденційність — незабаром'));
 }
 
 function openTerms() {
-  showToast('Умови використання — незабаром');
+  showToast(t('nav.toast.terms_soon', 'Умови використання — незабаром'));
 }
 
 function openFeedback() {
-  showToast('Написати автору — незабаром');
+  showToast(t('nav.toast.feedback_soon', 'Написати автору — незабаром'));
 }
 
 export function updateKeyStatus(hasKey) {
   const el = document.getElementById('key-status');
   if (hasKey) {
     el.className = 'key-status has-key';
-    el.textContent = '✓ API ключ збережено';
+    el.textContent = t('nav.key.saved', '✓ API ключ збережено');
   } else {
     el.className = 'key-status no-key';
-    el.textContent = '⚠️ Ключ не встановлено';
+    el.textContent = t('nav.key.missing', '⚠️ Ключ не встановлено');
   }
 }
 
@@ -1016,18 +1016,18 @@ function exportData() {
   a.download = `nevermind-backup-${new Date().toISOString().split('T')[0]}.json`;
   a.click();
   URL.revokeObjectURL(url);
-  showToast('📤 Дані експортовано');
+  showToast(t('nav.toast.exported', '📤 Дані експортовано'));
 }
 
 function clearAllData() {
-  if (!confirm('Видалити всі дані NeverMind? Цю дію не можна відмінити.')) return;
+  if (!confirm(t('nav.confirm.clear_all', 'Видалити всі дані NeverMind? Цю дію не можна відмінити.'))) return;
   // NM_KEYS визначено в app-core-system.js — єдине джерело правди
   const allKeys = [...NM_KEYS.data, ...NM_KEYS.settings, ...NM_KEYS.chat, ...NM_KEYS.cache];
   allKeys.forEach(k => localStorage.removeItem(k));
   NM_KEYS.patterns.forEach(p =>
     Object.keys(localStorage).filter(k => k.startsWith(p)).forEach(k => localStorage.removeItem(k))
   );
-  showToast('🗑️ Всі дані видалено');
+  showToast(t('nav.toast.all_cleared', '🗑️ Всі дані видалено'));
   setTimeout(() => window.location.reload(), 800);
 }
 
@@ -1039,12 +1039,12 @@ function saveFinanceSettings() {
 }
 
 function clearFinanceData() {
-  if (!confirm('Видалити всі фінансові дані?')) return;
+  if (!confirm(t('nav.confirm.clear_finance', 'Видалити всі фінансові дані?'))) return;
   localStorage.removeItem('nm_finance');
   localStorage.removeItem('nm_finance_budget');
   localStorage.removeItem('nm_finance_cats');
   if (currentTab === 'finance') renderFinance();
-  showToast('🗑️ Фінансові дані видалено');
+  showToast(t('nav.toast.finance_cleared', '🗑️ Фінансові дані видалено'));
 }
 
 // === MEMORY SYSTEM ===
@@ -1085,7 +1085,7 @@ async function refreshMemory() {
   const btn = document.getElementById('memory-refresh-btn');
   if (btn) { btn.textContent = '…'; btn.disabled = true; }
   await doRefreshMemory(true);
-  if (btn) { btn.textContent = '↻ Оновити через OWL'; btn.disabled = false; }
+  if (btn) { btn.textContent = t('nav.mem.refresh_btn', '↻ Оновити через OWL'); btn.disabled = false; }
   // якщо вікно памʼяті відкрите — перемалювати картки
   if (document.getElementById('memory-modal')?.style.display !== 'none') {
     renderMemoryCards();
@@ -1124,10 +1124,10 @@ async function doRefreshMemory(showResult) {
   const tsEl = document.getElementById('memory-last-updated');
   if (tsEl) {
     const d = new Date();
-    tsEl.textContent = `Останнє оновлення: ${d.toLocaleDateString('uk-UA')} о ${d.toLocaleTimeString('uk-UA', {hour:'2-digit',minute:'2-digit'})}`;
+    tsEl.textContent = t('nav.mem.last_updated', 'Останнє оновлення: {date} о {time}', { date: d.toLocaleDateString('uk-UA'), time: d.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' }) });
   }
 
-  if (showResult) showToast("✓ Пам'ять оновлено");
+  if (showResult) showToast(t('nav.toast.mem_refreshed', "✓ Пам'ять оновлено"));
 }
 
 // Одноразова міграція: старий текстовий nm_memory пропускаємо через AI
@@ -1228,29 +1228,29 @@ export function showDeployInfo() {
   modal.innerHTML = `
     <div style="background:#fef8ec;border-radius:22px;padding:22px 20px 18px;width:100%;max-width:380px;box-shadow:0 20px 60px rgba(30,16,64,0.3)">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-        <div style="font-size:17px;font-weight:800;color:#1e1040">Інфо про деплой</div>
+        <div style="font-size:17px;font-weight:800;color:#1e1040">${t('nav.deploy.title', 'Інфо про деплой')}</div>
         <button onclick="closeDeployInfo()" style="background:none;border:none;font-size:22px;line-height:1;color:rgba(30,16,64,0.5);cursor:pointer;padding:4px 8px">×</button>
       </div>
       <div style="display:flex;flex-direction:column;gap:10px;font-size:13px">
         <div style="display:flex;justify-content:space-between;gap:12px;padding:8px 12px;background:rgba(139,105,20,0.08);border-radius:10px">
-          <div style="color:rgba(30,16,64,0.55);font-weight:600">Версія</div>
+          <div style="color:rgba(30,16,64,0.55);font-weight:600">${t('nav.deploy.version', 'Версія')}</div>
           <div style="color:#1e1040;font-weight:700;font-family:monospace">${version}</div>
         </div>
         <div style="display:flex;justify-content:space-between;gap:12px;padding:8px 12px;background:rgba(139,105,20,0.08);border-radius:10px">
-          <div style="color:rgba(30,16,64,0.55);font-weight:600">Коміт</div>
+          <div style="color:rgba(30,16,64,0.55);font-weight:600">${t('nav.deploy.commit', 'Коміт')}</div>
           <div style="color:#1e1040;font-weight:700;font-family:monospace">${commitLink ? `<a href="${commitLink}" target="_blank" rel="noopener" style="color:#c2790a;text-decoration:none">${commit}</a>` : commit}</div>
         </div>
         <div style="display:flex;justify-content:space-between;gap:12px;padding:8px 12px;background:rgba(139,105,20,0.08);border-radius:10px">
-          <div style="color:rgba(30,16,64,0.55);font-weight:600">Гілка звідки</div>
+          <div style="color:rgba(30,16,64,0.55);font-weight:600">${t('nav.deploy.branch_from', 'Гілка звідки')}</div>
           <div style="color:#1e1040;font-weight:700;font-family:monospace;text-align:right;word-break:break-all">${sourceLink ? `<a href="${sourceLink}" target="_blank" rel="noopener" style="color:#c2790a;text-decoration:none">${source}</a>` : source}</div>
         </div>
         <div style="display:flex;justify-content:space-between;gap:12px;padding:8px 12px;background:rgba(139,105,20,0.08);border-radius:10px">
-          <div style="color:rgba(30,16,64,0.55);font-weight:600">Гілка у main</div>
+          <div style="color:rgba(30,16,64,0.55);font-weight:600">${t('nav.deploy.branch_main', 'Гілка у main')}</div>
           <div style="color:#1e1040;font-weight:700;font-family:monospace">${branch}</div>
         </div>
       </div>
       <div style="margin-top:14px;padding-top:12px;border-top:1px solid rgba(30,16,64,0.08);font-size:11px;color:rgba(30,16,64,0.45);line-height:1.45">
-        Якщо бейдж не оновився після пушу — CI ще не доробив. Потягни застосунок вниз за 2 хв.
+        ${t('nav.deploy.hint', 'Якщо бейдж не оновився після пушу — CI ще не доробив. Потягни застосунок вниз за 2 хв.')}
       </div>
     </div>
   `;
