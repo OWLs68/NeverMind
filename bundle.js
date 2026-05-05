@@ -7739,8 +7739,8 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     }
     const normalize = (list, startIdx) => (list || []).map((c, i) => {
       if (typeof c === "string") return _makeCatObj(c, startIdx + i);
-      if (!c || typeof c !== "object") return _makeCatObj("\u041D\u0435\u0432\u0456\u0434\u043E\u043C\u043E", startIdx + i);
-      if (!c.id || !c.name) return _makeCatObj(c.name || "\u0411\u0435\u0437 \u043D\u0430\u0437\u0432\u0438", startIdx + i);
+      if (!c || typeof c !== "object") return _makeCatObj(t("fincat.fallback.unknown", "\u041D\u0435\u0432\u0456\u0434\u043E\u043C\u043E"), startIdx + i);
+      if (!c.id || !c.name) return _makeCatObj(c.name || t("fincat.fallback.no_name", "\u0411\u0435\u0437 \u043D\u0430\u0437\u0432\u0438"), startIdx + i);
       const known = FIN_DEFAULT_COLORS[c.name];
       if (!c.icon || c.icon === "other") c.icon = FIN_DEFAULT_ICONS[c.name] || c.icon || "other";
       if (!c.color) c.color = known || pickRandomCatColor(i);
@@ -7800,7 +7800,7 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     const order = list.length;
     const newCat = {
       id: "cat_" + (data.name || "new").toLowerCase().replace(/[^\wа-яґєії]/gi, "_").slice(0, 20) + "_" + Date.now().toString(36),
-      name: data.name || "\u0411\u0435\u0437 \u043D\u0430\u0437\u0432\u0438",
+      name: data.name || t("fincat.fallback.no_name", "\u0411\u0435\u0437 \u043D\u0430\u0437\u0432\u0438"),
       icon: data.icon || FIN_DEFAULT_ICONS[data.name] || "other",
       color: data.color || FIN_DEFAULT_COLORS[data.name] || pickRandomCatColor(order),
       // B-58: якщо юзер/AI задав явно — беремо як є (до 3 максимум); якщо нема — дефолтні обмежені до 3.
@@ -7838,8 +7838,8 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
   function mergeFinCategories(fromId, toId) {
     const fromCat = findFinCatById(fromId);
     const toCat = findFinCatById(toId);
-    if (!fromCat || !toCat) return { ok: false, reason: "\u041A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E \u043D\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E" };
-    if (fromCat.type !== toCat.type) return { ok: false, reason: "\u0420\u0456\u0437\u043D\u0456 \u0442\u0438\u043F\u0438 (expense/income)" };
+    if (!fromCat || !toCat) return { ok: false, reason: t("fincat.err.cat_not_found", "\u041A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E \u043D\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E") };
+    if (fromCat.type !== toCat.type) return { ok: false, reason: t("fincat.err.diff_types", "\u0420\u0456\u0437\u043D\u0456 \u0442\u0438\u043F\u0438 (expense/income)") };
     const txs = getFinance();
     let changed = 0;
     txs.forEach((t2) => {
@@ -7873,7 +7873,7 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
         return { ok: true };
       }
     }
-    return { ok: false, reason: "\u041A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E \u043D\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E" };
+    return { ok: false, reason: t("fincat.err.cat_not_found", "\u041A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E \u043D\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E") };
   }
   function findFinCatByName(name) {
     if (!name) return null;
@@ -7905,6 +7905,7 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
   var init_finance_cats = __esm({
     "src/tabs/finance-cats.js"() {
       init_finance();
+      init_utils();
       FIN_CAT_ICONS = {
         // Базові
         food: '<path d="M3 11h18M5 11V6a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v5M5 11v8a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-8"/>',
