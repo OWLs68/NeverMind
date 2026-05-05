@@ -108,7 +108,41 @@ export function isMessageRelevant(msg) {
   // лишається у табло. Перевіряємо реальний стан habits — якщо всі виконані
   // сьогодні (включно з quit), це повідомлення вже неактуальне.
   if (_isStaleHabitGeneralization(msg)) return false;
+  // B-127 fix (MPVly 05.05): аналог для задач. Сценарій: «Три активні задачі:
+  // 'A', 'B', 'C'. Що закриваємо?» — entityRefs порожні. Юзер закриває одну з
+  // цитованих → текст тепер обманливий. Витягуємо назви у лапках і шукаємо у
+  // nm_tasks: якщо хоч одна стала done → повідомлення stale.
+  if (_isStaleTaskGeneralization(msg)) return false;
   return true;
+}
+
+// Детектор stale task-повідомлень. Шукає назви задач у одинарних/подвійних
+// лапках у тексті і перевіряє проти nm_tasks. Якщо хоч одна цитована задача
+// тепер 'done' — повідомлення з переліком активних застаріло.
+function _isStaleTaskGeneralization(msg) {
+  const topic = (msg.topic || '').toLowerCase();
+  const text = msg.text || '';
+  const lower = text.toLowerCase();
+  const isTaskTopic = /task|задач/.test(topic);
+  const isTaskTextRelevant = /(активн[іе].*задач|чекают.*виконан|що\s+закрива|закрива[єе]мо)/.test(lower);
+  if (!isTaskTopic && !isTaskTextRelevant) return false;
+
+  try {
+    const tasks = getTasks();
+    if (!tasks.length) return false;
+
+    // Витягуємо цитати у лапках: 'X', "X", „X“, «X»
+    const matches = text.match(/['"„«]([^'"„«»\n]{2,80})['"”»]/g) || [];
+    const cited = matches.map(m => m.replace(/^['"„«]|['"”»]$/g, '').trim().toLowerCase()).filter(Boolean);
+    if (cited.length === 0) return false;
+
+    return cited.some(name => {
+      const task = tasks.find(x => (x.title || '').toLowerCase() === name);
+      return task && task.status === 'done';
+    });
+  } catch (e) {
+    return false;
+  }
 }
 
 // Детектор stale habit-повідомлень без entityRefs. true → можна викидати.

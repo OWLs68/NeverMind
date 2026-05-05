@@ -1135,6 +1135,14 @@ export function tryTabBoardUpdate(tab) {
   const latestMsg = tabMsgs[0];
   const latestAge = latestMsg ? (Date.now() - (latestMsg.ts || latestMsg.id || 0)) : Infinity;
   if (latestAge < 5 * 60 * 1000) return;
+  // B-127 fix (MPVly 05.05): SAFETY NET 60 хв (паралельно inbox-board.js:1185-1190)
+  // Якщо повідомлення на табло > 60 хв — примусова генерація без огляду на Judge.
+  // Захищає від «13 год тому» зависання коли Pruning не зміг ідентифікувати stale.
+  if (latestAge > 60 * 60 * 1000) {
+    console.log('[OWL board] tab=' + tab + ' stale > 60min, forcing generation');
+    generateBoardMessage(tab);
+    return;
+  }
   const lastTs = parseInt(localStorage.getItem(getOwlTabTsKey(tab)) || '0');
   const elapsed = Date.now() - lastTs;
   const isNewDay = lastTs > 0 && new Date(lastTs).toDateString() !== new Date().toDateString();
