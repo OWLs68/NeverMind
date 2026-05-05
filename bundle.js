@@ -12709,7 +12709,7 @@ ${UI_TOOLS_RULES}`;
     saveQuitLog(log);
     renderProdHabits();
     const fd = s.freedomDays;
-    showToast("\u{1F4AA} +1 \u0432\u0456\u043B\u044C\u043D\u0438\u0439 \u0434\u0435\u043D\u044C! \u0412\u0441\u044C\u043E\u0433\u043E: " + fd + " " + _dayWord(fd));
+    showToast(t("habits.quit.toast.held", "\u{1F4AA} +1 \u0432\u0456\u043B\u044C\u043D\u0438\u0439 \u0434\u0435\u043D\u044C! \u0412\u0441\u044C\u043E\u0433\u043E: {fd} {dayWord}", { fd, dayWord: _dayWord(fd) }));
   }
   function relapseQuitHabit(habitId) {
     const today = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
@@ -12718,7 +12718,7 @@ ${UI_TOOLS_RULES}`;
     const s = log[habitId];
     if (!s.relapses) s.relapses = [];
     if (s.relapses[s.relapses.length - 1] === today) {
-      showToast("\u0417\u0440\u0438\u0432 \u0432\u0436\u0435 \u0432\u0456\u0434\u043C\u0456\u0447\u0435\u043D\u043E \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456");
+      showToast(t("habits.quit.toast.relapse_dup", "\u0417\u0440\u0438\u0432 \u0432\u0436\u0435 \u0432\u0456\u0434\u043C\u0456\u0447\u0435\u043D\u043E \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456"));
       return;
     }
     s.relapses.push(today);
@@ -12740,11 +12740,11 @@ ${UI_TOOLS_RULES}`;
   function _owlQuitRelapse(habitId, prevStreak, freedomDays) {
     const habits = getHabits();
     const h = habits.find((x) => x.id === habitId);
-    const name = h ? h.name : "\u0437\u0432\u0438\u0447\u043A\u0443";
-    const fdText = freedomDays > 0 ? ` \u0422\u0432\u043E\u0457 ${freedomDays} \u0432\u0456\u043B\u044C\u043D\u0438\u0445 ${_dayWord(freedomDays)} \u2014 \u043D\u0430\u0437\u0430\u0432\u0436\u0434\u0438 \u0442\u0432\u043E\u0457.` : "";
+    const name = h ? h.name : t("habits.quit.fallback_name", "\u0437\u0432\u0438\u0447\u043A\u0443");
+    const fdText = freedomDays > 0 ? t("habits.quit.freedom_kept", " \u0422\u0432\u043E\u0457 {fd} \u0432\u0456\u043B\u044C\u043D\u0438\u0445 {dayWord} \u2014 \u043D\u0430\u0437\u0430\u0432\u0436\u0434\u0438 \u0442\u0432\u043E\u0457.", { fd: freedomDays, dayWord: _dayWord(freedomDays) }) : "";
     const key = localStorage.getItem("nm_gemini_key");
     if (!key) {
-      addInboxChatMsg("agent", `\u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0432\u0430\u0436\u043A\u0438\u0439 \u0434\u0435\u043D\u044C \u0437 "${name}".${fdText} \u0417\u0430\u0432\u0442\u0440\u0430 \u043D\u043E\u0432\u0438\u0439 \u0448\u0430\u043D\u0441.`);
+      addInboxChatMsg("agent", t("habits.quit.msg.hard_day_offline", '\u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0432\u0430\u0436\u043A\u0438\u0439 \u0434\u0435\u043D\u044C \u0437 "{name}".{fdText} \u0417\u0430\u0432\u0442\u0440\u0430 \u043D\u043E\u0432\u0438\u0439 \u0448\u0430\u043D\u0441.', { name, fdText }));
       return;
     }
     const settings = JSON.parse(localStorage.getItem("nm_settings") || "{}");
@@ -12769,7 +12769,7 @@ ${UI_TOOLS_RULES}`;
       const reply = d.choices?.[0]?.message?.content;
       if (reply) addInboxChatMsg("agent", reply);
     }).catch(() => {
-      addInboxChatMsg("agent", `\u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0432\u0430\u0436\u043A\u0438\u0439 \u0434\u0435\u043D\u044C \u0437 "${name}".${fdText} \u0417\u0430\u0432\u0442\u0440\u0430 \u2014 \u043D\u043E\u0432\u0438\u0439 \u0448\u0430\u043D\u0441.`);
+      addInboxChatMsg("agent", t("habits.quit.msg.hard_day_fallback", '\u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0432\u0430\u0436\u043A\u0438\u0439 \u0434\u0435\u043D\u044C \u0437 "{name}".{fdText} \u0417\u0430\u0432\u0442\u0440\u0430 \u2014 \u043D\u043E\u0432\u0438\u0439 \u0448\u0430\u043D\u0441.', { name, fdText }));
     });
   }
   function setHabitModalType(type) {
@@ -12808,7 +12808,7 @@ ${UI_TOOLS_RULES}`;
     const h = habits.find((x) => x.id === id);
     if (!h) return;
     editingHabitId = id;
-    document.getElementById("habit-modal-title").textContent = "\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0437\u0432\u0438\u0447\u043A\u0443";
+    document.getElementById("habit-modal-title").textContent = t("habits.modal.title_edit", "\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0437\u0432\u0438\u0447\u043A\u0443");
     document.getElementById("habit-input-name").value = h.name;
     let details = h.details || "";
     if (!details && h.name) {
@@ -12844,7 +12844,7 @@ ${UI_TOOLS_RULES}`;
   }
   function openAddHabit() {
     editingHabitId = null;
-    document.getElementById("habit-modal-title").textContent = "\u041D\u043E\u0432\u0430 \u0437\u0432\u0438\u0447\u043A\u0430";
+    document.getElementById("habit-modal-title").textContent = t("habits.modal.title_new", "\u041D\u043E\u0432\u0430 \u0437\u0432\u0438\u0447\u043A\u0430");
     document.getElementById("habit-input-name").value = "";
     document.getElementById("habit-input-details").value = "";
     document.getElementById("habit-input-emoji").value = "";
@@ -12864,7 +12864,7 @@ ${UI_TOOLS_RULES}`;
   function saveHabit() {
     const name = document.getElementById("habit-input-name").value.trim();
     if (!name) {
-      showToast("\u0412\u0432\u0435\u0434\u0438 \u043D\u0430\u0437\u0432\u0443 \u0437\u0432\u0438\u0447\u043A\u0438");
+      showToast(t("habits.modal.err.empty_name", "\u0412\u0432\u0435\u0434\u0438 \u043D\u0430\u0437\u0432\u0443 \u0437\u0432\u0438\u0447\u043A\u0438"));
       return;
     }
     const details = document.getElementById("habit-input-details").value.trim();
@@ -12883,7 +12883,7 @@ ${UI_TOOLS_RULES}`;
     closeHabitModal();
     renderHabits();
     renderProdHabits();
-    showToast(editingHabitId ? "\u2713 \u0417\u0432\u0438\u0447\u043A\u0443 \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043E" : type === "quit" ? "\u{1F6AB} \u0427\u0435\u043B\u0435\u043D\u0434\u0436 \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E" : "\u2713 \u0417\u0432\u0438\u0447\u043A\u0443 \u0434\u043E\u0434\u0430\u043D\u043E");
+    showToast(editingHabitId ? t("habits.toast.updated", "\u2713 \u0417\u0432\u0438\u0447\u043A\u0443 \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043E") : type === "quit" ? t("habits.toast.quit_created", "\u{1F6AB} \u0427\u0435\u043B\u0435\u043D\u0434\u0436 \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E") : t("habits.toast.added", "\u2713 \u0417\u0432\u0438\u0447\u043A\u0443 \u0434\u043E\u0434\u0430\u043D\u043E"));
   }
   function deleteHabitFromModal() {
     if (!editingHabitId) return;
@@ -12893,7 +12893,7 @@ ${UI_TOOLS_RULES}`;
     renderHabits();
     renderProdHabits();
     closeHabitModal();
-    if (item) showUndoToast("\u0417\u0432\u0438\u0447\u043A\u0443 \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E", () => {
+    if (item) showUndoToast(t("habits.toast.deleted", "\u0417\u0432\u0438\u0447\u043A\u0443 \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E"), () => {
       const habits = getHabits();
       habits.push(item);
       saveHabits(habits);
@@ -13020,7 +13020,7 @@ ${UI_TOOLS_RULES}`;
     const today = (/* @__PURE__ */ new Date()).toDateString();
     const todayDow = ((/* @__PURE__ */ new Date()).getDay() + 6) % 7;
     if (habits.length === 0) {
-      el.innerHTML = '<div style="text-align:center;padding:20px 0;color:rgba(30,16,64,0.3);font-size:15px">\u0414\u043E\u0434\u0430\u0439 \u043F\u0435\u0440\u0448\u0443 \u0437\u0432\u0438\u0447\u043A\u0443</div>';
+      el.innerHTML = '<div style="text-align:center;padding:20px 0;color:rgba(30,16,64,0.3);font-size:15px">' + t("habits.empty.me_list", "\u0414\u043E\u0434\u0430\u0439 \u043F\u0435\u0440\u0448\u0443 \u0437\u0432\u0438\u0447\u043A\u0443") + "</div>";
       return;
     }
     el.innerHTML = habits.map(function(h) {
@@ -13078,7 +13078,7 @@ ${UI_TOOLS_RULES}`;
     const taskCountEl = document.getElementById("prod-tab-tasks-count");
     const taskSubEl = document.getElementById("prod-tab-tasks-sub");
     if (taskCountEl) taskCountEl.textContent = taskCount;
-    if (taskSubEl) taskSubEl.textContent = taskCount === 1 ? "\u0430\u043A\u0442\u0438\u0432\u043D\u0430" : "\u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0445";
+    if (taskSubEl) taskSubEl.textContent = taskCount === 1 ? t("tasks.counter.active_one", "\u0430\u043A\u0442\u0438\u0432\u043D\u0430") : t("tasks.counter.active_many", "\u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0445");
     const habits = getHabits();
     const buildHabitsAll = habits.filter((h) => h.type !== "quit");
     const quitHabitsAll = habits.filter((h) => h.type === "quit");
@@ -13086,7 +13086,7 @@ ${UI_TOOLS_RULES}`;
     const habitSubEl = document.getElementById("prod-tab-habits-sub");
     const totalHabits = buildHabitsAll.length + quitHabitsAll.length;
     if (habitCountEl) habitCountEl.textContent = totalHabits;
-    if (habitSubEl) habitSubEl.textContent = totalHabits === 1 ? "\u0437\u0432\u0438\u0447\u043A\u0430" : "\u0437\u0432\u0438\u0447\u043E\u043A";
+    if (habitSubEl) habitSubEl.textContent = totalHabits === 1 ? t("habits.counter.one", "\u0437\u0432\u0438\u0447\u043A\u0430") : t("habits.counter.many", "\u0437\u0432\u0438\u0447\u043E\u043A");
     _attachProdTabSwipe();
   }
   function switchProdTab(tab) {
@@ -13257,7 +13257,7 @@ ${UI_TOOLS_RULES}`;
     if (countEl) countEl.textContent = `${doneTodayCount} / ${todayHabits.length}`;
     if (barEl) barEl.style.width = todayHabits.length > 0 ? `${Math.round(doneTodayCount / todayHabits.length * 100)}%` : "0%";
     if (habits.length === 0) {
-      el.innerHTML = '<div style="text-align:center;padding:40px 20px;color:rgba(30,16,64,0.3);font-size:15px">\u0429\u0435 \u043D\u0435\u043C\u0430\u0454 \u0437\u0432\u0438\u0447\u043E\u043A<br>\u041D\u0430\u0442\u0438\u0441\u043D\u0438 + \u0449\u043E\u0431 \u0434\u043E\u0434\u0430\u0442\u0438</div>';
+      el.innerHTML = '<div style="text-align:center;padding:40px 20px;color:rgba(30,16,64,0.3);font-size:15px">' + t("habits.empty.prod_list", "\u0429\u0435 \u043D\u0435\u043C\u0430\u0454 \u0437\u0432\u0438\u0447\u043E\u043A<br>\u041D\u0430\u0442\u0438\u0441\u043D\u0438 + \u0449\u043E\u0431 \u0434\u043E\u0434\u0430\u0442\u0438") + "</div>";
       return;
     }
     const buildHabits = habits.filter((h) => h.type !== "quit");
@@ -13311,7 +13311,7 @@ ${UI_TOOLS_RULES}`;
       return '<div class="prod-habit-item-wrap" id="prod-habit-wrap-' + h.id + '" data-id="' + h.id + '" style="position:relative;border-radius:16px;margin-bottom:var(--card-gap);overflow:hidden"><div id="prod-habit-item-' + h.id + '" onclick="prodHabitCardClick(' + h.id + ', event)" style="background:rgba(255,255,255,0.6);border:1.5px solid rgba(255,255,255,0.85);border-radius:16px;padding:var(--card-pad-y) var(--card-pad-x);box-shadow:var(--card-shadow);position:relative;z-index:1;will-change:transform;cursor:pointer;-webkit-tap-highlight-color:transparent"><div style="display:flex;align-items:center;gap:12px;margin-bottom:8px"><div onclick="event.stopPropagation();toggleProdHabitToday(' + h.id + ')" data-habit-check="1" style="width:40px;height:40px;border-radius:12px;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.25s;-webkit-tap-highlight-color:transparent;' + checkBg + `"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${checkStroke}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></div><div style="flex:1;min-width:0"><div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px;margin-bottom:1px"><span style="font-size:16px;font-weight:700;color:#1e1040">` + escapeHtml(shortName2) + "</span>" + countLabel + '</div><div style="font-size:11px;font-weight:600;color:' + pctColor2 + '">' + streakTxt + habitPct + "% \u0437\u0430 30 \u0434\u043D\u0456\u0432</div></div></div>" + squaresHtml + '<div style="display:flex;gap:4px;padding-left:52px;margin-top:6px">' + dayDots2 + "</div></div></div>";
     }).join("");
     if (quitHabits.length > 0) {
-      html += '<div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.08em;margin:14px 14px 8px">\u{1F6AB} \u0427\u0435\u043B\u0435\u043D\u0434\u0436\u0456</div>';
+      html += '<div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.08em;margin:14px 14px 8px">' + t("habits.quit.section_title", "\u{1F6AB} \u0427\u0435\u043B\u0435\u043D\u0434\u0436\u0456") + "</div>";
       html += quitHabits.map((h) => _renderQuitHabitCard(h)).join("");
     }
     el.innerHTML = html;
@@ -13351,13 +13351,13 @@ ${UI_TOOLS_RULES}`;
     const cardBg = relapses30 === 0 && streak > 0 ? "background:rgba(232,240,232,0.8);border-color:rgba(22,163,74,0.2)" : relapses30 >= 6 ? "background:rgba(255,235,235,0.85);border-color:rgba(220,38,38,0.2)" : "background:rgba(255,248,240,0.85);border-color:rgba(234,88,12,0.15)";
     const streakColor = streak > 0 ? "#16a34a" : "rgba(30,16,64,0.3)";
     const lampHtml = '<div style="flex-shrink:0;width:14px;height:14px;border-radius:50%;background:' + lamp.color + ";box-shadow:0 0 8px 3px " + lamp.glow + ';margin-top:3px"></div>';
-    return '<div class="prod-habit-item-wrap" id="quit-wrap-' + h.id + '" data-id="' + h.id + '" style="position:relative;border-radius:16px;margin-bottom:var(--card-gap);overflow:hidden"><div id="prod-habit-item-' + h.id + '" onclick="openEditHabit(' + h.id + ')" style="' + cardBg + ';border:1.5px solid;border-radius:16px;padding:var(--card-pad-y) var(--card-pad-x);position:relative;z-index:1;cursor:pointer;-webkit-tap-highlight-color:transparent"><div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px">' + lampHtml + '<div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:700;color:#1e1040;line-height:1.2">' + escapeHtml(shortName) + '</div><div style="font-size:11px;color:' + lamp.color + ';font-weight:600;margin-top:1px">' + lamp.label + '</div></div><div style="text-align:right;flex-shrink:0"><div style="font-size:16px;font-weight:700;color:' + trend.color + ';line-height:1">' + trend.arrow + '</div><div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:500">' + trend.text + '</div></div></div><div style="display:flex;align-items:baseline;gap:10px;margin-bottom:8px"><div><span style="font-size:26px;font-weight:800;color:#1e1040;line-height:1">' + freedomDays + '</span><span style="font-size:12px;font-weight:600;color:rgba(30,16,64,0.5);margin-left:4px">\u0432\u0456\u043B\u044C\u043D\u0438\u0445 ' + _dayWord(freedomDays) + "</span></div>" + (streak > 0 ? '<div style="font-size:11px;font-weight:600;color:' + streakColor + ';margin-left:auto">\u{1F525} \u0441\u0435\u0440\u0456\u044F ' + streak + " " + _dayWord(streak) + (longest > streak ? " \xB7 \u0440\u0435\u043A\u043E\u0440\u0434 " + longest : "") + "</div>" : longest > 0 ? '<div style="font-size:11px;font-weight:500;color:rgba(30,16,64,0.35);margin-left:auto">\u0440\u0435\u043A\u043E\u0440\u0434 ' + longest + " " + _dayWord(longest) + "</div>" : "") + '</div><div style="display:flex;gap:8px" onclick="event.stopPropagation()"><button ontouchend="event.preventDefault();event.stopPropagation();holdQuitHabit(' + h.id + ')" onclick="holdQuitHabit(' + h.id + ')" style="flex:2;padding:10px;border-radius:12px;border:none;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;' + (heldToday ? "background:rgba(22,163,74,0.15);color:#16a34a" : "background:rgba(22,163,74,0.1);color:#16a34a") + '">' + (heldToday ? "\u2705 \u0422\u0440\u0438\u043C\u0430\u044E\u0441\u044C \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456" : "\u2713 \u0422\u0440\u0438\u043C\u0430\u044E\u0441\u044C") + '</button><button ontouchend="event.preventDefault();event.stopPropagation();confirmQuitRelapse(' + h.id + ')" onclick="confirmQuitRelapse(' + h.id + ')" style="flex:1;padding:10px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.1);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;background:rgba(30,16,64,0.03);color:rgba(30,16,64,0.35)">\u0417\u0456\u0440\u0432\u0430\u0432\u0441\u044F</button></div></div></div>';
+    return '<div class="prod-habit-item-wrap" id="quit-wrap-' + h.id + '" data-id="' + h.id + '" style="position:relative;border-radius:16px;margin-bottom:var(--card-gap);overflow:hidden"><div id="prod-habit-item-' + h.id + '" onclick="openEditHabit(' + h.id + ')" style="' + cardBg + ';border:1.5px solid;border-radius:16px;padding:var(--card-pad-y) var(--card-pad-x);position:relative;z-index:1;cursor:pointer;-webkit-tap-highlight-color:transparent"><div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px">' + lampHtml + '<div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:700;color:#1e1040;line-height:1.2">' + escapeHtml(shortName) + '</div><div style="font-size:11px;color:' + lamp.color + ';font-weight:600;margin-top:1px">' + lamp.label + '</div></div><div style="text-align:right;flex-shrink:0"><div style="font-size:16px;font-weight:700;color:' + trend.color + ';line-height:1">' + trend.arrow + '</div><div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:500">' + trend.text + '</div></div></div><div style="display:flex;align-items:baseline;gap:10px;margin-bottom:8px"><div><span style="font-size:26px;font-weight:800;color:#1e1040;line-height:1">' + freedomDays + '</span><span style="font-size:12px;font-weight:600;color:rgba(30,16,64,0.5);margin-left:4px">\u0432\u0456\u043B\u044C\u043D\u0438\u0445 ' + _dayWord(freedomDays) + "</span></div>" + (streak > 0 ? '<div style="font-size:11px;font-weight:600;color:' + streakColor + ';margin-left:auto">\u{1F525} \u0441\u0435\u0440\u0456\u044F ' + streak + " " + _dayWord(streak) + (longest > streak ? " \xB7 \u0440\u0435\u043A\u043E\u0440\u0434 " + longest : "") + "</div>" : longest > 0 ? '<div style="font-size:11px;font-weight:500;color:rgba(30,16,64,0.35);margin-left:auto">\u0440\u0435\u043A\u043E\u0440\u0434 ' + longest + " " + _dayWord(longest) + "</div>" : "") + '</div><div style="display:flex;gap:8px" onclick="event.stopPropagation()"><button ontouchend="event.preventDefault();event.stopPropagation();holdQuitHabit(' + h.id + ')" onclick="holdQuitHabit(' + h.id + ')" style="flex:2;padding:10px;border-radius:12px;border:none;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;' + (heldToday ? "background:rgba(22,163,74,0.15);color:#16a34a" : "background:rgba(22,163,74,0.1);color:#16a34a") + '">' + (heldToday ? t("habits.quit.btn.held_today", "\u2705 \u0422\u0440\u0438\u043C\u0430\u044E\u0441\u044C \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456") : t("habits.quit.btn.hold", "\u2713 \u0422\u0440\u0438\u043C\u0430\u044E\u0441\u044C")) + '</button><button ontouchend="event.preventDefault();event.stopPropagation();confirmQuitRelapse(' + h.id + ')" onclick="confirmQuitRelapse(' + h.id + ')" style="flex:1;padding:10px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.1);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;background:rgba(30,16,64,0.03);color:rgba(30,16,64,0.35)">' + t("habits.quit.btn.relapse", "\u0417\u0456\u0440\u0432\u0430\u0432\u0441\u044F") + "</button></div></div></div>";
   }
   function confirmQuitRelapse(habitId) {
     const s = getQuitStatus(habitId);
     const fd = s.freedomDays || 0;
     const fdText = fd > 0 ? "\n" + fd + " \u0432\u0456\u043B\u044C\u043D\u0438\u0445 " + _dayWord(fd) + " \u0437\u0430\u043B\u0438\u0448\u0430\u0442\u044C\u0441\u044F \u0442\u0432\u043E\u0457\u043C\u0438." : "";
-    if (window.confirm("\u0412\u0430\u0436\u043A\u0438\u0439 \u0434\u0435\u043D\u044C? \u0412\u0456\u0434\u043C\u0456\u0442\u0438\u0442\u0438 \u0437\u0440\u0438\u0432?" + fdText)) {
+    if (window.confirm(t("habits.quit.confirm.relapse", "\u0412\u0430\u0436\u043A\u0438\u0439 \u0434\u0435\u043D\u044C? \u0412\u0456\u0434\u043C\u0456\u0442\u0438\u0442\u0438 \u0437\u0440\u0438\u0432?") + fdText)) {
       relapseQuitHabit(habitId);
     }
   }
@@ -13373,7 +13373,7 @@ ${UI_TOOLS_RULES}`;
         saveHabits(allHabits.filter((h) => String(h.id) !== id));
         renderHabits();
         renderProdHabits();
-        if (item) showUndoToast("\u0417\u0432\u0438\u0447\u043A\u0443 \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E", () => {
+        if (item) showUndoToast(t("habits.toast.deleted", "\u0417\u0432\u0438\u0447\u043A\u0443 \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E"), () => {
           const habits = getHabits();
           const idx = Math.min(habitOrigIdx, habits.length);
           habits.splice(idx, 0, item);
