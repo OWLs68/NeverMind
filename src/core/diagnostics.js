@@ -218,19 +218,19 @@ export function runSmokeTests() {
   const start = performance.now();
 
   // 1. localStorage write/read/delete
-  tests.push(_runTest('Сховище write/read', () => {
+  tests.push(_runTest(t('diag.smoke.storage_rw', 'Сховище write/read'), () => {
     const payload = { v: 'ok', ts: Date.now() };
     localStorage.setItem(SMOKE_TEST_KEY, JSON.stringify(payload));
     const read = JSON.parse(localStorage.getItem(SMOKE_TEST_KEY));
-    if (read.v !== 'ok') throw new Error('Read value mismatch');
+    if (read.v !== 'ok') throw new Error(t('diag.smoke.read_mismatch', 'Read value mismatch'));
     localStorage.removeItem(SMOKE_TEST_KEY);
-    if (localStorage.getItem(SMOKE_TEST_KEY) !== null) throw new Error('Remove не спрацював');
+    if (localStorage.getItem(SMOKE_TEST_KEY) !== null) throw new Error(t('diag.smoke.remove_failed', 'Remove не спрацював'));
   }));
 
   // 2. JSON парсинг критичних ключів — має бути масивом
   const arrayKeys = ['nm_tasks', 'nm_notes', 'nm_habits2', 'nm_finance', 'nm_trash',
                      'nm_moments', 'nm_projects', 'nm_events', 'nm_health_cards', 'nm_inbox'];
-  tests.push(_runTest('JSON цілісність (масиви)', () => {
+  tests.push(_runTest(t('diag.smoke.json_arrays', 'JSON цілісність (масиви)'), () => {
     const broken = [];
     for (const k of arrayKeys) {
       const raw = localStorage.getItem(k);
@@ -248,7 +248,7 @@ export function runSmokeTests() {
   // 3. JSON парсинг об'єктних ключів
   const objectKeys = ['nm_settings', 'nm_habit_log2', 'nm_quit_log', 'nm_finance_budget',
                       'nm_finance_cats', 'nm_folders_meta'];
-  tests.push(_runTest('JSON цілісність (об\'єкти)', () => {
+  tests.push(_runTest(t('diag.smoke.json_objects', 'JSON цілісність (об\'єкти)'), () => {
     const broken = [];
     for (const k of objectKeys) {
       const raw = localStorage.getItem(k);
@@ -264,7 +264,7 @@ export function runSmokeTests() {
   }));
 
   // 4. Date формати
-  tests.push(_runTest('Формат дат', () => {
+  tests.push(_runTest(t('diag.smoke.date_format', 'Формат дат'), () => {
     const iso = new Date().toISOString().slice(0, 10);
     if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) throw new Error(`ISO date broken: ${iso}`);
     const utc = new Date().toDateString();
@@ -272,40 +272,40 @@ export function runSmokeTests() {
   }));
 
   // 5. Критичні DOM елементи
-  tests.push(_runTest('DOM структура', () => {
+  tests.push(_runTest(t('diag.smoke.dom_struct', 'DOM структура'), () => {
     const required = ['log-panel', 'toast', 'tab-bar', 'onboarding', 'splash'];
     const missing = required.filter(id => !document.getElementById(id));
-    if (missing.length) throw new Error('відсутні: ' + missing.join(', '));
+    if (missing.length) throw new Error(t('diag.smoke.missing', 'відсутні: {list}', { list: missing.join(', ') }));
   }));
 
   // 6. Критичні глобальні функції у window
-  tests.push(_runTest('Глобальні функції', () => {
+  tests.push(_runTest(t('diag.smoke.globals', 'Глобальні функції'), () => {
     const required = ['switchTab', 'showErrorLog', 'sendOwlReply', 'toggleOwlTabChat',
                       'scrollOwlTabChips', 'closeLogPanel', 'copyLogForClaude'];
     const missing = required.filter(g => typeof window[g] !== 'function');
-    if (missing.length) throw new Error('відсутні: ' + missing.join(', '));
+    if (missing.length) throw new Error(t('diag.smoke.missing', 'відсутні: {list}', { list: missing.join(', ') }));
   }));
 
   // 7. CSS-змінна висоти таббару
-  tests.push(_runTest('CSS --tabbar-h', () => {
+  tests.push(_runTest(t('diag.smoke.tabbar_var', 'CSS --tabbar-h'), () => {
     const val = getComputedStyle(document.documentElement).getPropertyValue('--tabbar-h');
-    if (!val || val.trim() === '') throw new Error('не встановлена');
+    if (!val || val.trim() === '') throw new Error(t('diag.smoke.not_set', 'не встановлена'));
   }));
 
   // 8. Event dispatcher (nm-data-changed)
-  tests.push(_runTest('Event система', () => {
+  tests.push(_runTest(t('diag.smoke.events', 'Event система'), () => {
     let received = false;
     const handler = e => { if (e.detail === 'smoke-test') received = true; };
     window.addEventListener('nm-data-changed', handler);
     window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'smoke-test' }));
     window.removeEventListener('nm-data-changed', handler);
-    if (!received) throw new Error('nm-data-changed не отримано');
+    if (!received) throw new Error(t('diag.smoke.event_not_received', 'nm-data-changed не отримано'));
   }));
 
   // 9. Clipboard API (не критично, але хочемо знати)
-  tests.push(_runTest('Clipboard API', () => {
+  tests.push(_runTest(t('diag.smoke.clipboard', 'Clipboard API'), () => {
     if (!navigator.clipboard || typeof navigator.clipboard.writeText !== 'function') {
-      throw new Error('недоступний');
+      throw new Error(t('diag.smoke.unavailable', 'недоступний'));
     }
   }));
 
@@ -333,8 +333,8 @@ export function renderSmokeTests() {
   const overall = fails > 0 ? 'fail' : 'ok';
   const overallIcon = fails > 0 ? '✗' : '✓';
   const overallText = fails > 0
-    ? `${passes}/${tests.length} пройшли · ${fails} провал`
-    : `${tests.length}/${tests.length} пройшли · ${totalMs}мс`;
+    ? t('diag.smoke.summary_fail', '{passes}/{total} пройшли · {fails} провал', { passes, total: tests.length, fails })
+    : t('diag.smoke.summary_ok', '{total}/{total} пройшли · {ms}мс', { total: tests.length, ms: totalMs });
   const overallColor = fails > 0 ? '#dc2626' : '#16a34a';
   const overallBg = fails > 0 ? 'rgba(239,68,68,0.08)' : 'rgba(34,197,94,0.08)';
   const overallBorder = fails > 0 ? 'rgba(239,68,68,0.3)' : 'rgba(34,197,94,0.25)';
@@ -346,7 +346,7 @@ export function renderSmokeTests() {
     <div onclick="toggleSmokeDetails()" style="display:flex;align-items:center;gap:12px;cursor:pointer;-webkit-tap-highlight-color:transparent">
       <span style="font-size:22px;color:${overallColor};line-height:1;flex-shrink:0">${overallIcon}</span>
       <div style="flex:1;min-width:0">
-        <div style="font-size:11px;font-weight:800;color:${overallColor};text-transform:uppercase;letter-spacing:0.5px">Smoke тести</div>
+        <div style="font-size:11px;font-weight:800;color:${overallColor};text-transform:uppercase;letter-spacing:0.5px">${t('diag.smoke.title', 'Smoke тести')}</div>
         <div style="font-size:14px;color:#1e1040;font-weight:700;margin-top:1px">${overallText}</div>
       </div>
       <span id="smoke-expand-arrow" style="font-size:14px;color:rgba(30,16,64,0.5);flex-shrink:0">▸</span>
@@ -484,7 +484,7 @@ export function renderPerformance() {
   const data = getPerformanceData();
 
   // Startup
-  const startupStr = data.startupMs != null ? `${data.startupMs}мс` : 'невідомо';
+  const startupStr = data.startupMs != null ? `${data.startupMs}мс` : t('diag.perf.unknown', 'невідомо');
   const startupStatus = data.startupMs == null ? 'unknown'
     : data.startupMs < 1500 ? 'ok'
     : data.startupMs < 3000 ? 'warn' : 'fail';
@@ -517,10 +517,10 @@ export function renderPerformance() {
   const overallBorder = { ok: 'rgba(34,197,94,0.25)', warn: 'rgba(251,191,36,0.35)', fail: 'rgba(239,68,68,0.3)' }[overall];
 
   const summaryParts = [];
-  summaryParts.push(`Старт ${startupStr}`);
-  if (data.longTaskSupported) summaryParts.push(`${longTasksCount} лагів`);
-  summaryParts.push(`${data.fetches.length} запитів`);
-  if (failedFetches.length > 0) summaryParts.push(`${failedFetches.length} з помилкою`);
+  summaryParts.push(t('diag.perf.startup_short', 'Старт {v}', { v: startupStr }));
+  if (data.longTaskSupported) summaryParts.push(t('diag.perf.lags_short', '{n} лагів', { n: longTasksCount }));
+  summaryParts.push(t('diag.perf.requests_short', '{n} запитів', { n: data.fetches.length }));
+  if (failedFetches.length > 0) summaryParts.push(t('diag.perf.with_error', '{n} з помилкою', { n: failedFetches.length }));
   const overallText = summaryParts.join(' · ');
 
   const statusIcon = { ok: '✓', warn: '⚠', fail: '✗', unknown: '·' };
@@ -532,7 +532,7 @@ export function renderPerformance() {
   rows.push(`<div style="display:flex;align-items:center;gap:10px;font-size:13px;line-height:1.4">
     <span style="color:${statusColor[startupStatus]};font-weight:800;flex-shrink:0;width:14px">${statusIcon[startupStatus]}</span>
     <div style="flex:1;min-width:0">
-      <span style="color:#1e1040;font-weight:600">Час запуску</span>
+      <span style="color:#1e1040;font-weight:600">${t('diag.perf.startup_time', 'Час запуску')}</span>
       <span style="color:rgba(30,16,64,0.7)">: ${startupStr}</span>
     </div>
   </div>`);
@@ -540,12 +540,12 @@ export function renderPerformance() {
   // Long tasks
   if (data.longTaskSupported) {
     const msg = longTasksCount === 0
-      ? 'немає'
-      : `${longTasksCount} (найдовший ${worstLongTask}мс)`;
+      ? t('diag.perf.none', 'немає')
+      : t('diag.perf.worst', '{n} (найдовший {ms}мс)', { n: longTasksCount, ms: worstLongTask });
     rows.push(`<div style="display:flex;align-items:center;gap:10px;font-size:13px;line-height:1.4">
       <span style="color:${statusColor[longTasksStatus]};font-weight:800;flex-shrink:0;width:14px">${statusIcon[longTasksStatus]}</span>
       <div style="flex:1;min-width:0">
-        <span style="color:#1e1040;font-weight:600">Лаги UI >50мс</span>
+        <span style="color:#1e1040;font-weight:600">${t('diag.perf.lags_50', 'Лаги UI >50мс')}</span>
         <span style="color:rgba(30,16,64,0.7)">: ${msg}</span>
       </div>
     </div>`);
@@ -553,20 +553,20 @@ export function renderPerformance() {
     rows.push(`<div style="display:flex;align-items:center;gap:10px;font-size:13px;line-height:1.4">
       <span style="color:${statusColor.unknown};font-weight:800;flex-shrink:0;width:14px">·</span>
       <div style="flex:1;min-width:0">
-        <span style="color:rgba(30,16,64,0.6);font-weight:600">Лаги UI</span>
-        <span style="color:rgba(30,16,64,0.55);font-style:italic">: Safari не підтримує цей API</span>
+        <span style="color:rgba(30,16,64,0.6);font-weight:600">${t('diag.perf.lags', 'Лаги UI')}</span>
+        <span style="color:rgba(30,16,64,0.55);font-style:italic">: ${t('diag.perf.safari_no_api', 'Safari не підтримує цей API')}</span>
       </div>
     </div>`);
   }
 
   // Fetches summary
   const fetchMsg = data.fetches.length === 0
-    ? 'ще не було'
-    : `${data.fetches.length} запитів · середній ${avgFetchMs}мс` + (failedFetches.length > 0 ? ` · ${failedFetches.length} з помилкою` : '');
+    ? t('diag.perf.no_requests', 'ще не було')
+    : t('diag.perf.requests_avg', '{n} запитів · середній {ms}мс', { n: data.fetches.length, ms: avgFetchMs }) + (failedFetches.length > 0 ? t('diag.perf.with_error_suffix', ' · {n} з помилкою', { n: failedFetches.length }) : '');
   rows.push(`<div style="display:flex;align-items:center;gap:10px;font-size:13px;line-height:1.4">
     <span style="color:${statusColor[fetchStatus]};font-weight:800;flex-shrink:0;width:14px">${statusIcon[fetchStatus]}</span>
     <div style="flex:1;min-width:0">
-      <span style="color:#1e1040;font-weight:600">HTTP запити</span>
+      <span style="color:#1e1040;font-weight:600">${t('diag.perf.http', 'HTTP запити')}</span>
       <span style="color:rgba(30,16,64,0.7)">: ${fetchMsg}</span>
     </div>
   </div>`);
@@ -574,7 +574,7 @@ export function renderPerformance() {
   // Останні 5 запитів (детально)
   if (data.fetches.length > 0) {
     const recent = data.fetches.slice(-5).reverse();
-    rows.push('<div style="margin-top:8px;padding-top:8px;border-top:1px dashed rgba(30,16,64,0.1)"><div style="font-size:10px;font-weight:800;color:rgba(30,16,64,0.55);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">Останні запити</div>' +
+    rows.push('<div style="margin-top:8px;padding-top:8px;border-top:1px dashed rgba(30,16,64,0.1)"><div style="font-size:10px;font-weight:800;color:rgba(30,16,64,0.55);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">' + t('diag.perf.recent', 'Останні запити') + '</div>' +
       recent.map(f => {
         const col = f.status === 0 || f.status >= 400 ? '#dc2626' : f.duration > 3000 ? '#b45309' : '#16a34a';
         const statusStr = f.status === 0 ? 'FAIL' : String(f.status);
@@ -591,7 +591,7 @@ export function renderPerformance() {
     <div onclick="togglePerfDetails()" style="display:flex;align-items:center;gap:12px;cursor:pointer;-webkit-tap-highlight-color:transparent">
       <span style="font-size:22px;color:${overallColor};line-height:1;flex-shrink:0">${overallIcon}</span>
       <div style="flex:1;min-width:0">
-        <div style="font-size:11px;font-weight:800;color:${overallColor};text-transform:uppercase;letter-spacing:0.5px">Performance</div>
+        <div style="font-size:11px;font-weight:800;color:${overallColor};text-transform:uppercase;letter-spacing:0.5px">${t('diag.perf.title', 'Performance')}</div>
         <div style="font-size:13px;color:#1e1040;font-weight:700;margin-top:1px">${overallText}</div>
       </div>
       <span id="perf-expand-arrow" style="font-size:14px;color:rgba(30,16,64,0.5);flex-shrink:0">▸</span>
