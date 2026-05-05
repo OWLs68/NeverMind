@@ -388,7 +388,7 @@ function renderNotesList(notes) {
           <div onclick="openNoteView(${n.id})" style="cursor:pointer">
             <div style="font-size:15px;line-height:1.55;color:#1e1040;font-weight:500;margin-bottom:5px">${escapeHtml(preview)}</div>
             <div style="display:flex;align-items:center;justify-content:space-between">
-              <div style="font-size:12px;color:rgba(30,16,64,0.3)">${formatTime(n.ts)}${n.source === 'inbox' ? ' · з Inbox' : n.source === 'agent' ? ' · через OWL' : ''}</div>
+              <div style="font-size:12px;color:rgba(30,16,64,0.3)">${formatTime(n.ts)}${n.source === 'inbox' ? t('notes.source.from_inbox', ' · з Inbox') : n.source === 'agent' ? t('notes.source.from_owl', ' · через OWL') : ''}</div>
               <div onclick="event.stopPropagation();openNoteMenu(${n.id})" style="padding:4px 8px;cursor:pointer;color:rgba(30,16,64,0.4);font-size:22px;line-height:1;min-width:32px;text-align:center">···</div>
             </div>
           </div>
@@ -456,7 +456,7 @@ function _attachNotesSwipeDelete() {
         if (folderNotes.length > 0) addToTrash('folder', { folder }, folderNotes);
         saveNotes(remaining);
         renderNotes();
-        if (folderNotes.length > 0) showUndoToast('Папку "' + folder + '" видалено (' + folderNotes.length + ')', () => {
+        if (folderNotes.length > 0) showUndoToast(t('notes.toast.folder_deleted', 'Папку "{folder}" видалено ({n})', { folder, n: folderNotes.length }), () => {
           const n = getNotes();
           folderNotes.forEach(note => n.push(note));
           saveNotes(n);
@@ -512,7 +512,7 @@ function noteMenuCopy() {
   if (navigator.clipboard) {
     navigator.clipboard.writeText(n.text);
   } else {
-    showToast('Копіювання недоступне');
+    showToast(t('notes.toast.copy_unavailable', 'Копіювання недоступне'));
   }
 }
 function noteMenuMove() {
@@ -525,11 +525,11 @@ function noteMenuMove() {
   const current = n.folder || t('notes.default_folder', 'Загальне');
   const folderList = folders.filter(f => f !== current);
   if (folderList.length === 0) {
-    showToast('Немає інших папок');
+    showToast(t('notes.toast.no_other_folders', 'Немає інших папок'));
     return;
   }
   // Simple prompt for now
-  const newFolder = prompt(`Перемістити в папку:\n${folderList.join(', ')}\n\nПоточна: ${current}\nВведіть назву:`, current);
+  const newFolder = prompt(t('notes.prompt.move_to_folder', 'Перемістити в папку:\n{list}\n\nПоточна: {current}\nВведіть назву:', { list: folderList.join(', '), current }), current);
   if (newFolder && newFolder.trim() && newFolder.trim() !== current) {
     const idx = notes.findIndex(x => x.id === id);
     if (idx !== -1) notes[idx].folder = newFolder.trim();
@@ -960,7 +960,7 @@ function saveFolderEdit() {
     const pinnedCount = Object.values(meta).filter(m => m.pinned).length;
     const wasAlreadyPinned = getFolderMeta(_editingFolder).pinned;
     if (!wasAlreadyPinned && pinnedCount >= 5) {
-      showToast('Максимум 5 закріплених папок');
+      showToast(t('notes.toast.max_pinned', 'Максимум 5 закріплених папок'));
       return;
     }
   }
