@@ -15014,13 +15014,13 @@ ${JSON.stringify(contextData, null, 2)}` : "";
   }
   function openEditTask(id) {
     const tasks = getTasks();
-    const t2 = tasks.find((x) => String(x.id) === String(id));
-    if (!t2) return;
+    const task = tasks.find((x) => String(x.id) === String(id));
+    if (!task) return;
     editingTaskId = id;
-    tempSteps = [...t2.steps || []];
-    document.getElementById("task-modal-title").textContent = t2("tasks.modal_edit", "\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443");
-    document.getElementById("task-input-title").value = t2.title;
-    document.getElementById("task-input-desc").value = t2.desc || "";
+    tempSteps = [...task.steps || []];
+    document.getElementById("task-modal-title").textContent = t("tasks.modal_edit", "\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443");
+    document.getElementById("task-input-title").value = task.title;
+    document.getElementById("task-input-desc").value = task.desc || "";
     document.getElementById("task-step-input").value = "";
     const delBtn = document.getElementById("task-delete-btn");
     if (delBtn) delBtn.style.display = "inline-block";
@@ -15079,10 +15079,10 @@ ${JSON.stringify(contextData, null, 2)}` : "";
     closeTaskModal();
     renderTasks();
     if (item) showUndoToast(t("tasks.deleted", "\u0417\u0430\u0434\u0430\u0447\u0443 \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E"), () => {
-      const t2 = getTasks();
-      const idx = Math.min(taskOrigIdx, t2.length);
-      t2.splice(idx, 0, item);
-      saveTasks(t2);
+      const arr = getTasks();
+      const idx = Math.min(taskOrigIdx, arr.length);
+      arr.splice(idx, 0, item);
+      saveTasks(arr);
       renderTasks();
     });
   }
@@ -15140,30 +15140,30 @@ ${JSON.stringify(contextData, null, 2)}` : "";
   }
   function toggleTaskStep(taskId, stepId) {
     const tasks = getTasks();
-    const t2 = tasks.find((x) => String(x.id) === String(taskId));
-    if (!t2) return;
-    const s = (t2.steps || []).find((x) => String(x.id) === String(stepId));
+    const task = tasks.find((x) => String(x.id) === String(taskId));
+    if (!task) return;
+    const s = (task.steps || []).find((x) => String(x.id) === String(stepId));
     if (s) s.done = !s.done;
-    const allDone = t2.steps.length > 0 && t2.steps.every((x) => x.done);
-    const wasDone = t2.status === "done";
+    const allDone = task.steps.length > 0 && task.steps.every((x) => x.done);
+    const wasDone = task.status === "done";
     const now = Date.now();
     if (allDone && !wasDone) {
-      t2.status = "done";
-      t2.completedAt = now;
-      t2.updatedAt = now;
+      task.status = "done";
+      task.completedAt = now;
+      task.updatedAt = now;
     } else if (!allDone && wasDone) {
-      t2.status = "active";
-      delete t2.completedAt;
-      t2.updatedAt = now;
+      task.status = "active";
+      delete task.completedAt;
+      task.updatedAt = now;
     }
     saveTasks(tasks);
     renderTasks();
   }
   function toggleTaskStatus(id) {
     const tasks = getTasks();
-    const t2 = tasks.find((x) => String(x.id) === String(id));
-    if (!t2) return;
-    const isCompleting = t2.status !== "done";
+    const task = tasks.find((x) => String(x.id) === String(id));
+    if (!task) return;
+    const isCompleting = task.status !== "done";
     const now = Date.now();
     if (isCompleting) {
       const wrap = document.getElementById("task-wrap-" + id);
@@ -15188,20 +15188,20 @@ ${JSON.stringify(contextData, null, 2)}` : "";
         }, 250);
       }
       setTimeout(() => {
-        t2.status = "done";
-        t2.completedAt = now;
-        t2.updatedAt = now;
+        task.status = "done";
+        task.completedAt = now;
+        task.updatedAt = now;
         saveTasks(tasks);
-        logRecentAction("complete_task", t2.title, "tasks");
+        logRecentAction("complete_task", task.title, "tasks");
         renderTasks();
       }, 620);
       return;
     }
-    t2.status = "active";
-    delete t2.completedAt;
-    t2.updatedAt = now;
+    task.status = "active";
+    delete task.completedAt;
+    task.updatedAt = now;
     saveTasks(tasks);
-    logRecentAction("reopen_task", t2.title, "tasks");
+    logRecentAction("reopen_task", task.title, "tasks");
     renderTasks();
   }
   function renderTasks() {
@@ -15214,25 +15214,25 @@ ${JSON.stringify(contextData, null, 2)}` : "";
       return;
     }
     empty.style.display = "none";
-    const active = tasks.filter((t2) => t2.status !== "done");
-    const done = tasks.filter((t2) => t2.status === "done").sort((a, b) => (b.completedAt || b.updatedAt || 0) - (a.completedAt || a.updatedAt || 0));
+    const active = tasks.filter((task) => task.status !== "done");
+    const done = tasks.filter((task) => task.status === "done").sort((a, b) => (b.completedAt || b.updatedAt || 0) - (a.completedAt || a.updatedAt || 0));
     const sorted = [...active, ...done];
     updateProdTabCounters();
-    list.innerHTML = sorted.map((t2) => {
-      const steps = t2.steps || [];
+    list.innerHTML = sorted.map((task) => {
+      const steps = task.steps || [];
       const doneCount = steps.filter((s) => s.done).length;
-      const pct = steps.length > 0 ? Math.round(doneCount / steps.length * 100) : t2.status === "done" ? 100 : 0;
-      const isDone = t2.status === "done";
-      return `<div class="task-item-wrap" id="task-wrap-${t2.id}" style="position:relative;margin:0 14px var(--card-gap);border-radius:16px">
-      <div id="task-item-${t2.id}" onclick="taskCardClick('${t2.id}', event)"
+      const pct = steps.length > 0 ? Math.round(doneCount / steps.length * 100) : task.status === "done" ? 100 : 0;
+      const isDone = task.status === "done";
+      return `<div class="task-item-wrap" id="task-wrap-${task.id}" style="position:relative;margin:0 14px var(--card-gap);border-radius:16px">
+      <div id="task-item-${task.id}" onclick="taskCardClick('${task.id}', event)"
         style="background:linear-gradient(135deg,#c6f3fd,#a8ecfb);border:1.5px solid rgba(255,255,255,0.4);border-radius:16px;padding:var(--card-pad-y) var(--card-pad-x);box-shadow:0 2px 12px rgba(0,0,0,0.04);opacity:${isDone ? "0.5" : "1"};cursor:pointer;-webkit-tap-highlight-color:transparent;position:relative;z-index:1;touch-action:pan-y">
       <div style="display:flex;align-items:flex-start;gap:6px;margin-bottom:${steps.length ? "8px" : "0"}">
-        <div data-task-check="1" ontouchend="event.preventDefault();event.stopPropagation();toggleTaskStatus('${t2.id}')" style="padding:8px;margin:-8px -4px -8px -8px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;-webkit-tap-highlight-color:transparent">
+        <div data-task-check="1" ontouchend="event.preventDefault();event.stopPropagation();toggleTaskStatus('${task.id}')" style="padding:8px;margin:-8px -4px -8px -8px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;-webkit-tap-highlight-color:transparent">
           <div style="width:28px;height:28px;border-radius:8px;border:2px solid ${isDone ? "#16a34a" : "rgba(234,88,12,0.3)"};background:${isDone ? "#16a34a" : "rgba(255,255,255,0.78)"};display:flex;align-items:center;justify-content:center;font-size:15px;color:white;transition:all 0.2s">${isDone ? "\u2713" : ""}</div>
         </div>
         <div style="flex:1">
-          <div style="font-size:16px;font-weight:700;color:#1e1040;${isDone ? "text-decoration:line-through;opacity:0.5" : ""};line-height:1.4">${escapeHtml(t2.title)}</div>
-          ${t2.desc ? `<div style="font-size:14px;color:rgba(30,16,64,0.45);margin-top:2px">${escapeHtml(t2.desc)}</div>` : ""}
+          <div style="font-size:16px;font-weight:700;color:#1e1040;${isDone ? "text-decoration:line-through;opacity:0.5" : ""};line-height:1.4">${escapeHtml(task.title)}</div>
+          ${task.desc ? `<div style="font-size:14px;color:rgba(30,16,64,0.45);margin-top:2px">${escapeHtml(task.desc)}</div>` : ""}
         </div>
       </div>
       ${steps.length > 0 ? `
@@ -15241,7 +15241,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
         </div>
         <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:10px">
           ${steps.map((s) => `
-            <div data-step-check="1" ontouchstart="this._sx=event.touches[0].clientX;this._sy=event.touches[0].clientY" ontouchend="if(Math.abs(event.changedTouches[0].clientX-(this._sx||0))<10&&Math.abs(event.changedTouches[0].clientY-(this._sy||0))<10){event.preventDefault();toggleTaskStep('${t2.id}',${s.id})}" style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:4px 0">
+            <div data-step-check="1" ontouchstart="this._sx=event.touches[0].clientX;this._sy=event.touches[0].clientY" ontouchend="if(Math.abs(event.changedTouches[0].clientX-(this._sx||0))<10&&Math.abs(event.changedTouches[0].clientY-(this._sy||0))<10){event.preventDefault();toggleTaskStep('${task.id}',${s.id})}" style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:4px 0">
               <div style="width:24px;height:24px;border-radius:7px;border:1.5px solid ${s.done ? "#ea580c" : "rgba(30,16,64,0.18)"};background:rgba(255,255,255,0.6);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px;color:#ea580c">${s.done ? "\u2713" : ""}</div>
               <div style="flex:1;font-size:14px;color:rgba(30,16,64,0.65);${s.done ? "text-decoration:line-through;opacity:0.4" : ""}">${escapeHtml(s.text)}</div>
             </div>
@@ -15262,10 +15262,10 @@ ${JSON.stringify(contextData, null, 2)}` : "";
         saveTasks(tasks2.filter((x) => String(x.id) !== id));
         renderTasks();
         if (item) showUndoToast(t("tasks.deleted", "\u0417\u0430\u0434\u0430\u0447\u0443 \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E"), () => {
-          const t2 = getTasks();
-          const idx = Math.min(taskOrigIdx, t2.length);
-          t2.splice(idx, 0, item);
-          saveTasks(t2);
+          const arr = getTasks();
+          const idx = Math.min(taskOrigIdx, arr.length);
+          arr.splice(idx, 0, item);
+          saveTasks(arr);
           renderTasks();
         });
       });
@@ -15314,7 +15314,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
     if (!text) return;
     const key = localStorage.getItem("nm_gemini_key");
     if (!key) {
-      addTaskChatMsg("agent", t2("common.no_api_key", "\u0412\u0432\u0435\u0434\u0438 OpenAI \u043A\u043B\u044E\u0447 \u0432 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445."));
+      addTaskChatMsg("agent", t("common.no_api_key", "\u0412\u0432\u0435\u0434\u0438 OpenAI \u043A\u043B\u044E\u0447 \u0432 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445."));
       return;
     }
     input.value = "";
@@ -15324,12 +15324,12 @@ ${JSON.stringify(contextData, null, 2)}` : "";
     const btn = document.getElementById("task-chat-send");
     btn.disabled = true;
     const tasks = getTasks();
-    const t2 = tasks.find((x) => x.id === taskChatId);
-    const steps = t2 ? (t2.steps || []).map((s) => `- ${s.text}${s.done ? " \u2713" : ""}`).join("\n") : "";
+    const task = tasks.find((x) => x.id === taskChatId);
+    const steps = task ? (task.steps || []).map((s) => `- ${s.text}${s.done ? " \u2713" : ""}`).join("\n") : "";
     const aiContext = getAIContext();
     const wantsSteps = /додай кроки|створи кроки|розбий на кроки|які кроки|план дій|крок за кроком|додай пункти|пункти|кроки/i.test(text);
     const stepInstruction = wantsSteps ? ' \u0412\u0410\u0416\u041B\u0418\u0412\u041E: \u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447 \u043F\u0440\u043E\u0441\u0438\u0442\u044C \u043A\u0440\u043E\u043A\u0438. \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0422\u0406\u041B\u042C\u041A\u0418 \u0432\u0430\u043B\u0456\u0434\u043D\u0438\u043C JSON \u0456 \u043D\u0456\u0447\u0438\u043C \u0456\u043D\u0448\u0438\u043C: {"steps":["\u043A\u0440\u043E\u043A 1","\u043A\u0440\u043E\u043A 2","\u043A\u0440\u043E\u043A 3"]}. \u0416\u043E\u0434\u043D\u043E\u0433\u043E \u0442\u0435\u043A\u0441\u0442\u0443 \u0434\u043E \u0430\u0431\u043E \u043F\u0456\u0441\u043B\u044F JSON.' : "";
-    const systemPrompt = `${getOWLPersonality()} \u041E\u0431\u0433\u043E\u0432\u043E\u0440\u044E\u0454\u0448 \u0437\u0430\u0434\u0430\u0447\u0443: "${t2?.title || ""}". ${t2?.desc ? "\u041E\u043F\u0438\u0441: " + t2.desc + "." : ""} ${steps ? "\u041A\u0440\u043E\u043A\u0438:\n" + steps : ""} \u0413\u043E\u0432\u043E\u0440\u0438\u0448 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E. \u041A\u043E\u0440\u043E\u0442\u043A\u0456 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456 (2-4 \u0440\u0435\u0447\u0435\u043D\u043D\u044F). \u0424\u043E\u043A\u0443\u0441 \u043D\u0430 \u043D\u0430\u0441\u0442\u0443\u043F\u043D\u0438\u0445 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0438\u0445 \u043A\u0440\u043E\u043A\u0430\u0445.${stepInstruction}
+    const systemPrompt = `${getOWLPersonality()} \u041E\u0431\u0433\u043E\u0432\u043E\u0440\u044E\u0454\u0448 \u0437\u0430\u0434\u0430\u0447\u0443: "${task?.title || ""}". ${task?.desc ? "\u041E\u043F\u0438\u0441: " + task.desc + "." : ""} ${steps ? "\u041A\u0440\u043E\u043A\u0438:\n" + steps : ""} \u0413\u043E\u0432\u043E\u0440\u0438\u0448 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E. \u041A\u043E\u0440\u043E\u0442\u043A\u0456 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456 (2-4 \u0440\u0435\u0447\u0435\u043D\u043D\u044F). \u0424\u043E\u043A\u0443\u0441 \u043D\u0430 \u043D\u0430\u0441\u0442\u0443\u043F\u043D\u0438\u0445 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0438\u0445 \u043A\u0440\u043E\u043A\u0430\u0445.${stepInstruction}
 \u042F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u043F\u0440\u043E\u0441\u0438\u0442\u044C \u043A\u0440\u043E\u043A\u0438 \u2014 {"steps":["\u043A\u0440\u043E\u043A 1","\u043A\u0440\u043E\u043A 2"]}
 \u042F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u043F\u0440\u043E\u0441\u0438\u0442\u044C \u0449\u043E\u0441\u044C \u041D\u0415 \u043F\u0440\u043E \u0446\u044E \u0437\u0430\u0434\u0430\u0447\u0443 (\u043D\u043E\u0432\u0430 \u0437\u0430\u0434\u0430\u0447\u0430, \u043F\u043E\u0434\u0456\u044F, \u043D\u043E\u0442\u0430\u0442\u043A\u0430, \u0437\u0432\u0438\u0447\u043A\u0430, \u0432\u0438\u0442\u0440\u0430\u0442\u0430) \u2014 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u043D\u0438\u043C JSON:
 - \u0417\u0430\u0434\u0430\u0447\u0430: {"action":"create_task","title":"\u043D\u0430\u0437\u0432\u0430","steps":[]}
@@ -15377,7 +15377,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
               allTasks[taskIdx].steps = [...allTasks[taskIdx].steps || [], ...newSteps];
               saveTasks(allTasks);
               renderTasks();
-              addTaskChatMsg("agent", t2("tasks.steps_added", "\u2705 \u0414\u043E\u0434\u0430\u0432 {n} \u043A\u0440\u043E\u043A\u0456\u0432 \u0434\u043E \u0437\u0430\u0434\u0430\u0447\u0456. \u041F\u0435\u0440\u0435\u0432\u0456\u0440 \u043A\u0430\u0440\u0442\u043A\u0443.", { n: parsed.steps.length }));
+              addTaskChatMsg("agent", t("tasks.steps_added", "\u2705 \u0414\u043E\u0434\u0430\u0432 {n} \u043A\u0440\u043E\u043A\u0456\u0432 \u0434\u043E \u0437\u0430\u0434\u0430\u0447\u0456. \u041F\u0435\u0440\u0435\u0432\u0456\u0440 \u043A\u0430\u0440\u0442\u043A\u0443.", { n: parsed.steps.length }));
             }
           } else if (parsed.action) {
             if (!processUniversalAction(parsed, text, addTaskChatMsg)) {
@@ -15398,7 +15398,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
                 allTasks[taskIdx].steps = [...allTasks[taskIdx].steps || [], ...newSteps];
                 saveTasks(allTasks);
                 renderTasks();
-                addTaskChatMsg("agent", t2("tasks.steps_added", "\u2705 \u0414\u043E\u0434\u0430\u0432 {n} \u043A\u0440\u043E\u043A\u0456\u0432 \u0434\u043E \u0437\u0430\u0434\u0430\u0447\u0456. \u041F\u0435\u0440\u0435\u0432\u0456\u0440 \u043A\u0430\u0440\u0442\u043A\u0443.", { n: p.steps.length }));
+                addTaskChatMsg("agent", t("tasks.steps_added", "\u2705 \u0414\u043E\u0434\u0430\u0432 {n} \u043A\u0440\u043E\u043A\u0456\u0432 \u0434\u043E \u0437\u0430\u0434\u0430\u0447\u0456. \u041F\u0435\u0440\u0435\u0432\u0456\u0440 \u043A\u0430\u0440\u0442\u043A\u0443.", { n: p.steps.length }));
                 handled = true;
               }
             } else if (p.action && processUniversalAction(p, text, addTaskChatMsg)) {
@@ -15409,7 +15409,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
         }
       } else handleChatError(addTaskChatMsg);
     } catch {
-      addTaskChatMsg("agent", t2("common.network_error", "\u041C\u0435\u0440\u0435\u0436\u0435\u0432\u0430 \u043F\u043E\u043C\u0438\u043B\u043A\u0430."));
+      addTaskChatMsg("agent", t("common.network_error", "\u041C\u0435\u0440\u0435\u0436\u0435\u0432\u0430 \u043F\u043E\u043C\u0438\u043B\u043A\u0430."));
     }
     taskChatLoading = false;
     btn.disabled = false;
