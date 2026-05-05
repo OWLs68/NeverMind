@@ -7485,16 +7485,16 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
         </div>
         <button onclick="toggleFinEditMode()" aria-label="${t("finance.edit.done", "\u0413\u043E\u0442\u043E\u0432\u043E")}" style="padding:6px 14px;border-radius:14px;border:none;background:#c2410c;color:white;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">${t("finance.edit.done", "\u0413\u043E\u0442\u043E\u0432\u043E")}</button>
       </div>` : `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;user-select:none">
-        <button onclick="shiftFinPeriod(-1)" aria-label="\u041F\u043E\u043F\u0435\u0440\u0435\u0434\u043D\u0456\u0439 \u043F\u0435\u0440\u0456\u043E\u0434" style="width:32px;height:32px;border-radius:50%;border:none;background:rgba(30,16,64,0.05);color:rgba(30,16,64,0.55);box-shadow:0 4px 10px rgba(0,0,0,0.32), 0 2px 4px rgba(0,0,0,0.22);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit">\u2039</button>
+        <button onclick="shiftFinPeriod(-1)" aria-label="${t("finance.nav.prev_period", "\u041F\u043E\u043F\u0435\u0440\u0435\u0434\u043D\u0456\u0439 \u043F\u0435\u0440\u0456\u043E\u0434")}" style="width:32px;height:32px;border-radius:50%;border:none;background:rgba(30,16,64,0.05);color:rgba(30,16,64,0.55);box-shadow:0 4px 10px rgba(0,0,0,0.32), 0 2px 4px rgba(0,0,0,0.22);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit">\u2039</button>
         <div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex:1">
           <div style="font-size:14px;font-weight:800;color:#1e1040">${escapeHtml(periodLabel)}</div>
           ${!isCurrent ? `<div onclick="shiftFinPeriod(${-currentFinPeriodOffset})" style="font-size:10px;font-weight:700;color:#c2410c;cursor:pointer;text-transform:uppercase;letter-spacing:0.06em">${t("finance.period.back_to_today", "\u21BA \u0434\u043E \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456")}</div>` : `<div style="font-size:10px;font-weight:600;color:rgba(30,16,64,0.3);text-transform:uppercase;letter-spacing:0.06em">${t("finance.period.swipe_hint", "\u0441\u0432\u0430\u0439\u043F \u2190\u2192 \u0434\u043B\u044F \u043D\u0430\u0432\u0456\u0433\u0430\u0446\u0456\u0457")}</div>`}
         </div>
         <div style="display:flex;align-items:center;gap:4px">
-          <button onclick="toggleFinEditMode()" aria-label="\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457" title="\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457" style="width:32px;height:32px;border-radius:50%;border:none;background:rgba(30,16,64,0.05);color:rgba(30,16,64,0.55);box-shadow:0 4px 10px rgba(0,0,0,0.32), 0 2px 4px rgba(0,0,0,0.22);cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit">
+          <button onclick="toggleFinEditMode()" aria-label="${t("finance.nav.edit_cats", "\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457")}" title="${t("finance.nav.edit_cats", "\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457")}" style="width:32px;height:32px;border-radius:50%;border:none;background:rgba(30,16,64,0.05);color:rgba(30,16,64,0.55);box-shadow:0 4px 10px rgba(0,0,0,0.32), 0 2px 4px rgba(0,0,0,0.22);cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
           </button>
-          <button onclick="shiftFinPeriod(1)" aria-label="\u041D\u0430\u0441\u0442\u0443\u043F\u043D\u0438\u0439 \u043F\u0435\u0440\u0456\u043E\u0434" style="width:32px;height:32px;border-radius:50%;border:none;background:rgba(30,16,64,0.05);color:rgba(30,16,64,0.55);box-shadow:0 4px 10px rgba(0,0,0,0.32), 0 2px 4px rgba(0,0,0,0.22);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit">\u203A</button>
+          <button onclick="shiftFinPeriod(1)" aria-label="${t("finance.nav.next_period", "\u041D\u0430\u0441\u0442\u0443\u043F\u043D\u0438\u0439 \u043F\u0435\u0440\u0456\u043E\u0434")}" style="width:32px;height:32px;border-radius:50%;border:none;background:rgba(30,16,64,0.05);color:rgba(30,16,64,0.55);box-shadow:0 4px 10px rgba(0,0,0,0.32), 0 2px 4px rgba(0,0,0,0.22);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit">\u203A</button>
         </div>
       </div>`;
     return `<div id="fin-cats-grid-wrap" class="card-glass-blur" style="padding:14px;margin-bottom:12px">
@@ -7529,13 +7529,13 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
       </div>
     </div>`;
     }).join("");
-    const moreBtn = allTxs.length > 8 ? `<div onclick="openAllTransactions()" style="text-align:center;margin-top:10px;font-size:13px;font-weight:700;color:#c2410c;cursor:pointer">\u0412\u0441\u0456 \u043E\u043F\u0435\u0440\u0430\u0446\u0456\u0457 (${allTxs.length}) <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#c2410c" stroke-width="2.5" stroke-linecap="round" style="vertical-align:middle"><polyline points="9 18 15 12 9 6"/></svg></div>` : "";
+    const moreBtn = allTxs.length > 8 ? `<div onclick="openAllTransactions()" style="text-align:center;margin-top:10px;font-size:13px;font-weight:700;color:#c2410c;cursor:pointer">${t("finance.tx.all_count", "\u0412\u0441\u0456 \u043E\u043F\u0435\u0440\u0430\u0446\u0456\u0457 ({n})", { n: allTxs.length })} <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#c2410c" stroke-width="2.5" stroke-linecap="round" style="vertical-align:middle"><polyline points="9 18 15 12 9 6"/></svg></div>` : "";
     return `<div class="card-glass-blur">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
       <div class="fin-section-label">${t("finance.tx.recent_title", "\u041E\u0441\u0442\u0430\u043D\u043D\u0456 \u043E\u043F\u0435\u0440\u0430\u0446\u0456\u0457")}</div>
-      <button onclick="openAddTransaction()" style="background:rgba(194,65,12,0.08);border:none;border-radius:8px;padding:4px 10px;font-size:12px;font-weight:700;color:#c2410c;cursor:pointer;font-family:inherit">+ \u0434\u043E\u0434\u0430\u0442\u0438</button>
+      <button onclick="openAddTransaction()" style="background:rgba(194,65,12,0.08);border:none;border-radius:8px;padding:4px 10px;font-size:12px;font-weight:700;color:#c2410c;cursor:pointer;font-family:inherit">${t("finance.tx.add_short", "+ \u0434\u043E\u0434\u0430\u0442\u0438")}</button>
     </div>
-    ${rows || '<div style="font-size:13px;color:rgba(30,16,64,0.3);text-align:center;padding:8px">\u041D\u0435\u043C\u0430\u0454 \u043E\u043F\u0435\u0440\u0430\u0446\u0456\u0439 \u0437\u0430 \u0446\u0435\u0439 \u043F\u0435\u0440\u0456\u043E\u0434</div>'}
+    ${rows || `<div style="font-size:13px;color:rgba(30,16,64,0.3);text-align:center;padding:8px">${t("finance.tx.empty_period", "\u041D\u0435\u043C\u0430\u0454 \u043E\u043F\u0435\u0440\u0430\u0446\u0456\u0439 \u0437\u0430 \u0446\u0435\u0439 \u043F\u0435\u0440\u0456\u043E\u0434")}</div>`}
     ${moreBtn}
   </div>`;
   }
@@ -7566,8 +7566,8 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     <div onclick="document.getElementById('fin-all-txs-modal').remove()" class="modal-backdrop"></div>
     <div style="position:relative;width:100%;max-width:480px;background:rgba(255,255,255,0.95);backdrop-filter:blur(24px);border-radius:24px;margin:0 16px 16px;z-index:1;padding:16px 16px calc(env(safe-area-inset-bottom) + 16px);max-height:80vh;overflow-y:auto;box-sizing:border-box">
       <div class="modal-handle"></div>
-      <div style="font-size:16px;font-weight:800;color:#1e1040;margin-bottom:12px">\u0412\u0441\u0456 \u043E\u043F\u0435\u0440\u0430\u0446\u0456\u0457 (${allTxs.length})</div>
-      ${rows || '<div style="font-size:14px;color:rgba(30,16,64,0.3);text-align:center;padding:16px">\u041D\u0435\u043C\u0430\u0454 \u043E\u043F\u0435\u0440\u0430\u0446\u0456\u0439</div>'}
+      <div style="font-size:16px;font-weight:800;color:#1e1040;margin-bottom:12px">${t("finance.modal.all_title", "\u0412\u0441\u0456 \u043E\u043F\u0435\u0440\u0430\u0446\u0456\u0457 ({n})", { n: allTxs.length })}</div>
+      ${rows || `<div style="font-size:14px;color:rgba(30,16,64,0.3);text-align:center;padding:16px">${t("finance.modal.no_tx", "\u041D\u0435\u043C\u0430\u0454 \u043E\u043F\u0435\u0440\u0430\u0446\u0456\u0439")}</div>`}
     </div>`;
     document.body.appendChild(modal);
   }
@@ -7597,7 +7597,7 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     const category = parsed.category || (type === "expense" ? "\u0406\u043D\u0448\u0435" : "\u0406\u043D\u0448\u0435");
     const comment = parsed.comment || originalText;
     if (!amount || amount <= 0) {
-      addInboxChatMsg("agent", '\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u0440\u043E\u0437\u043F\u0456\u0437\u043D\u0430\u0442\u0438 \u0441\u0443\u043C\u0443. \u0421\u043F\u0440\u043E\u0431\u0443\u0439 \u043D\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u0447\u0456\u0442\u043A\u0456\u0448\u0435: "\u0432\u0438\u0442\u0440\u0430\u0442\u0438\u0432 50 \u043D\u0430 \u0457\u0436\u0443"');
+      addInboxChatMsg("agent", t("finance.err.no_amount", '\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u0440\u043E\u0437\u043F\u0456\u0437\u043D\u0430\u0442\u0438 \u0441\u0443\u043C\u0443. \u0421\u043F\u0440\u043E\u0431\u0443\u0439 \u043D\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u0447\u0456\u0442\u043A\u0456\u0448\u0435: "\u0432\u0438\u0442\u0440\u0430\u0442\u0438\u0432 50 \u043D\u0430 \u0457\u0436\u0443"'));
       return;
     }
     const catList = type === "expense" ? cats.expense : cats.income;
@@ -7630,15 +7630,15 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     const totalSpent = txs.reduce((s, t2) => s + t2.amount, 0);
     if (budget.total > 0) {
       const pct = totalSpent / budget.total;
-      if (pct >= 1) addInboxChatMsg("agent", `\u26A0\uFE0F \u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0438\u0439 \u0431\u044E\u0434\u0436\u0435\u0442 \u043D\u0430 \u043C\u0456\u0441\u044F\u0446\u044C \u043F\u0435\u0440\u0435\u0432\u0438\u0449\u0435\u043D\u043E. \u0412\u0438\u0442\u0440\u0430\u0447\u0435\u043D\u043E ${formatMoney(totalSpent)} \u0437 ${formatMoney(budget.total)}.`);
-      else if (pct >= 0.8) addInboxChatMsg("agent", `\u{1F4A1} \u0414\u043E \u043B\u0456\u043C\u0456\u0442\u0443 \u043C\u0456\u0441\u044F\u0446\u044F \u0437\u0430\u043B\u0438\u0448\u0438\u043B\u043E\u0441\u044C ${formatMoney(budget.total - totalSpent)}.`);
+      if (pct >= 1) addInboxChatMsg("agent", t("finance.budget.month_over", "\u26A0\uFE0F \u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0438\u0439 \u0431\u044E\u0434\u0436\u0435\u0442 \u043D\u0430 \u043C\u0456\u0441\u044F\u0446\u044C \u043F\u0435\u0440\u0435\u0432\u0438\u0449\u0435\u043D\u043E. \u0412\u0438\u0442\u0440\u0430\u0447\u0435\u043D\u043E {spent} \u0437 {total}.", { spent: formatMoney(totalSpent), total: formatMoney(budget.total) }));
+      else if (pct >= 0.8) addInboxChatMsg("agent", t("finance.budget.month_left", "\u{1F4A1} \u0414\u043E \u043B\u0456\u043C\u0456\u0442\u0443 \u043C\u0456\u0441\u044F\u0446\u044F \u0437\u0430\u043B\u0438\u0448\u0438\u043B\u043E\u0441\u044C {left}.", { left: formatMoney(budget.total - totalSpent) }));
     }
     const catLimit = budget.categories?.[category];
     if (catLimit > 0) {
       const catSpent = txs.filter((t2) => t2.category === category).reduce((s, t2) => s + t2.amount, 0);
       const pct = catSpent / catLimit;
-      if (pct >= 1) addInboxChatMsg("agent", `\u26A0\uFE0F \u041B\u0456\u043C\u0456\u0442 \u043F\u043E "${category}" \u043F\u0435\u0440\u0435\u0432\u0438\u0449\u0435\u043D\u043E: ${formatMoney(catSpent)} \u0437 ${formatMoney(catLimit)}.`);
-      else if (pct >= 0.8) addInboxChatMsg("agent", `\u{1F4A1} \u041F\u043E "${category}" \u0437\u0430\u043B\u0438\u0448\u0438\u043B\u043E\u0441\u044C ${formatMoney(catLimit - catSpent)}.`);
+      if (pct >= 1) addInboxChatMsg("agent", t("finance.budget.cat_over", '\u26A0\uFE0F \u041B\u0456\u043C\u0456\u0442 \u043F\u043E "{cat}" \u043F\u0435\u0440\u0435\u0432\u0438\u0449\u0435\u043D\u043E: {spent} \u0437 {limit}.', { cat: category, spent: formatMoney(catSpent), limit: formatMoney(catLimit) }));
+      else if (pct >= 0.8) addInboxChatMsg("agent", t("finance.budget.cat_left", '\u{1F4A1} \u041F\u043E "{cat}" \u0437\u0430\u043B\u0438\u0448\u0438\u043B\u043E\u0441\u044C {left}.', { cat: category, left: formatMoney(catLimit - catSpent) }));
     }
   }
   function getFinanceContext() {
