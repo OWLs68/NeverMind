@@ -4,6 +4,7 @@
 // ============================================================
 
 import { getFinance, saveFinance } from './finance.js';
+import { t } from '../core/utils.js';
 
 // ===== SVG-бібліотека іконок (41 стиль Lucide/Heroicons, stroke-based) =====
 const FIN_CAT_ICONS = {
@@ -195,8 +196,8 @@ function _migrateFinCats(saved) {
   // дефолтна іконка/підкатегорії для відомих назв якщо порожні.
   const normalize = (list, startIdx) => (list || []).map((c, i) => {
     if (typeof c === 'string') return _makeCatObj(c, startIdx + i);
-    if (!c || typeof c !== 'object') return _makeCatObj('Невідомо', startIdx + i);
-    if (!c.id || !c.name) return _makeCatObj(c.name || 'Без назви', startIdx + i);
+    if (!c || typeof c !== 'object') return _makeCatObj(t('fincat.fallback.unknown', 'Невідомо'), startIdx + i);
+    if (!c.id || !c.name) return _makeCatObj(c.name || t('fincat.fallback.no_name', 'Без назви'), startIdx + i);
     const known = FIN_DEFAULT_COLORS[c.name];
     if (!c.icon || c.icon === 'other') c.icon = FIN_DEFAULT_ICONS[c.name] || c.icon || 'other';
     if (!c.color) c.color = known || pickRandomCatColor(i);
@@ -261,7 +262,7 @@ export function createFinCategory(type, data) {
   const order = list.length;
   const newCat = {
     id: 'cat_' + (data.name || 'new').toLowerCase().replace(/[^\wа-яґєії]/gi, '_').slice(0, 20) + '_' + Date.now().toString(36),
-    name: data.name || 'Без назви',
+    name: data.name || t('fincat.fallback.no_name', 'Без назви'),
     icon: data.icon || FIN_DEFAULT_ICONS[data.name] || 'other',
     color: data.color || FIN_DEFAULT_COLORS[data.name] || pickRandomCatColor(order),
     // B-58: якщо юзер/AI задав явно — беремо як є (до 3 максимум); якщо нема — дефолтні обмежені до 3.
@@ -304,8 +305,8 @@ export function deleteFinCategory(id) {
 export function mergeFinCategories(fromId, toId) {
   const fromCat = findFinCatById(fromId);
   const toCat = findFinCatById(toId);
-  if (!fromCat || !toCat) return { ok: false, reason: 'Категорію не знайдено' };
-  if (fromCat.type !== toCat.type) return { ok: false, reason: 'Різні типи (expense/income)' };
+  if (!fromCat || !toCat) return { ok: false, reason: t('fincat.err.cat_not_found', 'Категорію не знайдено') };
+  if (fromCat.type !== toCat.type) return { ok: false, reason: t('fincat.err.diff_types', 'Різні типи (expense/income)') };
   const txs = getFinance();
   let changed = 0;
   txs.forEach(t => {
@@ -335,7 +336,7 @@ export function addFinSubcategory(catIdOrName, subcatName) {
       return { ok: true };
     }
   }
-  return { ok: false, reason: 'Категорію не знайдено' };
+  return { ok: false, reason: t('fincat.err.cat_not_found', 'Категорію не знайдено') };
 }
 
 export function findFinCatByName(name) {
