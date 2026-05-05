@@ -357,7 +357,7 @@ export function renderInbox() {
       }
 
       renderInbox();
-      if (item) showUndoToast('Видалено з Inbox', () => {
+      if (item) showUndoToast(t('inbox.undo.deleted', 'Видалено з Inbox'), () => {
         const items = getInbox();
         const idx = Math.min(originalIdx, items.length);
         items.splice(idx, 0, item);
@@ -1277,11 +1277,11 @@ async function processSaveAction(parsed, originalText) {
       const ev = { id: Date.now(), title: eventDetected.title || savedText, date: eventDetected.date, time: null, priority: 'normal', createdAt: Date.now() };
       const res = addEventDedup(ev);
       if (!res.added) {
-        addInboxChatMsg('agent', `Така подія "${ev.title}" вже є в календарі.`);
+        addInboxChatMsg('agent', t('inbox.chat.event_dupe', 'Така подія "{title}" вже є в календарі.', { title: ev.title }));
       } else {
         const dateObj = new Date(eventDetected.date);
         const dayStr = `${dateObj.getDate()} ${monthGenitive(dateObj.getMonth())}`;
-        addInboxChatMsg('agent', `📅 Подію "${ev.title}" додано в календар на ${dayStr}`);
+        addInboxChatMsg('agent', t('inbox.event.added_simple', '📅 Подію "{title}" додано в календар на {day}', { title: ev.title, day: dayStr }));
       }
     } else {
       // Момент дня — як раніше
@@ -1295,15 +1295,15 @@ async function processSaveAction(parsed, originalText) {
     }
   }
   const catConfirm2 = {
-    task: '✅ Задачу створено',
-    habit: '🌱 Звичку створено',
-    note: '📝 Нотатку збережено',
-    idea: '💡 Ідею збережено',
-    event: '📅 Подію додано'
+    task:  t('inbox.confirm.task',  '✅ Задачу створено'),
+    habit: t('inbox.confirm.habit', '🌱 Звичку створено'),
+    note:  t('inbox.confirm.note',  '📝 Нотатку збережено'),
+    idea:  t('inbox.confirm.idea',  '💡 Ідею збережено'),
+    event: t('inbox.confirm.event', '📅 Подію додано')
   };
   const confirmMsg2 = parsed.comment
     ? `${parsed.comment} ${catConfirm2[cat] ? '/ ' + catConfirm2[cat] : ''}`
-    : (catConfirm2[cat] || '✓ Збережено');
+    : (catConfirm2[cat] || t('inbox.chat.saved', '✓ Збережено'));
   addInboxChatMsg('agent', confirmMsg2);
 
   // Якщо є уточнення після збереження — показуємо через паузу
@@ -1332,7 +1332,7 @@ function processCompleteHabit(parsed, originalText) {
   // Підтримуємо і старий формат (habit_id) і новий (habit_ids масив)
   const ids = parsed.habit_ids || (parsed.habit_id ? [parsed.habit_id] : []);
   if (ids.length === 0) {
-    addInboxChatMsg('agent', 'Не зрозумів яку звичку відмітити.');
+    addInboxChatMsg('agent', t('inbox.chat.habit_unclear', 'Не зрозумів яку звичку відмітити.'));
     return;
   }
   const habits = getHabits();
@@ -1348,7 +1348,7 @@ function processCompleteHabit(parsed, originalText) {
     }
   });
   if (completed.length === 0) {
-    addInboxChatMsg('agent', 'Не знайшов такі звички.');
+    addInboxChatMsg('agent', t('inbox.chat.habits_not_found', 'Не знайшов такі звички.'));
     return;
   }
   saveHabitLog(log);
@@ -1360,8 +1360,8 @@ function processCompleteHabit(parsed, originalText) {
   saveInbox(items);
   renderInbox();
   const msg = parsed.comment || (completed.length === 1
-    ? `✅ Відмітив звичку "${completed[0]}" як виконану`
-    : `✅ Відмітив ${completed.length} звички: ${completed.join(', ')}`);
+    ? t('inbox.habit.marked_one', '✅ Відмітив звичку "{name}" як виконану', { name: completed[0] })
+    : t('inbox.habit.marked_many', '✅ Відмітив {n} звички: {list}', { n: completed.length, list: completed.join(', ') }));
   addInboxChatMsg('agent', msg);
 }
 
@@ -1370,7 +1370,7 @@ function processCompleteTask(parsed, originalText) {
   // Підтримуємо і старий формат (task_id) і новий (task_ids масив)
   const ids = parsed.task_ids || (parsed.task_id ? [parsed.task_id] : []);
   if (ids.length === 0) {
-    addInboxChatMsg('agent', 'Не зрозумів яку задачу закрити.');
+    addInboxChatMsg('agent', t('inbox.chat.task_unclear', 'Не зрозумів яку задачу закрити.'));
     return;
   }
   const tasks = getTasks();
@@ -1383,7 +1383,7 @@ function processCompleteTask(parsed, originalText) {
     }
   });
   if (completed.length === 0) {
-    addInboxChatMsg('agent', 'Не знайшов такі задачі.');
+    addInboxChatMsg('agent', t('inbox.chat.tasks_not_found', 'Не знайшов такі задачі.'));
     return;
   }
   saveTasks(tasks);
@@ -1394,8 +1394,8 @@ function processCompleteTask(parsed, originalText) {
   saveInbox(items);
   renderInbox();
   const msg = parsed.comment || (completed.length === 1
-    ? `✅ Задачу "${completed[0]}" закрито`
-    : `✅ Закрив ${completed.length} задачі: ${completed.join(', ')}`);
+    ? t('inbox.task.closed_one', '✅ Задачу "{title}" закрито', { title: completed[0] })
+    : t('inbox.task.closed_many', '✅ Закрив {n} задачі: {list}', { n: completed.length, list: completed.join(', ') }));
   addInboxChatMsg('agent', msg);
 }
 
