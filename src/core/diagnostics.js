@@ -574,7 +574,7 @@ export function renderPerformance() {
   // Останні 5 запитів (детально)
   if (data.fetches.length > 0) {
     const recent = data.fetches.slice(-5).reverse();
-    rows.push('<div style="margin-top:8px;padding-top:8px;border-top:1px dashed rgba(30,16,64,0.1)"><div style="font-size:10px;font-weight:800;color:rgba(30,16,64,0.55);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">${t('diag.perf.recent', 'Останні запити')}</div>' +
+    rows.push('<div style="margin-top:8px;padding-top:8px;border-top:1px dashed rgba(30,16,64,0.1)"><div style="font-size:10px;font-weight:800;color:rgba(30,16,64,0.55);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">' + t('diag.perf.recent', 'Останні запити') + '</div>' +
       recent.map(f => {
         const col = f.status === 0 || f.status >= 400 ? '#dc2626' : f.duration > 3000 ? '#b45309' : '#16a34a';
         const statusStr = f.status === 0 ? 'FAIL' : String(f.status);
