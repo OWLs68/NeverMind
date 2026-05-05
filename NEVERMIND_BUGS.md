@@ -15,7 +15,8 @@ _Немає відкритих критичних багів станом на 0
 
 ## 🟡 Середні (є обхідний шлях або рідко трапляється)
 
-_Немає відкритих середніх багів станом на 05.05.2026 (QDIGl)._
+| B-125 | `src/ai/prompts.js:252` REMINDER_RULES + `src/ai/tool-dispatcher.js:115` set_reminder | Чіп «Завтра вранці» створює reminder на **сьогодні 09:00** замість завтра 08:00. Юзер тапнув [Завтра вранці] → AI викликав set_reminder без `date` → dispatcher поставив дефолт = сьогодні. Час уже минув на момент створення (22:30 → 09:00 СЬОГОДНІ це -13 годин). Виявлено MPVly 05.05 під час smoke-test після фіксу raw-JSON. Workaround: ввести вручну «завтра в 8 ранку». |
+| B-126 | `src/ai/prompts.js` REMINDER_RULES + відсутність tool `delete_reminder`/`update_reminder` | При коригуванні часу свіжого reminder («Нє не в 10 а в 09:30») AI створює **другий** reminder замість оновити перший. На скріні видно дублі 10:00 + 09:30 у Розпорядку. Корінь архітектурний: tool `delete_reminder`/`update_reminder` НЕ існує у dispatcher → AI може тільки `set_reminder` (create). Workaround: свайп вліво по старій reminder-картці у Inbox → видаляє з `nm_reminders`. Фікс потребує нової tool + dispatcher case + REMINDER_RULES правила «коригуєш час → delete + create». |
 
 ---
 
