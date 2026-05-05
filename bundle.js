@@ -8086,6 +8086,673 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     }
   });
 
+  // src/tabs/me.js
+  var me_exports = {};
+  __export(me_exports, {
+    addMeChatMsg: () => addMeChatMsg,
+    renderMe: () => renderMe,
+    sendMeChatMessage: () => sendMeChatMessage,
+    showMonthlyReportTemporarily: () => showMonthlyReportTemporarily
+  });
+  async function sendMeChatMessage() {
+    const input = document.getElementById("me-chat-input");
+    const text = input.value.trim();
+    if (!text) return;
+    input.value = "";
+    input.style.height = "auto";
+    input.focus();
+    addMeChatMsg("user", text);
+    meChatHistory.push({ role: "user", content: text });
+    const loadId = "me-chat-load-" + Date.now();
+    addMeChatMsg("agent", "\u2026", false, loadId);
+    const context = getAIContext();
+    const stats = getMeStatsContext();
+    const systemPrompt = `${getOWLPersonality()} \u0410\u043D\u0430\u043B\u0456\u0437\u0443\u0454\u0448 \u0434\u0430\u043D\u0456 \u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447\u0430 \u0456 \u0434\u0430\u0454\u0448 \u0447\u0435\u0441\u043D\u0438\u0439, \u043A\u043E\u0440\u0438\u0441\u043D\u0438\u0439 \u0437\u0432\u043E\u0440\u043E\u0442\u043D\u0456\u0439 \u0437\u0432\u02BC\u044F\u0437\u043E\u043A. \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456 \u2014 2-4 \u0440\u0435\u0447\u0435\u043D\u043D\u044F, \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E \u0456 \u043F\u043E \u0434\u0456\u043B\u0443. \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u041D\u0415 \u0432\u0438\u0433\u0430\u0434\u0443\u0439 \u0444\u0430\u043A\u0442\u0438 \u044F\u043A\u0438\u0445 \u043D\u0435\u043C\u0430\u0454 \u0432 \u0434\u0430\u043D\u0438\u0445.
+\u0417\u0410\u0414\u0410\u0427\u0410 = \u0434\u0456\u044F \u0417\u0420\u041E\u0411\u0418\u0422\u0418 (save_task). \u041F\u041E\u0414\u0406\u042F = \u0444\u0430\u043A\u0442 \u0449\u043E \u0421\u0422\u0410\u041D\u0415\u0422\u042C\u0421\u042F (create_event). "\u041F\u0435\u0440\u0435\u043D\u0435\u0441\u0438 \u043F\u043E\u0434\u0456\u044E" = edit_event.
+
+${REMINDER_RULES}
+
+\u0414\u043B\u044F CRUD \u0434\u0456\u0439 \u2014 \u0432\u0438\u043A\u043B\u0438\u043A\u0430\u0439 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u043D\u0438\u0439 tool. \u0414\u043B\u044F \u0430\u043D\u0430\u043B\u0456\u0437\u0443/\u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456 \u2014 \u043F\u0438\u0448\u0438 \u0442\u0435\u043A\u0441\u0442.
+
+${UI_TOOLS_RULES}${context ? "\n\n" + context : ""}${stats ? "\n\n" + stats : ""}`;
+    const msg = await callAIWithTools(systemPrompt, [...meChatHistory], INBOX_TOOLS, "me-chat");
+    const loadEl = document.getElementById(loadId);
+    if (msg && Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
+      if (loadEl) loadEl.remove();
+      const guard = shouldClarify(text, msg.tool_calls, "me");
+      if (guard) {
+        addMeChatMsg("agent", guard.question, false, "", guard.chips);
+        return;
+      }
+      dispatchChatToolCalls(msg.tool_calls, (r, t2) => addMeChatMsg(r, t2), text);
+      if (msg.content) {
+        const { text: rt, chips } = parseContentChips(msg.content);
+        if (rt) addMeChatMsg("agent", rt, false, "", chips);
+        meChatHistory.push({ role: "assistant", content: msg.content });
+      }
+      if (meChatHistory.length > 20) meChatHistory = meChatHistory.slice(-20);
+      return;
+    }
+    const rawReply = msg && msg.content ? msg.content : "";
+    const { text: reply, chips: extractedChips } = parseContentChips(rawReply);
+    let handled = false;
+    if (reply) {
+      const blocks = extractJsonBlocks(reply);
+      for (const parsed of blocks) {
+        if (parsed.action && processUniversalAction(parsed, text, (r, t2) => addMeChatMsg(r, t2))) {
+          handled = true;
+        }
+      }
+      if (handled && loadEl) loadEl.textContent = "\u2705";
+    }
+    if (!handled) {
+      if (loadEl) loadEl.remove();
+      addMeChatMsg("agent", reply || t("me.chat.no_reply", "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u043E\u0442\u0440\u0438\u043C\u0430\u0442\u0438 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C."), false, "", extractedChips);
+    }
+    if (reply) meChatHistory.push({ role: "assistant", content: reply });
+    if (meChatHistory.length > 20) meChatHistory = meChatHistory.slice(-20);
+  }
+  function renderMe() {
+    const inbox = JSON.parse(localStorage.getItem("nm_inbox") || "[]");
+    const now = /* @__PURE__ */ new Date();
+    const todayDow = (now.getDay() + 6) % 7;
+    try {
+      let streak = 0;
+      for (let i = 0; i <= 60; i++) {
+        const d = new Date(now);
+        d.setDate(now.getDate() - i);
+        const ds = d.toDateString();
+        const hasRecord = inbox.some((item) => new Date(item.ts).toDateString() === ds) || getTasks().some((t2) => t2.createdAt && new Date(t2.createdAt).toDateString() === ds);
+        if (hasRecord) streak++;
+        else if (i > 0) break;
+      }
+      const badge = document.getElementById("me-streak-badge");
+      const count = document.getElementById("me-streak-count");
+      if (badge && count) {
+        if (streak >= 2) {
+          badge.style.display = "flex";
+          count.textContent = streak;
+        } else badge.style.display = "none";
+      }
+    } catch (e) {
+    }
+    const projBlock = document.getElementById("me-projects-block");
+    const projList = document.getElementById("me-projects-list");
+    if (projBlock && projList) {
+      let allProjects = [];
+      try {
+        allProjects = getProjects();
+      } catch (e) {
+      }
+      if (allProjects.length > 0) {
+        projBlock.style.display = "block";
+        const weekAgo = Date.now() - 7 * 864e5;
+        const projWithStats = allProjects.map((p) => {
+          const steps = p.steps || [];
+          const done = steps.filter((s) => s.done).length;
+          const pct = steps.length > 0 ? Math.round(done / steps.length * 100) : p.progress || 0;
+          const stepsThisWeek = steps.filter((s) => s.done && s.doneAt && s.doneAt >= weekAgo).length;
+          const lastDoneAt = steps.filter((s) => s.done && s.doneAt).reduce((max, s) => Math.max(max, s.doneAt), 0);
+          const daysSince = lastDoneAt > 0 ? Math.floor((Date.now() - lastDoneAt) / 864e5) : null;
+          const nextStep = steps.find((s) => !s.done);
+          return { p, steps, done, pct, stepsThisWeek, daysSince, nextStep };
+        });
+        projWithStats.sort((a, b) => b.stepsThisWeek - a.stepsThisWeek);
+        const moving = projWithStats.filter((s) => s.stepsThisWeek > 0).length;
+        const stagnant = projWithStats.length - moving;
+        const activeWord = allProjects.length === 1 ? t("me.proj.active_one", "\u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0439") : t("me.proj.active_many", "\u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0445");
+        const movingWord = moving === 1 ? t("me.proj.moving_one", "\u0440\u0443\u0445\u0430\u0454\u0442\u044C\u0441\u044F") : t("me.proj.moving_many", "\u0440\u0443\u0445\u0430\u044E\u0442\u044C\u0441\u044F");
+        const stagnantWord = t("me.proj.stagnant", "\u0441\u0442\u043E\u0457\u0442\u044C");
+        const summaryHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:baseline;padding:7px 10px;background:rgba(255,255,255,0.55);border-radius:10px;margin-bottom:12px">
+          <span style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.5)">${allProjects.length} ${activeWord}</span>
+          <span style="font-size:11px;font-weight:700">
+            <span style="color:#16a34a">${moving} ${movingWord}</span>
+            ${stagnant > 0 ? `<span style="color:rgba(30,16,64,0.4)"> \xB7 </span><span style="color:#c2410c">${stagnant} ${stagnantWord}</span>` : ""}
+          </span>
+        </div>`;
+        const itemsHTML = projWithStats.slice(0, 5).map(({ p, pct, stepsThisWeek, daysSince, nextStep }) => {
+          let trendChip = "";
+          if (stepsThisWeek > 0) {
+            const stepWord = stepsThisWeek === 1 ? t("me.proj.step_one", "\u043A\u0440\u043E\u043A") : stepsThisWeek < 5 ? t("me.proj.step_few", "\u043A\u0440\u043E\u043A\u0438") : t("me.proj.step_many", "\u043A\u0440\u043E\u043A\u0456\u0432");
+            trendChip = `<span style="font-size:10px;font-weight:700;color:#16a34a;margin-top:2px;display:block">+${stepsThisWeek} ${stepWord} ${t("me.proj.per_week", "\u0437\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C")}</span>`;
+          } else if (daysSince !== null && daysSince >= 7) {
+            trendChip = `<span style="font-size:10px;font-weight:700;color:#c2410c;margin-top:2px;display:block">${t("me.proj.no_changes", "\u23F8 \u0431\u0435\u0437 \u0437\u043C\u0456\u043D {n} \u0434\u043D", { n: daysSince })}</span>`;
+          } else if (daysSince === null) {
+            trendChip = `<span style="font-size:10px;font-weight:700;color:rgba(30,16,64,0.4);margin-top:2px;display:block">${t("me.proj.just_created", "\u0449\u043E\u0439\u043D\u043E \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u0438\u0439")}</span>`;
+          }
+          return `<div style="margin-bottom:10px;cursor:pointer" onclick="switchTab('projects')">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">
+            <div style="flex:1">
+              <div style="font-size:13px;font-weight:700;color:#1e1040">${escapeHtml(p.name)}</div>
+              ${p.subtitle ? `<div style="font-size:10px;color:rgba(30,16,64,0.4);margin-top:1px;font-weight:600">${escapeHtml(p.subtitle)}</div>` : ""}
+              ${nextStep ? `<div style="font-size:10px;color:rgba(30,16,64,0.5);margin-top:2px;font-weight:600">\u2192 ${escapeHtml(nextStep.text)}</div>` : ""}
+              ${trendChip}
+            </div>
+            <div style="font-size:20px;font-weight:900;color:#7c4a2a;line-height:1;margin-left:8px">${pct}%</div>
+          </div>
+          <div style="height:4px;background:rgba(30,16,64,0.07);border-radius:3px;overflow:hidden">
+            <div style="height:100%;width:${pct}%;background:#7c4a2a;border-radius:3px;transition:width 0.5s"></div>
+          </div>
+        </div>`;
+        }).join("");
+        projList.innerHTML = summaryHTML + itemsHTML;
+      } else {
+        projBlock.style.display = "none";
+      }
+    }
+    renderMeHeatmap();
+    renderWeeklyInsights();
+    renderMonthlyReport();
+    renderMeActivityChart();
+  }
+  function _buildWindowContext(days) {
+    const now = /* @__PURE__ */ new Date();
+    const habits = getHabits();
+    const log = getHabitLog();
+    const buildHabits = habits.filter((h) => h.type !== "quit");
+    const habitLines = buildHabits.map((h) => {
+      let done = 0, scheduled = 0;
+      for (let i = 0; i < days; i++) {
+        const d = new Date(now);
+        d.setDate(now.getDate() - i);
+        const dow = (d.getDay() + 6) % 7;
+        if (!(h.days || [0, 1, 2, 3, 4]).includes(dow)) continue;
+        scheduled++;
+        if (log[d.toDateString()]?.[h.id]) done++;
+      }
+      return `- "${h.name}": ${done} \u0437 ${scheduled} \u0434\u043D\u0456\u0432`;
+    }).join("\n");
+    const quitHabits = habits.filter((h) => h.type === "quit");
+    const quitLines = quitHabits.map((h) => {
+      let abstained = 0;
+      for (let i = 0; i < days; i++) {
+        const d = new Date(now);
+        d.setDate(now.getDate() - i);
+        if (log[d.toDateString()]?.[h.id]) abstained++;
+      }
+      return `- "${h.name}" (\u0432\u0456\u0434\u043C\u043E\u0432\u0430): ${abstained}/${days} \u0434\u043D\u0456\u0432 \u0443\u0442\u0440\u0438\u043C\u0430\u043D\u043D\u044F`;
+    }).join("\n");
+    const cutoff = Date.now() - days * 864e5;
+    const doneTasks = getTasks().filter((t2) => t2.status === "done" && t2.completedAt && t2.completedAt >= cutoff).length;
+    const inbox = JSON.parse(localStorage.getItem("nm_inbox") || "[]");
+    const inboxCount = inbox.filter((i) => i.ts >= cutoff).length;
+    let moodSummary = "";
+    try {
+      const moods = [];
+      for (let i = 0; i < days; i++) {
+        const d = new Date(now);
+        d.setDate(now.getDate() - i);
+        const ds = d.toDateString();
+        const saved = JSON.parse(localStorage.getItem("nm_evening_mood") || "null");
+        if (saved && saved.date === ds && saved.mood) moods.push(saved.mood);
+      }
+      if (moods.length > 0) moodSummary = `\u041D\u0430\u0441\u0442\u0440\u0456\u0439 (\u0437\u0430\u043F\u0438\u0441\u0430\u043D\u043E ${moods.length} \u0434\u043D\u0456\u0432): ${moods.join(", ")}`;
+    } catch {
+    }
+    const parts = [`=== \u0420\u0415\u0410\u041B\u042C\u041D\u0406 \u0414\u0410\u041D\u0406 \u0417\u0410 \u041E\u0421\u0422\u0410\u041D\u041D\u0406 ${days} \u0414\u041D\u0406\u0412 ===`];
+    if (habitLines) parts.push(`\u{1F3AF} \u0417\u0412\u0418\u0427\u041A\u0418 (\u043F\u043E\u0432\u0442\u043E\u0440\u044E\u0432\u0430\u043D\u0456 \u0434\u0456\u0457 \u0437\u0430 \u0434\u043D\u044F\u043C\u0438 \u0442\u0438\u0436\u043D\u044F \u2014 \u0440\u0430\u0445\u0443\u0454\u0442\u044C\u0441\u044F "\u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E / \u0437\u0430\u043F\u043B\u0430\u043D\u043E\u0432\u0430\u043D\u043E \u043D\u0430 \u0446\u0456 \u0434\u043D\u0456"):
+${habitLines}`);
+    if (quitLines) parts.push(`\u{1F6AB} \u0412\u0406\u0414\u041C\u041E\u0412\u0410 \u0412\u0406\u0414 \u0417\u0412\u0418\u0427\u041E\u041A (\u0434\u043D\u0456\u0432 \u0443\u0442\u0440\u0438\u043C\u0430\u043D\u043D\u044F):
+${quitLines}`);
+    parts.push(`\u2705 \u0417\u0410\u041A\u0420\u0418\u0422\u0406 \u0417\u0410\u0414\u0410\u0427\u0406 \u0437\u0430 ${days} \u0434\u043D\u0456\u0432 (\u043E\u0434\u043D\u043E\u0440\u0430\u0437\u043E\u0432\u0456 \u0437\u0430\u0432\u0434\u0430\u043D\u043D\u044F, \u041D\u0415 \u0437\u0432\u0438\u0447\u043A\u0438, \u041D\u0415 \u043F\u043B\u0443\u0442\u0430\u0442\u0438): ${doneTasks}`);
+    parts.push(`\u{1F4E5} \u041D\u041E\u0412\u0418\u0425 \u0417\u0410\u041F\u0418\u0421\u0406\u0412 \u0412 INBOX \u0437\u0430 ${days} \u0434\u043D\u0456\u0432: ${inboxCount}`);
+    if (moodSummary) parts.push(moodSummary);
+    return parts.join("\n\n");
+  }
+  function _getInsights() {
+    try {
+      return JSON.parse(localStorage.getItem(INSIGHTS_KEY) || "null");
+    } catch {
+      return null;
+    }
+  }
+  function _isInsightsStale(insights) {
+    if (!insights || !insights.generatedAt) return true;
+    if (insights.version !== INSIGHTS_VERSION) return true;
+    const ageMs = Date.now() - insights.generatedAt;
+    return ageMs > 7 * 864e5;
+  }
+  function _formatInsightAge(ts) {
+    const days = Math.floor((Date.now() - ts) / 864e5);
+    if (days === 0) return t("me.weekly.age_today", "\u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456");
+    if (days === 1) return t("me.weekly.age_yesterday", "\u0432\u0447\u043E\u0440\u0430");
+    return t("me.weekly.age_days_ago", "{n} \u0434\u043D \u0442\u043E\u043C\u0443", { n: days });
+  }
+  async function generateWeeklyInsights() {
+    if (_insightsGenerating) return;
+    _insightsGenerating = true;
+    try {
+      const aiCtx = getAIContext();
+      const stats = getMeStatsContext ? getMeStatsContext() : "";
+      const systemPrompt = `${getOWLPersonality()} \u0422\u0438 \u0430\u043D\u0430\u043B\u0456\u0437\u0443\u0454\u0448 \u0434\u0430\u043D\u0456 \u044E\u0437\u0435\u0440\u0430 \u0437\u0430 \u043C\u0438\u043D\u0443\u043B\u0438\u0439 \u0442\u0438\u0436\u0434\u0435\u043D\u044C \u0456 \u043F\u043E\u0432\u0435\u0440\u0442\u0430\u0454\u0448 \u0422\u0406\u041B\u042C\u041A\u0418 \u0432\u0430\u043B\u0456\u0434\u043D\u0438\u0439 JSON \u0431\u0435\u0437 markdown, \u0431\u0435\u0437 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440\u0456\u0432. \u0421\u0442\u0440\u0443\u043A\u0442\u0443\u0440\u0430:
+{"oneliner":"\u043E\u0434\u043D\u0435 \u0440\u0435\u0447\u0435\u043D\u043D\u044F-\u043F\u0456\u0434\u0441\u0443\u043C\u043E\u043A \u0442\u0438\u0436\u043D\u044F (12-20 \u0441\u043B\u0456\u0432, \u0447\u0435\u0441\u043D\u043E \u2014 \u043D\u0435 \u043B\u0435\u0441\u0442\u043E\u0449\u0456)","patterns":["\u043F\u0430\u0442\u0435\u0440\u043D 1 (10-15 \u0441\u043B\u0456\u0432 \u043F\u0440\u043E \u0437\u0430\u043A\u043E\u043D\u043E\u043C\u0456\u0440\u043D\u0456\u0441\u0442\u044C)","\u043F\u0430\u0442\u0435\u0440\u043D 2","\u043F\u0430\u0442\u0435\u0440\u043D 3"],"deepReport":"4-6 \u0440\u0435\u0447\u0435\u043D\u044C \u0433\u043B\u0438\u0431\u043E\u043A\u043E\u0433\u043E \u0437\u0432\u0456\u0442\u0443: \u0446\u0438\u0444\u0440\u0438, \u043F\u0440\u043E\u0433\u0440\u0435\u0441, \u043F\u0440\u043E\u0431\u043B\u0435\u043C\u0438, \u0440\u0435\u043A\u043E\u043C\u0435\u043D\u0434\u0430\u0446\u0456\u0457"}
+\u0412\u0410\u0416\u041B\u0418\u0412\u041E: \u043F\u0438\u0448\u0438 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u041D\u0415 \u0432\u0438\u0433\u0430\u0434\u0443\u0439 \u0444\u0430\u043A\u0442\u0438 \u044F\u043A\u0438\u0445 \u043D\u0435\u043C\u0430 \u0432 \u0434\u0430\u043D\u0438\u0445. \u042F\u043A\u0449\u043E \u0434\u0430\u043D\u0438\u0445 \u043C\u0430\u043B\u043E \u2014 \u0432\u0441\u0435 \u043E\u0434\u043D\u043E \u0437\u0440\u043E\u0431\u0438 \u043A\u043E\u0440\u043E\u0442\u043A\u0438\u0439 \u0447\u0435\u0441\u043D\u0438\u0439 \u0437\u0432\u0456\u0442 ("\u0434\u0430\u043D\u0438\u0445 \u0437\u0430\u043C\u0430\u043B\u043E \u0434\u043B\u044F \u043F\u0430\u0442\u0435\u0440\u043D\u0456\u0432"). \u041D\u0415 \u0445\u0432\u0430\u043B\u0438 \u0431\u0435\u0437 \u043F\u0440\u0438\u0447\u0438\u043D\u0438. \u041A\u043E\u043D\u043A\u0440\u0435\u0442\u0438\u043A\u0430 > \u0437\u0430\u0433\u0430\u043B\u044C\u043D\u0456 \u0444\u0440\u0430\u0437\u0438.
+
+\u26A0\uFE0F \u0420\u041E\u0417\u0420\u0406\u0417\u041D\u0415\u041D\u041D\u042F \u0421\u0423\u0422\u041D\u041E\u0421\u0422\u0415\u0419 \u2014 \u0417\u0410\u0414\u0410\u0427\u0410 \u2260 \u0417\u0412\u0418\u0427\u041A\u0410. \u0426\u0415 \u041A\u0420\u0418\u0422\u0418\u0427\u041D\u041E:
+- \u{1F3AF} \u0417\u0412\u0418\u0427\u041A\u0410 \u2014 \u043F\u043E\u0432\u0442\u043E\u0440\u044E\u0432\u0430\u043D\u0430 \u0434\u0456\u044F (\u0431\u0456\u0433\u0430\u0442\u0438 \u0449\u043E\u0434\u043D\u044F, \u0447\u0438\u0442\u0430\u0442\u0438, \u0445\u043E\u0434\u0438\u0442\u0438 \u0432 \u0437\u0430\u043B). \u0420\u0430\u0445\u0443\u0454\u0442\u044C\u0441\u044F "X \u0437 Y \u0434\u043D\u0456\u0432" \u0437\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C.
+- \u2705 \u0417\u0410\u0414\u0410\u0427\u0410 \u2014 \u043E\u0434\u043D\u043E\u0440\u0430\u0437\u043E\u0432\u0435 \u0437\u0430\u0432\u0434\u0430\u043D\u043D\u044F (\u043F\u043E\u043F\u0440\u0438\u0431\u0438\u0440\u0430\u0442\u0438 \u0432 \u043C\u0430\u0448\u0438\u043D\u0456, \u0437\u0430\u043F\u043B\u0430\u0442\u0438\u0442\u0438 \u0448\u0442\u0440\u0430\u0444, \u043F\u043E\u0434\u0430\u0442\u0438 \u0434\u0435\u043A\u043B\u0430\u0440\u0430\u0446\u0456\u044E). \u0410\u0431\u043E \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0430, \u0430\u0431\u043E \u0437\u0430\u043A\u0440\u0438\u0442\u0430.
+- \u274C \u0417\u0410\u0411\u041E\u0420\u041E\u041D\u0415\u041D\u041E \u043F\u043B\u0443\u0442\u0430\u0442\u0438: \u044F\u043A\u0449\u043E \u0443 \u0434\u0430\u043D\u0438\u0445 "\u0417\u0410\u041A\u0420\u0418\u0422\u0406 \u0417\u0410\u0414\u0410\u0427\u0406 \u0437\u0430 7 \u0434\u043D\u0456\u0432: 3" \u0456 "\u0417\u0412\u0418\u0427\u041A\u0418: \u0411\u0456\u0433\u0430\u0442\u0438 \u0449\u043E\u0434\u043D\u044F \u2014 1 \u0437 7 \u0434\u043D\u0456\u0432", \u041D\u0415 \u043A\u0430\u0436\u0438 "\u0442\u0438 \u0437\u0430\u043A\u0440\u0438\u0432 3 \u0437\u0430\u0434\u0430\u0447\u0456 \u0437\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C" \u043A\u043E\u043B\u0438 \u043C\u0430\u0432 \u043D\u0430 \u0443\u0432\u0430\u0437\u0456 \u0437\u0432\u0438\u0447\u043A\u0438. \u0406 \u043D\u0430\u0432\u043F\u0430\u043A\u0438.
+- \u2705 \u041F\u0420\u0410\u0412\u0418\u041B\u042C\u041D\u041E \u0446\u0438\u0442\u0443\u0439 \u0434\u0436\u0435\u0440\u0435\u043B\u043E: "\u0442\u0438 \u0437\u0430\u043A\u0440\u0438\u0432 3 \u0437\u0430\u0434\u0430\u0447\u0456" (\u0437 \u0431\u043B\u043E\u043A\u0443 \u0417\u0410\u041A\u0420\u0418\u0422\u0406 \u0417\u0410\u0414\u0410\u0427\u0406) \u0430\u0431\u043E "\u0432\u0438\u043A\u043E\u043D\u0430\u0432 \u0437\u0432\u0438\u0447\u043A\u0443 3 \u0437 7 \u0434\u043D\u0456\u0432" (\u0437 \u0431\u043B\u043E\u043A\u0443 \u0417\u0412\u0418\u0427\u041A\u0418).
+- \u042F\u043A\u0449\u043E \u0443 \u0434\u0430\u043D\u0438\u0445 \u043D\u0435\u043C\u0430 \u0417\u0410\u041A\u0420\u0418\u0422\u0418\u0425 \u0417\u0410\u0414\u0410\u0427 \u2014 \u041D\u0415 \u0432\u0438\u0433\u0430\u0434\u0443\u0439 \u0457\u0445 \u0437 \u043A\u0456\u043B\u044C\u043A\u043E\u0441\u0442\u0456 \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u0438\u0445 \u0437\u0432\u0438\u0447\u043E\u043A.
+
+\u26A0\uFE0F \u0424\u041E\u0420\u041C\u0410\u0422 \u041C\u0415\u0422\u0420\u0418\u041A \u2014 \u041E\u0411\u041E\u0412\u02BC\u042F\u0417\u041A\u041E\u0412\u041E \u0410\u0411\u0421\u041E\u041B\u042E\u0422\u041D\u0406 \u0426\u0418\u0424\u0420\u0418:
+- \u274C \u0417\u0410\u0411\u041E\u0420\u041E\u041D\u0415\u041D\u041E: "14%", "\u0432\u0438\u043A\u043E\u043D\u0430\u043D\u0430 \u043D\u0430 43%", "\u043B\u0438\u0448\u0435 0%". \u042E\u0437\u0435\u0440 \u043D\u0435 \u0440\u043E\u0437\u0443\u043C\u0456\u0454 \u0432\u0456\u0434\u0441\u043E\u0442\u043A\u0438 \u0437\u0430 \u044F\u043A\u0438\u0439 \u043F\u0435\u0440\u0456\u043E\u0434.
+- \u2705 \u041F\u0420\u0410\u0412\u0418\u041B\u042C\u041D\u041E: "1 \u0437 7 \u0434\u043D\u0456\u0432 \u0437\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C", "0 \u0437 4 \u0434\u043D\u0456\u0432", "3 \u0437 7", "\u0437\u0430\u0439\u043C\u0430\u0432\u0441\u044F 3 \u0437 7 \u0434\u043D\u0456\u0432".
+- \u0414\u043B\u044F \u0437\u0432\u0438\u0447\u043E\u043A \u0437\u0430\u0432\u0436\u0434\u0438 \u043F\u0438\u0448\u0438 "X \u0437 Y \u0434\u043D\u0456\u0432" \u2014 \u0444\u043E\u0440\u043C\u0430\u0442 \u0443\u0436\u0435 \u0443 \u0434\u0430\u043D\u0438\u0445.
+- \u041C\u043E\u0436\u0435\u0448 \u043F\u0438\u0441\u0430\u0442\u0438 "\u0436\u043E\u0434\u043D\u043E\u0433\u043E \u0440\u0430\u0437\u0443 \u0437\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C", "\u0432\u0441\u0456 7 \u0434\u043D\u0456\u0432 \u043F\u043E\u0441\u043F\u0456\u043B\u044C" \u2014 \u0430\u043B\u0435 \u0431\u0435\u0437 \u043F\u0440\u043E\u0446\u0435\u043D\u0442\u0456\u0432.`;
+      const windowCtx = _buildWindowContext(7);
+      const userMsg = '\u0417\u0433\u0435\u043D\u0435\u0440\u0443\u0439 \u0442\u0438\u0436\u043D\u0435\u0432\u0456 \u0456\u043D\u0441\u0430\u0439\u0442\u0438 \u043D\u0430 \u043E\u0441\u043D\u043E\u0432\u0456 \u0434\u0430\u043D\u0438\u0445. \u041E\u0411\u041E\u0412\u02BC\u042F\u0417\u041A\u041E\u0412\u041E \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0420\u0415\u0410\u041B\u042C\u041D\u0406 \u0426\u0418\u0424\u0420\u0418 \u0437 \u0441\u0435\u043A\u0446\u0456\u0457 "\u0420\u0415\u0410\u041B\u042C\u041D\u0406 \u0414\u0410\u041D\u0406 \u0417\u0410 \u041E\u0421\u0422\u0410\u041D\u041D\u0406 7 \u0414\u041D\u0406\u0412" \u2014 \u043D\u0435 \u043A\u0430\u0436\u0438 "\u043D\u0435 \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E \u0436\u043E\u0434\u043D\u043E\u0457 \u0437\u0432\u0438\u0447\u043A\u0438" \u044F\u043A\u0449\u043E \u0442\u0430\u043C \u0432\u0438\u0434\u043D\u043E \u0446\u0438\u0444\u0440\u0438.\n\n' + windowCtx + (aiCtx ? "\n\n" + aiCtx : "") + (stats ? "\n\n" + stats : "");
+      const reply = await callAI(systemPrompt, userMsg, {}, "me-weekly-insights");
+      if (!reply) return;
+      const jsonMatch = reply.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) return;
+      const parsed = JSON.parse(jsonMatch[0]);
+      if (!parsed.oneliner || !parsed.patterns) return;
+      const insights = {
+        version: INSIGHTS_VERSION,
+        generatedAt: Date.now(),
+        oneliner: String(parsed.oneliner).slice(0, 200),
+        patterns: Array.isArray(parsed.patterns) ? parsed.patterns.slice(0, 3).map((p) => String(p).slice(0, 200)) : [],
+        deepReport: parsed.deepReport ? String(parsed.deepReport).slice(0, 1e3) : ""
+      };
+      localStorage.setItem(INSIGHTS_KEY, JSON.stringify(insights));
+      renderWeeklyInsights();
+    } catch (e) {
+      console.warn("[me-weekly-insights] generation failed:", e);
+    } finally {
+      _insightsGenerating = false;
+    }
+  }
+  function renderWeeklyInsights() {
+    const el = document.getElementById("me-weekly-insights");
+    if (!el) return;
+    const insights = _getInsights();
+    const accent = "#7c4a2a";
+    if (_isInsightsStale(insights)) {
+      el.style.display = "block";
+      el.innerHTML = `
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+        <span style="font-size:14px">\u{1F989}</span>
+        <span style="font-size:11px;font-weight:800;color:${accent};text-transform:uppercase;letter-spacing:0.07em">${t("me.weekly.title", "OWL \u0437\u043D\u0430\u0454 \u0442\u0435\u0431\u0435")}</span>
+      </div>
+      <div style="font-size:13px;color:rgba(30,16,64,0.5);font-style:italic">${t("me.insights.loading", "\u0410\u043D\u0430\u043B\u0456\u0437\u0443\u044E \u0442\u0432\u0456\u0439 \u0442\u0438\u0436\u0434\u0435\u043D\u044C \u2014 \u0456\u043D\u0441\u0430\u0439\u0442\u0438 \u0437\u02BC\u044F\u0432\u043B\u044F\u0442\u044C\u0441\u044F \u0437\u0430 \u0445\u0432\u0438\u043B\u0438\u043D\u0443\u2026")}</div>`;
+      setTimeout(() => {
+        generateWeeklyInsights();
+      }, 800);
+      return;
+    }
+    el.style.display = "block";
+    const ageStr = _formatInsightAge(insights.generatedAt);
+    const patternsHTML = (insights.patterns || []).map((p) => `
+    <div style="display:flex;gap:8px;font-size:12.5px;color:rgba(30,16,64,0.75);line-height:1.4;margin-top:6px">
+      <span style="color:${accent};flex-shrink:0">\u2022</span>
+      <span>${escapeHtml(p)}</span>
+    </div>`).join("");
+    const deepHTML = insights.deepReport ? `
+    <div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(124,74,42,0.12)">
+      <div style="font-size:10px;font-weight:700;color:rgba(124,74,42,0.6);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">${t("me.weekly.deep_report", "\u0413\u043B\u0438\u0431\u043E\u043A\u0438\u0439 \u0437\u0432\u0456\u0442")}</div>
+      <div style="font-size:12.5px;color:rgba(30,16,64,0.75);line-height:1.5">${escapeHtml(insights.deepReport)}</div>
+    </div>` : "";
+    el.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:14px">\u{1F989}</span>
+        <span style="font-size:11px;font-weight:800;color:${accent};text-transform:uppercase;letter-spacing:0.07em">${t("me.weekly.title", "OWL \u0437\u043D\u0430\u0454 \u0442\u0435\u0431\u0435")}</span>
+      </div>
+      <span style="font-size:10px;color:rgba(30,16,64,0.35);font-weight:600">${ageStr}</span>
+    </div>
+    <div style="font-size:14px;font-weight:600;color:#1e1040;line-height:1.4">${escapeHtml(insights.oneliner)}</div>
+    ${patternsHTML}
+    ${deepHTML}`;
+  }
+  function _getMonthlyReport() {
+    try {
+      return JSON.parse(localStorage.getItem(MONTHLY_KEY) || "null");
+    } catch {
+      return null;
+    }
+  }
+  function _prevMonthKey() {
+    const now = /* @__PURE__ */ new Date();
+    const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    return `${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, "0")}`;
+  }
+  function _prevMonthName() {
+    const now = /* @__PURE__ */ new Date();
+    const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    return monthGenitive(prev.getMonth());
+  }
+  async function generateMonthlyReport() {
+    if (_monthlyGenerating) return;
+    _monthlyGenerating = true;
+    try {
+      const aiCtx = getAIContext();
+      const stats = getMeStatsContext ? getMeStatsContext() : "";
+      const monthLabel = _prevMonthName();
+      const systemPrompt = `${getOWLPersonality()} \u0422\u0438 \u0440\u043E\u0431\u0438\u0448 \u043C\u0456\u0441\u044F\u0447\u043D\u0438\u0439 \u0437\u0432\u0456\u0442 \u044E\u0437\u0435\u0440\u0430 \u0437\u0430 \u041F\u041E\u041F\u0415\u0420\u0415\u0414\u041D\u0406\u0419 \u043C\u0456\u0441\u044F\u0446\u044C (${monthLabel}). \u041F\u043E\u0432\u0435\u0440\u043D\u0438 \u0422\u0406\u041B\u042C\u041A\u0418 \u0432\u0430\u043B\u0456\u0434\u043D\u0438\u0439 JSON \u0431\u0435\u0437 markdown:
+{"oneliner":"\u043E\u0434\u043D\u0435 \u0440\u0435\u0447\u0435\u043D\u043D\u044F-\u043F\u0456\u0434\u0441\u0443\u043C\u043E\u043A \u043C\u0456\u0441\u044F\u0446\u044F (15-25 \u0441\u043B\u0456\u0432, \u0447\u0435\u0441\u043D\u043E)","topActivities":["\u0437\u0430\u043D\u044F\u0442\u0442\u044F 1","\u0437\u0430\u043D\u044F\u0442\u0442\u044F 2","\u0437\u0430\u043D\u044F\u0442\u0442\u044F 3"],"moodTrend":"\u0440\u044F\u0434\u043E\u043A \u043F\u0440\u043E \u043D\u0430\u0441\u0442\u0440\u0456\u0439 (1 \u0440\u0435\u0447\u0435\u043D\u043D\u044F)","projectsProgress":"\u0440\u044F\u0434\u043E\u043A \u043F\u0440\u043E \u043F\u0440\u043E\u0433\u0440\u0435\u0441 \u043F\u0440\u043E\u0435\u043A\u0442\u0456\u0432 (1 \u0440\u0435\u0447\u0435\u043D\u043D\u044F)","financeNote":"\u0440\u044F\u0434\u043E\u043A \u043F\u0440\u043E \u0444\u0456\u043D\u0430\u043D\u0441\u0438 \u044F\u043A\u0449\u043E \u0454 \u0434\u0430\u043D\u0456, \u0456\u043D\u0430\u043A\u0448\u0435 \u043F\u0443\u0441\u0442\u0438\u0439","patterns":["\u043F\u0430\u0442\u0435\u0440\u043D 1","\u043F\u0430\u0442\u0435\u0440\u043D 2"]}
+\u0412\u0410\u0416\u041B\u0418\u0412\u041E: \u043F\u0438\u0448\u0438 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u041D\u0415 \u0432\u0438\u0433\u0430\u0434\u0443\u0439 \u0446\u0438\u0444\u0440. \u042F\u043A\u0449\u043E \u0434\u0430\u043D\u0438\u0445 \u043C\u0430\u043B\u043E \u2014 \u0432\u0441\u0435 \u043E\u0434\u043D\u043E \u0437\u0440\u043E\u0431\u0438 \u0447\u0435\u0441\u043D\u0438\u0439 \u043A\u043E\u0440\u043E\u0442\u043A\u0438\u0439 \u0437\u0432\u0456\u0442. \u041A\u043E\u043D\u043A\u0440\u0435\u0442\u0438\u043A\u0430 > \u0437\u0430\u0433\u0430\u043B\u044C\u043D\u0456 \u0444\u0440\u0430\u0437\u0438.`;
+      const windowCtx = _buildWindowContext(30);
+      const userMsg = `\u0417\u0433\u0435\u043D\u0435\u0440\u0443\u0439 \u043F\u0456\u0434\u0441\u0443\u043C\u043E\u043A ${monthLabel} \u043D\u0430 \u043E\u0441\u043D\u043E\u0432\u0456 \u0434\u0430\u043D\u0438\u0445. \u041E\u0411\u041E\u0412\u02BC\u042F\u0417\u041A\u041E\u0412\u041E \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0420\u0415\u0410\u041B\u042C\u041D\u0406 \u0426\u0418\u0424\u0420\u0418 \u0437 \u0441\u0435\u043A\u0446\u0456\u0457 "\u0420\u0415\u0410\u041B\u042C\u041D\u0406 \u0414\u0410\u041D\u0406 \u0417\u0410 \u041E\u0421\u0422\u0410\u041D\u041D\u0406 30 \u0414\u041D\u0406\u0412".
+
+${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
+      const reply = await callAI(systemPrompt, userMsg, {}, "me-monthly-report");
+      if (!reply) return;
+      const jsonMatch = reply.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) return;
+      const parsed = JSON.parse(jsonMatch[0]);
+      if (!parsed.oneliner) return;
+      const report = {
+        month: _prevMonthKey(),
+        generatedAt: Date.now(),
+        monthLabel,
+        oneliner: String(parsed.oneliner).slice(0, 250),
+        topActivities: Array.isArray(parsed.topActivities) ? parsed.topActivities.slice(0, 3).map((a) => String(a).slice(0, 100)) : [],
+        moodTrend: parsed.moodTrend ? String(parsed.moodTrend).slice(0, 200) : "",
+        projectsProgress: parsed.projectsProgress ? String(parsed.projectsProgress).slice(0, 200) : "",
+        financeNote: parsed.financeNote ? String(parsed.financeNote).slice(0, 200) : "",
+        patterns: Array.isArray(parsed.patterns) ? parsed.patterns.slice(0, 3).map((p) => String(p).slice(0, 200)) : []
+      };
+      localStorage.setItem(MONTHLY_KEY, JSON.stringify(report));
+      renderMonthlyReport();
+    } catch (e) {
+      console.warn("[me-monthly-report] generation failed:", e);
+    } finally {
+      _monthlyGenerating = false;
+    }
+  }
+  function showMonthlyReportTemporarily(durationMs = 60 * 60 * 1e3) {
+    try {
+      localStorage.setItem(MONTHLY_SHOW_UNTIL_KEY, String(Date.now() + durationMs));
+    } catch (e) {
+    }
+  }
+  function _monthlyShowOverrideActive() {
+    try {
+      const until = parseInt(localStorage.getItem(MONTHLY_SHOW_UNTIL_KEY) || "0");
+      return until > Date.now();
+    } catch (e) {
+      return false;
+    }
+  }
+  function renderMonthlyReport() {
+    const el = document.getElementById("me-monthly-report");
+    if (!el) return;
+    const now = /* @__PURE__ */ new Date();
+    const dayOfMonth = now.getDate();
+    if (dayOfMonth > 4 && !_monthlyShowOverrideActive()) {
+      el.style.display = "none";
+      return;
+    }
+    const report = _getMonthlyReport();
+    const expectedMonth = _prevMonthKey();
+    if (!report || report.month !== expectedMonth) {
+      if (_monthlyGenerating) {
+        el.style.display = "block";
+        el.innerHTML = `
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+          <span style="font-size:14px">\u{1F4C6}</span>
+          <span style="font-size:11px;font-weight:800;color:#16a34a;text-transform:uppercase;letter-spacing:0.07em">${t("me.monthly.title", "\u041F\u0456\u0434\u0441\u0443\u043C\u043E\u043A {month}", { month: _prevMonthName() })}</span>
+        </div>
+        <div style="font-size:13px;color:rgba(30,16,64,0.5);font-style:italic">${t("me.monthly.loading", "\u0421\u043A\u043B\u0430\u0434\u0430\u044E \u043C\u0456\u0441\u044F\u0447\u043D\u0438\u0439 \u0437\u0432\u0456\u0442\u2026")}</div>`;
+      } else {
+        el.style.display = "none";
+        setTimeout(() => {
+          generateMonthlyReport();
+        }, 1500);
+      }
+      return;
+    }
+    el.style.display = "block";
+    const greenAccent = "#16a34a";
+    const sections = [];
+    if (report.topActivities && report.topActivities.length > 0) {
+      sections.push(`<div style="margin-top:8px"><span style="font-size:10px;font-weight:800;color:rgba(22,163,74,0.7);text-transform:uppercase;letter-spacing:0.06em">${t("me.monthly.top_activities", "\u0422\u043E\u043F \u0437\u0430\u043D\u044F\u0442\u044C")}</span>
+      ${report.topActivities.map((a) => `<div style="font-size:12.5px;color:rgba(30,16,64,0.75);margin-top:3px">\u2022 ${escapeHtml(a)}</div>`).join("")}
+    </div>`);
+    }
+    if (report.moodTrend) sections.push(`<div style="font-size:12.5px;color:rgba(30,16,64,0.75);margin-top:8px"><span style="font-weight:700">${t("me.monthly.mood", "\u041D\u0430\u0441\u0442\u0440\u0456\u0439:")}</span> ${escapeHtml(report.moodTrend)}</div>`);
+    if (report.projectsProgress) sections.push(`<div style="font-size:12.5px;color:rgba(30,16,64,0.75);margin-top:6px"><span style="font-weight:700">${t("me.monthly.projects", "\u041F\u0440\u043E\u0435\u043A\u0442\u0438:")}</span> ${escapeHtml(report.projectsProgress)}</div>`);
+    if (report.financeNote) sections.push(`<div style="font-size:12.5px;color:rgba(30,16,64,0.75);margin-top:6px"><span style="font-weight:700">${t("me.monthly.finance", "\u0424\u0456\u043D\u0430\u043D\u0441\u0438:")}</span> ${escapeHtml(report.financeNote)}</div>`);
+    if (report.patterns && report.patterns.length > 0) {
+      sections.push(`<div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(22,163,74,0.15)">
+      <span style="font-size:10px;font-weight:800;color:rgba(22,163,74,0.7);text-transform:uppercase;letter-spacing:0.06em">${t("me.monthly.patterns", "\u041F\u0430\u0442\u0435\u0440\u043D\u0438")}</span>
+      ${report.patterns.map((p) => `<div style="font-size:12.5px;color:rgba(30,16,64,0.75);margin-top:3px">\u2022 ${escapeHtml(p)}</div>`).join("")}
+    </div>`);
+    }
+    el.innerHTML = `
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+      <span style="font-size:14px">\u{1F4C6}</span>
+      <span style="font-size:11px;font-weight:800;color:${greenAccent};text-transform:uppercase;letter-spacing:0.07em">${t("me.monthly.title", "\u041F\u0456\u0434\u0441\u0443\u043C\u043E\u043A {month}", { month: report.monthLabel })}</span>
+    </div>
+    <div style="font-size:14px;font-weight:600;color:#1e1040;line-height:1.45">${escapeHtml(report.oneliner)}</div>
+    ${sections.join("")}`;
+  }
+  function renderMeHeatmap() {
+    const grid = document.getElementById("me-heatmap-grid");
+    const legend = document.getElementById("me-heatmap-legend");
+    if (!grid) return;
+    const now = /* @__PURE__ */ new Date();
+    const habits = getHabits().filter((h) => h.type !== "quit");
+    const log = getHabitLog();
+    const accent = "#7c4a2a";
+    const dowLabels = [t("dow_mon", "\u041F\u043D"), t("dow_tue", "\u0412\u0442"), t("dow_wed", "\u0421\u0440"), t("dow_thu", "\u0427\u0442"), t("dow_fri", "\u041F\u0442"), t("dow_sat", "\u0421\u0431"), t("dow_sun", "\u041D\u0434")];
+    const cells = [];
+    let totalDone = 0;
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(now.getDate() - i);
+      const ds = d.toDateString();
+      const dow = (d.getDay() + 6) % 7;
+      const dayHabits = habits.filter((h) => (h.days || [0, 1, 2, 3, 4]).includes(dow));
+      const doneH = dayHabits.filter((h) => !!log[ds]?.[h.id]).length;
+      const doneT = getTasks().filter((t2) => t2.status === "done" && t2.completedAt && new Date(t2.completedAt).toDateString() === ds).length;
+      const total = dayHabits.length + doneT;
+      const done = doneH + doneT;
+      const pct = total > 0 ? Math.round(done / total * 100) : 0;
+      totalDone += done;
+      cells.push({ pct, done, total, day: d.getDate(), isToday: i === 0, dow });
+    }
+    grid.innerHTML = cells.map((c) => {
+      const border = c.isToday ? `2px solid ${accent}` : "1.5px solid rgba(30,16,64,0.10)";
+      const fillH = Math.max(0, Math.min(100, c.pct));
+      const labelColor = c.isToday ? accent : "rgba(30,16,64,0.45)";
+      const numColor = fillH >= 60 ? "white" : "rgba(30,16,64,0.7)";
+      const tooltip = c.total > 0 ? t("day_done_total", "{done}/{total} \u0434\u0456\u0439", { done: c.done, total: c.total }) : t("day_zero", "0 \u0434\u0456\u0439");
+      return `
+      <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+        <div style="font-size:9px;font-weight:700;color:${labelColor};text-transform:uppercase;letter-spacing:0.04em">${dowLabels[c.dow]}</div>
+        <div title="${tooltip}" style="position:relative;width:100%;aspect-ratio:1;background:rgba(30,16,64,0.06);border-radius:6px;border:${border};overflow:hidden">
+          <div style="position:absolute;left:0;right:0;bottom:0;height:${fillH}%;background:${accent};transition:height 0.4s ease"></div>
+          <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:${numColor};z-index:1">${c.day}</div>
+        </div>
+      </div>
+    `;
+    }).join("");
+    if (legend) legend.textContent = t("week_done_count", "{n} \u0434\u0456\u0439", { n: totalDone });
+  }
+  function renderMeActivityChart() {
+    const chartEl = document.getElementById("me-activity-chart");
+    const labelsEl = document.getElementById("me-activity-labels");
+    const totalEl = document.getElementById("me-activity-total");
+    if (!chartEl) return;
+    if (labelsEl) labelsEl.innerHTML = "";
+    if (totalEl) totalEl.textContent = "";
+    const now = /* @__PURE__ */ new Date();
+    const todayDS = now.toDateString();
+    const todayDow = (now.getDay() + 6) % 7;
+    const allTasks = getTasks();
+    const doneToday = allTasks.filter((t2) => t2.status === "done" && t2.completedAt && new Date(t2.completedAt).toDateString() === todayDS).length;
+    const stillActive = allTasks.filter((t2) => t2.status === "active").length;
+    const tasksTotal = doneToday + stillActive;
+    const tasksDone = doneToday;
+    const buildHabits = getHabits().filter((h) => h.type !== "quit");
+    const log = getHabitLog();
+    const habitsDone = buildHabits.filter((h) => !!log[todayDS]?.[h.id]).length;
+    const habitsTotal = buildHabits.length;
+    const ringSVG = (done, total, color, label) => {
+      const r = 38;
+      const C = 2 * Math.PI * r;
+      const pct = total > 0 ? Math.min(1, done / total) : 0;
+      const dash = `${(C * pct).toFixed(1)} ${C.toFixed(1)}`;
+      const text = total > 0 ? `${done}/${total}` : "\u2014";
+      const textColor = total > 0 ? color : "rgba(30,16,64,0.3)";
+      return `
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex:1">
+        <svg width="92" height="92" viewBox="0 0 100 100" style="display:block">
+          <circle cx="50" cy="50" r="${r}" fill="none" stroke="rgba(30,16,64,0.08)" stroke-width="9"/>
+          <circle cx="50" cy="50" r="${r}" fill="none" stroke="${color}" stroke-width="9" stroke-linecap="round"
+                  stroke-dasharray="${dash}" transform="rotate(-90 50 50)"
+                  style="transition:stroke-dasharray 0.4s ease"/>
+          <text x="50" y="52" text-anchor="middle" dominant-baseline="middle"
+                font-size="19" font-weight="800" fill="${textColor}" font-family="inherit">${text}</text>
+        </svg>
+        <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.55);text-transform:uppercase;letter-spacing:0.04em">${label}</div>
+      </div>
+    `;
+    };
+    chartEl.innerHTML = `
+    <div style="display:flex;gap:10px;align-items:center;justify-content:center;padding:6px 0">
+      ${ringSVG(tasksDone, tasksTotal, "#2fd0f9", t("me.chart.tasks", "\u0417\u0430\u0434\u0430\u0447\u0456"))}
+      ${ringSVG(habitsDone, habitsTotal, "#16a34a", t("me.chart.habits", "\u0417\u0432\u0438\u0447\u043A\u0438"))}
+    </div>
+  `;
+  }
+  async function refreshMeAnalysis() {
+    const btn = document.getElementById("me-refresh-btn");
+    const el = document.getElementById("me-ai-analysis");
+    btn.textContent = "\u2026";
+    btn.disabled = true;
+    el.textContent = "\u2026";
+    const inbox = JSON.parse(localStorage.getItem("nm_inbox") || "[]");
+    const tasks = JSON.parse(localStorage.getItem("nm_tasks") || "[]");
+    const notes = getNotes();
+    const aiContext = getAIContext();
+    const totalRecords = inbox.length + tasks.length + notes.length;
+    if (totalRecords < 3) {
+      el.textContent = t("me.analysis.too_few_records", "\u0429\u0435 \u0437\u0430\u043C\u0430\u043B\u043E \u0434\u0430\u043D\u0438\u0445 \u0434\u043B\u044F \u0430\u043D\u0430\u043B\u0456\u0437\u0443. \u0414\u043E\u0434\u0430\u0439 \u043A\u0456\u043B\u044C\u043A\u0430 \u0437\u0430\u043F\u0438\u0441\u0456\u0432 \u0432 Inbox, \u0441\u0442\u0432\u043E\u0440\u0438 \u0437\u0430\u0434\u0430\u0447\u0456 \u0430\u0431\u043E \u043D\u043E\u0442\u0430\u0442\u043A\u0438 \u2014 \u0456 \u044F \u0434\u0430\u043C \u0442\u043E\u0431\u0456 \u043A\u043E\u0440\u0438\u0441\u043D\u0438\u0439 \u0430\u043D\u0430\u043B\u0456\u0437.");
+      btn.textContent = "\u21BB";
+      btn.disabled = false;
+      return;
+    }
+    const dataNote = totalRecords < 10 ? "\u0423\u0412\u0410\u0413\u0410: \u0434\u0430\u043D\u0438\u0445 \u043C\u0430\u043B\u043E, \u043D\u0435 \u0440\u043E\u0431\u0438 \u0433\u043B\u0438\u0431\u043E\u043A\u0438\u0445 \u0432\u0438\u0441\u043D\u043E\u0432\u043A\u0456\u0432 \u043F\u0440\u043E \u043E\u0441\u043E\u0431\u0438\u0441\u0442\u0456\u0441\u0442\u044C \u2014 \u043F\u0440\u043E\u0441\u0442\u043E \u043E\u043F\u0438\u0448\u0438 \u0449\u043E \u0431\u0430\u0447\u0438\u0448 \u0456 \u0437\u0430\u043F\u0440\u043E\u043F\u043E\u043D\u0443\u0439 \u0449\u043E \u0434\u043E\u0434\u0430\u0442\u0438." : "";
+    const systemPrompt = `${getOWLPersonality()} \u041F\u0440\u043E\u0430\u043D\u0430\u043B\u0456\u0437\u0443\u0439 \u0434\u0430\u043D\u0456 \u0442\u0430 \u0434\u0430\u0439 \u043A\u043E\u0440\u043E\u0442\u043A\u0438\u0439 \u0430\u043D\u0430\u043B\u0456\u0437 (3-5 \u0440\u0435\u0447\u0435\u043D\u044C) \u0443 \u0441\u0432\u043E\u0454\u043C\u0443 \u0441\u0442\u0438\u043B\u0456. \u0429\u043E \u0432\u0434\u0430\u0454\u0442\u044C\u0441\u044F \u0434\u043E\u0431\u0440\u0435 \u0456 \u0449\u043E \u043C\u043E\u0436\u043D\u0430 \u043F\u043E\u043A\u0440\u0430\u0449\u0438\u0442\u0438 \u2014 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E. ${dataNote} \u0417\u0430\u0432\u0435\u0440\u0448\u0443\u0439 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E\u044E \u043F\u043E\u0440\u0430\u0434\u043E\u044E. \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E.
+
+\u0417\u0414\u041E\u0420\u041E\u0412'\u042F \u0443 \u043E\u0433\u043B\u044F\u0434\u0456 (\u0424\u0430\u0437\u0430 5):
+- \u042F\u043A\u0449\u043E \u0454 "\u0410\u043A\u0442\u0438\u0432\u043D\u0456 \u0441\u0442\u0430\u043D\u0438 \u0437\u0434\u043E\u0440\u043E\u0432'\u044F" \u2014 \u0432\u043A\u043B\u044E\u0447\u0438 \u043A\u043E\u0440\u043E\u0442\u043A\u0443 \u0441\u0442\u0440\u043E\u043A\u0443 \u043F\u0440\u043E \u0434\u0438\u0441\u0446\u0438\u043F\u043B\u0456\u043D\u0443 \u043A\u0443\u0440\u0441\u0456\u0432 (\u043D\u0430\u043F\u0440\u0438\u043A\u043B\u0430\u0434 "\u041A\u0443\u0440\u0441 \u041E\u043C\u0435\u0437\u0443 85%, \u0441\u0442\u0430\u043D \u0432\u0438\u0441\u0438\u043F\u0443 \u2014 \u043F\u043E\u043A\u0440\u0430\u0449\u0435\u043D\u043D\u044F, 2 \u043F\u0440\u043E\u043F\u0443\u0441\u043A\u0438 \u0437\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C"). \u0410\u043B\u0435 \u0442\u0456\u043B\u044C\u043A\u0438 \u044F\u043A\u0449\u043E \u0434\u0430\u043D\u0456 \u0440\u0435\u043B\u0435\u0432\u0430\u043D\u0442\u043D\u0456 (\u0454 \u043A\u0430\u0440\u0442\u043A\u0438 + \u0454 history \u0437\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C).
+- \u041D\u0415 \u0441\u0442\u0430\u0432\u044C \u0434\u0456\u0430\u0433\u043D\u043E\u0437\u0456\u0432, \u041D\u0415 \u0456\u043D\u0442\u0435\u0440\u043F\u0440\u0435\u0442\u0443\u0439 \u0441\u0438\u043C\u043F\u0442\u043E\u043C\u0438.${aiContext ? "\n\n" + aiContext : ""}`;
+    const userData = `\u0417\u0430\u043F\u0438\u0441\u0456\u0432 \u0432 Inbox: ${inbox.length}
+\u0410\u043A\u0442\u0438\u0432\u043D\u0438\u0445 \u0437\u0430\u0434\u0430\u0447: ${tasks.filter((t2) => t2.status !== "done").length}
+\u0412\u0438\u043A\u043E\u043D\u0430\u043D\u0438\u0445 \u0437\u0430\u0434\u0430\u0447: ${tasks.filter((t2) => t2.status === "done").length}
+\u041D\u043E\u0442\u0430\u0442\u043E\u043A: ${notes.length}
+\u041E\u0441\u0442\u0430\u043D\u043D\u0456 10 \u0437\u0430\u043F\u0438\u0441\u0456\u0432: ${inbox.slice(0, 10).map((i) => `[${i.category}] ${i.text}`).join("; ")}`;
+    const reply = await callAI(systemPrompt, userData, {}, "me-profile-analysis");
+    el.textContent = reply || t("me.analysis.no_reply", "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u043E\u0442\u0440\u0438\u043C\u0430\u0442\u0438 \u0430\u043D\u0430\u043B\u0456\u0437. \u0421\u043F\u0440\u043E\u0431\u0443\u0439 \u0449\u0435 \u0440\u0430\u0437.");
+    btn.textContent = "\u21BB";
+    btn.disabled = false;
+    if (reply && totalRecords >= 5) {
+      const adviceEl = document.getElementById("me-ai-advice");
+      const adviceBlock = document.getElementById("me-advice-block");
+      if (adviceEl && adviceBlock) {
+        adviceEl.textContent = "\u2026";
+        adviceBlock.style.display = "block";
+        const advicePrompt = `${getOWLPersonality()} \u041D\u0430 \u043E\u0441\u043D\u043E\u0432\u0456 \u0430\u043D\u0430\u043B\u0456\u0437\u0443 \u0434\u0430\u0439 \u0440\u0456\u0432\u043D\u043E 3 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0456, \u043F\u0440\u0430\u043A\u0442\u0438\u0447\u043D\u0456 \u043F\u043E\u0440\u0430\u0434\u0438 \u0434\u043B\u044F \u0446\u0456\u0454\u0457 \u043B\u044E\u0434\u0438\u043D\u0438. \u041A\u043E\u0436\u043D\u0430 \u043F\u043E\u0440\u0430\u0434\u0430 \u2014 \u043E\u0434\u043D\u0435 \u0440\u0435\u0447\u0435\u043D\u043D\u044F, \u043C\u0430\u043A\u0441\u0438\u043C\u0430\u043B\u044C\u043D\u043E \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0430 \u0456 \u0434\u0456\u0454\u0432\u0430. \u0424\u043E\u0440\u043C\u0430\u0442 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456: "1. [\u043F\u043E\u0440\u0430\u0434\u0430]
+2. [\u043F\u043E\u0440\u0430\u0434\u0430]
+3. [\u043F\u043E\u0440\u0430\u0434\u0430]". \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E.${aiContext ? "\n\n" + aiContext : ""}`;
+        const adviceReply = await callAI(advicePrompt, `\u0410\u043D\u0430\u043B\u0456\u0437: ${reply}
+
+\u0414\u0430\u043D\u0456: ${userData}`, {}, "me-advice");
+        if (adviceReply) {
+          adviceEl.innerHTML = adviceReply.split("\n").filter((l) => l.trim()).map((l) => `<div style="margin-bottom:8px">${escapeHtml(l.trim())}</div>`).join("");
+        } else {
+          adviceBlock.style.display = "none";
+        }
+      }
+    }
+  }
+  function showMeChatMessages() {
+    openChatBar("me");
+  }
+  function addMeChatMsg(role, text, _noSave = false, id = "", chips = null) {
+    const el = document.getElementById("me-chat-messages");
+    if (!el) return;
+    if (role === "agent") el.querySelectorAll(".chat-chips-row").forEach((n) => n.remove());
+    if (!_noSave) {
+      try {
+        openChatBar("me");
+      } catch (e) {
+      }
+    }
+    const isAgent = role === "agent";
+    const div = document.createElement("div");
+    div.style.cssText = `display:flex;${isAgent ? "" : "justify-content:flex-end"}`;
+    div.innerHTML = `<div ${id ? `id="${id}"` : ""} class="msg-bubble ${isAgent ? "msg-bubble--agent" : "msg-bubble--user"}">${escapeHtml(text)}</div>`;
+    el.appendChild(div);
+    if (isAgent && Array.isArray(chips) && chips.length > 0) {
+      const chipsRow = document.createElement("div");
+      chipsRow.className = "chat-chips-row";
+      renderChips(chipsRow, chips, "me");
+      el.appendChild(chipsRow);
+      requestAnimationFrame(() => chipsRow.scrollIntoView({ block: "end", inline: "nearest" }));
+    }
+    el.scrollTop = el.scrollHeight;
+    requestAnimationFrame(() => {
+      el.scrollTop = el.scrollHeight;
+    });
+    if (!_noSave) saveChatMsg("me", role, text, chips);
+  }
+  var meChatHistory, INSIGHTS_KEY, _insightsGenerating, _insightsRegenTimer, INSIGHTS_VERSION, MONTHLY_KEY, _monthlyGenerating, MONTHLY_SHOW_UNTIL_KEY;
+  var init_me = __esm({
+    "src/tabs/me.js"() {
+      init_nav();
+      init_utils();
+      init_core();
+      init_chips();
+      init_prompts();
+      init_tool_dispatcher();
+      init_clarify_guard();
+      init_tasks();
+      init_habits();
+      init_notes();
+      init_evening();
+      init_projects();
+      init_months();
+      meChatHistory = [];
+      INSIGHTS_KEY = "nm_me_weekly_insights";
+      _insightsGenerating = false;
+      _insightsRegenTimer = null;
+      window.addEventListener("nm-data-changed", (e) => {
+        if (e.detail === "insights") return;
+        const isMeActive = currentTab === "me";
+        if (isMeActive) {
+          clearTimeout(_insightsRegenTimer);
+          _insightsRegenTimer = setTimeout(() => {
+            generateWeeklyInsights();
+          }, 5e3);
+        } else {
+          try {
+            const cached = _getInsights();
+            if (cached) {
+              cached.version = -1;
+              localStorage.setItem(INSIGHTS_KEY, JSON.stringify(cached));
+            }
+          } catch {
+          }
+        }
+      });
+      INSIGHTS_VERSION = 5;
+      MONTHLY_KEY = "nm_me_monthly_report";
+      _monthlyGenerating = false;
+      MONTHLY_SHOW_UNTIL_KEY = "nm_me_monthly_show_until";
+      Object.assign(window, {
+        sendMeChatMessage,
+        showMeChatMessages,
+        refreshMeAnalysis
+      });
+    }
+  });
+
   // src/ai/tool-dispatcher.js
   function _toolCallToUniversalAction(name, args) {
     switch (name) {
@@ -8139,6 +8806,8 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
         return [{ action: "set_reminder", time: args.time, text: args.text, date: args.date }];
       case "save_routine":
         return [{ action: "save_routine", day: args.day, blocks: args.blocks }];
+      case "show_monthly_summary":
+        return [{ action: "show_monthly_summary", comment: args.comment }];
       default:
         return [];
     }
@@ -8558,6 +9227,21 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
         continue;
       }
       if (_handleProjectTool(name, args, addMsg)) {
+        any = true;
+        continue;
+      }
+      if (name === "show_monthly_summary") {
+        Promise.resolve().then(() => (init_me(), me_exports)).then((m) => {
+          if (m.showMonthlyReportTemporarily) m.showMonthlyReportTemporarily(60 * 60 * 1e3);
+          switchTab("me");
+          setTimeout(() => {
+            try {
+              m.renderMe?.();
+            } catch (e) {
+            }
+          }, 200);
+        }).catch((e) => console.warn("[dispatcher] show_monthly_summary load failed", e));
+        addMsg("agent", args.comment || "\u{1F4C6} \u041F\u0456\u0434\u0441\u0443\u043C\u043E\u043A \u043C\u0456\u0441\u044F\u0446\u044F \u0443 \u0432\u043A\u043B\u0430\u0434\u0446\u0456 \xAB\u042F\xBB (\u0437\u043D\u0438\u043A\u043D\u0435 \u0447\u0435\u0440\u0435\u0437 \u0433\u043E\u0434\u0438\u043D\u0443).");
         any = true;
         continue;
       }
@@ -10576,651 +11260,6 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
     }
   });
 
-  // src/tabs/me.js
-  async function sendMeChatMessage() {
-    const input = document.getElementById("me-chat-input");
-    const text = input.value.trim();
-    if (!text) return;
-    input.value = "";
-    input.style.height = "auto";
-    input.focus();
-    addMeChatMsg("user", text);
-    meChatHistory.push({ role: "user", content: text });
-    const loadId = "me-chat-load-" + Date.now();
-    addMeChatMsg("agent", "\u2026", false, loadId);
-    const context = getAIContext();
-    const stats = getMeStatsContext();
-    const systemPrompt = `${getOWLPersonality()} \u0410\u043D\u0430\u043B\u0456\u0437\u0443\u0454\u0448 \u0434\u0430\u043D\u0456 \u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447\u0430 \u0456 \u0434\u0430\u0454\u0448 \u0447\u0435\u0441\u043D\u0438\u0439, \u043A\u043E\u0440\u0438\u0441\u043D\u0438\u0439 \u0437\u0432\u043E\u0440\u043E\u0442\u043D\u0456\u0439 \u0437\u0432\u02BC\u044F\u0437\u043E\u043A. \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456 \u2014 2-4 \u0440\u0435\u0447\u0435\u043D\u043D\u044F, \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E \u0456 \u043F\u043E \u0434\u0456\u043B\u0443. \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u041D\u0415 \u0432\u0438\u0433\u0430\u0434\u0443\u0439 \u0444\u0430\u043A\u0442\u0438 \u044F\u043A\u0438\u0445 \u043D\u0435\u043C\u0430\u0454 \u0432 \u0434\u0430\u043D\u0438\u0445.
-\u0417\u0410\u0414\u0410\u0427\u0410 = \u0434\u0456\u044F \u0417\u0420\u041E\u0411\u0418\u0422\u0418 (save_task). \u041F\u041E\u0414\u0406\u042F = \u0444\u0430\u043A\u0442 \u0449\u043E \u0421\u0422\u0410\u041D\u0415\u0422\u042C\u0421\u042F (create_event). "\u041F\u0435\u0440\u0435\u043D\u0435\u0441\u0438 \u043F\u043E\u0434\u0456\u044E" = edit_event.
-
-${REMINDER_RULES}
-
-\u0414\u043B\u044F CRUD \u0434\u0456\u0439 \u2014 \u0432\u0438\u043A\u043B\u0438\u043A\u0430\u0439 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u043D\u0438\u0439 tool. \u0414\u043B\u044F \u0430\u043D\u0430\u043B\u0456\u0437\u0443/\u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456 \u2014 \u043F\u0438\u0448\u0438 \u0442\u0435\u043A\u0441\u0442.
-
-${UI_TOOLS_RULES}${context ? "\n\n" + context : ""}${stats ? "\n\n" + stats : ""}`;
-    const msg = await callAIWithTools(systemPrompt, [...meChatHistory], INBOX_TOOLS, "me-chat");
-    const loadEl = document.getElementById(loadId);
-    if (msg && Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
-      if (loadEl) loadEl.remove();
-      const guard = shouldClarify(text, msg.tool_calls, "me");
-      if (guard) {
-        addMeChatMsg("agent", guard.question, false, "", guard.chips);
-        return;
-      }
-      dispatchChatToolCalls(msg.tool_calls, (r, t2) => addMeChatMsg(r, t2), text);
-      if (msg.content) {
-        const { text: rt, chips } = parseContentChips(msg.content);
-        if (rt) addMeChatMsg("agent", rt, false, "", chips);
-        meChatHistory.push({ role: "assistant", content: msg.content });
-      }
-      if (meChatHistory.length > 20) meChatHistory = meChatHistory.slice(-20);
-      return;
-    }
-    const rawReply = msg && msg.content ? msg.content : "";
-    const { text: reply, chips: extractedChips } = parseContentChips(rawReply);
-    let handled = false;
-    if (reply) {
-      const blocks = extractJsonBlocks(reply);
-      for (const parsed of blocks) {
-        if (parsed.action && processUniversalAction(parsed, text, (r, t2) => addMeChatMsg(r, t2))) {
-          handled = true;
-        }
-      }
-      if (handled && loadEl) loadEl.textContent = "\u2705";
-    }
-    if (!handled) {
-      if (loadEl) loadEl.remove();
-      addMeChatMsg("agent", reply || t("me.chat.no_reply", "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u043E\u0442\u0440\u0438\u043C\u0430\u0442\u0438 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C."), false, "", extractedChips);
-    }
-    if (reply) meChatHistory.push({ role: "assistant", content: reply });
-    if (meChatHistory.length > 20) meChatHistory = meChatHistory.slice(-20);
-  }
-  function renderMe() {
-    const inbox = JSON.parse(localStorage.getItem("nm_inbox") || "[]");
-    const now = /* @__PURE__ */ new Date();
-    const todayDow = (now.getDay() + 6) % 7;
-    try {
-      let streak = 0;
-      for (let i = 0; i <= 60; i++) {
-        const d = new Date(now);
-        d.setDate(now.getDate() - i);
-        const ds = d.toDateString();
-        const hasRecord = inbox.some((item) => new Date(item.ts).toDateString() === ds) || getTasks().some((t2) => t2.createdAt && new Date(t2.createdAt).toDateString() === ds);
-        if (hasRecord) streak++;
-        else if (i > 0) break;
-      }
-      const badge = document.getElementById("me-streak-badge");
-      const count = document.getElementById("me-streak-count");
-      if (badge && count) {
-        if (streak >= 2) {
-          badge.style.display = "flex";
-          count.textContent = streak;
-        } else badge.style.display = "none";
-      }
-    } catch (e) {
-    }
-    const projBlock = document.getElementById("me-projects-block");
-    const projList = document.getElementById("me-projects-list");
-    if (projBlock && projList) {
-      let allProjects = [];
-      try {
-        allProjects = getProjects();
-      } catch (e) {
-      }
-      if (allProjects.length > 0) {
-        projBlock.style.display = "block";
-        const weekAgo = Date.now() - 7 * 864e5;
-        const projWithStats = allProjects.map((p) => {
-          const steps = p.steps || [];
-          const done = steps.filter((s) => s.done).length;
-          const pct = steps.length > 0 ? Math.round(done / steps.length * 100) : p.progress || 0;
-          const stepsThisWeek = steps.filter((s) => s.done && s.doneAt && s.doneAt >= weekAgo).length;
-          const lastDoneAt = steps.filter((s) => s.done && s.doneAt).reduce((max, s) => Math.max(max, s.doneAt), 0);
-          const daysSince = lastDoneAt > 0 ? Math.floor((Date.now() - lastDoneAt) / 864e5) : null;
-          const nextStep = steps.find((s) => !s.done);
-          return { p, steps, done, pct, stepsThisWeek, daysSince, nextStep };
-        });
-        projWithStats.sort((a, b) => b.stepsThisWeek - a.stepsThisWeek);
-        const moving = projWithStats.filter((s) => s.stepsThisWeek > 0).length;
-        const stagnant = projWithStats.length - moving;
-        const activeWord = allProjects.length === 1 ? t("me.proj.active_one", "\u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0439") : t("me.proj.active_many", "\u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0445");
-        const movingWord = moving === 1 ? t("me.proj.moving_one", "\u0440\u0443\u0445\u0430\u0454\u0442\u044C\u0441\u044F") : t("me.proj.moving_many", "\u0440\u0443\u0445\u0430\u044E\u0442\u044C\u0441\u044F");
-        const stagnantWord = t("me.proj.stagnant", "\u0441\u0442\u043E\u0457\u0442\u044C");
-        const summaryHTML = `
-        <div style="display:flex;justify-content:space-between;align-items:baseline;padding:7px 10px;background:rgba(255,255,255,0.55);border-radius:10px;margin-bottom:12px">
-          <span style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.5)">${allProjects.length} ${activeWord}</span>
-          <span style="font-size:11px;font-weight:700">
-            <span style="color:#16a34a">${moving} ${movingWord}</span>
-            ${stagnant > 0 ? `<span style="color:rgba(30,16,64,0.4)"> \xB7 </span><span style="color:#c2410c">${stagnant} ${stagnantWord}</span>` : ""}
-          </span>
-        </div>`;
-        const itemsHTML = projWithStats.slice(0, 5).map(({ p, pct, stepsThisWeek, daysSince, nextStep }) => {
-          let trendChip = "";
-          if (stepsThisWeek > 0) {
-            const stepWord = stepsThisWeek === 1 ? t("me.proj.step_one", "\u043A\u0440\u043E\u043A") : stepsThisWeek < 5 ? t("me.proj.step_few", "\u043A\u0440\u043E\u043A\u0438") : t("me.proj.step_many", "\u043A\u0440\u043E\u043A\u0456\u0432");
-            trendChip = `<span style="font-size:10px;font-weight:700;color:#16a34a;margin-top:2px;display:block">+${stepsThisWeek} ${stepWord} ${t("me.proj.per_week", "\u0437\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C")}</span>`;
-          } else if (daysSince !== null && daysSince >= 7) {
-            trendChip = `<span style="font-size:10px;font-weight:700;color:#c2410c;margin-top:2px;display:block">${t("me.proj.no_changes", "\u23F8 \u0431\u0435\u0437 \u0437\u043C\u0456\u043D {n} \u0434\u043D", { n: daysSince })}</span>`;
-          } else if (daysSince === null) {
-            trendChip = `<span style="font-size:10px;font-weight:700;color:rgba(30,16,64,0.4);margin-top:2px;display:block">${t("me.proj.just_created", "\u0449\u043E\u0439\u043D\u043E \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u0438\u0439")}</span>`;
-          }
-          return `<div style="margin-bottom:10px;cursor:pointer" onclick="switchTab('projects')">
-          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">
-            <div style="flex:1">
-              <div style="font-size:13px;font-weight:700;color:#1e1040">${escapeHtml(p.name)}</div>
-              ${p.subtitle ? `<div style="font-size:10px;color:rgba(30,16,64,0.4);margin-top:1px;font-weight:600">${escapeHtml(p.subtitle)}</div>` : ""}
-              ${nextStep ? `<div style="font-size:10px;color:rgba(30,16,64,0.5);margin-top:2px;font-weight:600">\u2192 ${escapeHtml(nextStep.text)}</div>` : ""}
-              ${trendChip}
-            </div>
-            <div style="font-size:20px;font-weight:900;color:#7c4a2a;line-height:1;margin-left:8px">${pct}%</div>
-          </div>
-          <div style="height:4px;background:rgba(30,16,64,0.07);border-radius:3px;overflow:hidden">
-            <div style="height:100%;width:${pct}%;background:#7c4a2a;border-radius:3px;transition:width 0.5s"></div>
-          </div>
-        </div>`;
-        }).join("");
-        projList.innerHTML = summaryHTML + itemsHTML;
-      } else {
-        projBlock.style.display = "none";
-      }
-    }
-    renderMeHeatmap();
-    renderWeeklyInsights();
-    renderMonthlyReport();
-    renderMeActivityChart();
-  }
-  function _buildWindowContext(days) {
-    const now = /* @__PURE__ */ new Date();
-    const habits = getHabits();
-    const log = getHabitLog();
-    const buildHabits = habits.filter((h) => h.type !== "quit");
-    const habitLines = buildHabits.map((h) => {
-      let done = 0, scheduled = 0;
-      for (let i = 0; i < days; i++) {
-        const d = new Date(now);
-        d.setDate(now.getDate() - i);
-        const dow = (d.getDay() + 6) % 7;
-        if (!(h.days || [0, 1, 2, 3, 4]).includes(dow)) continue;
-        scheduled++;
-        if (log[d.toDateString()]?.[h.id]) done++;
-      }
-      return `- "${h.name}": ${done} \u0437 ${scheduled} \u0434\u043D\u0456\u0432`;
-    }).join("\n");
-    const quitHabits = habits.filter((h) => h.type === "quit");
-    const quitLines = quitHabits.map((h) => {
-      let abstained = 0;
-      for (let i = 0; i < days; i++) {
-        const d = new Date(now);
-        d.setDate(now.getDate() - i);
-        if (log[d.toDateString()]?.[h.id]) abstained++;
-      }
-      return `- "${h.name}" (\u0432\u0456\u0434\u043C\u043E\u0432\u0430): ${abstained}/${days} \u0434\u043D\u0456\u0432 \u0443\u0442\u0440\u0438\u043C\u0430\u043D\u043D\u044F`;
-    }).join("\n");
-    const cutoff = Date.now() - days * 864e5;
-    const doneTasks = getTasks().filter((t2) => t2.status === "done" && t2.completedAt && t2.completedAt >= cutoff).length;
-    const inbox = JSON.parse(localStorage.getItem("nm_inbox") || "[]");
-    const inboxCount = inbox.filter((i) => i.ts >= cutoff).length;
-    let moodSummary = "";
-    try {
-      const moods = [];
-      for (let i = 0; i < days; i++) {
-        const d = new Date(now);
-        d.setDate(now.getDate() - i);
-        const ds = d.toDateString();
-        const saved = JSON.parse(localStorage.getItem("nm_evening_mood") || "null");
-        if (saved && saved.date === ds && saved.mood) moods.push(saved.mood);
-      }
-      if (moods.length > 0) moodSummary = `\u041D\u0430\u0441\u0442\u0440\u0456\u0439 (\u0437\u0430\u043F\u0438\u0441\u0430\u043D\u043E ${moods.length} \u0434\u043D\u0456\u0432): ${moods.join(", ")}`;
-    } catch {
-    }
-    const parts = [`=== \u0420\u0415\u0410\u041B\u042C\u041D\u0406 \u0414\u0410\u041D\u0406 \u0417\u0410 \u041E\u0421\u0422\u0410\u041D\u041D\u0406 ${days} \u0414\u041D\u0406\u0412 ===`];
-    if (habitLines) parts.push(`\u{1F3AF} \u0417\u0412\u0418\u0427\u041A\u0418 (\u043F\u043E\u0432\u0442\u043E\u0440\u044E\u0432\u0430\u043D\u0456 \u0434\u0456\u0457 \u0437\u0430 \u0434\u043D\u044F\u043C\u0438 \u0442\u0438\u0436\u043D\u044F \u2014 \u0440\u0430\u0445\u0443\u0454\u0442\u044C\u0441\u044F "\u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E / \u0437\u0430\u043F\u043B\u0430\u043D\u043E\u0432\u0430\u043D\u043E \u043D\u0430 \u0446\u0456 \u0434\u043D\u0456"):
-${habitLines}`);
-    if (quitLines) parts.push(`\u{1F6AB} \u0412\u0406\u0414\u041C\u041E\u0412\u0410 \u0412\u0406\u0414 \u0417\u0412\u0418\u0427\u041E\u041A (\u0434\u043D\u0456\u0432 \u0443\u0442\u0440\u0438\u043C\u0430\u043D\u043D\u044F):
-${quitLines}`);
-    parts.push(`\u2705 \u0417\u0410\u041A\u0420\u0418\u0422\u0406 \u0417\u0410\u0414\u0410\u0427\u0406 \u0437\u0430 ${days} \u0434\u043D\u0456\u0432 (\u043E\u0434\u043D\u043E\u0440\u0430\u0437\u043E\u0432\u0456 \u0437\u0430\u0432\u0434\u0430\u043D\u043D\u044F, \u041D\u0415 \u0437\u0432\u0438\u0447\u043A\u0438, \u041D\u0415 \u043F\u043B\u0443\u0442\u0430\u0442\u0438): ${doneTasks}`);
-    parts.push(`\u{1F4E5} \u041D\u041E\u0412\u0418\u0425 \u0417\u0410\u041F\u0418\u0421\u0406\u0412 \u0412 INBOX \u0437\u0430 ${days} \u0434\u043D\u0456\u0432: ${inboxCount}`);
-    if (moodSummary) parts.push(moodSummary);
-    return parts.join("\n\n");
-  }
-  function _getInsights() {
-    try {
-      return JSON.parse(localStorage.getItem(INSIGHTS_KEY) || "null");
-    } catch {
-      return null;
-    }
-  }
-  function _isInsightsStale(insights) {
-    if (!insights || !insights.generatedAt) return true;
-    if (insights.version !== INSIGHTS_VERSION) return true;
-    const ageMs = Date.now() - insights.generatedAt;
-    return ageMs > 7 * 864e5;
-  }
-  function _formatInsightAge(ts) {
-    const days = Math.floor((Date.now() - ts) / 864e5);
-    if (days === 0) return t("me.weekly.age_today", "\u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456");
-    if (days === 1) return t("me.weekly.age_yesterday", "\u0432\u0447\u043E\u0440\u0430");
-    return t("me.weekly.age_days_ago", "{n} \u0434\u043D \u0442\u043E\u043C\u0443", { n: days });
-  }
-  async function generateWeeklyInsights() {
-    if (_insightsGenerating) return;
-    _insightsGenerating = true;
-    try {
-      const aiCtx = getAIContext();
-      const stats = getMeStatsContext ? getMeStatsContext() : "";
-      const systemPrompt = `${getOWLPersonality()} \u0422\u0438 \u0430\u043D\u0430\u043B\u0456\u0437\u0443\u0454\u0448 \u0434\u0430\u043D\u0456 \u044E\u0437\u0435\u0440\u0430 \u0437\u0430 \u043C\u0438\u043D\u0443\u043B\u0438\u0439 \u0442\u0438\u0436\u0434\u0435\u043D\u044C \u0456 \u043F\u043E\u0432\u0435\u0440\u0442\u0430\u0454\u0448 \u0422\u0406\u041B\u042C\u041A\u0418 \u0432\u0430\u043B\u0456\u0434\u043D\u0438\u0439 JSON \u0431\u0435\u0437 markdown, \u0431\u0435\u0437 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440\u0456\u0432. \u0421\u0442\u0440\u0443\u043A\u0442\u0443\u0440\u0430:
-{"oneliner":"\u043E\u0434\u043D\u0435 \u0440\u0435\u0447\u0435\u043D\u043D\u044F-\u043F\u0456\u0434\u0441\u0443\u043C\u043E\u043A \u0442\u0438\u0436\u043D\u044F (12-20 \u0441\u043B\u0456\u0432, \u0447\u0435\u0441\u043D\u043E \u2014 \u043D\u0435 \u043B\u0435\u0441\u0442\u043E\u0449\u0456)","patterns":["\u043F\u0430\u0442\u0435\u0440\u043D 1 (10-15 \u0441\u043B\u0456\u0432 \u043F\u0440\u043E \u0437\u0430\u043A\u043E\u043D\u043E\u043C\u0456\u0440\u043D\u0456\u0441\u0442\u044C)","\u043F\u0430\u0442\u0435\u0440\u043D 2","\u043F\u0430\u0442\u0435\u0440\u043D 3"],"deepReport":"4-6 \u0440\u0435\u0447\u0435\u043D\u044C \u0433\u043B\u0438\u0431\u043E\u043A\u043E\u0433\u043E \u0437\u0432\u0456\u0442\u0443: \u0446\u0438\u0444\u0440\u0438, \u043F\u0440\u043E\u0433\u0440\u0435\u0441, \u043F\u0440\u043E\u0431\u043B\u0435\u043C\u0438, \u0440\u0435\u043A\u043E\u043C\u0435\u043D\u0434\u0430\u0446\u0456\u0457"}
-\u0412\u0410\u0416\u041B\u0418\u0412\u041E: \u043F\u0438\u0448\u0438 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u041D\u0415 \u0432\u0438\u0433\u0430\u0434\u0443\u0439 \u0444\u0430\u043A\u0442\u0438 \u044F\u043A\u0438\u0445 \u043D\u0435\u043C\u0430 \u0432 \u0434\u0430\u043D\u0438\u0445. \u042F\u043A\u0449\u043E \u0434\u0430\u043D\u0438\u0445 \u043C\u0430\u043B\u043E \u2014 \u0432\u0441\u0435 \u043E\u0434\u043D\u043E \u0437\u0440\u043E\u0431\u0438 \u043A\u043E\u0440\u043E\u0442\u043A\u0438\u0439 \u0447\u0435\u0441\u043D\u0438\u0439 \u0437\u0432\u0456\u0442 ("\u0434\u0430\u043D\u0438\u0445 \u0437\u0430\u043C\u0430\u043B\u043E \u0434\u043B\u044F \u043F\u0430\u0442\u0435\u0440\u043D\u0456\u0432"). \u041D\u0415 \u0445\u0432\u0430\u043B\u0438 \u0431\u0435\u0437 \u043F\u0440\u0438\u0447\u0438\u043D\u0438. \u041A\u043E\u043D\u043A\u0440\u0435\u0442\u0438\u043A\u0430 > \u0437\u0430\u0433\u0430\u043B\u044C\u043D\u0456 \u0444\u0440\u0430\u0437\u0438.
-
-\u26A0\uFE0F \u0420\u041E\u0417\u0420\u0406\u0417\u041D\u0415\u041D\u041D\u042F \u0421\u0423\u0422\u041D\u041E\u0421\u0422\u0415\u0419 \u2014 \u0417\u0410\u0414\u0410\u0427\u0410 \u2260 \u0417\u0412\u0418\u0427\u041A\u0410. \u0426\u0415 \u041A\u0420\u0418\u0422\u0418\u0427\u041D\u041E:
-- \u{1F3AF} \u0417\u0412\u0418\u0427\u041A\u0410 \u2014 \u043F\u043E\u0432\u0442\u043E\u0440\u044E\u0432\u0430\u043D\u0430 \u0434\u0456\u044F (\u0431\u0456\u0433\u0430\u0442\u0438 \u0449\u043E\u0434\u043D\u044F, \u0447\u0438\u0442\u0430\u0442\u0438, \u0445\u043E\u0434\u0438\u0442\u0438 \u0432 \u0437\u0430\u043B). \u0420\u0430\u0445\u0443\u0454\u0442\u044C\u0441\u044F "X \u0437 Y \u0434\u043D\u0456\u0432" \u0437\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C.
-- \u2705 \u0417\u0410\u0414\u0410\u0427\u0410 \u2014 \u043E\u0434\u043D\u043E\u0440\u0430\u0437\u043E\u0432\u0435 \u0437\u0430\u0432\u0434\u0430\u043D\u043D\u044F (\u043F\u043E\u043F\u0440\u0438\u0431\u0438\u0440\u0430\u0442\u0438 \u0432 \u043C\u0430\u0448\u0438\u043D\u0456, \u0437\u0430\u043F\u043B\u0430\u0442\u0438\u0442\u0438 \u0448\u0442\u0440\u0430\u0444, \u043F\u043E\u0434\u0430\u0442\u0438 \u0434\u0435\u043A\u043B\u0430\u0440\u0430\u0446\u0456\u044E). \u0410\u0431\u043E \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0430, \u0430\u0431\u043E \u0437\u0430\u043A\u0440\u0438\u0442\u0430.
-- \u274C \u0417\u0410\u0411\u041E\u0420\u041E\u041D\u0415\u041D\u041E \u043F\u043B\u0443\u0442\u0430\u0442\u0438: \u044F\u043A\u0449\u043E \u0443 \u0434\u0430\u043D\u0438\u0445 "\u0417\u0410\u041A\u0420\u0418\u0422\u0406 \u0417\u0410\u0414\u0410\u0427\u0406 \u0437\u0430 7 \u0434\u043D\u0456\u0432: 3" \u0456 "\u0417\u0412\u0418\u0427\u041A\u0418: \u0411\u0456\u0433\u0430\u0442\u0438 \u0449\u043E\u0434\u043D\u044F \u2014 1 \u0437 7 \u0434\u043D\u0456\u0432", \u041D\u0415 \u043A\u0430\u0436\u0438 "\u0442\u0438 \u0437\u0430\u043A\u0440\u0438\u0432 3 \u0437\u0430\u0434\u0430\u0447\u0456 \u0437\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C" \u043A\u043E\u043B\u0438 \u043C\u0430\u0432 \u043D\u0430 \u0443\u0432\u0430\u0437\u0456 \u0437\u0432\u0438\u0447\u043A\u0438. \u0406 \u043D\u0430\u0432\u043F\u0430\u043A\u0438.
-- \u2705 \u041F\u0420\u0410\u0412\u0418\u041B\u042C\u041D\u041E \u0446\u0438\u0442\u0443\u0439 \u0434\u0436\u0435\u0440\u0435\u043B\u043E: "\u0442\u0438 \u0437\u0430\u043A\u0440\u0438\u0432 3 \u0437\u0430\u0434\u0430\u0447\u0456" (\u0437 \u0431\u043B\u043E\u043A\u0443 \u0417\u0410\u041A\u0420\u0418\u0422\u0406 \u0417\u0410\u0414\u0410\u0427\u0406) \u0430\u0431\u043E "\u0432\u0438\u043A\u043E\u043D\u0430\u0432 \u0437\u0432\u0438\u0447\u043A\u0443 3 \u0437 7 \u0434\u043D\u0456\u0432" (\u0437 \u0431\u043B\u043E\u043A\u0443 \u0417\u0412\u0418\u0427\u041A\u0418).
-- \u042F\u043A\u0449\u043E \u0443 \u0434\u0430\u043D\u0438\u0445 \u043D\u0435\u043C\u0430 \u0417\u0410\u041A\u0420\u0418\u0422\u0418\u0425 \u0417\u0410\u0414\u0410\u0427 \u2014 \u041D\u0415 \u0432\u0438\u0433\u0430\u0434\u0443\u0439 \u0457\u0445 \u0437 \u043A\u0456\u043B\u044C\u043A\u043E\u0441\u0442\u0456 \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u0438\u0445 \u0437\u0432\u0438\u0447\u043E\u043A.
-
-\u26A0\uFE0F \u0424\u041E\u0420\u041C\u0410\u0422 \u041C\u0415\u0422\u0420\u0418\u041A \u2014 \u041E\u0411\u041E\u0412\u02BC\u042F\u0417\u041A\u041E\u0412\u041E \u0410\u0411\u0421\u041E\u041B\u042E\u0422\u041D\u0406 \u0426\u0418\u0424\u0420\u0418:
-- \u274C \u0417\u0410\u0411\u041E\u0420\u041E\u041D\u0415\u041D\u041E: "14%", "\u0432\u0438\u043A\u043E\u043D\u0430\u043D\u0430 \u043D\u0430 43%", "\u043B\u0438\u0448\u0435 0%". \u042E\u0437\u0435\u0440 \u043D\u0435 \u0440\u043E\u0437\u0443\u043C\u0456\u0454 \u0432\u0456\u0434\u0441\u043E\u0442\u043A\u0438 \u0437\u0430 \u044F\u043A\u0438\u0439 \u043F\u0435\u0440\u0456\u043E\u0434.
-- \u2705 \u041F\u0420\u0410\u0412\u0418\u041B\u042C\u041D\u041E: "1 \u0437 7 \u0434\u043D\u0456\u0432 \u0437\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C", "0 \u0437 4 \u0434\u043D\u0456\u0432", "3 \u0437 7", "\u0437\u0430\u0439\u043C\u0430\u0432\u0441\u044F 3 \u0437 7 \u0434\u043D\u0456\u0432".
-- \u0414\u043B\u044F \u0437\u0432\u0438\u0447\u043E\u043A \u0437\u0430\u0432\u0436\u0434\u0438 \u043F\u0438\u0448\u0438 "X \u0437 Y \u0434\u043D\u0456\u0432" \u2014 \u0444\u043E\u0440\u043C\u0430\u0442 \u0443\u0436\u0435 \u0443 \u0434\u0430\u043D\u0438\u0445.
-- \u041C\u043E\u0436\u0435\u0448 \u043F\u0438\u0441\u0430\u0442\u0438 "\u0436\u043E\u0434\u043D\u043E\u0433\u043E \u0440\u0430\u0437\u0443 \u0437\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C", "\u0432\u0441\u0456 7 \u0434\u043D\u0456\u0432 \u043F\u043E\u0441\u043F\u0456\u043B\u044C" \u2014 \u0430\u043B\u0435 \u0431\u0435\u0437 \u043F\u0440\u043E\u0446\u0435\u043D\u0442\u0456\u0432.`;
-      const windowCtx = _buildWindowContext(7);
-      const userMsg = '\u0417\u0433\u0435\u043D\u0435\u0440\u0443\u0439 \u0442\u0438\u0436\u043D\u0435\u0432\u0456 \u0456\u043D\u0441\u0430\u0439\u0442\u0438 \u043D\u0430 \u043E\u0441\u043D\u043E\u0432\u0456 \u0434\u0430\u043D\u0438\u0445. \u041E\u0411\u041E\u0412\u02BC\u042F\u0417\u041A\u041E\u0412\u041E \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0420\u0415\u0410\u041B\u042C\u041D\u0406 \u0426\u0418\u0424\u0420\u0418 \u0437 \u0441\u0435\u043A\u0446\u0456\u0457 "\u0420\u0415\u0410\u041B\u042C\u041D\u0406 \u0414\u0410\u041D\u0406 \u0417\u0410 \u041E\u0421\u0422\u0410\u041D\u041D\u0406 7 \u0414\u041D\u0406\u0412" \u2014 \u043D\u0435 \u043A\u0430\u0436\u0438 "\u043D\u0435 \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E \u0436\u043E\u0434\u043D\u043E\u0457 \u0437\u0432\u0438\u0447\u043A\u0438" \u044F\u043A\u0449\u043E \u0442\u0430\u043C \u0432\u0438\u0434\u043D\u043E \u0446\u0438\u0444\u0440\u0438.\n\n' + windowCtx + (aiCtx ? "\n\n" + aiCtx : "") + (stats ? "\n\n" + stats : "");
-      const reply = await callAI(systemPrompt, userMsg, {}, "me-weekly-insights");
-      if (!reply) return;
-      const jsonMatch = reply.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) return;
-      const parsed = JSON.parse(jsonMatch[0]);
-      if (!parsed.oneliner || !parsed.patterns) return;
-      const insights = {
-        version: INSIGHTS_VERSION,
-        generatedAt: Date.now(),
-        oneliner: String(parsed.oneliner).slice(0, 200),
-        patterns: Array.isArray(parsed.patterns) ? parsed.patterns.slice(0, 3).map((p) => String(p).slice(0, 200)) : [],
-        deepReport: parsed.deepReport ? String(parsed.deepReport).slice(0, 1e3) : ""
-      };
-      localStorage.setItem(INSIGHTS_KEY, JSON.stringify(insights));
-      renderWeeklyInsights();
-    } catch (e) {
-      console.warn("[me-weekly-insights] generation failed:", e);
-    } finally {
-      _insightsGenerating = false;
-    }
-  }
-  function renderWeeklyInsights() {
-    const el = document.getElementById("me-weekly-insights");
-    if (!el) return;
-    const insights = _getInsights();
-    const accent = "#7c4a2a";
-    if (_isInsightsStale(insights)) {
-      el.style.display = "block";
-      el.innerHTML = `
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-        <span style="font-size:14px">\u{1F989}</span>
-        <span style="font-size:11px;font-weight:800;color:${accent};text-transform:uppercase;letter-spacing:0.07em">${t("me.weekly.title", "OWL \u0437\u043D\u0430\u0454 \u0442\u0435\u0431\u0435")}</span>
-      </div>
-      <div style="font-size:13px;color:rgba(30,16,64,0.5);font-style:italic">${t("me.insights.loading", "\u0410\u043D\u0430\u043B\u0456\u0437\u0443\u044E \u0442\u0432\u0456\u0439 \u0442\u0438\u0436\u0434\u0435\u043D\u044C \u2014 \u0456\u043D\u0441\u0430\u0439\u0442\u0438 \u0437\u02BC\u044F\u0432\u043B\u044F\u0442\u044C\u0441\u044F \u0437\u0430 \u0445\u0432\u0438\u043B\u0438\u043D\u0443\u2026")}</div>`;
-      setTimeout(() => {
-        generateWeeklyInsights();
-      }, 800);
-      return;
-    }
-    el.style.display = "block";
-    const ageStr = _formatInsightAge(insights.generatedAt);
-    const patternsHTML = (insights.patterns || []).map((p) => `
-    <div style="display:flex;gap:8px;font-size:12.5px;color:rgba(30,16,64,0.75);line-height:1.4;margin-top:6px">
-      <span style="color:${accent};flex-shrink:0">\u2022</span>
-      <span>${escapeHtml(p)}</span>
-    </div>`).join("");
-    const deepHTML = insights.deepReport ? `
-    <div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(124,74,42,0.12)">
-      <div style="font-size:10px;font-weight:700;color:rgba(124,74,42,0.6);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">${t("me.weekly.deep_report", "\u0413\u043B\u0438\u0431\u043E\u043A\u0438\u0439 \u0437\u0432\u0456\u0442")}</div>
-      <div style="font-size:12.5px;color:rgba(30,16,64,0.75);line-height:1.5">${escapeHtml(insights.deepReport)}</div>
-    </div>` : "";
-    el.innerHTML = `
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-      <div style="display:flex;align-items:center;gap:8px">
-        <span style="font-size:14px">\u{1F989}</span>
-        <span style="font-size:11px;font-weight:800;color:${accent};text-transform:uppercase;letter-spacing:0.07em">${t("me.weekly.title", "OWL \u0437\u043D\u0430\u0454 \u0442\u0435\u0431\u0435")}</span>
-      </div>
-      <span style="font-size:10px;color:rgba(30,16,64,0.35);font-weight:600">${ageStr}</span>
-    </div>
-    <div style="font-size:14px;font-weight:600;color:#1e1040;line-height:1.4">${escapeHtml(insights.oneliner)}</div>
-    ${patternsHTML}
-    ${deepHTML}`;
-  }
-  function _getMonthlyReport() {
-    try {
-      return JSON.parse(localStorage.getItem(MONTHLY_KEY) || "null");
-    } catch {
-      return null;
-    }
-  }
-  function _prevMonthKey() {
-    const now = /* @__PURE__ */ new Date();
-    const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    return `${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, "0")}`;
-  }
-  function _prevMonthName() {
-    const now = /* @__PURE__ */ new Date();
-    const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    return monthGenitive(prev.getMonth());
-  }
-  async function generateMonthlyReport() {
-    if (_monthlyGenerating) return;
-    _monthlyGenerating = true;
-    try {
-      const aiCtx = getAIContext();
-      const stats = getMeStatsContext ? getMeStatsContext() : "";
-      const monthLabel = _prevMonthName();
-      const systemPrompt = `${getOWLPersonality()} \u0422\u0438 \u0440\u043E\u0431\u0438\u0448 \u043C\u0456\u0441\u044F\u0447\u043D\u0438\u0439 \u0437\u0432\u0456\u0442 \u044E\u0437\u0435\u0440\u0430 \u0437\u0430 \u041F\u041E\u041F\u0415\u0420\u0415\u0414\u041D\u0406\u0419 \u043C\u0456\u0441\u044F\u0446\u044C (${monthLabel}). \u041F\u043E\u0432\u0435\u0440\u043D\u0438 \u0422\u0406\u041B\u042C\u041A\u0418 \u0432\u0430\u043B\u0456\u0434\u043D\u0438\u0439 JSON \u0431\u0435\u0437 markdown:
-{"oneliner":"\u043E\u0434\u043D\u0435 \u0440\u0435\u0447\u0435\u043D\u043D\u044F-\u043F\u0456\u0434\u0441\u0443\u043C\u043E\u043A \u043C\u0456\u0441\u044F\u0446\u044F (15-25 \u0441\u043B\u0456\u0432, \u0447\u0435\u0441\u043D\u043E)","topActivities":["\u0437\u0430\u043D\u044F\u0442\u0442\u044F 1","\u0437\u0430\u043D\u044F\u0442\u0442\u044F 2","\u0437\u0430\u043D\u044F\u0442\u0442\u044F 3"],"moodTrend":"\u0440\u044F\u0434\u043E\u043A \u043F\u0440\u043E \u043D\u0430\u0441\u0442\u0440\u0456\u0439 (1 \u0440\u0435\u0447\u0435\u043D\u043D\u044F)","projectsProgress":"\u0440\u044F\u0434\u043E\u043A \u043F\u0440\u043E \u043F\u0440\u043E\u0433\u0440\u0435\u0441 \u043F\u0440\u043E\u0435\u043A\u0442\u0456\u0432 (1 \u0440\u0435\u0447\u0435\u043D\u043D\u044F)","financeNote":"\u0440\u044F\u0434\u043E\u043A \u043F\u0440\u043E \u0444\u0456\u043D\u0430\u043D\u0441\u0438 \u044F\u043A\u0449\u043E \u0454 \u0434\u0430\u043D\u0456, \u0456\u043D\u0430\u043A\u0448\u0435 \u043F\u0443\u0441\u0442\u0438\u0439","patterns":["\u043F\u0430\u0442\u0435\u0440\u043D 1","\u043F\u0430\u0442\u0435\u0440\u043D 2"]}
-\u0412\u0410\u0416\u041B\u0418\u0412\u041E: \u043F\u0438\u0448\u0438 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u041D\u0415 \u0432\u0438\u0433\u0430\u0434\u0443\u0439 \u0446\u0438\u0444\u0440. \u042F\u043A\u0449\u043E \u0434\u0430\u043D\u0438\u0445 \u043C\u0430\u043B\u043E \u2014 \u0432\u0441\u0435 \u043E\u0434\u043D\u043E \u0437\u0440\u043E\u0431\u0438 \u0447\u0435\u0441\u043D\u0438\u0439 \u043A\u043E\u0440\u043E\u0442\u043A\u0438\u0439 \u0437\u0432\u0456\u0442. \u041A\u043E\u043D\u043A\u0440\u0435\u0442\u0438\u043A\u0430 > \u0437\u0430\u0433\u0430\u043B\u044C\u043D\u0456 \u0444\u0440\u0430\u0437\u0438.`;
-      const windowCtx = _buildWindowContext(30);
-      const userMsg = `\u0417\u0433\u0435\u043D\u0435\u0440\u0443\u0439 \u043F\u0456\u0434\u0441\u0443\u043C\u043E\u043A ${monthLabel} \u043D\u0430 \u043E\u0441\u043D\u043E\u0432\u0456 \u0434\u0430\u043D\u0438\u0445. \u041E\u0411\u041E\u0412\u02BC\u042F\u0417\u041A\u041E\u0412\u041E \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0420\u0415\u0410\u041B\u042C\u041D\u0406 \u0426\u0418\u0424\u0420\u0418 \u0437 \u0441\u0435\u043A\u0446\u0456\u0457 "\u0420\u0415\u0410\u041B\u042C\u041D\u0406 \u0414\u0410\u041D\u0406 \u0417\u0410 \u041E\u0421\u0422\u0410\u041D\u041D\u0406 30 \u0414\u041D\u0406\u0412".
-
-${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
-      const reply = await callAI(systemPrompt, userMsg, {}, "me-monthly-report");
-      if (!reply) return;
-      const jsonMatch = reply.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) return;
-      const parsed = JSON.parse(jsonMatch[0]);
-      if (!parsed.oneliner) return;
-      const report = {
-        month: _prevMonthKey(),
-        generatedAt: Date.now(),
-        monthLabel,
-        oneliner: String(parsed.oneliner).slice(0, 250),
-        topActivities: Array.isArray(parsed.topActivities) ? parsed.topActivities.slice(0, 3).map((a) => String(a).slice(0, 100)) : [],
-        moodTrend: parsed.moodTrend ? String(parsed.moodTrend).slice(0, 200) : "",
-        projectsProgress: parsed.projectsProgress ? String(parsed.projectsProgress).slice(0, 200) : "",
-        financeNote: parsed.financeNote ? String(parsed.financeNote).slice(0, 200) : "",
-        patterns: Array.isArray(parsed.patterns) ? parsed.patterns.slice(0, 3).map((p) => String(p).slice(0, 200)) : []
-      };
-      localStorage.setItem(MONTHLY_KEY, JSON.stringify(report));
-      renderMonthlyReport();
-    } catch (e) {
-      console.warn("[me-monthly-report] generation failed:", e);
-    } finally {
-      _monthlyGenerating = false;
-    }
-  }
-  function renderMonthlyReport() {
-    const el = document.getElementById("me-monthly-report");
-    if (!el) return;
-    const now = /* @__PURE__ */ new Date();
-    const dayOfMonth = now.getDate();
-    if (dayOfMonth > 4) {
-      el.style.display = "none";
-      return;
-    }
-    const report = _getMonthlyReport();
-    const expectedMonth = _prevMonthKey();
-    if (!report || report.month !== expectedMonth) {
-      if (_monthlyGenerating) {
-        el.style.display = "block";
-        el.innerHTML = `
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-          <span style="font-size:14px">\u{1F4C6}</span>
-          <span style="font-size:11px;font-weight:800;color:#16a34a;text-transform:uppercase;letter-spacing:0.07em">${t("me.monthly.title", "\u041F\u0456\u0434\u0441\u0443\u043C\u043E\u043A {month}", { month: _prevMonthName() })}</span>
-        </div>
-        <div style="font-size:13px;color:rgba(30,16,64,0.5);font-style:italic">${t("me.monthly.loading", "\u0421\u043A\u043B\u0430\u0434\u0430\u044E \u043C\u0456\u0441\u044F\u0447\u043D\u0438\u0439 \u0437\u0432\u0456\u0442\u2026")}</div>`;
-      } else {
-        el.style.display = "none";
-        setTimeout(() => {
-          generateMonthlyReport();
-        }, 1500);
-      }
-      return;
-    }
-    el.style.display = "block";
-    const greenAccent = "#16a34a";
-    const sections = [];
-    if (report.topActivities && report.topActivities.length > 0) {
-      sections.push(`<div style="margin-top:8px"><span style="font-size:10px;font-weight:800;color:rgba(22,163,74,0.7);text-transform:uppercase;letter-spacing:0.06em">${t("me.monthly.top_activities", "\u0422\u043E\u043F \u0437\u0430\u043D\u044F\u0442\u044C")}</span>
-      ${report.topActivities.map((a) => `<div style="font-size:12.5px;color:rgba(30,16,64,0.75);margin-top:3px">\u2022 ${escapeHtml(a)}</div>`).join("")}
-    </div>`);
-    }
-    if (report.moodTrend) sections.push(`<div style="font-size:12.5px;color:rgba(30,16,64,0.75);margin-top:8px"><span style="font-weight:700">${t("me.monthly.mood", "\u041D\u0430\u0441\u0442\u0440\u0456\u0439:")}</span> ${escapeHtml(report.moodTrend)}</div>`);
-    if (report.projectsProgress) sections.push(`<div style="font-size:12.5px;color:rgba(30,16,64,0.75);margin-top:6px"><span style="font-weight:700">${t("me.monthly.projects", "\u041F\u0440\u043E\u0435\u043A\u0442\u0438:")}</span> ${escapeHtml(report.projectsProgress)}</div>`);
-    if (report.financeNote) sections.push(`<div style="font-size:12.5px;color:rgba(30,16,64,0.75);margin-top:6px"><span style="font-weight:700">${t("me.monthly.finance", "\u0424\u0456\u043D\u0430\u043D\u0441\u0438:")}</span> ${escapeHtml(report.financeNote)}</div>`);
-    if (report.patterns && report.patterns.length > 0) {
-      sections.push(`<div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(22,163,74,0.15)">
-      <span style="font-size:10px;font-weight:800;color:rgba(22,163,74,0.7);text-transform:uppercase;letter-spacing:0.06em">${t("me.monthly.patterns", "\u041F\u0430\u0442\u0435\u0440\u043D\u0438")}</span>
-      ${report.patterns.map((p) => `<div style="font-size:12.5px;color:rgba(30,16,64,0.75);margin-top:3px">\u2022 ${escapeHtml(p)}</div>`).join("")}
-    </div>`);
-    }
-    el.innerHTML = `
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-      <span style="font-size:14px">\u{1F4C6}</span>
-      <span style="font-size:11px;font-weight:800;color:${greenAccent};text-transform:uppercase;letter-spacing:0.07em">${t("me.monthly.title", "\u041F\u0456\u0434\u0441\u0443\u043C\u043E\u043A {month}", { month: report.monthLabel })}</span>
-    </div>
-    <div style="font-size:14px;font-weight:600;color:#1e1040;line-height:1.45">${escapeHtml(report.oneliner)}</div>
-    ${sections.join("")}`;
-  }
-  function renderMeHeatmap() {
-    const grid = document.getElementById("me-heatmap-grid");
-    const legend = document.getElementById("me-heatmap-legend");
-    if (!grid) return;
-    const now = /* @__PURE__ */ new Date();
-    const habits = getHabits().filter((h) => h.type !== "quit");
-    const log = getHabitLog();
-    const accent = "#7c4a2a";
-    const dowLabels = [t("dow_mon", "\u041F\u043D"), t("dow_tue", "\u0412\u0442"), t("dow_wed", "\u0421\u0440"), t("dow_thu", "\u0427\u0442"), t("dow_fri", "\u041F\u0442"), t("dow_sat", "\u0421\u0431"), t("dow_sun", "\u041D\u0434")];
-    const cells = [];
-    let totalDone = 0;
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date(now);
-      d.setDate(now.getDate() - i);
-      const ds = d.toDateString();
-      const dow = (d.getDay() + 6) % 7;
-      const dayHabits = habits.filter((h) => (h.days || [0, 1, 2, 3, 4]).includes(dow));
-      const doneH = dayHabits.filter((h) => !!log[ds]?.[h.id]).length;
-      const doneT = getTasks().filter((t2) => t2.status === "done" && t2.completedAt && new Date(t2.completedAt).toDateString() === ds).length;
-      const total = dayHabits.length + doneT;
-      const done = doneH + doneT;
-      const pct = total > 0 ? Math.round(done / total * 100) : 0;
-      totalDone += done;
-      cells.push({ pct, done, total, day: d.getDate(), isToday: i === 0, dow });
-    }
-    grid.innerHTML = cells.map((c) => {
-      const border = c.isToday ? `2px solid ${accent}` : "1.5px solid rgba(30,16,64,0.10)";
-      const fillH = Math.max(0, Math.min(100, c.pct));
-      const labelColor = c.isToday ? accent : "rgba(30,16,64,0.45)";
-      const numColor = fillH >= 60 ? "white" : "rgba(30,16,64,0.7)";
-      const tooltip = c.total > 0 ? t("day_done_total", "{done}/{total} \u0434\u0456\u0439", { done: c.done, total: c.total }) : t("day_zero", "0 \u0434\u0456\u0439");
-      return `
-      <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
-        <div style="font-size:9px;font-weight:700;color:${labelColor};text-transform:uppercase;letter-spacing:0.04em">${dowLabels[c.dow]}</div>
-        <div title="${tooltip}" style="position:relative;width:100%;aspect-ratio:1;background:rgba(30,16,64,0.06);border-radius:6px;border:${border};overflow:hidden">
-          <div style="position:absolute;left:0;right:0;bottom:0;height:${fillH}%;background:${accent};transition:height 0.4s ease"></div>
-          <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:${numColor};z-index:1">${c.day}</div>
-        </div>
-      </div>
-    `;
-    }).join("");
-    if (legend) legend.textContent = t("week_done_count", "{n} \u0434\u0456\u0439", { n: totalDone });
-  }
-  function renderMeActivityChart() {
-    const chartEl = document.getElementById("me-activity-chart");
-    const labelsEl = document.getElementById("me-activity-labels");
-    const totalEl = document.getElementById("me-activity-total");
-    if (!chartEl) return;
-    if (labelsEl) labelsEl.innerHTML = "";
-    if (totalEl) totalEl.textContent = "";
-    const now = /* @__PURE__ */ new Date();
-    const todayDS = now.toDateString();
-    const todayDow = (now.getDay() + 6) % 7;
-    const allTasks = getTasks();
-    const doneToday = allTasks.filter((t2) => t2.status === "done" && t2.completedAt && new Date(t2.completedAt).toDateString() === todayDS).length;
-    const stillActive = allTasks.filter((t2) => t2.status === "active").length;
-    const tasksTotal = doneToday + stillActive;
-    const tasksDone = doneToday;
-    const buildHabits = getHabits().filter((h) => h.type !== "quit");
-    const log = getHabitLog();
-    const habitsDone = buildHabits.filter((h) => !!log[todayDS]?.[h.id]).length;
-    const habitsTotal = buildHabits.length;
-    const ringSVG = (done, total, color, label) => {
-      const r = 38;
-      const C = 2 * Math.PI * r;
-      const pct = total > 0 ? Math.min(1, done / total) : 0;
-      const dash = `${(C * pct).toFixed(1)} ${C.toFixed(1)}`;
-      const text = total > 0 ? `${done}/${total}` : "\u2014";
-      const textColor = total > 0 ? color : "rgba(30,16,64,0.3)";
-      return `
-      <div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex:1">
-        <svg width="92" height="92" viewBox="0 0 100 100" style="display:block">
-          <circle cx="50" cy="50" r="${r}" fill="none" stroke="rgba(30,16,64,0.08)" stroke-width="9"/>
-          <circle cx="50" cy="50" r="${r}" fill="none" stroke="${color}" stroke-width="9" stroke-linecap="round"
-                  stroke-dasharray="${dash}" transform="rotate(-90 50 50)"
-                  style="transition:stroke-dasharray 0.4s ease"/>
-          <text x="50" y="52" text-anchor="middle" dominant-baseline="middle"
-                font-size="19" font-weight="800" fill="${textColor}" font-family="inherit">${text}</text>
-        </svg>
-        <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.55);text-transform:uppercase;letter-spacing:0.04em">${label}</div>
-      </div>
-    `;
-    };
-    chartEl.innerHTML = `
-    <div style="display:flex;gap:10px;align-items:center;justify-content:center;padding:6px 0">
-      ${ringSVG(tasksDone, tasksTotal, "#2fd0f9", t("me.chart.tasks", "\u0417\u0430\u0434\u0430\u0447\u0456"))}
-      ${ringSVG(habitsDone, habitsTotal, "#16a34a", t("me.chart.habits", "\u0417\u0432\u0438\u0447\u043A\u0438"))}
-    </div>
-  `;
-  }
-  async function refreshMeAnalysis() {
-    const btn = document.getElementById("me-refresh-btn");
-    const el = document.getElementById("me-ai-analysis");
-    btn.textContent = "\u2026";
-    btn.disabled = true;
-    el.textContent = "\u2026";
-    const inbox = JSON.parse(localStorage.getItem("nm_inbox") || "[]");
-    const tasks = JSON.parse(localStorage.getItem("nm_tasks") || "[]");
-    const notes = getNotes();
-    const aiContext = getAIContext();
-    const totalRecords = inbox.length + tasks.length + notes.length;
-    if (totalRecords < 3) {
-      el.textContent = t("me.analysis.too_few_records", "\u0429\u0435 \u0437\u0430\u043C\u0430\u043B\u043E \u0434\u0430\u043D\u0438\u0445 \u0434\u043B\u044F \u0430\u043D\u0430\u043B\u0456\u0437\u0443. \u0414\u043E\u0434\u0430\u0439 \u043A\u0456\u043B\u044C\u043A\u0430 \u0437\u0430\u043F\u0438\u0441\u0456\u0432 \u0432 Inbox, \u0441\u0442\u0432\u043E\u0440\u0438 \u0437\u0430\u0434\u0430\u0447\u0456 \u0430\u0431\u043E \u043D\u043E\u0442\u0430\u0442\u043A\u0438 \u2014 \u0456 \u044F \u0434\u0430\u043C \u0442\u043E\u0431\u0456 \u043A\u043E\u0440\u0438\u0441\u043D\u0438\u0439 \u0430\u043D\u0430\u043B\u0456\u0437.");
-      btn.textContent = "\u21BB";
-      btn.disabled = false;
-      return;
-    }
-    const dataNote = totalRecords < 10 ? "\u0423\u0412\u0410\u0413\u0410: \u0434\u0430\u043D\u0438\u0445 \u043C\u0430\u043B\u043E, \u043D\u0435 \u0440\u043E\u0431\u0438 \u0433\u043B\u0438\u0431\u043E\u043A\u0438\u0445 \u0432\u0438\u0441\u043D\u043E\u0432\u043A\u0456\u0432 \u043F\u0440\u043E \u043E\u0441\u043E\u0431\u0438\u0441\u0442\u0456\u0441\u0442\u044C \u2014 \u043F\u0440\u043E\u0441\u0442\u043E \u043E\u043F\u0438\u0448\u0438 \u0449\u043E \u0431\u0430\u0447\u0438\u0448 \u0456 \u0437\u0430\u043F\u0440\u043E\u043F\u043E\u043D\u0443\u0439 \u0449\u043E \u0434\u043E\u0434\u0430\u0442\u0438." : "";
-    const systemPrompt = `${getOWLPersonality()} \u041F\u0440\u043E\u0430\u043D\u0430\u043B\u0456\u0437\u0443\u0439 \u0434\u0430\u043D\u0456 \u0442\u0430 \u0434\u0430\u0439 \u043A\u043E\u0440\u043E\u0442\u043A\u0438\u0439 \u0430\u043D\u0430\u043B\u0456\u0437 (3-5 \u0440\u0435\u0447\u0435\u043D\u044C) \u0443 \u0441\u0432\u043E\u0454\u043C\u0443 \u0441\u0442\u0438\u043B\u0456. \u0429\u043E \u0432\u0434\u0430\u0454\u0442\u044C\u0441\u044F \u0434\u043E\u0431\u0440\u0435 \u0456 \u0449\u043E \u043C\u043E\u0436\u043D\u0430 \u043F\u043E\u043A\u0440\u0430\u0449\u0438\u0442\u0438 \u2014 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E. ${dataNote} \u0417\u0430\u0432\u0435\u0440\u0448\u0443\u0439 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E\u044E \u043F\u043E\u0440\u0430\u0434\u043E\u044E. \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E.
-
-\u0417\u0414\u041E\u0420\u041E\u0412'\u042F \u0443 \u043E\u0433\u043B\u044F\u0434\u0456 (\u0424\u0430\u0437\u0430 5):
-- \u042F\u043A\u0449\u043E \u0454 "\u0410\u043A\u0442\u0438\u0432\u043D\u0456 \u0441\u0442\u0430\u043D\u0438 \u0437\u0434\u043E\u0440\u043E\u0432'\u044F" \u2014 \u0432\u043A\u043B\u044E\u0447\u0438 \u043A\u043E\u0440\u043E\u0442\u043A\u0443 \u0441\u0442\u0440\u043E\u043A\u0443 \u043F\u0440\u043E \u0434\u0438\u0441\u0446\u0438\u043F\u043B\u0456\u043D\u0443 \u043A\u0443\u0440\u0441\u0456\u0432 (\u043D\u0430\u043F\u0440\u0438\u043A\u043B\u0430\u0434 "\u041A\u0443\u0440\u0441 \u041E\u043C\u0435\u0437\u0443 85%, \u0441\u0442\u0430\u043D \u0432\u0438\u0441\u0438\u043F\u0443 \u2014 \u043F\u043E\u043A\u0440\u0430\u0449\u0435\u043D\u043D\u044F, 2 \u043F\u0440\u043E\u043F\u0443\u0441\u043A\u0438 \u0437\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C"). \u0410\u043B\u0435 \u0442\u0456\u043B\u044C\u043A\u0438 \u044F\u043A\u0449\u043E \u0434\u0430\u043D\u0456 \u0440\u0435\u043B\u0435\u0432\u0430\u043D\u0442\u043D\u0456 (\u0454 \u043A\u0430\u0440\u0442\u043A\u0438 + \u0454 history \u0437\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C).
-- \u041D\u0415 \u0441\u0442\u0430\u0432\u044C \u0434\u0456\u0430\u0433\u043D\u043E\u0437\u0456\u0432, \u041D\u0415 \u0456\u043D\u0442\u0435\u0440\u043F\u0440\u0435\u0442\u0443\u0439 \u0441\u0438\u043C\u043F\u0442\u043E\u043C\u0438.${aiContext ? "\n\n" + aiContext : ""}`;
-    const userData = `\u0417\u0430\u043F\u0438\u0441\u0456\u0432 \u0432 Inbox: ${inbox.length}
-\u0410\u043A\u0442\u0438\u0432\u043D\u0438\u0445 \u0437\u0430\u0434\u0430\u0447: ${tasks.filter((t2) => t2.status !== "done").length}
-\u0412\u0438\u043A\u043E\u043D\u0430\u043D\u0438\u0445 \u0437\u0430\u0434\u0430\u0447: ${tasks.filter((t2) => t2.status === "done").length}
-\u041D\u043E\u0442\u0430\u0442\u043E\u043A: ${notes.length}
-\u041E\u0441\u0442\u0430\u043D\u043D\u0456 10 \u0437\u0430\u043F\u0438\u0441\u0456\u0432: ${inbox.slice(0, 10).map((i) => `[${i.category}] ${i.text}`).join("; ")}`;
-    const reply = await callAI(systemPrompt, userData, {}, "me-profile-analysis");
-    el.textContent = reply || t("me.analysis.no_reply", "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u043E\u0442\u0440\u0438\u043C\u0430\u0442\u0438 \u0430\u043D\u0430\u043B\u0456\u0437. \u0421\u043F\u0440\u043E\u0431\u0443\u0439 \u0449\u0435 \u0440\u0430\u0437.");
-    btn.textContent = "\u21BB";
-    btn.disabled = false;
-    if (reply && totalRecords >= 5) {
-      const adviceEl = document.getElementById("me-ai-advice");
-      const adviceBlock = document.getElementById("me-advice-block");
-      if (adviceEl && adviceBlock) {
-        adviceEl.textContent = "\u2026";
-        adviceBlock.style.display = "block";
-        const advicePrompt = `${getOWLPersonality()} \u041D\u0430 \u043E\u0441\u043D\u043E\u0432\u0456 \u0430\u043D\u0430\u043B\u0456\u0437\u0443 \u0434\u0430\u0439 \u0440\u0456\u0432\u043D\u043E 3 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0456, \u043F\u0440\u0430\u043A\u0442\u0438\u0447\u043D\u0456 \u043F\u043E\u0440\u0430\u0434\u0438 \u0434\u043B\u044F \u0446\u0456\u0454\u0457 \u043B\u044E\u0434\u0438\u043D\u0438. \u041A\u043E\u0436\u043D\u0430 \u043F\u043E\u0440\u0430\u0434\u0430 \u2014 \u043E\u0434\u043D\u0435 \u0440\u0435\u0447\u0435\u043D\u043D\u044F, \u043C\u0430\u043A\u0441\u0438\u043C\u0430\u043B\u044C\u043D\u043E \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0430 \u0456 \u0434\u0456\u0454\u0432\u0430. \u0424\u043E\u0440\u043C\u0430\u0442 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456: "1. [\u043F\u043E\u0440\u0430\u0434\u0430]
-2. [\u043F\u043E\u0440\u0430\u0434\u0430]
-3. [\u043F\u043E\u0440\u0430\u0434\u0430]". \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E.${aiContext ? "\n\n" + aiContext : ""}`;
-        const adviceReply = await callAI(advicePrompt, `\u0410\u043D\u0430\u043B\u0456\u0437: ${reply}
-
-\u0414\u0430\u043D\u0456: ${userData}`, {}, "me-advice");
-        if (adviceReply) {
-          adviceEl.innerHTML = adviceReply.split("\n").filter((l) => l.trim()).map((l) => `<div style="margin-bottom:8px">${escapeHtml(l.trim())}</div>`).join("");
-        } else {
-          adviceBlock.style.display = "none";
-        }
-      }
-    }
-  }
-  function showMeChatMessages() {
-    openChatBar("me");
-  }
-  function addMeChatMsg(role, text, _noSave = false, id = "", chips = null) {
-    const el = document.getElementById("me-chat-messages");
-    if (!el) return;
-    if (role === "agent") el.querySelectorAll(".chat-chips-row").forEach((n) => n.remove());
-    if (!_noSave) {
-      try {
-        openChatBar("me");
-      } catch (e) {
-      }
-    }
-    const isAgent = role === "agent";
-    const div = document.createElement("div");
-    div.style.cssText = `display:flex;${isAgent ? "" : "justify-content:flex-end"}`;
-    div.innerHTML = `<div ${id ? `id="${id}"` : ""} class="msg-bubble ${isAgent ? "msg-bubble--agent" : "msg-bubble--user"}">${escapeHtml(text)}</div>`;
-    el.appendChild(div);
-    if (isAgent && Array.isArray(chips) && chips.length > 0) {
-      const chipsRow = document.createElement("div");
-      chipsRow.className = "chat-chips-row";
-      renderChips(chipsRow, chips, "me");
-      el.appendChild(chipsRow);
-      requestAnimationFrame(() => chipsRow.scrollIntoView({ block: "end", inline: "nearest" }));
-    }
-    el.scrollTop = el.scrollHeight;
-    requestAnimationFrame(() => {
-      el.scrollTop = el.scrollHeight;
-    });
-    if (!_noSave) saveChatMsg("me", role, text, chips);
-  }
-  var meChatHistory, INSIGHTS_KEY, _insightsGenerating, _insightsRegenTimer, INSIGHTS_VERSION, MONTHLY_KEY, _monthlyGenerating;
-  var init_me = __esm({
-    "src/tabs/me.js"() {
-      init_nav();
-      init_utils();
-      init_core();
-      init_chips();
-      init_prompts();
-      init_tool_dispatcher();
-      init_clarify_guard();
-      init_tasks();
-      init_habits();
-      init_notes();
-      init_evening();
-      init_projects();
-      init_months();
-      meChatHistory = [];
-      INSIGHTS_KEY = "nm_me_weekly_insights";
-      _insightsGenerating = false;
-      _insightsRegenTimer = null;
-      window.addEventListener("nm-data-changed", (e) => {
-        if (e.detail === "insights") return;
-        const isMeActive = currentTab === "me";
-        if (isMeActive) {
-          clearTimeout(_insightsRegenTimer);
-          _insightsRegenTimer = setTimeout(() => {
-            generateWeeklyInsights();
-          }, 5e3);
-        } else {
-          try {
-            const cached = _getInsights();
-            if (cached) {
-              cached.version = -1;
-              localStorage.setItem(INSIGHTS_KEY, JSON.stringify(cached));
-            }
-          } catch {
-          }
-        }
-      });
-      INSIGHTS_VERSION = 5;
-      MONTHLY_KEY = "nm_me_monthly_report";
-      _monthlyGenerating = false;
-      Object.assign(window, {
-        sendMeChatMessage,
-        showMeChatMessages,
-        refreshMeAnalysis
-      });
-    }
-  });
-
   // src/owl/chips.js
   var chips_exports = {};
   __export(chips_exports, {
@@ -12542,6 +12581,7 @@ ${UI_TOOLS_RULES}`;
         { type: "function", function: { name: "set_reminder", description: "\u0412\u0441\u0442\u0430\u043D\u043E\u0432\u0438\u0442\u0438 \u043D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 \u041D\u0410\u0413\u0410\u0414\u0410\u0419, \u043D\u0430\u0433\u0430\u0434\u0430\u0439 \u043C\u0435\u043D\u0456, \u043D\u0430\u043F\u043E\u043C\u043D\u0438. \u0417\u0410\u0412\u0416\u0414\u0418 set_reminder, \u041D\u0406\u041A\u041E\u041B\u0418 \u043D\u0435 save_task, \u041D\u0406\u041A\u041E\u041B\u0418 \u043D\u0435 create_event.", parameters: { type: "object", properties: { _reasoning_log: { type: "string", description: "\u0412\u043D\u0443\u0442\u0440\u0456\u0448\u043D\u0456 \u0434\u0443\u043C\u043A\u0438 \u043C\u043E\u0434\u0435\u043B\u0456 \u041F\u0415\u0420\u0415\u0414 \u0434\u0456\u0454\u044E: \u0447\u043E\u043C\u0443 \u0441\u0430\u043C\u0435 \u0446\u0435\u0439 tool \u043E\u0431\u0440\u0430\u043D\u043E, \u044F\u043A\u0456 \u0441\u0443\u0442\u043D\u043E\u0441\u0442\u0456 \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443 \u0432\u0440\u0430\u0445\u043E\u0432\u0430\u043D\u043E, \u044F\u043A\u0456 \u0440\u0438\u0437\u0438\u043A\u0438/\u0430\u043B\u044C\u0442\u0435\u0440\u043D\u0430\u0442\u0438\u0432\u0438. 1-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u041E\u0411\u041E\u0412\u02BC\u042F\u0417\u041A\u041E\u0412\u041E \u0437\u0430\u043F\u043E\u0432\u043D\u044E\u0439 \u2014 \u0446\u0435 \u043F\u0430\u0440\u0430\u043C\u0435\u0442\u0440 \u0434\u043B\u044F \u043F\u043E\u043A\u0440\u0430\u0449\u0435\u043D\u043D\u044F \u044F\u043A\u043E\u0441\u0442\u0456 \u0440\u0456\u0448\u0435\u043D\u043D\u044F (zero-shot CoT)." }, text: { type: "string", description: "\u0429\u043E \u043D\u0430\u0433\u0430\u0434\u0430\u0442\u0438" }, time: { type: "string", description: "HH:MM. \u041C\u0410\u041F\u0410 \u0427\u0410\u0421\u0423: \u0437\u0440\u0430\u043D\u043A\u0443/\u0432\u0440\u0430\u043D\u0446\u0456/\u0437 \u0440\u0430\u043D\u043A\u0443/\u0440\u0430\u043D\u043A\u043E\u043C=08:00, \u043F\u0456\u0437\u043D\u0456\u0448\u0435 \u0437\u0440\u0430\u043D\u043A\u0443=09:00, \u043E\u043F\u0456\u0432\u0434\u043D\u0456=12:00, \u0432\u0434\u0435\u043D\u044C=13:00, \u043F\u0456\u0441\u043B\u044F \u043E\u0431\u0456\u0434\u0443=14:00, \u0432\u0432\u0435\u0447\u0435\u0440\u0456=18:00, \u043F\u0456\u0437\u043D\u043E \u0432\u0432\u0435\u0447\u0435\u0440\u0456=21:00, \u043F\u0435\u0440\u0435\u0434 \u0441\u043D\u043E\u043C=22:00, \u0432\u043D\u043E\u0447\u0456=02:00, \u0447\u0435\u0440\u0435\u0437 \u0433\u043E\u0434\u0438\u043D\u0443=\u043F\u043E\u0442\u043E\u0447\u043D\u0438\u0439+1, \u0447\u0435\u0440\u0435\u0437 30 \u0445\u0432=\u043F\u043E\u0442\u043E\u0447\u043D\u0438\u0439+0:30. \u041D\u0415 \u043E\u0431\u0438\u0440\u0430\u0439 05:00-06:00 \u044F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u043D\u0435 \u0441\u043A\u0430\u0437\u0430\u0432 \u044F\u0432\u043D\u043E '\u043E 5 \u0440\u0430\u043D\u043A\u0443'." }, date: { type: "string", description: "YYYY-MM-DD, \u0437\u0430 \u0437\u0430\u043C\u043E\u0432\u0447\u0443\u0432\u0430\u043D\u043D\u044F\u043C \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456" } }, required: ["_reasoning_log", "text", "time"], additionalProperties: false } } },
         { type: "function", function: { name: "restore_deleted", description: "\u0412\u0456\u0434\u043D\u043E\u0432\u0438\u0442\u0438 \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u0438\u0439 \u0437\u0430\u043F\u0438\u0441 \u0437 \u043A\u043E\u0448\u0438\u043A\u0430.", parameters: { type: "object", properties: { _reasoning_log: { type: "string", description: "\u0412\u043D\u0443\u0442\u0440\u0456\u0448\u043D\u0456 \u0434\u0443\u043C\u043A\u0438 \u043C\u043E\u0434\u0435\u043B\u0456 \u041F\u0415\u0420\u0415\u0414 \u0434\u0456\u0454\u044E: \u0447\u043E\u043C\u0443 \u0441\u0430\u043C\u0435 \u0446\u0435\u0439 tool \u043E\u0431\u0440\u0430\u043D\u043E, \u044F\u043A\u0456 \u0441\u0443\u0442\u043D\u043E\u0441\u0442\u0456 \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443 \u0432\u0440\u0430\u0445\u043E\u0432\u0430\u043D\u043E, \u044F\u043A\u0456 \u0440\u0438\u0437\u0438\u043A\u0438/\u0430\u043B\u044C\u0442\u0435\u0440\u043D\u0430\u0442\u0438\u0432\u0438. 1-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u041E\u0411\u041E\u0412\u02BC\u042F\u0417\u041A\u041E\u0412\u041E \u0437\u0430\u043F\u043E\u0432\u043D\u044E\u0439 \u2014 \u0446\u0435 \u043F\u0430\u0440\u0430\u043C\u0435\u0442\u0440 \u0434\u043B\u044F \u043F\u043E\u043A\u0440\u0430\u0449\u0435\u043D\u043D\u044F \u044F\u043A\u043E\u0441\u0442\u0456 \u0440\u0456\u0448\u0435\u043D\u043D\u044F (zero-shot CoT)." }, query: { type: "string", description: "\u041A\u043B\u044E\u0447\u043E\u0432\u0456 \u0441\u043B\u043E\u0432\u0430, 'all' (\u0432\u0441\u0456) \u0430\u0431\u043E 'last' (\u043E\u0441\u0442\u0430\u043D\u043D\u0456\u0439)" }, type: { type: "string", enum: ["task", "note", "habit", "inbox", "folder", "finance"], description: "\u0422\u0438\u043F \u0437\u0430\u043F\u0438\u0441\u0443" } }, required: ["_reasoning_log", "query"], additionalProperties: false } } },
         { type: "function", function: { name: "save_routine", description: '\u041F\u041E\u0412\u0422\u041E\u0420\u042E\u0412\u0410\u041D\u0418\u0419 \u0440\u043E\u0437\u043F\u043E\u0440\u044F\u0434\u043E\u043A \u0434\u043D\u044F. \u0414\u043D\u0456: \u043F\u043D=mon,\u0432\u0442=tue,\u0441\u0440=wed,\u0447\u0442=thu,\u043F\u0442=fri,\u0441\u0431=sat,\u043D\u0434=sun. "\u0411\u0443\u0434\u043D\u0456"/"\u0437 \u043F\u043D \u043F\u043E \u043F\u0442"=["mon","tue","wed","thu","fri"]. "\u0412\u0438\u0445\u0456\u0434\u043D\u0456"=["sat","sun"]. "\u0429\u043E\u0434\u043D\u044F"/"\u043A\u043E\u0436\u0435\u043D \u0434\u0435\u043D\u044C"=\u0432\u0441\u0456 7 (\u041D\u0415 default). "\u0423 \u043F\u043E\u043D\u0435\u0434\u0456\u043B\u043E\u043A"/"\u043F\u043E \u043F\u043E\u043D\u0435\u0434\u0456\u043B\u043A\u0430\u0445"=["mon"]. "\u0427\u0435\u0440\u0435\u0437 \u0434\u0435\u043D\u044C" \u2014 \u041D\u0415 \u0432\u0433\u0430\u0434\u0443\u0439, \u0441\u043F\u0438\u0442\u0430\u0439 \u041F\u043D/\u0421\u0440/\u041F\u0442 \u0447\u0438 \u0412\u0442/\u0427\u0442/\u0421\u0431 \u0437 \u0447\u0456\u043F\u0430\u043C\u0438. \u041A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0430 \u0434\u0430\u0442\u0430/"\u0437\u0430\u0432\u0442\u0440\u0430" \u0411\u0415\u0417 \u0441\u043B\u043E\u0432\u0430 "\u0449\u043E\u0442\u0438\u0436\u043D\u044F" \u2192 \u041D\u0415 save_routine, \u0446\u0435 create_event (one-off). Multi-block \u043E\u0434\u043D\u0438\u043C \u0432\u0438\u043A\u043B\u0438\u043A\u043E\u043C.', parameters: { type: "object", properties: { _reasoning_log: { type: "string", description: "\u0412\u043D\u0443\u0442\u0440\u0456\u0448\u043D\u0456 \u0434\u0443\u043C\u043A\u0438 \u043C\u043E\u0434\u0435\u043B\u0456 \u041F\u0415\u0420\u0415\u0414 \u0434\u0456\u0454\u044E: \u0447\u043E\u043C\u0443 \u0441\u0430\u043C\u0435 \u0446\u0435\u0439 tool \u043E\u0431\u0440\u0430\u043D\u043E, \u044F\u043A\u0456 \u0441\u0443\u0442\u043D\u043E\u0441\u0442\u0456 \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443 \u0432\u0440\u0430\u0445\u043E\u0432\u0430\u043D\u043E, \u044F\u043A\u0456 \u0440\u0438\u0437\u0438\u043A\u0438/\u0430\u043B\u044C\u0442\u0435\u0440\u043D\u0430\u0442\u0438\u0432\u0438. 1-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u041E\u0411\u041E\u0412\u02BC\u042F\u0417\u041A\u041E\u0412\u041E \u0437\u0430\u043F\u043E\u0432\u043D\u044E\u0439 \u2014 \u0446\u0435 \u043F\u0430\u0440\u0430\u043C\u0435\u0442\u0440 \u0434\u043B\u044F \u043F\u043E\u043A\u0440\u0430\u0449\u0435\u043D\u043D\u044F \u044F\u043A\u043E\u0441\u0442\u0456 \u0440\u0456\u0448\u0435\u043D\u043D\u044F (zero-shot CoT)." }, day: { type: "array", items: { type: "string", enum: ["mon", "tue", "wed", "thu", "fri", "sat", "sun", "default"] }, description: "\u0414\u043D\u0456 \u0437 \u041C\u0410\u041F\u0418. default=fallback (legacy, \u0440\u0456\u0434\u043A\u043E \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0454\u0442\u044C\u0441\u044F)." }, blocks: { type: "array", items: { type: "object", properties: { time: { type: "string" }, activity: { type: "string" } }, required: ["time", "activity"] }, description: "\u0411\u043B\u043E\u043A\u0438 \u0440\u043E\u0437\u043F\u043E\u0440\u044F\u0434\u043A\u0443. Multi-block \u043E\u0434\u043D\u0438\u043C \u0432\u0438\u043A\u043B\u0438\u043A\u043E\u043C: \xAB7 \u043F\u0456\u0434\u0439\u043E\u043C, 9 \u0440\u043E\u0431\u043E\u0442\u0430, 18 \u0441\u043F\u043E\u0440\u0442\xBB \u2192 3 \u0431\u043B\u043E\u043A\u0438." } }, required: ["_reasoning_log", "day", "blocks"], additionalProperties: false } } },
+        { type: "function", function: { name: "show_monthly_summary", description: "\u0422\u0438\u043C\u0447\u0430\u0441\u043E\u0432\u043E \u043F\u043E\u043A\u0430\u0437\u0430\u0442\u0438 \u043F\u0456\u0434\u0441\u0443\u043C\u043E\u043A \u043F\u043E\u043F\u0435\u0440\u0435\u0434\u043D\u044C\u043E\u0433\u043E \u043C\u0456\u0441\u044F\u0446\u044F \u0443 \u0432\u043A\u043B\u0430\u0434\u0446\u0456 \xAB\u042F\xBB. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 \xAB\u043F\u043E\u043A\u0430\u0436\u0438 \u043F\u0456\u0434\u0441\u0443\u043C\u043E\u043A \u043A\u0432\u0456\u0442\u043D\u044F\xBB, \xAB\u0437\u0433\u0430\u0434\u0430\u0439 \u043C\u0456\u0441\u044F\u0446\u044C\xBB, \xAB\u0449\u043E \u0431\u0443\u043B\u043E \u0443 \u043A\u0432\u0456\u0442\u043D\u0456\xBB. \u041F\u0456\u0434\u0441\u0443\u043C\u043E\u043A \u0437\u043D\u0438\u043A\u0430\u0454 \u0430\u0432\u0442\u043E\u043C\u0430\u0442\u0438\u0447\u043D\u043E \u0447\u0435\u0440\u0435\u0437 1 \u0433\u043E\u0434\u0438\u043D\u0443. \u0412\u0438\u043A\u043B\u0438\u043A\u0430\u0442\u0438 \u0422\u0406\u041B\u042C\u041A\u0418 \u043A\u043E\u043B\u0438 \u044E\u0437\u0435\u0440 \u042F\u0412\u041D\u041E \u043F\u0440\u043E\u0441\u0438\u0442\u044C \u2014 \u043D\u0435 \u0437\u0430 \u0432\u043B\u0430\u0441\u043D\u043E\u044E \u0456\u043D\u0456\u0446\u0456\u0430\u0442\u0438\u0432\u043E\u044E.", parameters: { type: "object", properties: { _reasoning_log: { type: "string", description: "\u0412\u043D\u0443\u0442\u0440\u0456\u0448\u043D\u0456 \u0434\u0443\u043C\u043A\u0438 \u043C\u043E\u0434\u0435\u043B\u0456 \u041F\u0415\u0420\u0415\u0414 \u0434\u0456\u0454\u044E: \u0447\u043E\u043C\u0443 \u0441\u0430\u043C\u0435 \u0446\u0435\u0439 tool \u043E\u0431\u0440\u0430\u043D\u043E, \u044F\u043A\u0456 \u0441\u0443\u0442\u043D\u043E\u0441\u0442\u0456 \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443 \u0432\u0440\u0430\u0445\u043E\u0432\u0430\u043D\u043E, \u044F\u043A\u0456 \u0440\u0438\u0437\u0438\u043A\u0438/\u0430\u043B\u044C\u0442\u0435\u0440\u043D\u0430\u0442\u0438\u0432\u0438. 1-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u041E\u0411\u041E\u0412\u02BC\u042F\u0417\u041A\u041E\u0412\u041E \u0437\u0430\u043F\u043E\u0432\u043D\u044E\u0439 \u2014 \u0446\u0435 \u043F\u0430\u0440\u0430\u043C\u0435\u0442\u0440 \u0434\u043B\u044F \u043F\u043E\u043A\u0440\u0430\u0449\u0435\u043D\u043D\u044F \u044F\u043A\u043E\u0441\u0442\u0456 \u0440\u0456\u0448\u0435\u043D\u043D\u044F (zero-shot CoT)." }, comment: { type: "string", description: "\u041A\u043E\u0440\u043E\u0442\u043A\u0435 \u043F\u0456\u0434\u0442\u0432\u0435\u0440\u0434\u0436\u0435\u043D\u043D\u044F \u0434\u043B\u044F \u044E\u0437\u0435\u0440\u0430." } }, required: ["_reasoning_log", "comment"], additionalProperties: false } } },
         { type: "function", function: { name: "clarify", description: "\u0417\u0430\u043F\u0438\u0442\u0430\u0442\u0438 \u0443\u0442\u043E\u0447\u043D\u0435\u043D\u043D\u044F. \u0422\u0406\u041B\u042C\u041A\u0418 \u043A\u043E\u043B\u0438 2+ \u0440\u0456\u0437\u043D\u0438\u0445 \u0442\u0438\u043F\u0456\u0432 \u0456 \u043D\u0435\u0437\u0440\u043E\u0437\u0443\u043C\u0456\u043B\u043E, \u0430\u0431\u043E \u0437\u0430\u0434\u0430\u0447\u0430 vs \u043F\u0440\u043E\u0435\u043A\u0442. \u042F\u043A\u0449\u043E 80%+ \u0432\u043F\u0435\u0432\u043D\u0435\u043D\u043E\u0441\u0442\u0456 \u2014 \u0437\u0431\u0435\u0440\u0456\u0433\u0430\u0439 \u0431\u0435\u0437 \u043F\u0438\u0442\u0430\u043D\u044C.", parameters: { type: "object", properties: { _reasoning_log: { type: "string", description: "\u0412\u043D\u0443\u0442\u0440\u0456\u0448\u043D\u0456 \u0434\u0443\u043C\u043A\u0438 \u043C\u043E\u0434\u0435\u043B\u0456 \u041F\u0415\u0420\u0415\u0414 \u0434\u0456\u0454\u044E: \u0447\u043E\u043C\u0443 \u0441\u0430\u043C\u0435 \u0446\u0435\u0439 tool \u043E\u0431\u0440\u0430\u043D\u043E, \u044F\u043A\u0456 \u0441\u0443\u0442\u043D\u043E\u0441\u0442\u0456 \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443 \u0432\u0440\u0430\u0445\u043E\u0432\u0430\u043D\u043E, \u044F\u043A\u0456 \u0440\u0438\u0437\u0438\u043A\u0438/\u0430\u043B\u044C\u0442\u0435\u0440\u043D\u0430\u0442\u0438\u0432\u0438. 1-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u041E\u0411\u041E\u0412\u02BC\u042F\u0417\u041A\u041E\u0412\u041E \u0437\u0430\u043F\u043E\u0432\u043D\u044E\u0439 \u2014 \u0446\u0435 \u043F\u0430\u0440\u0430\u043C\u0435\u0442\u0440 \u0434\u043B\u044F \u043F\u043E\u043A\u0440\u0430\u0449\u0435\u043D\u043D\u044F \u044F\u043A\u043E\u0441\u0442\u0456 \u0440\u0456\u0448\u0435\u043D\u043D\u044F (zero-shot CoT)." }, question: { type: "string", description: "\u041A\u043E\u0440\u043E\u0442\u043A\u0435 \u043F\u0438\u0442\u0430\u043D\u043D\u044F 1 \u0440\u0435\u0447\u0435\u043D\u043D\u044F" }, options: { type: "array", items: { type: "object", properties: { label: { type: "string" }, action: { type: "string" }, category: { type: "string" }, text: { type: "string" }, task_title: { type: "string" }, task_steps: { type: "array", items: { type: "string" } }, habit_id: { type: "integer" } }, required: ["label"] }, description: "2-3 \u0432\u0430\u0440\u0456\u0430\u043D\u0442\u0438 \u0437 \u0432\u0431\u0443\u0434\u043E\u0432\u0430\u043D\u0438\u043C\u0438 \u0434\u0456\u044F\u043C\u0438" } }, required: ["_reasoning_log", "question", "options"], additionalProperties: false } } },
         // --- ЗДОРОВ'Я (Фаза 2, 15.04 6v2eR) ---
         // Перед create_health_card ОБОВ'ЯЗКОВО глянь "ЗДОРОВ'Я" контекст —
@@ -16778,6 +16818,8 @@ ${userText}
         return { action: "restore_deleted", query: args.query, type: args.type || null };
       case "save_routine":
         return { action: "save_routine", day: args.day, blocks: args.blocks };
+      case "show_monthly_summary":
+        return { action: "show_monthly_summary", comment: args.comment };
       case "clarify":
         return { action: "clarify", question: args.question, options: args.options };
       case "save_memory_fact":
