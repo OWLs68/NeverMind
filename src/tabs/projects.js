@@ -47,7 +47,16 @@ export function findProjectByName(query) {
   const q = (query || '').toLowerCase().trim();
   if (q.length < 3) return null;
   const projects = getProjects();
-  return projects.find(p => (p.name || '').toLowerCase().includes(q.slice(0, 12))) || null;
+  // QDIGl audit fix: пріоритет exact match → потім startsWith → потім includes.
+  // Раніше includes ловив випадковий проект із спільним префіксом
+  // («Хімчистка-А» при запиті «Хімчистка-Б»). Тепер точний матч перший.
+  const exact = projects.find(p => (p.name || '').toLowerCase() === q);
+  if (exact) return exact;
+  const starts = projects.find(p => (p.name || '').toLowerCase().startsWith(q));
+  if (starts) return starts;
+  // Fuzzy: тільки якщо ОДИН кандидат з includes — інакше null (ambiguous).
+  const matches = projects.filter(p => (p.name || '').toLowerCase().includes(q.slice(0, 12)));
+  return matches.length === 1 ? matches[0] : null;
 }
 
 export function createProjectProgrammatic(name, subtitle = '') {

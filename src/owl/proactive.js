@@ -192,10 +192,15 @@ function _getInboxBoardContext() {
     });
     stillRelevant.forEach(r => critical.push(`[КРИТИЧНО] ⏰ НАГАДУВАННЯ (${r.time}): "${r.text}". Скажи це юзеру ЗАРАЗ!`));
     fading.forEach(r => important.push(`[ПОМ'ЯКШЕНЕ] Нагадування о ${r.time} ще актуальне? "${r.text}". Запитай юзера: "Ще актуально чи вже не треба?" з чіпами [{"label":"Виконав ✔️","action":"chat"},{"label":"Скасувати","action":"chat"},{"label":"Перенести","action":"chat"}]`));
-    // Mark done всі що сповістили (stillRelevant + fading) + expired
-    const showedOrExpired = [...stillRelevant, ...fading, ...expired];
-    if (showedOrExpired.length > 0) {
-      const updated = reminders.map(r => showedOrExpired.find(d => d.id === r.id) ? { ...r, done: true } : r);
+    // QDIGl audit fix: mark done:true ТІЛЬКИ для expired (>180хв) — їх юзер
+    // вже не побачить навіть якщо AI fetch fails. CRITICAL/IMPORTANT
+    // позначаються done через окремий шлях ПІСЛЯ render (saveTabMessage у
+    // proactive.js:874-887 + iбоx-board.js). Раніше done:true ставилось
+    // у контекст-будівнику до AI запиту → якщо fetch fail → reminder
+    // втрачено назавжди.
+    if (expired.length > 0) {
+      const expIds = new Set(expired.map(d => d.id));
+      const updated = reminders.map(r => expIds.has(r.id) ? { ...r, done: true } : r);
       localStorage.setItem('nm_reminders', JSON.stringify(updated));
     }
     // Майбутні нагадування у наступні 30 хв
@@ -979,7 +984,7 @@ function _tryLocalFallback(tab) {
     const todayStr = new Date().toDateString();
     const habitLog = getHabitLog();
     const todayLog = habitLog[todayStr] || {};
-    const dow = new Date().getDay();
+    const dow = (new Date().getDay() + 6) % 7;
     const todayHabits = habits.filter(h => h.type !== 'quit' && (h.days || []).includes(dow));
     const doneH = todayHabits.filter(h => todayLog[h.id]);
     const pendingH = todayHabits.filter(h => !todayLog[h.id]);
