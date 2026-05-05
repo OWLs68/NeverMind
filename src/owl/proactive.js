@@ -169,22 +169,41 @@ function _getInboxBoardContext() {
   const important = [];
   const normal = [];
 
-  // Нагадування що настали
+  // Нагадування що настали — TTL-логіка (QDIGl 04.05):
+  //   <60 хв запізнення  → CRITICAL (нагадай ЗАРАЗ)
+  //   60-180 хв          → IMPORTANT з пом'якшеним текстом «ще актуально?»
+  //   >180 хв (3 год)    → silent done (запізно, не нагадуємо щоб не дратувати)
+  // Раніше будь-яке прострочене нагадування завжди було CRITICAL — навіть якщо
+  // 8 годин минуло, AI кричав «помити посуд!» при відкритті ранку.
   try {
     const reminders = JSON.parse(localStorage.getItem('nm_reminders') || '[]');
     const todayISO = now.toISOString().slice(0, 10);
-    const nowTime = `${String(hour).padStart(2,'0')}:${String(min).padStart(2,'0')}`;
-    const due = reminders.filter(r => !r.done && r.date === todayISO && r.time <= nowTime);
-    if (due.length > 0) {
-      due.forEach(r => critical.push(`[КРИТИЧНО] ⏰ НАГАДУВАННЯ (${r.time}): "${r.text}". Скажи це юзеру ЗАРАЗ!`));
-      const updated = reminders.map(r => due.find(d => d.id === r.id) ? { ...r, done: true } : r);
+    const nowMin = hour * 60 + min;
+    const due = reminders.filter(r => !r.done && r.date === todayISO && r.time <= `${String(hour).padStart(2,'0')}:${String(min).padStart(2,'0')}`);
+    const stillRelevant = []; // <60 хв — CRITICAL
+    const fading = [];        // 60-180 хв — IMPORTANT з пом'якшенням
+    const expired = [];       // >180 хв — silent mark done
+    due.forEach(r => {
+      const [rh, rm] = r.time.split(':').map(Number);
+      const lateMin = nowMin - (rh * 60 + rm);
+      if (lateMin < 60) stillRelevant.push(r);
+      else if (lateMin <= 180) fading.push(r);
+      else expired.push(r);
+    });
+    stillRelevant.forEach(r => critical.push(`[КРИТИЧНО] ⏰ НАГАДУВАННЯ (${r.time}): "${r.text}". Скажи це юзеру ЗАРАЗ!`));
+    fading.forEach(r => important.push(`[ПОМ'ЯКШЕНЕ] Нагадування о ${r.time} ще актуальне? "${r.text}". Запитай юзера: "Ще актуально чи вже не треба?" з чіпами [{"label":"Виконав ✔️","action":"chat"},{"label":"Скасувати","action":"chat"},{"label":"Перенести","action":"chat"}]`));
+    // Mark done всі що сповістили (stillRelevant + fading) + expired
+    const showedOrExpired = [...stillRelevant, ...fading, ...expired];
+    if (showedOrExpired.length > 0) {
+      const updated = reminders.map(r => showedOrExpired.find(d => d.id === r.id) ? { ...r, done: true } : r);
       localStorage.setItem('nm_reminders', JSON.stringify(updated));
     }
-    const upcoming = reminders.filter(r => !r.done && r.date === todayISO && r.time > nowTime).sort((a, b) => a.time.localeCompare(b.time));
+    // Майбутні нагадування у наступні 30 хв
+    const upcoming = reminders.filter(r => !r.done && r.date === todayISO && r.time > `${String(hour).padStart(2,'0')}:${String(min).padStart(2,'0')}`).sort((a, b) => a.time.localeCompare(b.time));
     if (upcoming.length > 0) {
       const next = upcoming[0];
-      const [nh, nm] = next.time.split(':').map(Number);
-      const minsUntil = nh * 60 + nm - (hour * 60 + min);
+      const [nh, nm2] = next.time.split(':').map(Number);
+      const minsUntil = nh * 60 + nm2 - nowMin;
       if (minsUntil <= 30) important.push(`[СКОРО] ⏰ Нагадування о ${next.time}: "${next.text}" (через ${minsUntil} хв)`);
     }
   } catch(e) {}
