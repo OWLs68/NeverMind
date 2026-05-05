@@ -2178,9 +2178,9 @@ ${lines.join("\n")}`;
     const allergiesHtml = _buildAllergiesCardHtml();
     const cardsHtml = cards.length === 0 ? `<div style="text-align:center;padding:32px 0">
         <div style="font-size:36px;margin-bottom:10px">\u{1FAC0}</div>
-        <div style="font-size:15px;font-weight:700;color:rgba(30,16,64,0.5)">\u041D\u0435\u043C\u0430\u0454 \u043A\u0430\u0440\u0442\u043E\u043A \u0437\u0434\u043E\u0440\u043E\u0432'\u044F</div>
-        <div style="font-size:13px;color:rgba(30,16,64,0.3);margin-top:4px">\u0414\u043E\u0434\u0430\u0439 \u043F\u0435\u0440\u0448\u0443 \u2014 \u0445\u0432\u043E\u0440\u043E\u0431\u0443, \u0441\u0442\u0430\u043D \u0430\u0431\u043E \u043C\u0435\u0442\u0443</div>
-        <button onclick="openAddHealthCard()" style="margin-top:14px;font-size:13px;font-weight:700;color:white;background:#1a5c2a;border:none;border-radius:12px;padding:10px 20px;cursor:pointer">+ \u0414\u043E\u0434\u0430\u0442\u0438 \u043A\u0430\u0440\u0442\u043A\u0443</button>
+        <div style="font-size:15px;font-weight:700;color:rgba(30,16,64,0.5)">${t("health.empty.title", "\u041D\u0435\u043C\u0430\u0454 \u043A\u0430\u0440\u0442\u043E\u043A \u0437\u0434\u043E\u0440\u043E\u0432'\u044F")}</div>
+        <div style="font-size:13px;color:rgba(30,16,64,0.3);margin-top:4px">${t("health.empty.hint", "\u0414\u043E\u0434\u0430\u0439 \u043F\u0435\u0440\u0448\u0443 \u2014 \u0445\u0432\u043E\u0440\u043E\u0431\u0443, \u0441\u0442\u0430\u043D \u0430\u0431\u043E \u043C\u0435\u0442\u0443")}</div>
+        <button onclick="openAddHealthCard()" style="margin-top:14px;font-size:13px;font-weight:700;color:white;background:#1a5c2a;border:none;border-radius:12px;padding:10px 20px;cursor:pointer">${t("health.empty.add_btn", "+ \u0414\u043E\u0434\u0430\u0442\u0438 \u043A\u0430\u0440\u0442\u043A\u0443")}</button>
       </div>` : cards.map((card) => {
       const st = _statusDef(card.status);
       const pct = card.progress || 0;
@@ -2206,7 +2206,7 @@ ${lines.join("\n")}`;
     }).join("");
     const disclaimerHtml = `<div style="background:rgba(249,115,22,0.07);border:1px solid rgba(249,115,22,0.15);border-radius:12px;padding:8px 12px;display:flex;gap:7px;align-items:flex-start;margin-bottom:10px">
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ea580c" stroke-width="2.5" style="flex-shrink:0;margin-top:2px"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-    <div style="font-size:11px;color:rgba(234,88,12,0.75);font-weight:600;line-height:1.45">NeverMind \u043D\u0435 \u0454 \u043C\u0435\u0434\u0438\u0447\u043D\u0438\u043C \u0441\u0435\u0440\u0432\u0456\u0441\u043E\u043C. OWL \u043D\u0435 \u0441\u0442\u0430\u0432\u0438\u0442\u044C \u0434\u0456\u0430\u0433\u043D\u043E\u0437\u0438. \u0417\u0430\u0432\u0436\u0434\u0438 \u043A\u043E\u043D\u0441\u0443\u043B\u044C\u0442\u0443\u0439\u0441\u044F \u0437 \u043B\u0456\u043A\u0430\u0440\u0435\u043C.</div>
+    <div style="font-size:11px;color:rgba(234,88,12,0.75);font-weight:600;line-height:1.45">${t("health.disclaimer.main", "NeverMind \u043D\u0435 \u0454 \u043C\u0435\u0434\u0438\u0447\u043D\u0438\u043C \u0441\u0435\u0440\u0432\u0456\u0441\u043E\u043C. OWL \u043D\u0435 \u0441\u0442\u0430\u0432\u0438\u0442\u044C \u0434\u0456\u0430\u0433\u043D\u043E\u0437\u0438. \u0417\u0430\u0432\u0436\u0434\u0438 \u043A\u043E\u043D\u0441\u0443\u043B\u044C\u0442\u0443\u0439\u0441\u044F \u0437 \u043B\u0456\u043A\u0430\u0440\u0435\u043C.")}</div>
   </div>`;
     const missedBannerHtml = _buildMissedDosesBannerHtml();
     scrollEl.innerHTML = allergiesHtml + missedBannerHtml + disclaimerHtml + cardsHtml;
@@ -2557,13 +2557,13 @@ ${lines.join("\n")}`;
       }
       if (btn) {
         const orig = btn.textContent;
-        btn.textContent = "\u2713 \u0421\u043A\u043E\u043F\u0456\u0439\u043E\u0432\u0430\u043D\u043E";
+        btn.textContent = t("health.export.copied", "\u2713 \u0421\u043A\u043E\u043F\u0456\u0439\u043E\u0432\u0430\u043D\u043E");
         setTimeout(() => {
           btn.textContent = orig;
         }, 1500);
       }
     } catch (e) {
-      showToast("\u26A0\uFE0F \u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u0441\u043A\u043E\u043F\u0456\u044E\u0432\u0430\u0442\u0438 \u2014 \u0432\u0438\u0434\u0456\u043B\u0438 \u0442\u0435\u043A\u0441\u0442 \u0432\u0440\u0443\u0447\u043D\u0443");
+      showToast(t("health.export.copy_fail", "\u26A0\uFE0F \u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u0441\u043A\u043E\u043F\u0456\u044E\u0432\u0430\u0442\u0438 \u2014 \u0432\u0438\u0434\u0456\u043B\u0438 \u0442\u0435\u043A\u0441\u0442 \u0432\u0440\u0443\u0447\u043D\u0443"));
     }
   }
   function _syncMedicationToTask(cardName, med) {
@@ -2683,8 +2683,8 @@ ${lines.join("\n")}`;
         <div style="font-size:12px;font-weight:800;color:#1e1040">${escapeHtml(d.medName)}${d.dosage ? " " + escapeHtml(d.dosage) : ""}</div>
         <div style="font-size:10px;color:rgba(30,16,64,0.5);font-weight:600;margin-top:1px">${escapeHtml(d.cardName)} \xB7 ${escapeHtml(d.scheduledTime)}</div>
       </div>
-      <button onclick="logHealthMedDose(${d.cardId},${d.medId})" style="font-size:11px;font-weight:800;padding:5px 10px;border-radius:8px;border:none;background:#16a34a;color:white;cursor:pointer;white-space:nowrap">\u2713 \u041F\u0440\u0438\u0439\u043D\u044F\u0432</button>
-      <button onclick="skipHealthMedDose(${d.cardId},${d.medId},'${escapeHtml(d.scheduledTime)}')" style="font-size:11px;font-weight:700;padding:5px 10px;border-radius:8px;border:1.5px solid rgba(30,16,64,0.15);background:white;color:rgba(30,16,64,0.55);cursor:pointer;white-space:nowrap">\u041F\u0440\u043E\u043F\u0443\u0449\u0443</button>
+      <button onclick="logHealthMedDose(${d.cardId},${d.medId})" style="font-size:11px;font-weight:800;padding:5px 10px;border-radius:8px;border:none;background:#16a34a;color:white;cursor:pointer;white-space:nowrap">${t("health.dose.took_btn", "\u2713 \u041F\u0440\u0438\u0439\u043D\u044F\u0432")}</button>
+      <button onclick="skipHealthMedDose(${d.cardId},${d.medId},'${escapeHtml(d.scheduledTime)}')" style="font-size:11px;font-weight:700;padding:5px 10px;border-radius:8px;border:1.5px solid rgba(30,16,64,0.15);background:white;color:rgba(30,16,64,0.55);cursor:pointer;white-space:nowrap">${t("health.dose.skip_btn", "\u041F\u0440\u043E\u043F\u0443\u0449\u0443")}</button>
     </div>`).join("")}
     ${missed.length > 5 ? `<div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:600;text-align:center">+ \u0449\u0435 ${missed.length - 5} \u043F\u0440\u043E\u043F\u0443\u0449\u0435\u043D\u0438\u0445</div>` : ""}
   </div>`;
@@ -2763,7 +2763,7 @@ ${lines.join("\n")}`;
     <!-- \u041D\u0430\u0437\u0430\u0434 -->
     <div onclick="closeHealthCard()" style="display:flex;align-items:center;gap:6px;margin-bottom:12px;cursor:pointer">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1a5c2a" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
-      <span style="font-size:13px;font-weight:700;color:#1a5c2a">\u041D\u0430\u0437\u0430\u0434</span>
+      <span style="font-size:13px;font-weight:700;color:#1a5c2a">${t("health.card.back", "\u041D\u0430\u0437\u0430\u0434")}</span>
     </div>
 
     <!-- \u041F\u0440\u043E\u0433\u0440\u0435\u0441 + \u0441\u0442\u0430\u0442\u0443\u0441 (\u0424\u0430\u0437\u0430 3: + \u0431\u0435\u0439\u0434\u0436 "\u041A\u0443\u0440\u0441 X% \xB7 \u0442\u0440\u0435\u043D\u0434") -->
@@ -2774,7 +2774,7 @@ ${lines.join("\n")}`;
           <div style="font-size:11px;color:rgba(30,16,64,0.4);font-weight:600;margin-top:2px">${escapeHtml(card.subtitle || "")}</div>
         </div>
         <div style="display:flex;align-items:center;gap:10px;flex-shrink:0">
-          <button onclick="openEditHealthCard(${id})" title="\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438" style="background:rgba(30,16,64,0.06);border:none;border-radius:8px;padding:6px 10px;font-size:11px;font-weight:700;color:rgba(30,16,64,0.65);cursor:pointer">\u0420\u0435\u0434.</button>
+          <button onclick="openEditHealthCard(${id})" title="${t("health.card.edit_title", "\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438")}" style="background:rgba(30,16,64,0.06);border:none;border-radius:8px;padding:6px 10px;font-size:11px;font-weight:700;color:rgba(30,16,64,0.65);cursor:pointer">${t("health.card.edit_btn", "\u0420\u0435\u0434.")}</button>
           <div style="font-size:20px;font-weight:900;color:${st.color};line-height:1">${pct}%</div>
         </div>
       </div>
@@ -2801,15 +2801,15 @@ ${lines.join("\n")}`;
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a5c2a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
       </div>
       <div style="flex:1">
-        <div style="font-size:13px;font-weight:800;color:#1a5c2a">\u0417\u0430\u043F\u0438\u0442\u0430\u0442\u0438 OWL \u043F\u0440\u043E \u0446\u0435\u0439 \u0441\u0442\u0430\u043D</div>
-        <div style="font-size:10px;color:rgba(30,16,64,0.45);font-weight:600;margin-top:1px">OWL \u0437\u043D\u0430\u0454 \u0432\u0441\u0456 \u0434\u0435\u0442\u0430\u043B\u0456 \u043A\u0430\u0440\u0442\u043A\u0438 \u2192 \u043F\u0438\u0448\u0438 \u043F\u0438\u0442\u0430\u043D\u043D\u044F</div>
+        <div style="font-size:13px;font-weight:800;color:#1a5c2a">${t("health.card.ask_owl_title", "\u0417\u0430\u043F\u0438\u0442\u0430\u0442\u0438 OWL \u043F\u0440\u043E \u0446\u0435\u0439 \u0441\u0442\u0430\u043D")}</div>
+        <div style="font-size:10px;color:rgba(30,16,64,0.45);font-weight:600;margin-top:1px">${t("health.card.ask_owl_hint", "OWL \u0437\u043D\u0430\u0454 \u0432\u0441\u0456 \u0434\u0435\u0442\u0430\u043B\u0456 \u043A\u0430\u0440\u0442\u043A\u0438 \u2192 \u043F\u0438\u0448\u0438 \u043F\u0438\u0442\u0430\u043D\u043D\u044F")}</div>
       </div>
       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="rgba(26,92,42,0.4)" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
     </div>
 
     <!-- \u041F\u0440\u0435\u043F\u0430\u0440\u0430\u0442\u0438 (\u0424\u0430\u0437\u0430 3: \u043B\u043E\u0433 \u043F\u0440\u0438\u0439\u043E\u043C\u0443 + \u043A\u043D\u043E\u043F\u043A\u0430 "\u041F\u0440\u0438\u0439\u043D\u044F\u0442\u0438 \u0437\u0430\u0440\u0430\u0437") -->
     ${meds.length > 0 ? `<div class="card-glass">
-      <div class="section-label">\u041F\u0440\u0435\u043F\u0430\u0440\u0430\u0442\u0438</div>
+      <div class="section-label">${t("health.card.meds_label", "\u041F\u0440\u0435\u043F\u0430\u0440\u0430\u0442\u0438")}</div>
       ${meds.map((m, i) => {
       const takenToday = isMedTakenToday(m);
       const schedArr = Array.isArray(m.schedule) ? m.schedule : [];
@@ -2844,7 +2844,7 @@ ${lines.join("\n")}`;
 
     <!-- \u041B\u0456\u043A\u0430\u0440 + \u0440\u0435\u043A\u043E\u043C\u0435\u043D\u0434\u0430\u0446\u0456\u0457 + \u043D\u0430\u0441\u0442\u0443\u043F\u043D\u0438\u0439 \u043F\u0440\u0438\u0439\u043E\u043C -->
     ${card.doctor || card.doctorRecommendations || card.doctorConclusion || card.nextAppointment && card.nextAppointment.date ? `<div class="card-glass">
-      <div class="section-label">\u041B\u0456\u043A\u0443\u0432\u0430\u043D\u043D\u044F</div>
+      <div class="section-label">${t("health.card.treatment_label", "\u041B\u0456\u043A\u0443\u0432\u0430\u043D\u043D\u044F")}</div>
       ${card.doctor ? `<div style="font-size:11px;color:rgba(30,16,64,0.5);font-weight:600;margin-bottom:4px"><b style="color:#1e1040">\u041B\u0456\u043A\u0430\u0440:</b> ${escapeHtml(card.doctor)}</div>` : ""}
       ${card.doctorRecommendations ? `<div style="font-size:11px;color:rgba(30,16,64,0.55);font-weight:600;margin-bottom:4px;line-height:1.45"><b style="color:#1e1040">\u0420\u0435\u043A\u043E\u043C\u0435\u043D\u0434\u0430\u0446\u0456\u0457:</b> ${escapeHtml(card.doctorRecommendations)}</div>` : ""}
       ${card.doctorConclusion ? `<div style="font-size:11px;color:rgba(30,16,64,0.55);font-weight:600;margin-bottom:4px;line-height:1.45"><b style="color:#1e1040">\u0412\u0438\u0441\u043D\u043E\u0432\u043E\u043A:</b> ${escapeHtml(card.doctorConclusion)}</div>` : ""}
@@ -2853,7 +2853,7 @@ ${lines.join("\n")}`;
 
     <!-- \u0406\u0441\u0442\u043E\u0440\u0456\u044F (\u0424\u0430\u0437\u0430 3: \u043F\u043E\u0432\u043D\u0438\u0439 timeline \u0432\u0441\u0456\u0445 \u0442\u0438\u043F\u0456\u0432 \u0437 \u0456\u043A\u043E\u043D\u043A\u0430\u043C\u0438 \u2014 \u0437\u0430\u043C\u0456\u043D\u044E\u0454 "\u0417\u0430\u043F\u0438\u0441\u0438 \u043B\u0456\u043A\u0430\u0440\u044F") -->
     ${historyAll.length > 0 ? `<div class="card-glass">
-      <div class="section-label">\u0406\u0441\u0442\u043E\u0440\u0456\u044F</div>
+      <div class="section-label">${t("health.card.history_label", "\u0406\u0441\u0442\u043E\u0440\u0456\u044F")}</div>
       ${historyAll.slice(0, 15).map((h) => {
       const d = new Date(h.ts);
       const dateStr = isNaN(d) ? "" : d.toLocaleDateString("uk-UA") + " " + d.toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" });
@@ -2899,7 +2899,7 @@ ${lines.join("\n")}`;
     <!-- \u0414\u0438\u0441\u043A\u043B\u0435\u0439\u043C\u0435\u0440 -->
     <div style="background:rgba(249,115,22,0.07);border:1px solid rgba(249,115,22,0.15);border-radius:10px;padding:7px 10px;display:flex;gap:6px;align-items:flex-start;margin-bottom:10px">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ea580c" stroke-width="2.5" style="flex-shrink:0;margin-top:2px"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/></svg>
-      <div style="font-size:10px;color:rgba(234,88,12,0.7);font-weight:600;line-height:1.45">\u0414\u043B\u044F \u0434\u0456\u0430\u0433\u043D\u043E\u0441\u0442\u0438\u043A\u0438 \u0456 \u043B\u0456\u043A\u0443\u0432\u0430\u043D\u043D\u044F \u043A\u043E\u043D\u0441\u0443\u043B\u044C\u0442\u0443\u0439\u0441\u044F \u0437 \u043B\u0456\u043A\u0430\u0440\u0435\u043C.</div>
+      <div style="font-size:10px;color:rgba(234,88,12,0.7);font-weight:600;line-height:1.45">${t("health.disclaimer.short", "\u0414\u043B\u044F \u0434\u0456\u0430\u0433\u043D\u043E\u0441\u0442\u0438\u043A\u0438 \u0456 \u043B\u0456\u043A\u0443\u0432\u0430\u043D\u043D\u044F \u043A\u043E\u043D\u0441\u0443\u043B\u044C\u0442\u0443\u0439\u0441\u044F \u0437 \u043B\u0456\u043A\u0430\u0440\u0435\u043C.")}</div>
     </div>
   `;
   }
@@ -2912,7 +2912,7 @@ ${lines.join("\n")}`;
     } catch (e) {
     }
     setTimeout(() => {
-      addHealthChatMsg("agent", `OWL \u0443 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0456 \u0441\u0442\u0430\u043D\u0443 "${card.name}". \u0429\u043E \u0445\u043E\u0447\u0435\u0448 \u0434\u0456\u0437\u043D\u0430\u0442\u0438\u0441\u044C?`);
+      addHealthChatMsg("agent", t("health.owl.focus_intro", 'OWL \u0443 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0456 \u0441\u0442\u0430\u043D\u0443 "{name}". \u0429\u043E \u0445\u043E\u0447\u0435\u0448 \u0434\u0456\u0437\u043D\u0430\u0442\u0438\u0441\u044C?', { name: card.name }));
     }, 200);
   }
   function logHealthMedDose(cardId, medId) {
@@ -3375,18 +3375,18 @@ ${lines.join("\n")}`;
     renderHealth();
   }
   function openAddAllergy() {
-    const name = prompt("\u041D\u0430\u0437\u0432\u0430 \u0430\u043B\u0435\u0440\u0433\u0435\u043D\u0443 (\u043D\u0430\u043F\u0440\u0438\u043A\u043B\u0430\u0434: \u0433\u043E\u0440\u0456\u0445\u0438, \u043F\u0435\u043D\u0456\u0446\u0438\u043B\u0456\u043D, \u043B\u0430\u043A\u0442\u043E\u0437\u0430):");
+    const name = prompt(t("health.allergy.name_prompt", "\u041D\u0430\u0437\u0432\u0430 \u0430\u043B\u0435\u0440\u0433\u0435\u043D\u0443 (\u043D\u0430\u043F\u0440\u0438\u043A\u043B\u0430\u0434: \u0433\u043E\u0440\u0456\u0445\u0438, \u043F\u0435\u043D\u0456\u0446\u0438\u043B\u0456\u043D, \u043B\u0430\u043A\u0442\u043E\u0437\u0430):"));
     if (!name || !name.trim()) return;
-    const notes = prompt("\u041D\u043E\u0442\u0430\u0442\u043A\u0438 (\u043D\u0435\u043E\u0431\u043E\u0432'\u044F\u0437\u043A\u043E\u0432\u043E \u2014 \u0441\u0438\u043C\u043F\u0442\u043E\u043C\u0438, \u0434\u0435\u0442\u0430\u043B\u0456 \u0440\u0435\u0430\u043A\u0446\u0456\u0457):") || "";
+    const notes = prompt(t("health.allergy.notes_prompt", "\u041D\u043E\u0442\u0430\u0442\u043A\u0438 (\u043D\u0435\u043E\u0431\u043E\u0432'\u044F\u0437\u043A\u043E\u0432\u043E \u2014 \u0441\u0438\u043C\u043F\u0442\u043E\u043C\u0438, \u0434\u0435\u0442\u0430\u043B\u0456 \u0440\u0435\u0430\u043A\u0446\u0456\u0457):")) || "";
     const added = addAllergy(name, notes);
     if (added) {
       renderHealth();
     } else {
-      showToast("\u0422\u0430\u043A\u0430 \u0430\u043B\u0435\u0440\u0433\u0456\u044F \u0432\u0436\u0435 \u0454");
+      showToast(t("health.allergy.duplicate", "\u0422\u0430\u043A\u0430 \u0430\u043B\u0435\u0440\u0433\u0456\u044F \u0432\u0436\u0435 \u0454"));
     }
   }
   function deleteAllergyById(id) {
-    if (!confirm("\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0430\u043B\u0435\u0440\u0433\u0456\u044E?")) return;
+    if (!confirm(t("health.allergy.delete_confirm", "\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0430\u043B\u0435\u0440\u0433\u0456\u044E?"))) return;
     if (deleteAllergy(id)) {
       renderHealth();
     }
@@ -3538,7 +3538,7 @@ ${lines.join("\n")}`;
     if (!text) return;
     const key = localStorage.getItem("nm_gemini_key");
     if (!key) {
-      addHealthChatMsg("agent", "\u0412\u0432\u0435\u0434\u0438 OpenAI \u043A\u043B\u044E\u0447 \u0432 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445.");
+      addHealthChatMsg("agent", t("health.chat.no_key", "\u0412\u0432\u0435\u0434\u0438 OpenAI \u043A\u043B\u044E\u0447 \u0432 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445."));
       return;
     }
     input.value = "";
@@ -3580,14 +3580,14 @@ ${lines.join("\n")}`;
         if (looksLikeJson) {
           try {
             JSON.parse(replyText);
-            addHealthChatMsg("agent", "\u0417\u0440\u043E\u0431\u043B\u0435\u043D\u043E \u2713");
+            addHealthChatMsg("agent", t("health.chat.done", "\u0417\u0440\u043E\u0431\u043B\u0435\u043D\u043E \u2713"));
           } catch {
             addHealthChatMsg("agent", replyText, false, chips);
           }
         } else addHealthChatMsg("agent", replyText, false, chips);
       }
     } catch {
-      addHealthChatMsg("agent", "\u041C\u0435\u0440\u0435\u0436\u0435\u0432\u0430 \u043F\u043E\u043C\u0438\u043B\u043A\u0430.");
+      addHealthChatMsg("agent", t("health.chat.network_err", "\u041C\u0435\u0440\u0435\u0436\u0435\u0432\u0430 \u043F\u043E\u043C\u0438\u043B\u043A\u0430."));
     }
     healthBarLoading = false;
   }
