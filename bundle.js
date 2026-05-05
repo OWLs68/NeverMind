@@ -5755,8 +5755,8 @@ ${lines.join("\n\n")}`;
     const diffMin = Math.max(1, Math.round((target - now) / 6e4));
     const h = Math.floor(diffMin / 60);
     const m = diffMin % 60;
-    if (h > 0) return `\u0434\u043E \u0440\u043E\u0437\u0431\u043B\u043E\u043A\u0443\u0432\u0430\u043D\u043D\u044F: ${h} \u0433\u043E\u0434 ${m} \u0445\u0432`;
-    return `\u0434\u043E \u0440\u043E\u0437\u0431\u043B\u043E\u043A\u0443\u0432\u0430\u043D\u043D\u044F: ${m} \u0445\u0432`;
+    if (h > 0) return t("evening.lock.countdown_hm", "\u0434\u043E \u0440\u043E\u0437\u0431\u043B\u043E\u043A\u0443\u0432\u0430\u043D\u043D\u044F: {h} \u0433\u043E\u0434 {m} \u0445\u0432", { h, m });
+    return t("evening.lock.countdown_m", "\u0434\u043E \u0440\u043E\u0437\u0431\u043B\u043E\u043A\u0443\u0432\u0430\u043D\u043D\u044F: {m} \u0445\u0432", { m });
   }
   function updateEveningLock() {
     const overlay = document.getElementById("evening-lock-overlay");
