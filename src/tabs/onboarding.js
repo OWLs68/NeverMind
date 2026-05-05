@@ -290,7 +290,7 @@ function renderSlide() {
 
   // Пропустити → Закрити на останньому
   const skipBtn = document.getElementById('slides-skip-btn');
-  skipBtn.textContent = slide.isLast ? '' : 'Пропустити';
+  skipBtn.textContent = slide.isLast ? '' : t('onb.btn.skip', 'Пропустити');
   skipBtn.style.display = slide.isLast ? 'none' : 'block';
 }
 
@@ -460,12 +460,12 @@ const HELP_CONTENT = {
 };
 
 const FIRST_VISIT_TIPS = {
-  inbox:   { icon: '💡', title: 'Підказка', text: 'Пиши будь-що — задачу, ідею, звичку. Агент сам розбере. Спробуй: "купити хліб о 18:00"' },
-  tasks:   { icon: '⚡', title: 'Підказка', text: 'Пиши список одним записом: "Ремонт: купити фарбу, знайти майстра" — Агент розібʼє на кроки' },
-  notes:   { icon: '📁', title: 'Підказка', text: 'Нотатки автоматично сортуються по папках. Тапни на папку щоб побачити записи всередині' },
-  me:      { icon: '📊', title: 'Підказка', text: 'Натисни ↻ в блоці "Аналіз агента" — отримаєш чесний огляд своєї продуктивності' },
-  evening: { icon: '🌙', title: 'Підказка', text: 'Натисни ↻ в "Агент на вечір" — Агент підсумує твій день на основі всіх записів' },
-  finance: { icon: '◈',  title: 'Підказка', text: 'Пиши витрати прямо в Inbox: "витратив 50 на їжу" — Агент сам збереже у Фінанси' },
+  inbox:   { icon: '💡', title: t('onb.tip.title', 'Підказка'), text: t('onb.tip.inbox', 'Пиши будь-що — задачу, ідею, звичку. Агент сам розбере. Спробуй: "купити хліб о 18:00"') },
+  tasks:   { icon: '⚡', title: t('onb.tip.title', 'Підказка'), text: t('onb.tip.tasks', 'Пиши список одним записом: "Ремонт: купити фарбу, знайти майстра" — Агент розібʼє на кроки') },
+  notes:   { icon: '📁', title: t('onb.tip.title', 'Підказка'), text: t('onb.tip.notes', 'Нотатки автоматично сортуються по папках. Тапни на папку щоб побачити записи всередині') },
+  me:      { icon: '📊', title: t('onb.tip.title', 'Підказка'), text: t('onb.tip.me', 'Натисни ↻ в блоці "Аналіз агента" — отримаєш чесний огляд своєї продуктивності') },
+  evening: { icon: '🌙', title: t('onb.tip.title', 'Підказка'), text: t('onb.tip.evening', 'Натисни ↻ в "Агент на вечір" — Агент підсумує твій день на основі всіх записів') },
+  finance: { icon: '◈',  title: t('onb.tip.title', 'Підказка'), text: t('onb.tip.finance', 'Пиши витрати прямо в Inbox: "витратив 50 на їжу" — Агент сам збереже у Фінанси') },
 };
 
 let _helpOpen = false;
@@ -623,16 +623,16 @@ export function showFirstVisitTip(tab) {
 
 // === SURVEY (після першого онбордингу) ===
 const SURVEY_QUESTIONS = [
-  'Чим займаєшся? (наприклад: підприємець, студент, програміст, фрілансер…)',
-  'Які твої головні цілі зараз? (коротко, 1-2 речення)',
-  'Що хочеш тримати під контролем — задачі, звички, ідеї, або все разом?',
-  'Як у тебе зараз з фінансами — ведеш облік чи поки хаос?',
-  'Є якийсь проект або велика ціль над якою зараз працюєш?',
-  'Розкажи про свій день: о котрій зазвичай прокидаєшся, починаєш активну роботу і лягаєш спати? (наприклад: встаю о 7, працюю з 9 до 18, сплю о 23)',
-  'Що найбільше заважає тобі бути продуктивним зараз?',
-  'Які звички хочеш сформувати або вже намагаєшся підтримувати?',
-  'Як ти зазвичай запамʼятовуєш ідеї — телефон, блокнот, голова?',
-  'Що хочеш змінити у своєму житті через 3 місяці?',
+  t('onb.sv.q1', 'Чим займаєшся? (наприклад: підприємець, студент, програміст, фрілансер…)'),
+  t('onb.sv.q2', 'Які твої головні цілі зараз? (коротко, 1-2 речення)'),
+  t('onb.sv.q3', 'Що хочеш тримати під контролем — задачі, звички, ідеї, або все разом?'),
+  t('onb.sv.q4', 'Як у тебе зараз з фінансами — ведеш облік чи поки хаос?'),
+  t('onb.sv.q5', 'Є якийсь проект або велика ціль над якою зараз працюєш?'),
+  t('onb.sv.q6', 'Розкажи про свій день: о котрій зазвичай прокидаєшся, починаєш активну роботу і лягаєш спати? (наприклад: встаю о 7, працюю з 9 до 18, сплю о 23)'),
+  t('onb.sv.q7', 'Що найбільше заважає тобі бути продуктивним зараз?'),
+  t('onb.sv.q8', 'Які звички хочеш сформувати або вже намагаєшся підтримувати?'),
+  t('onb.sv.q9', 'Як ти зазвичай запамʼятовуєш ідеї — телефон, блокнот, голова?'),
+  t('onb.sv.q10', 'Що хочеш змінити у своєму житті через 3 місяці?'),
 ];
 let surveyAnswers = [];
 let surveyStep = 0;
@@ -646,7 +646,7 @@ function startSurvey() {
   if (currentTab !== 'inbox') switchTab('inbox');
   // Невелика затримка щоб Inbox відрендерився
   setTimeout(() => {
-    addInboxChatMsg('agent', 'Привіт! 👋 Щоб я міг бути кориснішим — розкажи трохи про себе. Це займе хвилину, а я зможу давати конкретніші поради саме для тебе.');
+    addInboxChatMsg('agent', t('onb.sv.intro', 'Привіт! 👋 Щоб я міг бути кориснішим — розкажи трохи про себе. Це займе хвилину, а я зможу давати конкретніші поради саме для тебе.'));
     setTimeout(() => askSurveyQuestion(), 800);
   }, 400);
 }
@@ -675,10 +675,10 @@ export function handleSurveyAnswer(text) {
 }
 
 async function finishSurvey() {
-  addInboxChatMsg('agent', 'Дякую! Зараз підготую персональні поради…');
+  addInboxChatMsg('agent', t('onb.sv.thanks', 'Дякую! Зараз підготую персональні поради…'));
   const key = localStorage.getItem('nm_gemini_key');
   if (!key) {
-    addInboxChatMsg('agent', 'Введи API ключ в налаштуваннях — і я збережу все про тебе в памʼять.');
+    addInboxChatMsg('agent', t('onb.sv.no_key', 'Введи API ключ в налаштуваннях — і я збережу все про тебе в памʼять.'));
     localStorage.setItem('nm_survey_done', '1');
     localStorage.setItem('nm_guide_step', SURVEY_QUESTIONS.length.toString());
     return;
@@ -735,7 +735,7 @@ async function finishSurvey() {
       }
     }
   } catch(e) {
-    addInboxChatMsg('agent', 'Не вдалось зберегти — але твої відповіді я запамʼятав.');
+    addInboxChatMsg('agent', t('onb.sv.err', 'Не вдалось зберегти — але твої відповіді я запамʼятав.'));
   }
   localStorage.setItem('nm_survey_done', '1');
   localStorage.setItem('nm_guide_step', SURVEY_QUESTIONS.length.toString());
@@ -959,7 +959,7 @@ function obNext(step) {
   if (step === 1) {
     const name = document.getElementById('ob-name').value.trim();
     const age = document.getElementById('ob-age').value.trim();
-    if (!name) { showToast('Введи імʼя'); return; }
+    if (!name) { showToast(t('onb.toast.need_name', 'Введи імʼя')); return; }
     const settings = JSON.parse(localStorage.getItem('nm_settings') || '{}');
     settings.name = name;
     if (age) settings.age = age;
@@ -1002,7 +1002,7 @@ function selectOwlMode(mode) {
 
 function obShowWelcome() {
   const settings = JSON.parse(localStorage.getItem('nm_settings') || '{}');
-  document.getElementById('ob-welcome-text').textContent = `Привіт, ${settings.name || 'друже'}! 👋`;
+  document.getElementById('ob-welcome-text').textContent = t('onb.welcome', 'Привіт, {name}! 👋', { name: settings.name || t('onb.welcome.fallback_name', 'друже') });
   document.getElementById('ob-step-2').style.display = 'none';
   document.getElementById('ob-step-3').style.display = 'block';
 }
