@@ -9,15 +9,13 @@
 
 ## 🔴 Критичні (зламана функціональність)
 
-_Немає відкритих критичних багів станом на 03.05.2026 (4xJ7n)._
+_Немає відкритих критичних багів станом на 05.05.2026 (QDIGl)._
 
 ---
 
 ## 🟡 Середні (є обхідний шлях або рідко трапляється)
 
-| ID | Файл | Симптом | Аналіз |
-|---|---|---|---|
-| **B-117** | `src/owl/proactive.js:1091` (м'який кеш 5хв) + `_pickMessageForTab` + Pruning без entityRefs | Юзер виконав 2/2 звичок (зелені ✓ у вкладці Продуктивність), але сова в табло показує застаріле «Сьогодні не виконано жодну звичку. Активізуйся — 5 присідань або 2 хв розтяжки». Скріншот mUpS8 16:47. Дані оновлені (заголовок «Звички 2 з 2 сьогодні» правильний), застаріле тільки повідомлення сови. | **Знайдено гілки розслідування, не зафіксовано корінь:** (1) `tryTabBoardUpdate` рядок 1091 блокує генерацію якщо latestMsg молодше 5 хв (м'який кеш для економії API); (2) listener `nm-data-changed: habits` рядок 1185 викликає `generateBoardMessage` через 5 сек **повз кеш**, але якщо `_boardGenerating[tab]=true` (рядок 625) — пропускається; (3) Pruning Engine (`isMessageRelevant` у `getTabBoardMsgs`) перевіряє `entityRefs`, а повідомлення «не виконано звичку» не має ref на конкретні `habit_X` → не фільтрується; (4) `_pickMessageForTab` міг обирати критичне повідомлення з історії навіть після генерації нового. **Потребує live debug у DevTools на iPhone:** `localStorage.nm_unified_board` (повний stack повідомлень для tab=tasks) + `_boardGenerating` стан + чи створено новий запис після `complete_habit`. Фікс наосліп = ризик зламати Brain Pulse. **Опції фіксу:** (а) додати `force` параметр у `tryBoardUpdate`, listener викликає з `force:true` для `e.detail !== 'chat'`; (б) розширити `entityRefs` для habit-related повідомлень щоб Pruning ловив; (в) у listener для `habits/tasks/...` детайл — інвалідувати `latestMsg.ts=0` через нову експорт-функцію у `unified-storage.js`. Найбезпечніше — (в). |
+_Немає відкритих середніх багів станом на 05.05.2026 (QDIGl)._
 
 ---
 
@@ -29,21 +27,17 @@ _Немає відкритих дрібних багів._
 
 ## ✅ Закриті (активні сесії)
 
-_Зберігаються закриті у 2 останніх активних сесіях (rC4TO + UvEHE). Старіші (MIeXK з 0 багів + iWyjU з 0 багів + 4xJ7n + mUpS8 + BqTWF) перенесено у [`_archive/BUGS_HISTORY.md`](_archive/BUGS_HISTORY.md)._
+_Зберігаються закриті у 2 останніх активних сесіях (QDIGl + rC4TO). Старіші (UvEHE з B-120/B-121, MIeXK, iWyjU, 4xJ7n, mUpS8, BqTWF) перенесено у [`_archive/BUGS_HISTORY.md`](_archive/BUGS_HISTORY.md)._
+
+_Сесія **QDIGl** (05.05.2026) — Розпорядок merge + delete_project + B-117 audit fix остаточно + 19 раундів i18n + 4 audit фікси:_
+- **B-117 закрито остаточно** (`923ae80` + `9e30379`) — табло звичок stale. **Перша спроба** (`923ae80`): Pruning content fallback у `_isStaleHabitGeneralization` (board-utils.js) + `renderTabBoard` у boot.js listener для habit/task ключів. Сова оновлюється миттєво після complete_habit. **Друга спроба** (audit `9e30379` #2): фікс позитивних повідомлень — раніше умова `doneCount === buildHabits.length` ловила позитивні «3/3 чудово!» → додав `&& isHabitTextNegative` гард. Тепер тільки негативні «не виконано/жодну/активізуйся» викидаються. + audit fix #1 — DOW Mon=0 у proactive.js:982 (5-та точка пропущена при попередньому уніфікуванні): `dow = (getDay()+6)%7`. + audit fix #3 — TTL прострочених mark `done:true` ТІЛЬКИ для expired (>180хв). Раніше done ставилось ДО показу → race condition з AI fetch fail втрачав reminder. + audit fix #5 — `findProjectByName` exact > startsWith > unique-fuzzy (не видалить «Хімчистка-А» при запиті «Хімчистка-Б»).
 
 _Сесія **rC4TO** (04.05.2026) — silent failures фіксовано (chips Phase C + dispatcher) + swipe-delete карток Здоров'я + iOS діагноз правило + Notes render guard:_
-- **B-122 закрито** (`8a05ada`) — Health Phase C інтерв'ю чіпи мовчать. Корінь у `src/owl/chips.js:199-204`: (1) whitelist action переписував `health_interview` у `'chat'` → handler ніколи не спрацьовував, (2) `escapeHtml` не кодує `"` → JSON payload ламав HTML-атрибут. Фікс: додано `health_interview` у whitelist + локальний escape `"` → `&quot;` для payloadAttr + `console.warn` у fallback `handleChipClick` для майбутніх silent failures. Юзер підтвердив: «Чіпи працюють».
-- **B-123 закрито** (`431b433`) — `create_project` у Фінансах висне (typing-індикатор крутиться вічно). Корінь у `src/ai/tool-dispatcher.js`: tool навмисно НЕ оброблявся (коментар «Inbox-specific interview flow») → silent skip → `addMsg` ніколи не викликається → typing висне. Фікс: новий handler `create_project` ПЕРЕД universal loop (створює проект з будь-якого чату через `createProjectProgrammatic` helper з projects.js + `switchTab('inbox')` + `startProjectInboxInterview`) + універсальний SILENT FAILURE GUARD у кінці `dispatchChatToolCalls` для будь-яких unknown tools.
-- **B-124 закрито** (`2f96593`) — вкладка Нотатки порожня попри 30 записів у `nm_notes`. Симптом (Роман v626): порожній екран без empty state, «+» каже «збережено» але список не оновлюється. Корінь з логів діагностики (`bundle.js:8661`): `items[0].text.length` throws у `renderNotes:333` бо хоч один запис у nm_notes без поля `text` (AI через clarify-chip path міг згенерувати save_note з payload без text → `addNoteFromInbox(undefined)` → запис з `text: undefined`). Один битий запис → throws всередині `.map()` → весь HTML не формується → `content.innerHTML` лишається порожнім → empty state не показується (бо `notes.length > 0`). Фікс: 3 захисти у `notes.js` — (1) `addNoteFromInbox` return early якщо text falsy, (2) `renderNotes` фільтрує битих + one-time cleanup `saveNotes(validNotes)` в localStorage, (3) safe-read `items[0]?.text` у preview generation. Юзер підтвердив: «Папки повернулися». Розблоковано всі 5+ папок з 30 нотатками.
+- **B-122 закрито** (`8a05ada`) — Health Phase C інтерв'ю чіпи мовчать. Корінь у `src/owl/chips.js:199-204`: (1) whitelist action переписував `health_interview` у `'chat'` → handler ніколи не спрацьовував, (2) `escapeHtml` не кодує `"` → JSON payload ламав HTML-атрибут. Фікс: додано `health_interview` у whitelist + локальний escape `"` → `&quot;` для payloadAttr + `console.warn` у fallback `handleChipClick` для майбутніх silent failures.
+- **B-123 закрито** (`431b433`) — `create_project` у Фінансах висне (typing-індикатор крутиться вічно). Корінь у `src/ai/tool-dispatcher.js`: tool навмисно НЕ оброблявся → silent skip → `addMsg` ніколи не викликається → typing висне. Фікс: новий handler `create_project` ПЕРЕД universal loop + універсальний SILENT FAILURE GUARD у кінці `dispatchChatToolCalls` для будь-яких unknown tools.
+- **B-124 закрито** (`2f96593`) — вкладка Нотатки порожня попри 30 записів. Корінь з логів діагностики: `items[0].text.length` throws у `renderNotes:333` бо хоч один запис у nm_notes без поля `text`. Один битий запис → throws всередині `.map()` → весь HTML не формується. Фікс: 3 захисти у `notes.js`.
 
-_Сесія **UvEHE** (03.05.2026) — фінал модалок (B-120/B-121 + drum-picker + Settings 4-ітерац):_
-- **B-120 закрито фінально** — модалка Health стала на calendar-pattern: top-level `#health-card-modal-overlay` як sibling (НЕ дитячий backdrop-div) + onclick на root з `event.target===this`. Окремий swipe-handler на root через `setupModalSwipeClose` (універсальний з `tasks.js`). iOS rubber-band повністю усунуто бо overlay не у transformed-context.
-- **B-121 закрито фінально** — заміна native `<input type=date/time>` на власний drum-picker mini-модалку (`#health-dt-picker-modal`) з 3-кол date drum + 2-кол time drum. Native iOS picker більше не відкривається — замість нього стилізована модалка з кроком 5 хв для часу. Роки 1990-2035. Поля-trigger показують форматовану дату «3 трав. 2026» / «09:00». Плюс `_initDrumCol` експортовано з calendar.js для перевикористання.
-- **Settings scale-glitch (4 ітерації — без B-номера, регресія)** — модалка візуально стискалась при тапі/скролі всередині. False leads: mask-image, flex layout, nested backdrop-filter, body-lock. **Справжній корінь:** глобальне CSS `style.css:1551`: `[onclick]:active { transform: scale(0.87); }` — settings-overlay має onclick → tap bubbles до root → scale(0.87) на ВСІЙ модалці. Фікс: override `#settings-overlay:active, [id$="-modal"]:active { transform: none }`.
-- **deploy-info-modal blur** — переніс blur з самого root на окремий top-level overlay-bg sibling (як calendar).
-- **Help-drawer** для всіх 8 вкладок: HELP_CONTENT для health/projects (раніше null → нічого не показувало) + swipe-right на drawer (root) щоб ловити touch на dim теж.
-
-_Старіші сесії (4xJ7n з B-118+B-119, mUpS8 з B-116, BqTWF з B-115, rKQPT + bOqdI + LW3j8 + 6ANWm + Ph8ym) → [`_archive/BUGS_HISTORY.md`](_archive/BUGS_HISTORY.md)._
+_Старіші сесії (UvEHE з B-120+B-121, 4xJ7n з B-118+B-119, mUpS8 з B-116, BqTWF з B-115) → [`_archive/BUGS_HISTORY.md`](_archive/BUGS_HISTORY.md)._
 
 ---
 

@@ -8,7 +8,98 @@
 
 ---
 
-## 🔧 Поточна сесія RGisY — Шар 6 chip-system (5 фаз) + Council/Gemini синтез + B1+B2 (04.05.2026)
+## 🔧 Поточна сесія QDIGl — Розпорядок merge + delete_project + B-117 fix + 19 раундів i18n (-319) + audit (05.05.2026)
+
+### Зроблено
+
+#### A. Шар 4 destructive + B-117 + drag toggle (4 коміти)
+1. **Шар 4 destructive промпт + safety net** (`a937c54`) — фікс суперечності у CHIP_PROMPT_RULES + `_ensureDestructiveSafety` у normalizeChips автоматично додає «Не треба» при missing safe.
+2. **B-117 fix** (`923ae80` + audit `9e30379` #2) — content-based fallback у `_isStaleHabitGeneralization` (board-utils.js) + `renderTabBoard` у boot.js listener для всіх 7 вкладок при habit/task changes. Сова оновлюється миттєво.
+3. **Habit counter «1/4»** (`ea2ad44`+`368a121`) — прибрано підпис «X з Y сьогодні» з картки + total = всі buildHabits скрізь (renderProdHabits, me.js ring, proactive.js контекст AI). DOW Mon=0 уніфіковано 5/5 точок.
+4. **Segmented control toggle** (`40fa5a1`+`e86bce7`+`21e3d48`) — drag pill з real-time translateX, glass `--card-bg`+blur(16px), direction-lock 8px, snap до середини на release.
+
+#### B. delete_project tool + missing-tool правило (3 коміти)
+5. **delete_project tool** (`28ac694`) — INBOX_TOOLS + `deleteProjectProgrammatic` + `findProjectByName` (audit fix #5: exact > startsWith > unique-fuzzy). Закриває корінь wrong-target регресії «видали проект».
+6. **fuzzy SAFETY habits.js:1086** (`28ac694`) — `nameQ.length >= 3` інакше відмова. Раніше `title.includes('')` для всіх задач було true → видаляли ПЕРШУ.
+7. **Missing-tool правило INBOX_SYSTEM_PROMPT** (`28ac694`+`4de5a9f`) — «Якщо tool НЕМА — НЕ підставляй інший». + delete-uncertainty шаблон з ЧІПАМИ (не текст).
+
+#### C. Розпорядок дня combined timeline (4 коміти)
+8. **`getCombinedTimelineForDate`** (`64da3f7`+`e17d4ab`+`21e3d48`+`227b1ea`) — об'єднує routine + events + reminders за дату з іконками 🔁/📅/⏰. Поточний тиждень Пн-Нд з історією. Лейбл «вчора/сьогодні/завтра/DD.MM».
+9. **TTL прострочених** (`227b1ea`+ audit fix #3) — <60 хв CRITICAL, 60-180 пом'якшено з чіпами, >180 silent done. mark done:true ТІЛЬКИ для expired (race condition fix).
+10. **ROUTINE_RULES промпт** (`227b1ea`) — будні/вихідні/щодня/у понеділок mapping; «через день» → AI питає; «завтра 14:00» → create_event. Tool description 32→280 символів.
+11. **Hotfix `_nearestDateForDayKey`** (`3bd9bf7`) — забутий call-site після rename. ReferenceError блокував модалку. Знайдено через DevTools console v663.
+
+#### D. Reminder + monthly summary (3 коміти)
+12. **Свайп reminder синк** (`5dd133d`) — inbox `reminderId` → cleanup nm_reminders + nm_events + undo для всіх 3 джерел.
+13. **show_monthly_summary tool** (`c829ef2`+`0ac46c3`+`56fdc33`) — універсальний у tool-dispatcher (один мозок, 8 чатів). Override JSON `nm_me_monthly_override` 1 година. Історичний місяць (березень коли травень) — AI генерує oneliner. `dayOfMonth > 4` ховати.
+
+#### E. 3 i18n агенти + 19 раундів обгортки (-319 рядків)
+14. **3 read-only sub-агенти** (`078c91b`) — `i18n-finder` / `i18n-quality-checker` / `i18n-regression-checker`. Робоча петля finder→Edit→quality→regression стабільна 19 разів.
+15. **19 раундів обгортки** (`7f27595`→`a4721fb`+`eb40cb1`+`eb16d7a`) — baseline 1004→685 (-319, -32%). 12 файлів. 6 файлів повністю UI: notes, evening, projects, me, boot, health.
+16. **Hotfix `${}` у single-quote** (`eb16d7a`) — quality-checker знайшов одразу. diagnostics:577 — юзер бачив літерально `${t(...)}`.
+
+#### F. Audit-фікс після всіх змін (1 коміт `9e30379`)
+17. **silent-bug-scout 4 знахідки виправлено**: (#1) DOW Sun=0 у proactive.js:982 — 5-та точка пропущена у попередньому уніфікуванні. (#2) `_isStaleHabitGeneralization` викидав ПОЗИТИВНІ повідомлення «3/3 чудово!» — додав `&& isHabitTextNegative` гард. (#3) TTL мітив `done:true` ДО показу — race condition; тепер тільки expired. (#5) findProjectByName fuzzy → exact > startsWith > unique.
+
+### Обговорено (без виконання)
+
+- **Розпорядок дня — повний редизайн ПОПЕРЕДУ** (ROADMAP Блок 3): storage `{mon}` → `{date}`, conflict detector `_detectTimeConflict`, 6 UX питань. Я зробив тільки read-only merge.
+- **Inbox cards редизайн** затверджено 30.03 — окрема сесія попереду.
+- **Onboarding редизайн** після Supabase (інтерактивний walkthrough з OWL-провідником, A2HS) → НЕ обгортав bodies слайдів і HELP_CONTENT (~150 рядків).
+- **Phase 12 chip-payload-store** — НЕ існує у коді, агент перевірив. Косметика, відкласти до Supabase.
+
+### Ключові рішення
+
+- **show_monthly_summary універсально у dispatcher** (не локально в inbox.js) — один мозок для 8 чатів.
+- **TTL прострочених mark done ТІЛЬКИ для expired** — раніше race condition втрачав reminder при AI fetch fail.
+- **NE обгортати onboarding bodies + HELP_CONTENT** — буде редизайн.
+- **Audit через прямий grep при API rate limit** — економніше, чесніше при правильній параметризації.
+- **DOW Mon=0 у proactive.js — 5/5 точок** після audit fix #1.
+
+### Інциденти
+
+- **Hotfix `_nearestDateForDayKey`** (`3bd9bf7`) — забутий call-site при rename. ReferenceError → тиша при тапі. Знайдено через DevTools console v663 (Роман дав логи).
+- **single-quote `${}` regression** (`eb16d7a`) — i18n-quality-checker знайшов одразу після round 2.
+- **5 silent-bug-scout знахідок** (`9e30379`) виявлені фінальним аудитом — 4 виправлено.
+- **silent-bug-scout rate-limit двічі** — переключився на прямий grep аудит. 0 i18n конфліктів (781 унікальний ключ).
+- Без `git reset` / `push --force` / skip hooks. 42 коміти — всі першою спробою.
+
+### Конфлікти/суперечності
+
+- **Шкала «1/4» vs «1/3»** — 3 спроби: прибрати підпис → scheduled-or-done → ВСІ buildHabits. Council-агенти знайшли DOW конвенцію регресію.
+- **Wrong-target «видали проект Хімчистка»** → видалив випадкову задачу. 3 окремі дірки: missing tool, fuzzy-empty habits.js, slabe правило промпту. Виправлено одним комітом.
+- **Onboarding обгортка** — почав, потім Роман: «буде редизайн, не треба». STOP.
+
+### Відкладене
+
+- **Розпорядок повний редизайн** (storage per-date, conflict detector) — 2-3 сесії.
+- **Inbox cards редизайн** — затверджено 30.03, не зроблено.
+- **Onboarding bodies + HELP_CONTENT** — після walkthrough редизайну.
+- **habits.js processUniversalAction round 3** — потребує refactor `const t = task` shadow.
+- **Smoke-test шпаргалка** — тести 1+2 підтверджені, 3+4 (час чіпи, drag-toggle edge cases) лишились.
+- **Phase 12 chip-payload-store** — окремо, разом з Supabase.
+
+### Спостереження Claude
+
+- Роман **прямо просив агентів** двічі для аудиту («з агентами», «не для галочки»). При першій моїй швидкій grep-перевірці зауважив що поверхневий — це справді так, виявилось 5 ризиків при глибокому аналізі.
+- **iPhone smoke-test після кожної фази** — Роман дисциплінований, перевіряв на v648→v667+. Не накопичував зміни без перевірки.
+- **«Не для галочки. Чесно. Якщо є — виправ»** — урок для майбутніх сесій: на запит ауд иту НЕ робити швидкий grep, одразу запускати silent-bug-scout / code-regression-finder з конкретним промптом.
+- Швидкість: дуже інтенсивна — 42 коміти за 6+ годин, 19 раундів i18n + 3 агенти + audit. Не втомлювався.
+
+### Метрики
+
+- Коміти: 42 (від `1a41385` до `d31db8b` /finish phase 0)
+- Версії: v648 → v667+ (CI ще збирає)
+- CACHE_NAME: `nm-20260504-1058` → `nm-20260505-2045` (~25 bumps)
+- Гілка: `claude/start-session-QDIGl`
+- i18n: baseline 1004 → 685 (-319, -32%); 781 унікальний ключ; 0 конфліктів
+- Закрито: B-117 (audit fix #2 закриває остаточно)
+- Нові tools: `delete_project`, `show_monthly_summary` (історичний місяць)
+- Нові агенти: 3 i18n-агенти у `.claude/agents/`
+
+---
+
+## 🔧 Сесія RGisY — Шар 6 chip-system (5 фаз) + Council/Gemini синтез + B1+B2 (04.05.2026)
 
 ### Зроблено
 
@@ -80,62 +171,7 @@
 
 ---
 
-## 🔧 Сесія rC4TO — silent failures trio + Health swipe-delete + Dynamic chips Шар 1 (04.05.2026)
-
-### Зроблено
-
-#### A. Документація і правила (1 коміт)
-1. **iOS Safari діагноз — 3-крядковий чек ДО CSS-патчів** (`dce16df`): нова секція 5 у `_ai-tools/RULES_UI.md` (grep universal `:active` / grep `backdrop-filter` parents / composite layers). lessons.md: робочий патерн «iOS Safari ВІЗУАЛЬНИЙ баг» + анти-патерн «Chips clipping — parent backdrop-filter clips children». Корінь: 8 ітерацій false leads UvEHE (Settings 4 + Chips 4) — шукав CSS-патчі навмання. Council code-regression-finder знаходить за секунди.
-
-#### B. Silent failure trio (3 коміти + 1 doc)
-2. **B-122 chips Phase C** (`8a05ada`): Health AI-інтерв'ю чіпи мовчать. Корінь у `chips.js:199-204` — (1) whitelist action переписував `health_interview` у `'chat'` → handler ніколи не спрацьовував; (2) `escapeHtml` не кодує `"` → JSON payload ламав HTML-атрибут. Фікс: додано `health_interview` у whitelist + локальний escape `"` → `&quot;` для payloadAttr + `console.warn` у fallback `handleChipClick` для майбутніх silent failures. Юзер підтвердив рукою: «Чіпи працюють».
-3. **B-123 dispatcher create_project висне** (`431b433`): «Створи проект хімчистка» у Фінансах → typing-індикатор крутиться вічно. Корінь у `tool-dispatcher.js`: tool навмисно НЕ оброблявся («Inbox-specific interview flow») → silent skip → addMsg ніколи не викликається. Фікс: винесено `createProjectProgrammatic(name, subtitle)` з inbox.js у projects.js (helper) + новий handler create_project ПЕРЕД universal loop у dispatcher (працює з будь-якого чату + switchTab(inbox) + startProjectInboxInterview) + універсальний SILENT FAILURE GUARD у кінці dispatchChatToolCalls для unknown tools.
-4. **lessons.md silent failure анти-патерн** (`a738ade`): записано урок про 3 кейси (chips action whitelist, payload escape, dispatcher silent skip). Спільний патерн: один шар генерує, інший не знає → тиша. Універсальне правило: завжди default case з `console.warn` + видимим feedback (addMsg). NEVERMIND_BUGS.md: B-122 + B-123 закрито.
-5. **B-124 Notes порожня попри 30 записів** (`2f96593` + `e733be3`): діагностика юзера показала помилку `bundle.js:8661 → renderNotes → items[0].text.length`. Один запис без поля text ламав весь `.map()` → content.innerHTML лишається порожнім → empty state не показується (бо length>0). Фікс 3 захисти у `notes.js`: (1) `addNoteFromInbox` return early якщо text falsy; (2) `renderNotes` фільтрує битих + one-time `saveNotes(validNotes)` cleanup localStorage; (3) safe-read items[0]?.text у preview. Юзер: «Папки повернулися». Розблоковано 30 нотаток + 5+ папок.
-
-#### C. Нова фіча — Health swipe-delete карток (1 коміт)
-6. **Свайп вліво на картці Здоров'я** (`26a541b`): обгортка `.health-card-wrap` навколо `.card-glass` + `_attachHealthSwipeDelete` за патерном notes.js:395-424. Через існуючий `attachSwipeDelete` (священна корова — не пишемо свій). Червона кнопка-кошик справа, тап → анімація схлопу + `deleteHealthCardProgrammatic` + 5-сек undo-toast. Undo повертає і картку, і пов'язаний event (наступний прийом). CSS клас `.health-card-wrap.swipe-deleting` додано у `.note-item-wrap` селектор у style.css. Юзер: «Видалення чотко».
-
-#### D. Dynamic AI-driven chips Шар 1 (1 коміт)
-7. **Контекстний 4-й чіп [Створити проект]** (`a625539`): Active ROADMAP «Dynamic AI-driven chips» крок 1. Симптом: Роман у Inbox написав «Відкрив автомийку» — guard повертав 3 фіксованих чіпи без [Створити проект]. Фікс ДВА шари: (1) prompts.js `CLARIFY_INLINE_RULES` розширено блоком «КОНТЕКСТНИЙ ЧІП Створити проект (ПРІОРИТЕТ)» з тригером МИНУЛИЙ ЧАС + БІЗНЕС-ІМЕННИК; (2) clarify-guard.js `BUSINESS_NOUN_RE` детектор (~20 іменників: автомийка/салон/сайт/магазин/студія/курси/хімчистка/...) → у `shouldClarify` додає 4-й чіп `target:'create_project'` з capitalize-name на ПЕРШУ позицію. Без змін у chips.js — `applyClarifyChoice` уже використовує універсальний `dispatchChatToolCalls`, а `create_project` доданий у dispatcher комітом B-123. End-to-end демо: «Відкрив автомийку» → 4 чіпи → тап «Створити проект» → «✅ Проект Автомийка створено» + Inbox interview стартував.
-
-### Обговорено (без виконання)
-- **Інтерв'ю проектів коротке** — після `startProjectInboxInterview` на запитання «Який стартовий капітал?» юзер відповів «Поки не знаю» → AI закрив розмову. Має бути серія 5+ питань: капітал → команда → строки → ризики → метрики. Окрема задача.
-- **Smoke-test шпаргалка пункти 15-38** — перевірив тільки автомийку (фактично пункт ≈18 з 24-го блоку chips). Решта (calendar-pattern модалки UvEHE, settings scale-glitch, chips clipping translateZ, help-drawer, drum-picker, safe-area pad) НЕ перевірена.
-- **Dynamic chips Шари 2-6** з ROADMAP — лікар (Health context), час [Зараз/Завтра], destructive [Так/Скасувати], multi-step інтерв'ю, оновлення 8 системних промптів. Прийшли через prompt-engineer-auditor аудит, але реалізовано тільки Шар 1.
-
-### Ключові рішення
-- **Точкова реалізація Dynamic chips** замість 6 кроків з ROADMAP — спочатку Шар 1 (бізнес-іменник → проект), решта окремими сесіями за тим же патерном. Аргумент: 6 кроків стане «простирадлом промпта», швидкий ефект тестується легше.
-- **Універсальний SILENT FAILURE GUARD у dispatcher** — замість точкових fixes для кожної tool. Додає `console.warn` + addMsg для unknown actions. Запобігає типу B-123 для майбутніх tools (typing висне → юзер не розуміє).
-- **Винесення `createProjectProgrammatic` у helper** — інакше dublicate 18-рядкового schema у inbox.js + dispatcher. DRY-фікс під час B-123 фіксу.
-- **clarify-guard.js обовʼязково ОКРЕМО від prompts.js** — бо guard це safety net коли AI ігнорує промпт. Якщо AI послухався (генерує content з 4 chips) — guard не активується. Якщо AI генерує create_project tool безпосередньо — guard активується і має додати свої контекстні chips.
-- **One-time cleanup у renderNotes** — замість окремої міграції у boot.js. Спрацьовує при першому рендері в новій версії, виправляє нечисті дані юзера БЕЗ повторної міграції.
-
-### Інциденти
-- **Pre-push hook бойкотував 3 рази** — фраза «нова tool» / «міграція» у тексті комітів = false positive. Додано «pre-push: ok» у відповідь, push пройшов з другої спроби кожен раз. Жоден коміт не пропустив через bypass без перевірки.
-- **Bash `&&` chain зломав push на B-123** — git add+commit+push зчеплено `&&`, хук блокує push → весь chain не виконався → потрібен був окремий commit потім push.
-- Без `git reset` / `git push --force` / skip hooks. Усі коміти першою спробою.
-
-### Конфлікти/суперечності
-- **Юзер очікував чіп [Створити проект]** на «Відкрив автомийку» — перш ніж я фіксував dynamic chips. Сам прописав це у ROADMAP як Active. Реалізовано після нагадування.
-- **«Нотатки порожні»** — спочатку я підозрював регресію від мого dispatcher коміту, потім гонитва per-file. Корінь знайшовся через діагностичний звіт юзера (логи бандлу) — це було НЕ моя регресія, а старий битий запис у localStorage що ніколи не міг рендеритись. Урок: при «нічого не показується» — спершу попросити логи браузера а не гадати по коду.
-
-### Відкладене
-- **Поглибити `startProjectInboxInterview`** — 5+ питань замість 1 (капітал/команда/строки/ризики/метрики).
-- **Dynamic chips Шари 2-6**: лікар (Health context), час, destructive confirm, multi-step інтерв'ю, оновлення 8 системних промптів.
-- **Smoke-test пункти 15-38**: clarify-guard у 7 чатах (Tasks інтеграція mUpS8 чекає UX-рішення save_task), calendar-pattern модалки UvEHE, chips clipping translateZ, help-drawer 8 вкладок, drum-picker date/time.
-- **B-117 табло звичок stale** — потребує live Safari DevTools.
-- **Tasks інтеграція clarify-guard Phase 3 mUpS8** — план Council готовий, чекає UX-рішення save_task.
-- **B-119 rAF rollout** — після smoke-test 7 чатів.
-
-### Метрики
-- Коміти: `dce16df` → `e733be3` = 8 фічі/фікси + 1 архівація phase 0 + finish коміти
-- Версії: v620 (start) → v627 (live)
-- CACHE_NAME: `nm-20260503-2140` → `nm-20260504-0005` (5 bumps)
-- Build: всі коміти `node --check` чисті, deploy через CI пройшов кожен раз.
-- Гілка: `claude/start-session-rC4TO`
-- Закрито: B-122 (chips), B-123 (dispatcher), B-124 (notes render). 3 баги.
-- Нові фічі: Health swipe-delete карток + контекстний чіп [Створити проект].
+## 🔧 Сесія rC4TO (04.05.2026) — архівовано QDIGl 05.05 → [archive](../_archive/SESSION_STATE_archive.md#-сесія-rc4to--silent-failures-trio--health-swipe-delete--dynamic-chips-шар-1-04052026)
 
 ---
 
@@ -157,12 +193,18 @@
 
 ## ⚠️ ДЛЯ НОВОГО ЧАТУ — найважливіше
 
-**🚀 ПРІОРИТЕТ #1 (rC4TO 04.05): Dynamic AI-driven chips Шари 2-6.** Шар 1 закрито (`a625539`) — контекстний 4-й чіп `[Створити проект]` для бізнес-іменників, end-to-end демо у Inbox підтверджено. Решта 5 шарів за тим же патерном (BUSINESS_NOUN_RE детектор + ChipGenerator у CLARIFY_INLINE_RULES):
-1. **Шар 2 — лікарі (Health context)**: `BUSINESS_NOUN_RE` стиль для лікарів з `nm_health_cards.history.doctor` → 3 чіпи з реальних імен + 1 «Інший лікар»
-2. **Шар 3 — час**: AI пише «Коли?» → `[Зараз][Через годину][Завтра вранці][Інше]` (action='chat')
-3. **Шар 4 — destructive confirm**: «Видалити X?» → `[Так, видалити][Скасувати][Тільки сьогодні]`
-4. **Шар 5 — multi_step інтерв'ю**: новий action у `chips.js handleChipClick`, state у `nm_inline_interview_pending`
-5. **Шар 6 — оновлення 8 системних промптів** — додати посилання на CHIP_TRIGGER_TABLE як константу (зараз `INBOX_SYSTEM_PROMPT` має таблицю, інші не мають). prompt-engineer-auditor у rC4TO знайшов **3 несумісні chip-схеми** (action:"chat" / "clarify_save" / inline-JSON у Owl-chat) — варто уніфікувати.
+**🚀 ПРІОРИТЕТ #1 (QDIGl 05.05): Розпорядок дня — повний редизайн.** Я зробив тільки read-only merge (combined timeline events+reminders+routine на день). Лишилось у ROADMAP Блок 3 (рядки 326-334):
+- Storage redesign: `nm_routine` з `{mon: [...]}` → `{'2026-04-10': [...]}` per-date
+- Auto-fill блоків при створенні задачі/події з часом → `_detectTimeConflict(date, time)` + tool `clarify_schedule_conflict`
+- Day-tabs Пн-Нд → дати-вкладки «Пт 10.04» з навігацією між тижнями
+- 6 відкритих UX питань (тривалість блока, edit-modal, видалення з джерела і т.д.)
+- Обсяг: 2-3 сесії
+
+**🚀 ПРІОРИТЕТ #2: Inbox cards редизайн** (затверджено 30.03 ще, не імплементовано). Кольорова крапка зліва, truncate 1 рядок, датові сепаратори «СЬОГОДНІ/ВЧОРА», закріплені нагадування зверху. Окрема сесія.
+
+**🚀 ПРІОРИТЕТ #3: Dynamic chips Шари 5-6** (Шар 1+2+3+4 закриті у попередніх сесіях — Phase 9c). Шар 5 — multi_step інтерв'ю (новий action у chips.js + state у `nm_inline_interview_pending`). Шар 6 — уніфікація 3 chip-схем (action:"chat" / "clarify_save" / inline-JSON у Owl-chat) у єдиний формат.
+
+**🚨 ПЕРЕВІРИТИ iPhone smoke-test** (тести 3+4 з шпаргалки QDIGl): (3) «Нагадай помити посуд» → 4 часові чіпи `[Зараз][Через годину][Завтра вранці][Інше]`; (4) Drag-toggle edge: свайп до середини і відпустити → snap назад.
 
 **🚀 ПРІОРИТЕТ #2: Поглибити `startProjectInboxInterview`** — після створення проекту запитує тільки «Який стартовий капітал?», на «Поки не знаю» закриває розмову. Має бути серія 5+ питань: капітал → команда → строки → ризики → метрики. Юзер у rC4TO підтвердив що цикл працює, але інтерв'ю «дуже коротке».
 
@@ -316,12 +358,13 @@
 
 | Параметр | Значення |
 |---|---|
-| **Версія** | **v565+** (deploy 03.05 after auto-merge of `8f15871`) |
+| **Версія** | **v667+** (deploy 05.05 after CI auto-merge of `9e30379` audit fixes) |
 | **URL** | owls68.github.io/NeverMind |
-| **AI модель** | OpenAI GPT-4o-mini з Tool Calling (60 tools, всі з обовʼязковим `_reasoning_log:string`) |
-| **Гілка** | `claude/start-session-4xJ7n` (B-118+B-119 фікси + Health-modal UI + ROADMAP AI-інтерв'ю) |
-| **CACHE_NAME** | `nm-20260503-0030` (Health modal status removed) |
+| **AI модель** | OpenAI GPT-4o-mini з Tool Calling (62 tools — додано delete_project, show_monthly_summary) |
+| **Гілка** | `claude/start-session-QDIGl` (Розпорядок merge + 19 раундів i18n + audit fixes) |
+| **CACHE_NAME** | `nm-20260505-2045` |
 | **Repo** | Public + LICENSE (All Rights Reserved) |
+| **i18n** | 781 unique keys, baseline 685 (UI частина проекту 32% локалізовано) |
 
 ---
 
@@ -344,6 +387,7 @@
 
 | ID | Дата | Закрито / Зроблено | Коміти | Гілка | Деталі |
 |---|---|---|---|---|---|
+| **QDIGl** | 05.05 | 🚀 **Розпорядок дня combined timeline (Phase A merge + D TTL + E ROUTINE_RULES) + delete_project tool + B-117 audit fix остаточно + 19 раундів i18n (-319 рядків) + 3 i18n агенти + audit з silent-bug-scout (4 виправлено).** Drag toggle Задачі↔Звички з glass blur. Hotfix `_nearestDateForDayKey` (DevTools console v663). Habit counter «1/4» уніфіковано скрізь + DOW Mon=0 5/5 точок. show_monthly_summary tool у всіх 8 чатах + історичний місяць (березень коли травень). Свайп reminder синк nm_reminders+nm_events. CACHE `nm-20260504-1058` → `nm-20260505-2045`. | 42 | `claude/start-session-QDIGl` | — |
 | **EhxzJ** | 30.04 | 🛠️ **6 OWL-багів закрито (B-109..B-114) + V3 Фази 1 і 1.5.** Ранкове тестування Романа на v494 виявило 5 багів табло і weekly insights — закрито всі за один захід: B-109 (табло занадто велике, аватар 96→76 + line-clamp), B-110 (3 теми в одне повідомлення → правило «одна тема» у промпті), B-111 (минулі події о 19:00 як майбутні → `isPassedToday()` фільтр у `getAIContext`), B-112 (незрозумілий «14%» → формат «X з Y днів»), B-113 (блок «OWL знає тебе» не оновлювався → listener `nm-data-changed` з debounce 5 сек), B-114 (AI плутав закриті задачі і виконані звички → чіткіші лейбли + блок «РОЗРІЗНЕННЯ СУТНОСТЕЙ» у промпті). **V3 Фаза 1**: `_reasoning_log` обовʼязковий у всіх 60 tools (50 INBOX + 9 UI + 1 brain) — zero-shot CoT, dispatcher strip + лог `nm_reasoning_log`. Закриває B-97. **V3 Фаза 1.5**: Dynamic Tool Loading — regex-класифікатор з 12 категорій фільтрує 60→15 tools, лог `nm_tool_filter_log`, fallback на повний набір при 0 або >4 матчах. CACHE_NAME `nm-20260429-2340` → `nm-20260430-0432` (3 bumps). | 12 | `claude/start-session-EhxzJ` | — |
 | **H0DxS** | 29.04 | 🔧 **Фікс-сесія: тижневий контекст звичок + правило проти галюцинацій + 2 баги lRnXU закрито + видалено онбординг.** `getAIContext` тепер дає табло і всім чатам тижневий зріз звичок (done/scheduled на кожну) — корінь бага «OWL знає тебе каже жодної звички за тиждень» при реальних 3/4. Bump `INSIGHTS_VERSION` 2→3 → старий кеш `nm_me_weekly_insights` стає невалідним → AI перегенерує. У `getOWLPersonality()` додано «ПРАВИЛО ЗОВНІШНІХ ФАКТІВ» (на питання про конкретні фільми/книги/особи AI чесно каже «не знаю» — корінь галюцинації сюжету «Кіллхаус» у чаті Вечора) — працює у всіх 8 чатах. Закрито 2 баги lRnXU: (1) «Відкрий звички» з чату Я тепер реально перемикає на підтаб Звички (`switchProdTab('habits')` після `switchTab('tasks')`), (2) блок «🦉 OWL знає тебе» — білий фон 0.85 + темніша рамка 0.35 + тінь, чітко видно на бежевому фоні. Видалено онбординг-модалку при першому вході (поля «імʼя» і «API ключ» доступні у Налаштуваннях). CACHE bump `nm-20260429-2300` → `nm-20260429-2340`. | 4 | `claude/start-session-H0DxS` | — |
 | **TdIqO** | 29.04 | 🎨 **Повна переробка вкладки «Я» + уніфікація кольорів сутностей.** Стовпчики (швидко відкочено) → 2 progress-кільця (Apple Watch стиль): Задачі (3/15) і Звички (3/4). Видалено блоки «Цей тиждень vs минулий», «Настрій тижня», «Звички», окремий «14 днів». Тиждень-картки 7 днів усередині блоку Активність: лейбл Пн/Вт/... + квадрат із заповненням знизу-вгору % виконаних дій + число дня. Toast: матове скло (blur+saturate, біла рамка, темний текст) + зелена «Відновити» з тінню. Видалено ~25 ✓-підтверджень дій (`tasks/notes/evening/inbox/health/finance-modals/projects/nav/logger`). Уніфікація кольорів по Inbox: Подія `#3b82f6` (раніше бірюза `#14b8a6` у календарі), Задача `#2fd0f9` (раніше оранж у бублику Я), Звичка `#16a34a`. `nm_evening_mood` лишається для AI без візуалу. CACHE_NAME bump `nm-20260429-1948` → `nm-20260429-2300` (4 разу). | 8 | `claude/start-session-TdIqO` | — |
