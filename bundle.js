@@ -21898,9 +21898,9 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
       balances.push(cumBalance);
     });
     const modes = [
-      { id: "balance", label: "\u041A\u0430\u043F\u0456\u0442\u0430\u043B", desc: "\u041D\u0430\u043A\u043E\u043F\u0438\u0447\u0443\u0432\u0430\u043B\u044C\u043D\u0438\u0439 \u0431\u0430\u043B\u0430\u043D\u0441" },
-      { id: "expenses-weekly", label: "\u0412\u0438\u0442\u0440\u0430\u0442\u0438", desc: "\u0421\u0443\u043C\u0430 \u0432\u0438\u0442\u0440\u0430\u0442 \u043F\u043E \u0442\u0438\u0436\u043D\u044F\u0445" },
-      { id: "income-vs-expense", label: "\u0414\u043E\u0445\u043E\u0434\u0438", desc: "\u0414\u043E\u0445\u043E\u0434\u0438 vs \u0432\u0438\u0442\u0440\u0430\u0442\u0438" }
+      { id: "balance", label: t("finstat.chart.balance_label", "\u041A\u0430\u043F\u0456\u0442\u0430\u043B"), desc: t("finstat.chart.balance_desc", "\u041D\u0430\u043A\u043E\u043F\u0438\u0447\u0443\u0432\u0430\u043B\u044C\u043D\u0438\u0439 \u0431\u0430\u043B\u0430\u043D\u0441") },
+      { id: "expenses-weekly", label: t("finstat.chart.expenses_label", "\u0412\u0438\u0442\u0440\u0430\u0442\u0438"), desc: t("finstat.chart.expenses_desc", "\u0421\u0443\u043C\u0430 \u0432\u0438\u0442\u0440\u0430\u0442 \u043F\u043E \u0442\u0438\u0436\u043D\u044F\u0445") },
+      { id: "income-vs-expense", label: t("finstat.chart.income_label", "\u0414\u043E\u0445\u043E\u0434\u0438"), desc: t("finstat.chart.income_vs_exp", "\u0414\u043E\u0445\u043E\u0434\u0438 vs \u0432\u0438\u0442\u0440\u0430\u0442\u0438") }
     ];
     const toggleHtml = `<div style="display:flex;gap:4px;background:rgba(30,16,64,0.04);border-radius:10px;padding:3px;margin-bottom:10px">
     ${modes.map((m) => {
@@ -21930,7 +21930,7 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
       }).join("")}
     </svg>
     <div style="display:flex;gap:2px;margin-top:4px">${weeks.map((w) => `<div style="flex:1;font-size:9px;font-weight:${w.isCurrent ? "700" : "500"};color:${w.isCurrent ? "#c2410c" : "rgba(30,16,64,0.35)"};text-align:center">${w.label}</div>`).join("")}</div>
-    <div style="font-size:10px;color:rgba(30,16,64,0.4);margin-top:6px;text-align:center">\u041F\u043E\u0442\u043E\u0447\u043D\u0438\u0439: <span style="color:#0ea5e9;font-weight:700">${formatMoney(cumBalance)}</span></div>`;
+    <div style="font-size:10px;color:rgba(30,16,64,0.4);margin-top:6px;text-align:center">${t("finstat.chart.current", "\u041F\u043E\u0442\u043E\u0447\u043D\u0438\u0439")}: <span style="color:#0ea5e9;font-weight:700">${formatMoney(cumBalance)}</span></div>`;
     } else if (_analyticsChartMode === "expenses-weekly") {
       const maxVal = Math.max(1, ...weeks.map((w) => w.exp));
       const barsHtml = weeks.map((w) => {
@@ -21960,13 +21960,13 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
       }).join("");
       chartHtml = `<div style="display:flex;gap:4px;align-items:flex-end;height:100px">${barsHtml}</div>
     <div style="display:flex;gap:10px;justify-content:center;margin-top:6px">
-      <div style="display:flex;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:50%;background:#f97316"></div><span style="font-size:10px;font-weight:600;color:rgba(30,16,64,0.4)">\u0412\u0438\u0442\u0440\u0430\u0442\u0438</span></div>
-      <div style="display:flex;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:50%;background:#16a34a"></div><span style="font-size:10px;font-weight:600;color:rgba(30,16,64,0.4)">\u0414\u043E\u0445\u043E\u0434\u0438</span></div>
+      <div style="display:flex;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:50%;background:#f97316"></div><span style="font-size:10px;font-weight:600;color:rgba(30,16,64,0.4)">${t("finstat.legend.expenses", "\u0412\u0438\u0442\u0440\u0430\u0442\u0438")}</span></div>
+      <div style="display:flex;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:50%;background:#16a34a"></div><span style="font-size:10px;font-weight:600;color:rgba(30,16,64,0.4)">${t("finstat.legend.income", "\u0414\u043E\u0445\u043E\u0434\u0438")}</span></div>
     </div>`;
     }
     return `<div style="background:white;border-radius:20px;box-shadow:0 2px 12px rgba(30,16,64,0.06);padding:14px;margin-bottom:12px">
     ${toggleHtml}
-    <div style="font-size:11px;color:rgba(30,16,64,0.4);margin-bottom:8px">${escapeHtml(modeObj.desc)} \xB7 8 \u0442\u0438\u0436\u043D\u0456\u0432</div>
+    <div style="font-size:11px;color:rgba(30,16,64,0.4);margin-bottom:8px">${escapeHtml(modeObj.desc)} \xB7 ${t("finstat.chart.weeks_suffix", "8 \u0442\u0438\u0436\u043D\u0456\u0432")}</div>
     ${chartHtml}
   </div>`;
   }
@@ -22002,37 +22002,37 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
     const forecastEnd = daysPassed > 0 ? curExp / daysPassed * daysInMonth : 0;
     const metrics = [
       {
-        label: "\u0412\u0438\u0442\u0440\u0430\u0442\u0438 \u043C\u0456\u0441\u044F\u0446\u044F",
+        label: t("finstat.metric.month_exp", "\u0412\u0438\u0442\u0440\u0430\u0442\u0438 \u043C\u0456\u0441\u044F\u0446\u044F"),
         value: formatMoney(curExp),
-        desc: prevExp > 0 ? `${curExp >= prevExp ? "+" : ""}${Math.round((curExp - prevExp) / prevExp * 100)}% vs \u043C\u0438\u043D\u0443\u043B\u0438\u0439 \u043C\u0456\u0441\u044F\u0446\u044C` : "\u043F\u0435\u0440\u0448\u0438\u0439 \u043C\u0456\u0441\u044F\u0446\u044C \u0437 \u0434\u0430\u043D\u0438\u043C\u0438",
+        desc: prevExp > 0 ? t("finstat.metric.vs_prev", "{sign}{pct}% vs \u043C\u0438\u043D\u0443\u043B\u0438\u0439 \u043C\u0456\u0441\u044F\u0446\u044C", { sign: curExp >= prevExp ? "+" : "", pct: Math.round((curExp - prevExp) / prevExp * 100) }) : t("finstat.metric.first_month", "\u043F\u0435\u0440\u0448\u0438\u0439 \u043C\u0456\u0441\u044F\u0446\u044C \u0437 \u0434\u0430\u043D\u0438\u043C\u0438"),
         color: "#c2410c"
       },
       {
-        label: "\u0412 \u0441\u0435\u0440\u0435\u0434\u043D\u044C\u043E\u043C\u0443/\u0434\u0435\u043D\u044C",
+        label: t("finstat.metric.avg_day", "\u0412 \u0441\u0435\u0440\u0435\u0434\u043D\u044C\u043E\u043C\u0443/\u0434\u0435\u043D\u044C"),
         value: formatMoney(Math.round(curExp / daysPassed)),
-        desc: `\u0437\u0430 ${daysPassed} ${daysPassed === 1 ? "\u0434\u0435\u043D\u044C" : daysPassed < 5 ? "\u0434\u043D\u0456" : "\u0434\u043D\u0456\u0432"} \u043C\u0456\u0441\u044F\u0446\u044F`,
+        desc: t("finstat.metric.days_of_month", "\u0437\u0430 {n} {word} \u043C\u0456\u0441\u044F\u0446\u044F", { n: daysPassed, word: daysPassed === 1 ? t("finstat.word.day1", "\u0434\u0435\u043D\u044C") : daysPassed < 5 ? t("finstat.word.day2", "\u0434\u043D\u0456") : t("finstat.word.day5", "\u0434\u043D\u0456\u0432") }),
         color: "#1e1040"
       },
       {
-        label: "\u0422\u043E\u043F \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F",
+        label: t("finstat.metric.top_cat", "\u0422\u043E\u043F \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F"),
         value: topCats.length > 0 ? topCats[0][0] : "\u2014",
-        desc: topCats.length > 0 ? `${formatMoney(topCats[0][1])} \xB7 ${Math.round(topCats[0][1] / curExp * 100)}% \u0432\u0438\u0442\u0440\u0430\u0442` : "\u043D\u0435\u043C\u0430\u0454 \u0434\u0430\u043D\u0438\u0445",
+        desc: topCats.length > 0 ? t("finstat.metric.top_cat_desc", "{sum} \xB7 {pct}% \u0432\u0438\u0442\u0440\u0430\u0442", { sum: formatMoney(topCats[0][1]), pct: Math.round(topCats[0][1] / curExp * 100) }) : t("finstat.metric.no_data", "\u043D\u0435\u043C\u0430\u0454 \u0434\u0430\u043D\u0438\u0445"),
         color: "#c2410c"
       },
       {
-        label: "\u0417\u0430\u043E\u0449\u0430\u0434\u0436\u0435\u043D\u043D\u044F",
+        label: t("finstat.metric.savings", "\u0417\u0430\u043E\u0449\u0430\u0434\u0436\u0435\u043D\u043D\u044F"),
         value: curInc > 0 ? Math.round((curInc - curExp) / curInc * 100) + "%" : "\u2014",
-        desc: curInc > 0 ? `${formatMoney(curInc - curExp)} \u0437 ${formatMoney(curInc)}` : "\u0434\u043E\u0434\u0430\u0439 \u0434\u043E\u0445\u0456\u0434",
+        desc: curInc > 0 ? t("finstat.metric.savings_desc", "{saved} \u0437 {inc}", { saved: formatMoney(curInc - curExp), inc: formatMoney(curInc) }) : t("finstat.metric.add_income", "\u0434\u043E\u0434\u0430\u0439 \u0434\u043E\u0445\u0456\u0434"),
         color: curInc > 0 && curInc > curExp ? "#16a34a" : "#c2410c"
       },
       {
-        label: "\u041E\u043F\u0435\u0440\u0430\u0446\u0456\u0439",
+        label: t("finstat.metric.ops", "\u041E\u043F\u0435\u0440\u0430\u0446\u0456\u0439"),
         value: monthExp.length,
-        desc: `\u0441\u0435\u0440\u0435\u0434\u043D\u044F ${formatMoney(Math.round(avgTx))}`,
+        desc: t("finstat.metric.ops_avg", "\u0441\u0435\u0440\u0435\u0434\u043D\u044F {sum}", { sum: formatMoney(Math.round(avgTx)) }),
         color: "#0ea5e9"
       },
       {
-        label: "\u041C\u0430\u043A\u0441\u0438\u043C\u0443\u043C \u0437\u0430 \u0434\u0435\u043D\u044C",
+        label: t("finstat.metric.max_day", "\u041C\u0430\u043A\u0441\u0438\u043C\u0443\u043C \u0437\u0430 \u0434\u0435\u043D\u044C"),
         value: formatMoney(Math.round(maxDay)),
         desc: dayTotals.length > 0 ? `\u043D\u0430\u0439\u0434\u043E\u0440\u043E\u0436\u0447\u0438\u0439 \u0437 ${dayTotals.length} \u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0445 \u0434\u043D\u0456\u0432` : "\u043D\u0435\u043C\u0430\u0454 \u0434\u0430\u043D\u0438\u0445",
         color: "#c2410c"
@@ -22096,7 +22096,7 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
     if (curInc <= 0 && !_analyticsBenchmarkEdit) {
       return `<div style="background:white;border-radius:20px;box-shadow:0 2px 12px rgba(30,16,64,0.06);padding:16px;margin-bottom:12px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <div class="fin-section-label">\u0420\u043E\u0437\u043F\u043E\u0434\u0456\u043B \u0434\u043E\u0445\u043E\u0434\u0443</div>
+        <div class="fin-section-label">${t("finstat.bench.title", "\u0420\u043E\u0437\u043F\u043E\u0434\u0456\u043B \u0434\u043E\u0445\u043E\u0434\u0443")}</div>
         <button onclick="toggleAnalyticsBenchmarkEdit()" aria-label="\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438" style="width:28px;height:28px;border-radius:50%;border:none;background:rgba(30,16,64,0.05);color:rgba(30,16,64,0.5);cursor:pointer;font-family:inherit"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></button>
       </div>
       <div style="font-size:13px;color:rgba(30,16,64,0.45)">\u0414\u043E\u0434\u0430\u0439 \u0434\u043E\u0445\u0456\u0434 \u0449\u043E\u0431 \u043F\u043E\u0431\u0430\u0447\u0438\u0442\u0438 \u0440\u043E\u0437\u043F\u043E\u0434\u0456\u043B</div>
@@ -22156,7 +22156,7 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
     };
     return `<div style="background:white;border-radius:20px;box-shadow:0 2px 12px rgba(30,16,64,0.06);padding:16px;margin-bottom:12px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-      <div class="fin-section-label">\u0420\u043E\u0437\u043F\u043E\u0434\u0456\u043B \u0434\u043E\u0445\u043E\u0434\u0443</div>
+      <div class="fin-section-label">${t("finstat.bench.title", "\u0420\u043E\u0437\u043F\u043E\u0434\u0456\u043B \u0434\u043E\u0445\u043E\u0434\u0443")}</div>
       <button onclick="toggleAnalyticsBenchmarkEdit()" aria-label="\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438" style="width:28px;height:28px;border-radius:50%;border:none;background:rgba(30,16,64,0.05);color:rgba(30,16,64,0.5);cursor:pointer;font-family:inherit"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></button>
     </div>
     ${bar(cfg.needs, needsPct, "#f97316")}
