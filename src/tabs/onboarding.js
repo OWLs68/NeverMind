@@ -15,9 +15,9 @@ const UPDATE_VERSION = 'v065';
 
 const UPDATE_SLIDES = [
   {
-    tag: '🥁 Новий барабан',
+    tag: t('onb.upd.s1_tag', '🥁 Новий барабан'),
     emoji: '🥁',
-    title: 'Навігація переписана з нуля',
+    title: t('onb.upd.s1_title', 'Навігація переписана з нуля'),
     body: `<div class="ob-list">
   <div class="ob-item">
     <div class="ob-icon-lg">👆</div>
@@ -37,7 +37,7 @@ const UPDATE_SLIDES = [
   {
     tag: '🦉 OWL Board',
     emoji: '🦉',
-    title: 'OWL завжди поруч',
+    title: t('onb.upd.s2_title', 'OWL завжди поруч'),
     body: `<div class="ob-list">
   <div class="ob-item">
     <div class="ob-icon-lg">📋</div>
@@ -55,9 +55,9 @@ const UPDATE_SLIDES = [
     color: 'linear-gradient(135deg,#fef9c3,#f59e0b)',
   },
   {
-    tag: '💬 Новий чат',
+    tag: t('onb.upd.s3_tag', '💬 Новий чат'),
     emoji: '💬',
-    title: '3 стани чату',
+    title: t('onb.upd.s3_title', '3 стани чату'),
     body: `<div class="ob-list">
   <div class="ob-item">
     <div class="ob-icon-lg">⬇️</div>
@@ -75,9 +75,9 @@ const UPDATE_SLIDES = [
     color: 'linear-gradient(135deg,#d1fae5,#16a34a)',
   },
   {
-    tag: '🆕 Нові вкладки',
+    tag: t('onb.upd.s4_tag', '🆕 Нові вкладки'),
     emoji: '🆕',
-    title: 'Вечір · Я · Здоровʼя · Проекти',
+    title: t('onb.upd.s4_title', 'Вечір · Я · Здоровʼя · Проекти'),
     body: `<div class="ob-list">
   <div class="ob-item">
     <div class="ob-icon-lg">🌙</div>
@@ -99,9 +99,9 @@ const UPDATE_SLIDES = [
     color: 'linear-gradient(135deg,#fce7f3,#db2777)',
   },
   {
-    tag: '🔧 25+ фіксів',
+    tag: t('onb.upd.s5_tag', '🔧 25+ фіксів'),
     emoji: '🔧',
-    title: 'Більше виправлень ніж будь-коли',
+    title: t('onb.upd.s5_title', 'Більше виправлень ніж будь-коли'),
     body: `<div class="ob-list">
   <div class="ob-item">
     <div class="ob-icon-lg">🔢</div>
@@ -123,17 +123,17 @@ const UPDATE_SLIDES = [
 
 const SLIDES = [
   {
-    tag: 'Що таке NeverMind',
+    tag: t('onb.tour.s1_tag', 'Що таке NeverMind'),
     emoji: '🧠',
-    title: 'Один потік для всього',
+    title: t('onb.tour.s1_title', 'Один потік для всього'),
     body: `<p class="ob-desc" style="margin-bottom:12px">Думки зникають. Записи губляться по різних застосунках. Нічого не виконується бо немає системи.</p>
 <p class="ob-desc">NeverMind — один рядок куди скидаєш все що в голові. OWL сам розбереться.</p>`,
     color: 'linear-gradient(135deg,#f2d978,#f97316)',
   },
   {
-    tag: 'Inbox',
+    tag: t('onb.tour.s2_tag', 'Inbox'),
     emoji: '📥',
-    title: 'Пиши — OWL розбирає',
+    title: t('onb.tour.s2_title', 'Пиши — OWL розбирає'),
     body: `<div class="ob-list">
   <div class="ob-example">"купити хліб" → <b>задача</b></div>
   <div class="ob-example">"бігати щоранку" → <b>звичка</b></div>
@@ -143,9 +143,9 @@ const SLIDES = [
     color: 'linear-gradient(135deg,#f2d978,#f97316)',
   },
   {
-    tag: 'Продуктивність',
+    tag: t('onb.tour.s3_tag', 'Продуктивність'),
     emoji: '⚡',
-    title: 'Задачі і звички',
+    title: t('onb.tour.s3_title', 'Задачі і звички'),
     body: `<div class="ob-list">
   <div class="ob-item">
     <div class="ob-icon">✅</div>
@@ -163,9 +163,9 @@ const SLIDES = [
     color: 'linear-gradient(135deg,#fdb87a,#ea580c)',
   },
   {
-    tag: 'Вечір і Я',
+    tag: t('onb.tour.s4_tag', 'Вечір і Я'),
     emoji: '🌙',
-    title: 'Закриття дня і дзеркало',
+    title: t('onb.tour.s4_title', 'Закриття дня і дзеркало'),
     body: `<div class="ob-list">
   <div class="ob-item">
     <div class="ob-icon">🌙</div>
@@ -183,9 +183,9 @@ const SLIDES = [
     color: 'linear-gradient(135deg,#1e3350,#3a5a80)',
   },
   {
-    tag: 'Нові вкладки',
+    tag: t('onb.tour.s5_tag', 'Нові вкладки'),
     emoji: '🆕',
-    title: "Здоров'я і Проекти",
+    title: t('onb.tour.s5_title', "Здоров'я і Проекти"),
     body: `<div class="ob-list">
   <div class="ob-item">
     <div class="ob-icon">🫀</div>
@@ -285,7 +285,7 @@ function renderSlide() {
 
   // Кнопка
   const nextBtn = document.getElementById('slides-next-btn');
-  nextBtn.textContent = slide.isLast ? 'Почати →' : 'Далі →';
+  nextBtn.textContent = slide.isLast ? t('onb.btn.start', 'Почати →') : t('onb.btn.next', 'Далі →');
   nextBtn.style.background = slide.color;
 
   // Пропустити → Закрити на останньому
