@@ -59,19 +59,22 @@ function openEditTask(id) {
 // вниз ПО ФОНУ теж закривав модалку, не лише по самій картці. Transform
 // застосовуємо до contentEl (картка). Працює тому що картка — єдина
 // дитина root після винесення overlay як top-level sibling (Phase 1-4).
-export function setupModalSwipeClose(contentEl, closeFn) {
+export function setupModalSwipeClose(contentEl, closeFn, options = {}) {
   if (!contentEl || contentEl._swipeClose) return;
   contentEl._swipeClose = true;
   const swipeRoot = contentEl.parentElement || contentEl;
+  // MPVly-day2 06.05 (B-146): handleOnly mode — свайп закриває ТIЛЬКИ якщо
+  // touchstart на `.modal-handle` (полоска зверху). На все інше — blocked.
+  // Для модалок зі скролом всередині (analytics, memory) — свайп по контенту
+  // не повинен закривати модалку.
+  const handleOnly = !!options.handleOnly;
   let startY = 0, startX = 0, dy = 0, _swipeBlocked = false;
   swipeRoot.addEventListener('touchstart', e => {
-    // Не перехоплювати свайп на скролюваних/інтерактивних елементах:
-    // барабан, чат, прокрутка Налаштувань, input/textarea/select (UvEHE 03.05 sweep —
-    // inconsistent з modal-overlay-sync.js _setupSwipeClose; dragging textarea модалки
-    // переривав edit замість редагування).
-    // MPVly-day2 06.05 (B-135): #memory-cards-list — список факт-карток у модалці пам'яті
-    // (overflow-y:auto). Без whitelist свайп вниз по картках закривав модалку замість скролу.
-    _swipeBlocked = !!e.target.closest('.drum-col, .drum-item, .settings-scroll, #memory-cards-list, input, textarea, select');
+    if (handleOnly) {
+      _swipeBlocked = !e.target.closest('.modal-handle');
+    } else {
+      _swipeBlocked = !!e.target.closest('.drum-col, .drum-item, .settings-scroll, #memory-cards-list, input, textarea, select');
+    }
     startY = e.touches[0].clientY;
     startX = e.touches[0].clientX;
     dy = 0;
