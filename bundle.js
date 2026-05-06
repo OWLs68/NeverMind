@@ -21791,7 +21791,7 @@ ${legacy}`;
       const hasBlur = /backdrop-filter\s*:\s*blur/i.test(s) || /modal-backdrop/.test(cls);
       const isAbsolute = /position\s*:\s*absolute/i.test(s);
       const hasInset = /inset\s*:\s*0/i.test(s) || /top\s*:\s*0/i.test(s) && /left\s*:\s*0/i.test(s);
-      if (hasBlur && (isAbsolute || hasInset)) return child;
+      if (hasBlur && (isAbsolute || hasInset || /modal-backdrop/.test(cls))) return child;
     }
     return null;
   }
