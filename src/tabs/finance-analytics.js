@@ -360,7 +360,7 @@ export function openFinAnalytics() {
   const allTxs = getFinance();
   const content = _buildAnalyticsContent(allTxs);
   modal.innerHTML = `
-    <div style="position:relative;width:100%;max-width:480px;background:white;border-radius:24px 24px 0 0;z-index:1;max-height:92vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 -4px 24px rgba(30,16,64,0.1);animation:slideUp 0.3s ease-out">
+    <div style="position:relative;width:100%;max-width:480px;background:white;border-radius:24px 24px 0 0;z-index:1;max-height:92vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 -4px 24px rgba(30,16,64,0.1);animation:slideUp 0.3s ease-out;pointer-events:auto">
       <div class="modal-handle" style="margin:8px auto"></div>
       <div style="padding:0 16px 8px;text-align:center">
         <div style="font-size:17px;font-weight:800;color:#1e1040">📊 ${t('finstat.title', 'Аналітика')}</div>
@@ -370,7 +370,12 @@ export function openFinAnalytics() {
       </div>
     </div>`;
   document.body.appendChild(modal);
-  setupModalSwipeClose(modal.querySelector(':scope > div'), closeFinAnalytics);
+  // MPVly-day2 06.05 (B-141 follow-up): setupModalSwipeClose ПРИБРАНО.
+  // touchmove handler з порогом dy>8 все одно ламав click event — палець на
+  // iPhone може дрейфувати 10-15px при тапі по дрібних кнопках (стрілки ‹ ›
+  // 30x20px). Будь-який translate під час touch → iOS cancel click. Закриття
+  // через onclick="if(event.target===this)closeFinAnalytics()" + тап overlay.
+  // Свайп вниз для close не критичний для аналітики.
 }
 
 export function closeFinAnalytics() {
