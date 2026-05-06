@@ -340,7 +340,7 @@ function _openDayScheduleModal(day) {
 
   // Заголовок
   const titleEl = document.getElementById('day-schedule-title');
-  if (titleEl) titleEl.textContent = `${day} ${monthGenitive(_calMonth)} · ${DAYS_UA_FULL[date.getDay()]}`;
+  if (titleEl) titleEl.textContent = t('calendar.day_schedule.title', '{day} {month} · {weekday}', { day, month: monthGenitive(_calMonth), weekday: DAYS_UA_FULL[date.getDay()] });
 
   // Events на цей день
   const dayEvents = getEvents().filter(ev => ev.date === dateISO);
