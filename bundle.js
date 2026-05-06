@@ -21280,17 +21280,26 @@ ${logLines}
     await doRefreshMemory(false);
   }
   async function refreshMemory() {
-    const btn = document.getElementById("memory-refresh-btn");
-    if (btn) {
-      btn.textContent = "\u2026";
-      btn.disabled = true;
+    const settingsBtn = document.getElementById("memory-refresh-btn-settings");
+    const modalBtn = document.getElementById("memory-refresh-btn-modal");
+    if (settingsBtn) {
+      settingsBtn.textContent = "\u2026";
+      settingsBtn.disabled = true;
+    }
+    if (modalBtn) {
+      modalBtn.textContent = "\u2026";
+      modalBtn.disabled = true;
     }
     try {
       await doRefreshMemory(true);
     } finally {
-      if (btn) {
-        btn.textContent = t("nav.mem.refresh_btn", "\u21BB \u041E\u043D\u043E\u0432\u0438\u0442\u0438 \u0447\u0435\u0440\u0435\u0437 OWL");
-        btn.disabled = false;
+      if (settingsBtn) {
+        settingsBtn.textContent = "\u21BB";
+        settingsBtn.disabled = false;
+      }
+      if (modalBtn) {
+        modalBtn.textContent = t("nav.mem.refresh_btn", "\u21BB \u041E\u043D\u043E\u0432\u0438\u0442\u0438 \u0447\u0435\u0440\u0435\u0437 OWL");
+        modalBtn.disabled = false;
       }
       if (document.getElementById("memory-modal")?.style.display !== "none") {
         renderMemoryCards();

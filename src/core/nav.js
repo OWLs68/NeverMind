@@ -1091,15 +1091,23 @@ export async function autoRefreshMemory() {
 }
 
 async function refreshMemory() {
-  const btn = document.getElementById('memory-refresh-btn');
-  if (btn) { btn.textContent = '…'; btn.disabled = true; }
-  // MPVly-day2 06.05 (B-136): try/finally — без нього reject у callAIWithTools
-  // лишав btn.disabled=true назавжди (юзер тапнув «Оновити», AI завис, кнопка
-  // мертва, треба перезавантажити PWA).
+  // MPVly-day2 06.05 (B-137): раніше у HTML дублювався id="memory-refresh-btn"
+  // у Налаштуваннях (компактна "↻") і у модалці (повна "↻ Оновити через OWL").
+  // getElementById повертав першу = settings → коли юзер тапав у модалці,
+  // textContent settings-кнопки мутував ('↻' → '…' → '↻ Оновити через OWL'
+  // довгий) → settings-картка візуально росла. Кнопка у модалці лишалась
+  // disabled назавжди. Розділили на 2 ID, тут оновлюємо обидві.
+  const settingsBtn = document.getElementById('memory-refresh-btn-settings');
+  const modalBtn = document.getElementById('memory-refresh-btn-modal');
+  if (settingsBtn) { settingsBtn.textContent = '…'; settingsBtn.disabled = true; }
+  if (modalBtn) { modalBtn.textContent = '…'; modalBtn.disabled = true; }
+  // B-136: try/finally — без нього reject у callAIWithTools лишав btn.disabled=true
+  // назавжди (юзер тапнув «Оновити», AI завис, кнопка мертва).
   try {
     await doRefreshMemory(true);
   } finally {
-    if (btn) { btn.textContent = t('nav.mem.refresh_btn', '↻ Оновити через OWL'); btn.disabled = false; }
+    if (settingsBtn) { settingsBtn.textContent = '↻'; settingsBtn.disabled = false; }
+    if (modalBtn) { modalBtn.textContent = t('nav.mem.refresh_btn', '↻ Оновити через OWL'); modalBtn.disabled = false; }
     if (document.getElementById('memory-modal')?.style.display !== 'none') {
       renderMemoryCards();
     }
