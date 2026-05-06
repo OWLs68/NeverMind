@@ -198,24 +198,27 @@ function openTabSelector() {
   overlay.id = 'tab-selector-overlay';
   overlay.style.cssText = 'position:fixed;inset:0;z-index:300;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,0.3);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)';
 
-  // Будуємо HTML через конкатенацію (без вкладених template literals)
-  var cardsHtml = ALL_TABS_CONFIG.map(function(t) {
-    var isActive = active.includes(t.id);
-    var isLocked = locked.includes(t.id);
-    var borderColor = isActive ? t.accent : 'rgba(30,16,64,0.08)';
-    var cardBg = isActive ? t.bg : 'rgba(255,255,255,0.6)';
-    var iconBg = isActive ? t.accent : 'rgba(30,16,64,0.06)';
+  // Будуємо HTML через конкатенацію (без вкладених template literals).
+  // MPVly-day2 06.05: параметр map ПЕРЕЙМЕНОВАНО з `t` на `cfg` — раніше
+  // shadowed import `t` з utils.js → виклик `t('nav.tabsel.always')` падав
+  // TypeError бо `t` всередині map це об'єкт ALL_TABS_CONFIG[i].
+  var cardsHtml = ALL_TABS_CONFIG.map(function(cfg) {
+    var isActive = active.includes(cfg.id);
+    var isLocked = locked.includes(cfg.id);
+    var borderColor = isActive ? cfg.accent : 'rgba(30,16,64,0.08)';
+    var cardBg = isActive ? cfg.bg : 'rgba(255,255,255,0.6)';
+    var iconBg = isActive ? cfg.accent : 'rgba(30,16,64,0.06)';
     var iconColor = isActive ? 'white' : 'rgba(30,16,64,0.4)';
-    var labelColor = isActive ? t.accent : 'rgba(30,16,64,0.45)';
-    var onclickAttr = isLocked ? '' : "toggleTabSelection('" + t.id + "')";
+    var labelColor = isActive ? cfg.accent : 'rgba(30,16,64,0.45)';
+    var onclickAttr = isLocked ? '' : "toggleTabSelection('" + cfg.id + "')";
     var checkHtml = isLocked
       ? '<div style="position:absolute;top:10px;right:10px;font-size:10px;font-weight:700;color:rgba(30,16,64,0.3);background:rgba(30,16,64,0.06);padding:2px 7px;border-radius:6px">' + t('nav.tabsel.always', 'завжди') + '</div>'
-      : '<div id="tab-sel-check-' + t.id + '" style="position:absolute;top:10px;right:10px;width:20px;height:20px;border-radius:6px;border:2px solid ' + (isActive ? t.accent : 'rgba(30,16,64,0.15)') + ';background:' + (isActive ? t.accent : 'transparent') + ';display:flex;align-items:center;justify-content:center;transition:all 0.18s">'
+      : '<div id="tab-sel-check-' + cfg.id + '" style="position:absolute;top:10px;right:10px;width:20px;height:20px;border-radius:6px;border:2px solid ' + (isActive ? cfg.accent : 'rgba(30,16,64,0.15)') + ';background:' + (isActive ? cfg.accent : 'transparent') + ';display:flex;align-items:center;justify-content:center;transition:all 0.18s">'
         + (isActive ? '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg>' : '')
         + '</div>';
-    return '<div id="tab-sel-card-' + t.id + '" onclick="' + onclickAttr + '" style="border-radius:18px;padding:14px;background:' + cardBg + ';border:2px solid ' + borderColor + ';cursor:' + (isLocked ? 'default' : 'pointer') + ';transition:all 0.18s;position:relative;-webkit-tap-highlight-color:transparent">'
-      + '<div style="width:40px;height:40px;border-radius:12px;background:' + iconBg + ';display:flex;align-items:center;justify-content:center;margin-bottom:8px;color:' + iconColor + ';transition:all 0.18s">' + t.svg + '</div>'
-      + '<div style="font-size:14px;font-weight:700;color:' + labelColor + ';line-height:1.2">' + t.label + '</div>'
+    return '<div id="tab-sel-card-' + cfg.id + '" onclick="' + onclickAttr + '" style="border-radius:18px;padding:14px;background:' + cardBg + ';border:2px solid ' + borderColor + ';cursor:' + (isLocked ? 'default' : 'pointer') + ';transition:all 0.18s;position:relative;-webkit-tap-highlight-color:transparent">'
+      + '<div style="width:40px;height:40px;border-radius:12px;background:' + iconBg + ';display:flex;align-items:center;justify-content:center;margin-bottom:8px;color:' + iconColor + ';transition:all 0.18s">' + cfg.svg + '</div>'
+      + '<div style="font-size:14px;font-weight:700;color:' + labelColor + ';line-height:1.2">' + t('tab.' + cfg.id, cfg.label) + '</div>'
       + checkHtml + '</div>';
   }).join('');
 
@@ -275,13 +278,13 @@ function toggleTabSelection(tabId) {
   if (idx !== -1) {
     _pendingTabs.splice(idx, 1);
   } else {
-    const order = ALL_TABS_CONFIG.map(t => t.id);
+    const order = ALL_TABS_CONFIG.map(c => c.id);
     _pendingTabs.push(tabId);
     _pendingTabs.sort((a, b) => order.indexOf(a) - order.indexOf(b));
   }
 
   const isNowActive = _pendingTabs.includes(tabId);
-  const cfg = ALL_TABS_CONFIG.find(t => t.id === tabId);
+  const cfg = ALL_TABS_CONFIG.find(c => c.id === tabId);
   if (!cfg) return;
 
   const card = document.getElementById(`tab-sel-card-${tabId}`);

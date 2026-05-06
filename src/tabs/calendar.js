@@ -582,6 +582,16 @@ export function getCombinedTimelineForDate(dateISO) {
   return out;
 }
 
+// MPVly-day2 06.05: винесено з openRoutineFromCalendar + openRoutineModal —
+// обидва викликали setupModalSwipeClose(routine-panel, closeRoutineModal).
+// `_swipeClose` guard у tasks.js:63 робить дублювання безпечним поки
+// #routine-panel статичний у HTML; helper убирає залежність від цього
+// припущення для майбутніх refactor'ів.
+function _ensureRoutineSwipeClose() {
+  const panel = document.getElementById('routine-panel');
+  if (panel) setupModalSwipeClose(panel, closeRoutineModal);
+}
+
 function openRoutineFromCalendar(dayKey) {
   closeDayScheduleModal();
   _routineReturnTo = 'calendar';
@@ -592,7 +602,7 @@ function openRoutineFromCalendar(dayKey) {
   if (modal) {
     modal.style.display = 'flex';
     _zoomIn('routine-panel');
-    setupModalSwipeClose(document.getElementById('routine-panel'), closeRoutineModal);
+    _ensureRoutineSwipeClose();
   }
 }
 
@@ -605,7 +615,7 @@ function openRoutineModal() {
   if (modal) {
     modal.style.display = 'flex';
     _zoomIn('routine-panel');
-    setupModalSwipeClose(document.getElementById('routine-panel'), closeRoutineModal);
+    _ensureRoutineSwipeClose();
   }
 }
 

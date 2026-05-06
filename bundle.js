@@ -822,6 +822,10 @@
     });
     return out;
   }
+  function _ensureRoutineSwipeClose() {
+    const panel = document.getElementById("routine-panel");
+    if (panel) setupModalSwipeClose(panel, closeRoutineModal);
+  }
   function openRoutineFromCalendar(dayKey) {
     closeDayScheduleModal();
     _routineReturnTo = "calendar";
@@ -832,7 +836,7 @@
     if (modal) {
       modal.style.display = "flex";
       _zoomIn("routine-panel");
-      setupModalSwipeClose(document.getElementById("routine-panel"), closeRoutineModal);
+      _ensureRoutineSwipeClose();
     }
   }
   function openRoutineModal() {
@@ -844,7 +848,7 @@
     if (modal) {
       modal.style.display = "flex";
       _zoomIn("routine-panel");
-      setupModalSwipeClose(document.getElementById("routine-panel"), closeRoutineModal);
+      _ensureRoutineSwipeClose();
     }
   }
   function closeRoutineModal() {
@@ -20491,17 +20495,17 @@ ${logLines}
     const overlay = document.createElement("div");
     overlay.id = "tab-selector-overlay";
     overlay.style.cssText = "position:fixed;inset:0;z-index:300;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,0.3);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)";
-    var cardsHtml = ALL_TABS_CONFIG.map(function(t2) {
-      var isActive = active.includes(t2.id);
-      var isLocked = locked.includes(t2.id);
-      var borderColor = isActive ? t2.accent : "rgba(30,16,64,0.08)";
-      var cardBg = isActive ? t2.bg : "rgba(255,255,255,0.6)";
-      var iconBg = isActive ? t2.accent : "rgba(30,16,64,0.06)";
+    var cardsHtml = ALL_TABS_CONFIG.map(function(cfg) {
+      var isActive = active.includes(cfg.id);
+      var isLocked = locked.includes(cfg.id);
+      var borderColor = isActive ? cfg.accent : "rgba(30,16,64,0.08)";
+      var cardBg = isActive ? cfg.bg : "rgba(255,255,255,0.6)";
+      var iconBg = isActive ? cfg.accent : "rgba(30,16,64,0.06)";
       var iconColor = isActive ? "white" : "rgba(30,16,64,0.4)";
-      var labelColor = isActive ? t2.accent : "rgba(30,16,64,0.45)";
-      var onclickAttr = isLocked ? "" : "toggleTabSelection('" + t2.id + "')";
-      var checkHtml = isLocked ? '<div style="position:absolute;top:10px;right:10px;font-size:10px;font-weight:700;color:rgba(30,16,64,0.3);background:rgba(30,16,64,0.06);padding:2px 7px;border-radius:6px">' + t2("nav.tabsel.always", "\u0437\u0430\u0432\u0436\u0434\u0438") + "</div>" : '<div id="tab-sel-check-' + t2.id + '" style="position:absolute;top:10px;right:10px;width:20px;height:20px;border-radius:6px;border:2px solid ' + (isActive ? t2.accent : "rgba(30,16,64,0.15)") + ";background:" + (isActive ? t2.accent : "transparent") + ';display:flex;align-items:center;justify-content:center;transition:all 0.18s">' + (isActive ? '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg>' : "") + "</div>";
-      return '<div id="tab-sel-card-' + t2.id + '" onclick="' + onclickAttr + '" style="border-radius:18px;padding:14px;background:' + cardBg + ";border:2px solid " + borderColor + ";cursor:" + (isLocked ? "default" : "pointer") + ';transition:all 0.18s;position:relative;-webkit-tap-highlight-color:transparent"><div style="width:40px;height:40px;border-radius:12px;background:' + iconBg + ";display:flex;align-items:center;justify-content:center;margin-bottom:8px;color:" + iconColor + ';transition:all 0.18s">' + t2.svg + '</div><div style="font-size:14px;font-weight:700;color:' + labelColor + ';line-height:1.2">' + t2.label + "</div>" + checkHtml + "</div>";
+      var labelColor = isActive ? cfg.accent : "rgba(30,16,64,0.45)";
+      var onclickAttr = isLocked ? "" : "toggleTabSelection('" + cfg.id + "')";
+      var checkHtml = isLocked ? '<div style="position:absolute;top:10px;right:10px;font-size:10px;font-weight:700;color:rgba(30,16,64,0.3);background:rgba(30,16,64,0.06);padding:2px 7px;border-radius:6px">' + t("nav.tabsel.always", "\u0437\u0430\u0432\u0436\u0434\u0438") + "</div>" : '<div id="tab-sel-check-' + cfg.id + '" style="position:absolute;top:10px;right:10px;width:20px;height:20px;border-radius:6px;border:2px solid ' + (isActive ? cfg.accent : "rgba(30,16,64,0.15)") + ";background:" + (isActive ? cfg.accent : "transparent") + ';display:flex;align-items:center;justify-content:center;transition:all 0.18s">' + (isActive ? '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg>' : "") + "</div>";
+      return '<div id="tab-sel-card-' + cfg.id + '" onclick="' + onclickAttr + '" style="border-radius:18px;padding:14px;background:' + cardBg + ";border:2px solid " + borderColor + ";cursor:" + (isLocked ? "default" : "pointer") + ';transition:all 0.18s;position:relative;-webkit-tap-highlight-color:transparent"><div style="width:40px;height:40px;border-radius:12px;background:' + iconBg + ";display:flex;align-items:center;justify-content:center;margin-bottom:8px;color:" + iconColor + ';transition:all 0.18s">' + cfg.svg + '</div><div style="font-size:14px;font-weight:700;color:' + labelColor + ';line-height:1.2">' + t("tab." + cfg.id, cfg.label) + "</div>" + checkHtml + "</div>";
     }).join("");
     overlay.innerHTML = '<div onclick="event.stopPropagation()" id="tab-sel-sheet" style="width:100%;max-width:480px;background:rgba(250,249,255,0.97);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border-radius:28px 28px 0 0;padding:0 0 calc(env(safe-area-inset-bottom) + 20px);border-top:1.5px solid rgba(255,255,255,0.8);box-shadow:0 -8px 40px rgba(0,0,0,0.15);transform:translateY(100%);transition:transform 0.35s cubic-bezier(0.32,0.72,0,1)"><div style="padding:14px 20px 10px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(30,16,64,0.06)"><div><div class="modal-handle"></div><div style="font-size:18px;font-weight:800;color:#1e1040">' + t("nav.tabsel.title", "\u0412\u043A\u043B\u0430\u0434\u043A\u0438") + '</div><div style="font-size:12px;color:rgba(30,16,64,0.38);font-weight:500;margin-top:2px">' + t("nav.tabsel.subtitle", "\u0412\u0438\u0431\u0435\u0440\u0438 \u0449\u043E \u043F\u043E\u043A\u0430\u0437\u0443\u0432\u0430\u0442\u0438 \u0432 \u0431\u0430\u0440\u0430\u0431\u0430\u043D\u0456") + '</div></div><button onclick="applyTabSelection()" style="background:#1e1040;border:none;border-radius:14px;padding:9px 18px;font-size:14px;font-weight:700;color:white;cursor:pointer">' + t("nav.tabsel.done", "\u0413\u043E\u0442\u043E\u0432\u043E") + '</button></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:16px 16px 8px">' + cardsHtml + '</div><div style="padding:0 16px 8px"><div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">' + t("nav.tabsel.order", "\u041F\u043E\u0440\u044F\u0434\u043E\u043A") + '</div><div id="tab-order-list" style="display:flex;flex-direction:row;gap:8px;overflow-x:auto;padding:4px 0 8px;-webkit-overflow-scrolling:touch;scrollbar-width:none"></div><div style="font-size:12px;color:rgba(30,16,64,0.3);font-weight:500;text-align:center">' + t("nav.tabsel.hint", "\u0422\u0430\u043F\u043D\u0438 \u0432\u043A\u043B\u0430\u0434\u043A\u0443 \u2192 \u2039 \u203A \u0434\u043B\u044F \u043F\u0435\u0440\u0435\u043C\u0456\u0449\u0435\u043D\u043D\u044F") + "</div></div></div>";
     overlay.addEventListener("click", (e) => {
@@ -20547,12 +20551,12 @@ ${logLines}
     if (idx !== -1) {
       _pendingTabs.splice(idx, 1);
     } else {
-      const order = ALL_TABS_CONFIG.map((t2) => t2.id);
+      const order = ALL_TABS_CONFIG.map((c) => c.id);
       _pendingTabs.push(tabId);
       _pendingTabs.sort((a, b) => order.indexOf(a) - order.indexOf(b));
     }
     const isNowActive = _pendingTabs.includes(tabId);
-    const cfg = ALL_TABS_CONFIG.find((t2) => t2.id === tabId);
+    const cfg = ALL_TABS_CONFIG.find((c) => c.id === tabId);
     if (!cfg) return;
     const card = document.getElementById(`tab-sel-card-${tabId}`);
     const check = document.getElementById(`tab-sel-check-${tabId}`);
