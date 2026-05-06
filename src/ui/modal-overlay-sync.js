@@ -102,6 +102,11 @@ function _externalizeOverlay(modal, childOverlay) {
 function _setupSwipeClose(modal) {
   const style = modal.getAttribute('style') || '';
   if (!/align-items\s*:\s*flex-end/i.test(style)) return; // не bottom-sheet
+  // MPVly-day2 06.05 (B-149): data-skip-auto-swipe — модалка сама керує свайпом
+  // (наприклад memory-modal використовує handleOnly режим). Без цього автo-sync
+  // вішав свій listener раніше за tasks.js setupModalSwipeClose на init →
+  // ігнорувався флаг handleOnly і свайп по картках закривав модалку.
+  if (modal.hasAttribute('data-skip-auto-swipe')) return;
   // Шукаємо картку (єдину non-overlay дитину) — після _externalizeOverlay
   // overlay винесений, тож children[0] зазвичай це картка.
   const card = modal.querySelector(':scope > div');

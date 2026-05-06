@@ -1513,7 +1513,7 @@
 
 <!-- MEMORY MODAL -->
 <div id="memory-modal-overlay" style="display:none;position:fixed;inset:0;z-index:599;background:rgba(20,10,50,0.45);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);pointer-events:none"></div>
-<div id="memory-modal" onclick="if(event.target===this)closeMemoryModal()" style="display:none;position:fixed;inset:0;z-index:600;align-items:flex-end;justify-content:center">
+<div id="memory-modal" data-skip-auto-swipe="1" onclick="if(event.target===this)closeMemoryModal()" style="display:none;position:fixed;inset:0;z-index:600;align-items:flex-end;justify-content:center">
   <div style="position:relative;width:100%;max-width:480px;background:linear-gradient(180deg,#f5f0e8 0%,#faf7f2 20%,#ffffff 100%);border-radius:24px 24px 0 0;z-index:1;max-height:88vh;display:flex;flex-direction:column">
     <!-- Handle -->
     <div style="padding:12px 20px 0;flex-shrink:0">
