@@ -14888,6 +14888,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
     el.appendChild(div);
     if (isAgent && Array.isArray(chips) && chips.length > 0) {
       Promise.resolve().then(() => (init_chips(), chips_exports)).then((m) => {
+        el.querySelectorAll(".chat-chips-row").forEach((n) => n.remove());
         const chipsRow = document.createElement("div");
         chipsRow.className = "chat-chips-row";
         m.renderChips(chipsRow, chips, "inbox");
