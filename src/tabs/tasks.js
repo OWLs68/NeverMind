@@ -81,7 +81,11 @@ export function setupModalSwipeClose(contentEl, closeFn) {
     if (_swipeBlocked) return;
     dy = e.touches[0].clientY - startY;
     const dx = Math.abs(e.touches[0].clientX - startX);
-    if (dy > 0 && dy > dx) {
+    // MPVly-day2 06.05 (B-138): поріг 8px замість 0. На iOS Safari палець
+    // завжди має +-1-3px рух при тапі — translate(2px) під час touchmove
+    // → iOS cancel click → клікі по кнопках всередині модалки не працюють.
+    // Аналітика, finance-budget, fin-all-txs були мертві після v647.
+    if (dy > 8 && dy > dx) {
       contentEl.style.transform = `translateY(${dy}px)`;
     }
   }, { passive: true });

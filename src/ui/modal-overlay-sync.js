@@ -101,7 +101,8 @@ function _setupSwipeClose(modal) {
     if (blocked) return;
     dy = e.touches[0].clientY - startY;
     const dx = Math.abs(e.touches[0].clientX - startX);
-    if (dy > 0 && dy > dx) {
+    // MPVly-day2 06.05 (B-138): поріг 8px (див. tasks.js setupModalSwipeClose)
+    if (dy > 8 && dy > dx) {
       card.style.transform = `translateY(${dy}px)`;
     }
   }, { passive: true });
