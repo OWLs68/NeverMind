@@ -640,10 +640,10 @@ function _syncMedicationToTask(cardName, med) {
     const tasks = JSON.parse(localStorage.getItem('nm_tasks') || '[]');
     const title = t('health.task.take_med_title', 'Прийняти {name}{dosage}', { name: med.name, dosage: med.dosage ? ' ' + med.dosage : '' });
     // Перевірка на дубль
-    const existing = tasks.find(t => t.title === title && t.status === 'active');
+    const existing = tasks.find(task => task.title === title && task.status === 'active');
     if (existing) return;
     const schedule = Array.isArray(med.schedule) ? med.schedule : [];
-    const steps = schedule.map(t => ({ id: Date.now() + Math.floor(Math.random() * 10000), text: t, done: false }));
+    const steps = schedule.map(s => ({ id: Date.now() + Math.floor(Math.random() * 10000), text: s, done: false }));
     const newTask = {
       id: Date.now() + Math.floor(Math.random() * 1000),
       title,
@@ -1680,8 +1680,8 @@ export function getHealthContext() {
       if (card.doctor) lines.push(`  лікар: ${card.doctor}`);
       if (card.doctorRecommendations) lines.push(`  рекомендації: ${card.doctorRecommendations}`);
       if (card.nextAppointment && card.nextAppointment.date) {
-        const t = card.nextAppointment.time ? ' ' + card.nextAppointment.time : '';
-        lines.push(`  наступний прийом: ${card.nextAppointment.date}${t}`);
+        const tm = card.nextAppointment.time ? ' ' + card.nextAppointment.time : '';
+        lines.push(`  наступний прийом: ${card.nextAppointment.date}${tm}`);
       }
       if (Array.isArray(card.medications) && card.medications.length > 0) {
         const meds = card.medications.map(m => {

@@ -2571,10 +2571,10 @@ ${lines.join("\n")}`;
     try {
       const tasks = JSON.parse(localStorage.getItem("nm_tasks") || "[]");
       const title = t("health.task.take_med_title", "\u041F\u0440\u0438\u0439\u043D\u044F\u0442\u0438 {name}{dosage}", { name: med.name, dosage: med.dosage ? " " + med.dosage : "" });
-      const existing = tasks.find((t2) => t2.title === title && t2.status === "active");
+      const existing = tasks.find((task) => task.title === title && task.status === "active");
       if (existing) return;
       const schedule = Array.isArray(med.schedule) ? med.schedule : [];
-      const steps = schedule.map((t2) => ({ id: Date.now() + Math.floor(Math.random() * 1e4), text: t2, done: false }));
+      const steps = schedule.map((s) => ({ id: Date.now() + Math.floor(Math.random() * 1e4), text: s, done: false }));
       const newTask = {
         id: Date.now() + Math.floor(Math.random() * 1e3),
         title,
@@ -3473,8 +3473,8 @@ ${lines.join("\n")}`;
         if (card.doctor) lines.push(`  \u043B\u0456\u043A\u0430\u0440: ${card.doctor}`);
         if (card.doctorRecommendations) lines.push(`  \u0440\u0435\u043A\u043E\u043C\u0435\u043D\u0434\u0430\u0446\u0456\u0457: ${card.doctorRecommendations}`);
         if (card.nextAppointment && card.nextAppointment.date) {
-          const t2 = card.nextAppointment.time ? " " + card.nextAppointment.time : "";
-          lines.push(`  \u043D\u0430\u0441\u0442\u0443\u043F\u043D\u0438\u0439 \u043F\u0440\u0438\u0439\u043E\u043C: ${card.nextAppointment.date}${t2}`);
+          const tm = card.nextAppointment.time ? " " + card.nextAppointment.time : "";
+          lines.push(`  \u043D\u0430\u0441\u0442\u0443\u043F\u043D\u0438\u0439 \u043F\u0440\u0438\u0439\u043E\u043C: ${card.nextAppointment.date}${tm}`);
         }
         if (Array.isArray(card.medications) && card.medications.length > 0) {
           const meds = card.medications.map((m) => {
@@ -13169,7 +13169,7 @@ ${UI_TOOLS_RULES}`;
     _attachHabitsSwipeDelete();
   }
   function updateProdTabCounters() {
-    const taskCount = getTasks().filter((t2) => t2.status !== "done").length;
+    const taskCount = getTasks().filter((task) => task.status !== "done").length;
     const taskCountEl = document.getElementById("prod-tab-tasks-count");
     const taskSubEl = document.getElementById("prod-tab-tasks-sub");
     if (taskCountEl) taskCountEl.textContent = taskCount;
@@ -13580,8 +13580,8 @@ ${UI_TOOLS_RULES}`;
     }
     if (action === "edit_task") {
       const tasks = getTasks();
-      const t2 = tasks.find((x) => String(x.id) === String(parsed.task_id));
-      if (!t2) {
+      const task = tasks.find((x) => String(x.id) === String(parsed.task_id));
+      if (!task) {
         const nameQ = (parsed.title || "").toLowerCase();
         const found = tasks.find((x) => x.title.toLowerCase().includes(nameQ.slice(0, 8)));
         if (!found) {
@@ -13600,16 +13600,16 @@ ${UI_TOOLS_RULES}`;
         addMsg("agent", '\u270F\uFE0F \u0417\u0430\u0434\u0430\u0447\u0443 "' + found.title + '" \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043E');
         return true;
       }
-      if (parsed.title) t2.title = parsed.title;
-      if (parsed.dueDate && parsed.dueDate !== t2.dueDate) {
-        if (t2.dueDate) t2.rescheduleCount = (t2.rescheduleCount || 0) + 1;
-        t2.dueDate = parsed.dueDate;
-        t2.updatedAt = Date.now();
+      if (parsed.title) task.title = parsed.title;
+      if (parsed.dueDate && parsed.dueDate !== task.dueDate) {
+        if (task.dueDate) task.rescheduleCount = (task.rescheduleCount || 0) + 1;
+        task.dueDate = parsed.dueDate;
+        task.updatedAt = Date.now();
       }
-      if (parsed.priority && ["normal", "important", "critical"].includes(parsed.priority)) t2.priority = parsed.priority;
+      if (parsed.priority && ["normal", "important", "critical"].includes(parsed.priority)) task.priority = parsed.priority;
       saveTasks(tasks);
       if (currentTab === "tasks") renderTasks();
-      addMsg("agent", '\u270F\uFE0F \u0417\u0430\u0434\u0430\u0447\u0443 "' + t2.title + '" \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043E');
+      addMsg("agent", '\u270F\uFE0F \u0417\u0430\u0434\u0430\u0447\u0443 "' + task.title + '" \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043E');
       return true;
     }
     if (action === "delete_task") {
@@ -13653,9 +13653,9 @@ ${UI_TOOLS_RULES}`;
     }
     if (action === "reopen_task") {
       const tasks = getTasks();
-      const t2 = tasks.find((x) => String(x.id) === String(parsed.task_id) && x.status === "done");
+      const task = tasks.find((x) => String(x.id) === String(parsed.task_id) && x.status === "done");
       const nameQ = (parsed.title || parsed.query || "").toLowerCase();
-      const target = t2 || tasks.find((x) => x.status === "done" && x.title.toLowerCase().includes(nameQ.slice(0, 8)));
+      const target = task || tasks.find((x) => x.status === "done" && x.title.toLowerCase().includes(nameQ.slice(0, 8)));
       if (!target) {
         addMsg("agent", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u0437\u0430\u043A\u0440\u0438\u0442\u0443 \u0437\u0430\u0434\u0430\u0447\u0443 \u0437 \u0442\u0430\u043A\u043E\u044E \u043D\u0430\u0437\u0432\u043E\u044E.");
         return true;
@@ -13669,23 +13669,23 @@ ${UI_TOOLS_RULES}`;
     }
     if (action === "complete_task") {
       const tasks = getTasks();
-      const t2 = tasks.find((x) => String(x.id) === String(parsed.task_id));
-      if (!t2) {
+      const task = tasks.find((x) => String(x.id) === String(parsed.task_id));
+      if (!task) {
         addMsg("agent", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u0437\u0430\u0434\u0430\u0447\u0443 \u0437 \u0442\u0430\u043A\u0438\u043C ID.");
         return true;
       }
-      if (t2.status === "done") {
-        addMsg("agent", `\u0417\u0430\u0434\u0430\u0447\u0430 "${t2.title}" \u0432\u0436\u0435 \u0437\u0430\u043A\u0440\u0438\u0442\u0430.`);
+      if (task.status === "done") {
+        addMsg("agent", `\u0417\u0430\u0434\u0430\u0447\u0430 "${task.title}" \u0432\u0436\u0435 \u0437\u0430\u043A\u0440\u0438\u0442\u0430.`);
         return true;
       }
-      addMsg("agent", `\u2705 \u0417\u0430\u0434\u0430\u0447\u0443 "${t2.title}" \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E!`);
+      addMsg("agent", `\u2705 \u0417\u0430\u0434\u0430\u0447\u0443 "${task.title}" \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E!`);
       if (currentTab === "tasks") {
-        toggleTaskStatus(t2.id);
+        toggleTaskStatus(task.id);
       } else {
-        t2.status = "done";
-        t2.completedAt = Date.now();
-        t2.updatedAt = Date.now();
-        if (Array.isArray(t2.steps)) t2.steps.forEach((s) => s.done = true);
+        task.status = "done";
+        task.completedAt = Date.now();
+        task.updatedAt = Date.now();
+        if (Array.isArray(task.steps)) task.steps.forEach((s) => s.done = true);
         saveTasks(tasks);
       }
       return true;
@@ -13713,8 +13713,8 @@ ${UI_TOOLS_RULES}`;
     }
     if (action === "add_step") {
       const tasks = getTasks();
-      const t2 = tasks.find((x) => String(x.id) === String(parsed.task_id));
-      if (!t2) {
+      const task = tasks.find((x) => String(x.id) === String(parsed.task_id));
+      if (!task) {
         addMsg("agent", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u0437\u0430\u0434\u0430\u0447\u0443 \u0434\u043B\u044F \u0434\u043E\u0434\u0430\u0432\u0430\u043D\u043D\u044F \u043A\u0440\u043E\u043A\u0443.");
         return true;
       }
@@ -13723,9 +13723,9 @@ ${UI_TOOLS_RULES}`;
         addMsg("agent", "\u041D\u0435 \u0432\u043A\u0430\u0437\u0430\u043D\u043E \u0442\u0435\u043A\u0441\u0442 \u043A\u0440\u043E\u043A\u0443.");
         return true;
       }
-      if (!Array.isArray(t2.steps)) t2.steps = [];
-      t2.steps.push({ id: Date.now(), text: stepText, done: false });
-      t2.updatedAt = Date.now();
+      if (!Array.isArray(task.steps)) task.steps = [];
+      task.steps.push({ id: Date.now(), text: stepText, done: false });
+      task.updatedAt = Date.now();
       saveTasks(tasks);
       if (currentTab === "tasks") renderTasks();
       addMsg("agent", `\u2705 \u0414\u043E\u0434\u0430\u0432 \u043A\u0440\u043E\u043A "${stepText}"`);
@@ -13807,9 +13807,9 @@ ${UI_TOOLS_RULES}`;
       saveEvents(events);
       const dateObj = new Date(events[idx].date);
       const dayStr = `${dateObj.getDate()} ${monthGenitive(dateObj.getMonth())}`;
-      const t2 = events[idx].time;
+      const tm = events[idx].time;
       const et = events[idx].endTime;
-      const timeStr = t2 ? ` \u043E ${t2}${et ? "\u2013" + et : ""}` : "";
+      const timeStr = tm ? ` \u043E ${tm}${et ? "\u2013" + et : ""}` : "";
       const editText = `\u270F\uFE0F \u0417\u043C\u0456\u043D\u0435\u043D\u043E: "${events[idx].title}" \u2192 ${dayStr}${timeStr}`;
       addMsg("agent", editText);
       try {
@@ -14058,10 +14058,10 @@ ${UI_TOOLS_RULES}`;
     addTaskBarMsg("user", text);
     setTaskBarLoading(true);
     addTaskBarMsg("typing", "");
-    const tasks = getTasks().filter((t2) => t2.status !== "done");
-    const tasksSummary = tasks.map((t2) => {
-      const steps = (t2.steps || []).map((s) => "  - " + s.text + (s.done ? " [\u2713]" : "")).join("\n");
-      return "\u0417\u0430\u0434\u0430\u0447\u0430 ID:" + t2.id + ' "' + t2.title + '"' + (steps ? "\n\u041A\u0440\u043E\u043A\u0438:\n" + steps : "");
+    const tasks = getTasks().filter((task) => task.status !== "done");
+    const tasksSummary = tasks.map((task) => {
+      const steps = (task.steps || []).map((s) => "  - " + s.text + (s.done ? " [\u2713]" : "")).join("\n");
+      return "\u0417\u0430\u0434\u0430\u0447\u0430 ID:" + task.id + ' "' + task.title + '"' + (steps ? "\n\u041A\u0440\u043E\u043A\u0438:\n" + steps : "");
     }).join("\n\n");
     const habits = getHabits();
     const log = getHabitLog();
@@ -14109,15 +14109,15 @@ ${UI_TOOLS_RULES}`;
         if (processUniversalAction(parsed, text, addTaskBarMsg)) return true;
         if (parsed.action === "complete_step") {
           const allTasks = getTasks();
-          const t2 = allTasks.find((x) => String(x.id) === String(parsed.task_id));
-          if (t2) {
-            const step = t2.steps.find((s) => s.text.toLowerCase().includes(parsed.step_text.toLowerCase().substring(0, 10)));
+          const task = allTasks.find((x) => String(x.id) === String(parsed.task_id));
+          if (task) {
+            const step = task.steps.find((s) => s.text.toLowerCase().includes(parsed.step_text.toLowerCase().substring(0, 10)));
             if (step) {
               step.done = true;
-              if (t2.steps.every((s) => s.done)) {
-                t2.status = "done";
-                t2.completedAt = Date.now();
-                t2.updatedAt = Date.now();
+              if (task.steps.every((s) => s.done)) {
+                task.status = "done";
+                task.completedAt = Date.now();
+                task.updatedAt = Date.now();
               }
               saveTasks(allTasks);
               renderTasks();
@@ -14130,23 +14130,23 @@ ${UI_TOOLS_RULES}`;
         }
         if (parsed.action === "complete_task") {
           const allTasks = getTasks();
-          const t2 = allTasks.find((x) => String(x.id) === String(parsed.task_id));
-          if (t2) {
-            t2.status = "done";
-            t2.completedAt = Date.now();
-            t2.updatedAt = Date.now();
-            t2.steps.forEach((s) => s.done = true);
+          const task = allTasks.find((x) => String(x.id) === String(parsed.task_id));
+          if (task) {
+            task.status = "done";
+            task.completedAt = Date.now();
+            task.updatedAt = Date.now();
+            task.steps.forEach((s) => s.done = true);
             saveTasks(allTasks);
             renderTasks();
-            addTaskBarMsg("agent", `\u2705 \u0417\u0430\u0434\u0430\u0447\u0443 "${t2.title}" \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E!`);
+            addTaskBarMsg("agent", `\u2705 \u0417\u0430\u0434\u0430\u0447\u0443 "${task.title}" \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E!`);
           }
           return true;
         }
         if (parsed.action === "add_step") {
           const allTasks = getTasks();
-          const t2 = allTasks.find((x) => String(x.id) === String(parsed.task_id));
-          if (t2) {
-            t2.steps.push({ id: Date.now(), text: parsed.step, done: false });
+          const task = allTasks.find((x) => String(x.id) === String(parsed.task_id));
+          if (task) {
+            task.steps.push({ id: Date.now(), text: parsed.step, done: false });
             saveTasks(allTasks);
             renderTasks();
             addTaskBarMsg("agent", '\u2705 \u0414\u043E\u0434\u0430\u0432 \u043A\u0440\u043E\u043A "' + parsed.step + '"');
@@ -14196,12 +14196,12 @@ ${UI_TOOLS_RULES}`;
         }
         if (parsed.action === "undo_step") {
           const allTasks = getTasks();
-          const t2 = allTasks.find((x) => String(x.id) === String(parsed.task_id));
-          if (t2) {
-            const step = t2.steps.find((s) => s.text.toLowerCase().includes((parsed.step_text || "").toLowerCase().substring(0, 10)));
+          const task = allTasks.find((x) => String(x.id) === String(parsed.task_id));
+          if (task) {
+            const step = task.steps.find((s) => s.text.toLowerCase().includes((parsed.step_text || "").toLowerCase().substring(0, 10)));
             if (step) {
               step.done = false;
-              if (t2.status === "done") t2.status = "active";
+              if (task.status === "done") task.status = "active";
               saveTasks(allTasks);
               renderTasks();
               addTaskBarMsg("agent", `\u21A9\uFE0F \u0421\u043A\u0430\u0441\u0443\u0432\u0430\u0432 \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043D\u044F "${step.text}"`);
@@ -22568,11 +22568,11 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
   }
   function openEditTransaction(id) {
     const txs = getFinance();
-    const t2 = txs.find((x) => x.id === id);
-    if (!t2) return;
+    const tx = txs.find((x) => x.id === id);
+    if (!tx) return;
     _finEditId = id;
-    _finTxComment = t2.comment || "";
-    _showTransactionModal(t2);
+    _finTxComment = tx.comment || "";
+    _showTransactionModal(tx);
   }
   function _showTransactionModal(data) {
     _finTxCurrentType = data.type === "income" ? "income" : "expense";
@@ -22725,8 +22725,8 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
   }
   function deleteFinTransaction() {
     if (!_finEditId) return;
-    const item = getFinance().find((t2) => t2.id === _finEditId);
-    saveFinance(getFinance().filter((t2) => t2.id !== _finEditId));
+    const item = getFinance().find((tx) => tx.id === _finEditId);
+    saveFinance(getFinance().filter((tx) => tx.id !== _finEditId));
     closeFinTxModal();
     renderFinance();
     try {

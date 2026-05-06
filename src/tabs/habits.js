@@ -487,7 +487,7 @@ export let currentProdTab = 'tasks';
 
 export function updateProdTabCounters() {
   // Лічильник задач
-  const taskCount = getTasks().filter(t => t.status !== 'done').length;
+  const taskCount = getTasks().filter(task => task.status !== 'done').length;
   const taskCountEl = document.getElementById('prod-tab-tasks-count');
   const taskSubEl = document.getElementById('prod-tab-tasks-sub');
   if (taskCountEl) taskCountEl.textContent = taskCount;
@@ -1049,8 +1049,8 @@ export function processUniversalAction(parsed, originalText, addMsg) {
 
   if (action === 'edit_task') {
     const tasks = getTasks();
-    const t = tasks.find(x => String(x.id) === String(parsed.task_id));
-    if (!t) {
+    const task = tasks.find(x => String(x.id) === String(parsed.task_id));
+    if (!task) {
       const nameQ = (parsed.title || '').toLowerCase();
       const found = tasks.find(x => x.title.toLowerCase().includes(nameQ.slice(0, 8)));
       if (!found) { addMsg('agent', 'Не знайшов цю задачу.'); return true; }
@@ -1066,16 +1066,16 @@ export function processUniversalAction(parsed, originalText, addMsg) {
       addMsg('agent', '✏️ Задачу "' + found.title + '" оновлено');
       return true;
     }
-    if (parsed.title) t.title = parsed.title;
-    if (parsed.dueDate && parsed.dueDate !== t.dueDate) {
-      if (t.dueDate) t.rescheduleCount = (t.rescheduleCount || 0) + 1;
-      t.dueDate = parsed.dueDate;
-      t.updatedAt = Date.now();
+    if (parsed.title) task.title = parsed.title;
+    if (parsed.dueDate && parsed.dueDate !== task.dueDate) {
+      if (task.dueDate) task.rescheduleCount = (task.rescheduleCount || 0) + 1;
+      task.dueDate = parsed.dueDate;
+      task.updatedAt = Date.now();
     }
-    if (parsed.priority && ['normal','important','critical'].includes(parsed.priority)) t.priority = parsed.priority;
+    if (parsed.priority && ['normal','important','critical'].includes(parsed.priority)) task.priority = parsed.priority;
     saveTasks(tasks);
     if (currentTab === 'tasks') renderTasks();
-    addMsg('agent', '✏️ Задачу "' + t.title + '" оновлено');
+    addMsg('agent', '✏️ Задачу "' + task.title + '" оновлено');
     return true;
   }
 
@@ -1119,9 +1119,9 @@ export function processUniversalAction(parsed, originalText, addMsg) {
 
   if (action === 'reopen_task') {
     const tasks = getTasks();
-    const t = tasks.find(x => String(x.id) === String(parsed.task_id) && x.status === 'done');
+    const task = tasks.find(x => String(x.id) === String(parsed.task_id) && x.status === 'done');
     const nameQ = (parsed.title || parsed.query || '').toLowerCase();
-    const target = t || tasks.find(x => x.status === 'done' && x.title.toLowerCase().includes(nameQ.slice(0, 8)));
+    const target = task || tasks.find(x => x.status === 'done' && x.title.toLowerCase().includes(nameQ.slice(0, 8)));
     if (!target) { addMsg('agent', 'Не знайшов закриту задачу з такою назвою.'); return true; }
     target.status = 'active';
     delete target.completedAt;
@@ -1137,20 +1137,20 @@ export function processUniversalAction(parsed, originalText, addMsg) {
   // друку висіли назавжди.
   if (action === 'complete_task') {
     const tasks = getTasks();
-    const t = tasks.find(x => String(x.id) === String(parsed.task_id));
-    if (!t) { addMsg('agent', 'Не знайшов задачу з таким ID.'); return true; }
-    if (t.status === 'done') { addMsg('agent', `Задача "${t.title}" вже закрита.`); return true; }
-    addMsg('agent', `✅ Задачу "${t.title}" виконано!`);
+    const task = tasks.find(x => String(x.id) === String(parsed.task_id));
+    if (!task) { addMsg('agent', 'Не знайшов задачу з таким ID.'); return true; }
+    if (task.status === 'done') { addMsg('agent', `Задача "${task.title}" вже закрита.`); return true; }
+    addMsg('agent', `✅ Задачу "${task.title}" виконано!`);
     // Викликаємо ту саму 3-фазну анімацію що й при ручному тапі ✓:
     // галочка → 250мс пауза → сповзання картки → save+render через 620мс.
     if (currentTab === 'tasks') {
-      toggleTaskStatus(t.id);
+      toggleTaskStatus(task.id);
     } else {
       // Не на вкладці Задач — анімувати нема де, просто зберігаємо статус.
-      t.status = 'done';
-      t.completedAt = Date.now();
-      t.updatedAt = Date.now();
-      if (Array.isArray(t.steps)) t.steps.forEach(s => s.done = true);
+      task.status = 'done';
+      task.completedAt = Date.now();
+      task.updatedAt = Date.now();
+      if (Array.isArray(task.steps)) task.steps.forEach(s => s.done = true);
       saveTasks(tasks);
     }
     return true;
@@ -1177,13 +1177,13 @@ export function processUniversalAction(parsed, originalText, addMsg) {
 
   if (action === 'add_step') {
     const tasks = getTasks();
-    const t = tasks.find(x => String(x.id) === String(parsed.task_id));
-    if (!t) { addMsg('agent', 'Не знайшов задачу для додавання кроку.'); return true; }
+    const task = tasks.find(x => String(x.id) === String(parsed.task_id));
+    if (!task) { addMsg('agent', 'Не знайшов задачу для додавання кроку.'); return true; }
     const stepText = (parsed.step || '').trim();
     if (!stepText) { addMsg('agent', 'Не вказано текст кроку.'); return true; }
-    if (!Array.isArray(t.steps)) t.steps = [];
-    t.steps.push({ id: Date.now(), text: stepText, done: false });
-    t.updatedAt = Date.now();
+    if (!Array.isArray(task.steps)) task.steps = [];
+    task.steps.push({ id: Date.now(), text: stepText, done: false });
+    task.updatedAt = Date.now();
     saveTasks(tasks);
     if (currentTab === 'tasks') renderTasks();
     addMsg('agent', `✅ Додав крок "${stepText}"`);
@@ -1263,9 +1263,9 @@ export function processUniversalAction(parsed, originalText, addMsg) {
     saveEvents(events);
     const dateObj = new Date(events[idx].date);
     const dayStr = `${dateObj.getDate()} ${monthGenitive(dateObj.getMonth())}`;
-    const t = events[idx].time;
+    const tm = events[idx].time;
     const et = events[idx].endTime;
-    const timeStr = t ? ` о ${t}${et ? '–' + et : ''}` : '';
+    const timeStr = tm ? ` о ${tm}${et ? '–' + et : ''}` : '';
     const editText = `✏️ Змінено: "${events[idx].title}" → ${dayStr}${timeStr}`;
     addMsg('agent', editText);
     // Карточка в Inbox стрічку щоб юзер бачив що було змінено
@@ -1519,10 +1519,10 @@ export async function sendTasksBarMessage() {
   setTaskBarLoading(true);
   addTaskBarMsg('typing', '');
 
-  const tasks = getTasks().filter(t => t.status !== 'done');
-  const tasksSummary = tasks.map(t => {
-    const steps = (t.steps || []).map(s => '  - ' + s.text + (s.done ? ' [✓]' : '')).join('\n');
-    return 'Задача ID:' + t.id + ' "' + t.title + '"' + (steps ? '\nКроки:\n' + steps : '');
+  const tasks = getTasks().filter(task => task.status !== 'done');
+  const tasksSummary = tasks.map(task => {
+    const steps = (task.steps || []).map(s => '  - ' + s.text + (s.done ? ' [✓]' : '')).join('\n');
+    return 'Задача ID:' + task.id + ' "' + task.title + '"' + (steps ? '\nКроки:\n' + steps : '');
   }).join('\n\n');
 
   const habits = getHabits();
@@ -1584,15 +1584,15 @@ export async function sendTasksBarMessage() {
       if (processUniversalAction(parsed, text, addTaskBarMsg)) return true;
       if (parsed.action === 'complete_step') {
         const allTasks = getTasks();
-        const t = allTasks.find(x => String(x.id) === String(parsed.task_id));
-        if (t) {
-          const step = t.steps.find(s => s.text.toLowerCase().includes(parsed.step_text.toLowerCase().substring(0,10)));
+        const task = allTasks.find(x => String(x.id) === String(parsed.task_id));
+        if (task) {
+          const step = task.steps.find(s => s.text.toLowerCase().includes(parsed.step_text.toLowerCase().substring(0,10)));
           if (step) {
             step.done = true;
-            if (t.steps.every(s => s.done)) {
-              t.status = 'done';
-              t.completedAt = Date.now();
-              t.updatedAt = Date.now();
+            if (task.steps.every(s => s.done)) {
+              task.status = 'done';
+              task.completedAt = Date.now();
+              task.updatedAt = Date.now();
             }
             saveTasks(allTasks); renderTasks();
             addTaskBarMsg('agent', `✅ Відмітив "${step.text}" як виконано`);
@@ -1602,14 +1602,14 @@ export async function sendTasksBarMessage() {
       }
       if (parsed.action === 'complete_task') {
         const allTasks = getTasks();
-        const t = allTasks.find(x => String(x.id) === String(parsed.task_id));
-        if (t) { t.status = 'done'; t.completedAt = Date.now(); t.updatedAt = Date.now(); t.steps.forEach(s => s.done = true); saveTasks(allTasks); renderTasks(); addTaskBarMsg('agent', `✅ Задачу "${t.title}" виконано!`); }
+        const task = allTasks.find(x => String(x.id) === String(parsed.task_id));
+        if (task) { task.status = 'done'; task.completedAt = Date.now(); task.updatedAt = Date.now(); task.steps.forEach(s => s.done = true); saveTasks(allTasks); renderTasks(); addTaskBarMsg('agent', `✅ Задачу "${task.title}" виконано!`); }
         return true;
       }
       if (parsed.action === 'add_step') {
         const allTasks = getTasks();
-        const t = allTasks.find(x => String(x.id) === String(parsed.task_id));
-        if (t) { t.steps.push({ id: Date.now(), text: parsed.step, done: false }); saveTasks(allTasks); renderTasks(); addTaskBarMsg('agent', '✅ Додав крок "' + parsed.step + '"'); }
+        const task = allTasks.find(x => String(x.id) === String(parsed.task_id));
+        if (task) { task.steps.push({ id: Date.now(), text: parsed.step, done: false }); saveTasks(allTasks); renderTasks(); addTaskBarMsg('agent', '✅ Додав крок "' + parsed.step + '"'); }
         return true;
       }
       if (parsed.action === 'complete_habit') {
@@ -1653,12 +1653,12 @@ export async function sendTasksBarMessage() {
       }
       if (parsed.action === 'undo_step') {
         const allTasks = getTasks();
-        const t = allTasks.find(x => String(x.id) === String(parsed.task_id));
-        if (t) {
-          const step = t.steps.find(s => s.text.toLowerCase().includes((parsed.step_text || '').toLowerCase().substring(0,10)));
+        const task = allTasks.find(x => String(x.id) === String(parsed.task_id));
+        if (task) {
+          const step = task.steps.find(s => s.text.toLowerCase().includes((parsed.step_text || '').toLowerCase().substring(0,10)));
           if (step) {
             step.done = false;
-            if (t.status === 'done') t.status = 'active';
+            if (task.status === 'done') task.status = 'active';
             saveTasks(allTasks); renderTasks();
             addTaskBarMsg('agent', `↩️ Скасував виконання "${step.text}"`);
           } else { addTaskBarMsg('agent', 'Не знайшов такий крок. Уточни будь ласка.'); }
