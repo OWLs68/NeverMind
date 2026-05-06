@@ -69,7 +69,9 @@ export function setupModalSwipeClose(contentEl, closeFn) {
     // барабан, чат, прокрутка Налаштувань, input/textarea/select (UvEHE 03.05 sweep —
     // inconsistent з modal-overlay-sync.js _setupSwipeClose; dragging textarea модалки
     // переривав edit замість редагування).
-    _swipeBlocked = !!e.target.closest('.drum-col, .drum-item, .settings-scroll, input, textarea, select');
+    // MPVly-day2 06.05 (B-135): #memory-cards-list — список факт-карток у модалці пам'яті
+    // (overflow-y:auto). Без whitelist свайп вниз по картках закривав модалку замість скролу.
+    _swipeBlocked = !!e.target.closest('.drum-col, .drum-item, .settings-scroll, #memory-cards-list, input, textarea, select');
     startY = e.touches[0].clientY;
     startX = e.touches[0].clientX;
     dy = 0;

@@ -1093,11 +1093,16 @@ export async function autoRefreshMemory() {
 async function refreshMemory() {
   const btn = document.getElementById('memory-refresh-btn');
   if (btn) { btn.textContent = '…'; btn.disabled = true; }
-  await doRefreshMemory(true);
-  if (btn) { btn.textContent = t('nav.mem.refresh_btn', '↻ Оновити через OWL'); btn.disabled = false; }
-  // якщо вікно памʼяті відкрите — перемалювати картки
-  if (document.getElementById('memory-modal')?.style.display !== 'none') {
-    renderMemoryCards();
+  // MPVly-day2 06.05 (B-136): try/finally — без нього reject у callAIWithTools
+  // лишав btn.disabled=true назавжди (юзер тапнув «Оновити», AI завис, кнопка
+  // мертва, треба перезавантажити PWA).
+  try {
+    await doRefreshMemory(true);
+  } finally {
+    if (btn) { btn.textContent = t('nav.mem.refresh_btn', '↻ Оновити через OWL'); btn.disabled = false; }
+    if (document.getElementById('memory-modal')?.style.display !== 'none') {
+      renderMemoryCards();
+    }
   }
 }
 
