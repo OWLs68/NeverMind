@@ -318,13 +318,14 @@ function _analyticsBenchmark(allTxs) {
 }
 function _refreshAnalyticsContent() {
   const modal = document.getElementById('fin-analytics-modal');
-  if (!modal) return;
+  if (!modal) { logError('log', '[analytics-refresh] NO MODAL', 'finance-analytics'); return; }
   const scrollEl = modal.querySelector('div[style*="overflow-y:auto"]');
-  if (!scrollEl) return;
+  if (!scrollEl) { logError('log', `[analytics-refresh] NO scrollEl, modal.children=${modal.children.length}`, 'finance-analytics'); return; }
   const prevScroll = scrollEl.scrollTop;
   const activeId = document.activeElement?.id || '';
   const activeSelStart = document.activeElement?.selectionStart;
   scrollEl.innerHTML = _buildAnalyticsContent(getFinance());
+  logError('log', `[analytics-refresh] OK mode=${_analyticsChartMode} idx=[${_analyticsMiniIdx.join(',')}] htmlLen=${scrollEl.innerHTML.length}`, 'finance-analytics');
   scrollEl.scrollTop = prevScroll;
   if (activeId) {
     const el = document.getElementById(activeId);
