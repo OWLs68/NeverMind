@@ -713,8 +713,8 @@
           const isEvent = item.type === "event";
           const isTask = item.type === "task";
           const isDone = item.done;
-          const color = isDone ? "rgba(30,16,64,0.3)" : isEvent ? "#3b82f6" : isCurrent ? "#ea580c" : "#1e1040";
-          const icon = isEvent ? "\u{1F4C5}" : isTask ? isDone ? "\u2705" : "\u2611\uFE0F" : "";
+          const color = isDone ? "rgba(30,16,64,0.3)" : isCurrent ? "#ea580c" : "#1e1040";
+          const iconSvg = isEvent || isTask ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.5)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-2px;margin-right:4px"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>${isDone ? '<polyline points="9 14 11 16 15 12"/>' : ""}</svg>` : "";
           const prio = item.priority === "critical" ? "\u{1F534} " : item.priority === "important" ? "\u{1F7E0} " : "";
           const strike = isDone ? "text-decoration:line-through;" : "";
           let tapAttr;
@@ -724,19 +724,20 @@
           const timeLabel = item.endTime ? `${item.time}<br><span style="font-size:11px;font-weight:500;color:rgba(30,16,64,0.4)">${item.endTime}</span>` : item.time;
           html += `<div ${tapAttr}display:flex;align-items:flex-start;gap:12px;padding:10px 0;${isPast ? "opacity:0.4;" : ""}${isCurrent ? "background:rgba(234,88,12,0.06);border-radius:12px;padding:10px 8px;margin:0 -8px;" : ""}">
           <div style="width:46px;flex-shrink:0;font-size:14px;font-weight:700;color:${isCurrent ? "#ea580c" : "rgba(30,16,64,0.5)"};text-align:right;line-height:1.2">${timeLabel}</div>
-          <div style="width:8px;height:8px;border-radius:50%;margin-top:5px;flex-shrink:0;background:${isEvent ? "#3b82f6" : isCurrent ? "#ea580c" : isPast ? "rgba(30,16,64,0.15)" : "rgba(234,88,12,0.35)"}"></div>
-          <div style="flex:1;font-size:14px;font-weight:${isCurrent ? "700" : "500"};color:${color};${strike}">${icon ? icon + " " : ""}${prio}${escapeHtml(item.text)}${isCurrent ? " \u2190" : ""}${isTask && item.dueDate ? " \u{1F4C5}" : ""}</div>
+          <div style="width:8px;height:8px;border-radius:50%;margin-top:5px;flex-shrink:0;background:${isEvent ? "#3b82f6" : isTask ? "#2fd0f9" : isCurrent ? "#ea580c" : isPast ? "rgba(30,16,64,0.15)" : "rgba(234,88,12,0.35)"}"></div>
+          <div style="flex:1;font-size:14px;font-weight:${isCurrent ? "700" : "500"};color:${color};${strike}">${iconSvg}${prio}${escapeHtml(item.text)}${isCurrent ? " \u2190" : ""}</div>
         </div>`;
         });
         if (untimedTasks.length > 0) {
           html += `<div style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(30,16,64,0.08)">`;
           html += `<div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px">${t("calendar.section.tasks", "\u0417\u0430\u0434\u0430\u0447\u0456")}</div>`;
-          untimedTasks.forEach((t2) => {
-            const prio = t2.priority === "critical" ? "\u{1F534} " : t2.priority === "important" ? "\u{1F7E0} " : "";
-            const doneStyle = t2.done ? "color:rgba(30,16,64,0.3);text-decoration:line-through;" : "color:#1e1040;";
+          untimedTasks.forEach((tk) => {
+            const prio = tk.priority === "critical" ? "\u{1F534} " : tk.priority === "important" ? "\u{1F7E0} " : "";
+            const doneStyle = tk.done ? "color:rgba(30,16,64,0.3);text-decoration:line-through;" : "color:#1e1040;";
+            const taskIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.5)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-2px;margin-right:4px"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>${tk.done ? '<polyline points="9 14 11 16 15 12"/>' : ""}</svg>`;
             html += `<div style="display:flex;align-items:center;gap:10px;padding:6px 0">
-            <div style="font-size:14px">${t2.done ? "\u2705" : "\u2611\uFE0F"}</div>
-            <div style="font-size:14px;font-weight:500;${doneStyle}">${prio}${escapeHtml(t2.text)}${t2.dueDate ? " \u{1F4C5}" : ""}</div>
+            <div style="width:8px;height:8px;border-radius:50%;flex-shrink:0;background:#2fd0f9"></div>
+            <div style="font-size:14px;font-weight:500;${doneStyle}">${taskIcon}${prio}${escapeHtml(tk.text)}</div>
           </div>`;
           });
           html += `</div>`;
