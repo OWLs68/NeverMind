@@ -80,6 +80,17 @@ function _externalizeOverlay(modal, childOverlay) {
   // Вставляємо overlay як sibling ПЕРЕД модалкою + видаляємо старий child
   modal.parentNode.insertBefore(newOverlay, modal);
   childOverlay.remove();
+  // MPVly-day2 06.05 (B-140): авто-видалити overlay коли modal видалений
+  // з DOM. Раніше syncOverlay реагував тільки на style.display зміни через
+  // MutationObserver attributes — а при `closeFinAnalytics() { modal.remove() }`
+  // спостерігач не спрацьовував. Юзер бачив застрягле «матове скло» поверх UI.
+  const removeWatcher = new MutationObserver(() => {
+    if (!document.body.contains(modal)) {
+      newOverlay.remove();
+      removeWatcher.disconnect();
+    }
+  });
+  removeWatcher.observe(document.body, { childList: true, subtree: true });
   return newOverlay;
 }
 
