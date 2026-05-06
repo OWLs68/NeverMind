@@ -647,7 +647,7 @@
     const dateISO = `${_calYear}-${String(_calMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
     const dayKey = DAY_KEYS[date.getDay()];
     const titleEl = document.getElementById("day-schedule-title");
-    if (titleEl) titleEl.textContent = `${day} ${monthGenitive(_calMonth)} \xB7 ${DAYS_UA_FULL[date.getDay()]}`;
+    if (titleEl) titleEl.textContent = t("calendar.day_schedule.title", "{day} {month} \xB7 {weekday}", { day, month: monthGenitive(_calMonth), weekday: DAYS_UA_FULL[date.getDay()] });
     const dayEvents = getEvents().filter((ev) => ev.date === dateISO);
     const allDayEvents = dayEvents.filter((ev) => !ev.time);
     const timedEvents = dayEvents.filter((ev) => ev.time);
