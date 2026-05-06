@@ -95,26 +95,27 @@ function _analyticsChart(allTxs) {
 
   let chartHtml = '';
   if (_analyticsChartMode === 'balance') {
-    // Капітал — лінія
+    // Капітал — лінія + Y-шкала зліва (B-148)
     const minB = Math.min(0, ...balances);
     const maxB = Math.max(1, ...balances);
     const range = maxB - minB || 1;
-    const pts = balances.map((b, i) => {
-      const x = (i / (POINTS - 1)) * 400;
-      const y = 100 - ((b - minB) / range) * 100;
-      return `${x},${y}`;
-    }).join(' ');
-    const zeroY = 100 - ((0 - minB) / range) * 100;
-    chartHtml = `<svg viewBox="-12 -12 424 124" preserveAspectRatio="none" style="width:100%;height:100px;display:block;border:1px solid rgba(30,16,64,0.10);border-radius:8px;background:rgba(255,255,255,0.4);box-sizing:border-box">
-      <line x1="0" y1="${zeroY}" x2="400" y2="${zeroY}" stroke="rgba(30,16,64,0.12)" stroke-width="1" stroke-dasharray="3,3"/>
-      <polyline points="${pts}" fill="none" stroke="#0ea5e9" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-      ${balances.map((b, i) => {
-        const x = (i / (POINTS - 1)) * 400;
-        const y = 100 - ((b - minB) / range) * 100;
-        return `<circle cx="${x}" cy="${y}" r="5" fill="#0ea5e9"/>`;
-      }).join('')}
-    </svg>
-    <div style="display:flex;gap:2px;margin-top:4px">${buckets.map(b => `<div style="flex:1;font-size:9px;font-weight:${b.isCurrent?'700':'500'};color:${b.isCurrent?'#c2410c':'rgba(30,16,64,0.35)'};text-align:center">${b.label}</div>`).join('')}</div>
+    // y range 8..92 у viewBox (8% padding щоб точки r=5 не вилазили)
+    const yOf = (b) => 92 - ((b - minB) / range) * 84;
+    const pts = balances.map((b, i) => `${(i / (POINTS - 1)) * 400},${yOf(b)}`).join(' ');
+    const zeroY = yOf(0);
+    const hasNeg = minB < 0;
+    const yLabels = hasNeg
+      ? `<div>${formatMoney(maxB)}</div><div>0</div><div>${formatMoney(minB)}</div>`
+      : `<div>${formatMoney(maxB)}</div><div>${formatMoney(minB)}</div>`;
+    chartHtml = `<div style="display:flex;gap:6px;height:100px">
+      <div style="display:flex;flex-direction:column;justify-content:space-between;width:50px;font-size:9px;font-weight:600;color:rgba(30,16,64,0.45);text-align:right;padding:6px 0;flex-shrink:0">${yLabels}</div>
+      <svg viewBox="0 0 400 100" preserveAspectRatio="none" style="flex:1;height:100px;display:block;border:1px solid rgba(30,16,64,0.10);border-radius:8px;background:rgba(255,255,255,0.4);box-sizing:border-box">
+        ${hasNeg ? `<line x1="0" y1="${zeroY}" x2="400" y2="${zeroY}" stroke="rgba(30,16,64,0.12)" stroke-width="1" stroke-dasharray="3,3"/>` : ''}
+        <polyline points="${pts}" fill="none" stroke="#0ea5e9" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+        ${balances.map((b, i) => `<circle cx="${(i / (POINTS - 1)) * 400}" cy="${yOf(b)}" r="5" fill="#0ea5e9"/>`).join('')}
+      </svg>
+    </div>
+    <div style="display:flex;gap:2px;margin-top:4px;padding-left:56px">${buckets.map(b => `<div style="flex:1;font-size:9px;font-weight:${b.isCurrent?'700':'500'};color:${b.isCurrent?'#c2410c':'rgba(30,16,64,0.35)'};text-align:center">${b.label}</div>`).join('')}</div>
     <div style="font-size:10px;color:rgba(30,16,64,0.4);margin-top:6px;text-align:center">${t('finstat.chart.current', 'Поточний')}: <span style="color:#0ea5e9;font-weight:700">${formatMoney(cumBalance)}</span></div>`;
   } else if (_analyticsChartMode === 'expenses-weekly') {
     // Витрати — bars (помаранчеві). Рамка ТIЛЬКИ навколо стовпчиків,
