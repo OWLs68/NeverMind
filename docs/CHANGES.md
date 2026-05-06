@@ -6,7 +6,17 @@
 
 ---
 
-## 2026-05-06 — MPVly-day2: silent-bug-scout 4-pack (B-128/129/130/131) + i18n 110 рядків
+## 2026-05-06 — MPVly-day2: 23 баги + Council 5 агентів + Аналітика redesign + календар SVG icons
+
+**Гілка:** `claude/start-session-MPVly` · 152 коміти (v707 → v724+) · CACHE `nm-20260507-0110`
+
+7-годинний live debugging день з Романом. Закрито B-128 → B-150 (23 баги). Проактивний silent-bug-scout (4 фікси перед Романом), prompt-engineer-auditor для B-134 auto-reminder, Council 5 агентів Sonnet знайшов корінь Аналітики після 5 фіксів-наосліп (REAL корінь B-143 — scrollEl selector через #id). i18n обгортка 110 рядків (4 файли). Memory modal handleOnly mode + dual-id fix. Аналітика повний redesign: 7 точок, перемикач Тижні/Дні, Y-шкала Капітал, латте gradient на стрілках, рамка з матовим склом. Календарна модалка: уніфіковані dateColors + SVG icons з кольоровими індикаторами (узгоджено з CAT_DOT_SOLID). **Урок дисципліни:** 5 фіксів-наосліп до Council = провал правила #5 CLAUDE.md.
+
+**Коміти:** `0c01a7b` silent-bug-scout 4-pack · `5101c8c` хвости B-132+B-133 · `0e3ca89` B-134 auto-reminder · `10c4d62` B-135+B-136 memory · `5eab31a` B-137 dual-id · `604089a` B-138 dy>8 · `e30fcd1` B-139 backdrop class · `8906dc7` B-140+B-141 refactor · `1264fc1` B-141 hot · `6249d3b` B-142 CSS scale · `2081bcf`+`c728434` diagnostic · `df6e48d`+`a5b7714` B-143 REAL · `00c5fde`+`5eed8ac`+`8136a8b` polish · `3d03ba3`+`2d2ceda` B-145 lines→bars+toggle · `36ecabb` матове скло · `64dbdac` B-146 handleOnly · `8d5ba79` B-147 polish · `cd708fc`+`a3bd691` латте gradient · `d111601` B-148 Y-шкала · `54f4dcb` B-149 skip-auto-swipe · `2050c7e`+`401c669` B-150 calendar SVG.
+
+---
+
+## 2026-05-06 — MPVly-day2 (rev 1): silent-bug-scout 4-pack (B-128/129/130/131) + i18n 110 рядків
 
 **Гілка:** `claude/start-session-MPVly` · 1 fix-коміт · v? → v?
 
