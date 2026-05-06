@@ -22412,9 +22412,11 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
     const prevScroll = scrollEl.scrollTop;
     const activeId = document.activeElement?.id || "";
     const activeSelStart = document.activeElement?.selectionStart;
-    scrollEl.innerHTML = _buildAnalyticsContent(getFinance());
-    logError("log", `[analytics-refresh] OK mode=${_analyticsChartMode} idx=[${_analyticsMiniIdx.join(",")}] htmlLen=${scrollEl.innerHTML.length}`, "finance-analytics");
-    scrollEl.scrollTop = prevScroll;
+    const newScrollEl = scrollEl.cloneNode(false);
+    newScrollEl.innerHTML = _buildAnalyticsContent(getFinance());
+    scrollEl.parentNode.replaceChild(newScrollEl, scrollEl);
+    logError("log", `[analytics-refresh] OK mode=${_analyticsChartMode} idx=[${_analyticsMiniIdx.join(",")}] htmlLen=${newScrollEl.innerHTML.length}`, "finance-analytics");
+    newScrollEl.scrollTop = prevScroll;
     if (activeId) {
       const el = document.getElementById(activeId);
       if (el && typeof el.focus === "function") {
