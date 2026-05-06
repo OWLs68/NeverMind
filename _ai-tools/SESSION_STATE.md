@@ -8,7 +8,7 @@
 
 ---
 
-## 🔧 Поточна сесія MPVly-day2 — silent-bug-scout 4-pack (B-128/129/130/131) + i18n 110 рядків (06.05.2026)
+## 🔧 Поточна сесія MPVly-day2 — silent-bug-scout 4-pack + i18n 110 + Аналітика redesign + Council 5 агентів (06.05.2026)
 
 ### Зроблено
 
@@ -16,52 +16,98 @@
 
 1. **B-128 drum-col mask-image** (`style.css:1505-1517`) — той самий клас бага що Settings UvEHE 03.05. `event-edit-modal` + `health-dt-picker-modal` обидва мають parent `backdrop-filter:blur(32px)+overflow:hidden`. На iOS Safari при scroll барабана дати/часу composite layer ламався → модалка стискалась. Не проявилось ще тільки бо barrel рідко відкривається. Фікс: видалено `mask-image` / `-webkit-mask-image` — fade на краях прибрано (border ramp + центральна acent-смуга залишилися). Знайдено `silent-bug-scout` агентом проактивно.
 2. **B-129 set_reminder без t()** (`habits.js:1452`) — `addMsg('agent', \`⏰ Нагадаю о ${time}: "${text}"\`)` стояв необгорнутим хоч `delete_reminder` поряд був повністю обгорнутий (B-126 з MPVly day1). Фікс: `t('habits.reminder.set.ok', '⏰ Нагадаю о {time}: "{text}"', { time, text })`.
-3. **B-130 reminder cross-tab silent failure** (`boot.js:177-187`) — `set_reminder`/`delete_reminder` диспатчили `nm-data-changed` з `detail:'reminder'`, але `DETAIL_TO_KEY` не мала цього ключа → `handleSyncKey` не викликався → друга вкладка не оновлювалась. Зараз непомітно (1 девайс), станеться видно з Supabase. Фікс: `'reminder': 'nm_reminders'` у мапу.
-4. **B-131 sendClarifyText без aiLoading guard** (`inbox.js:1048`) — при відкритому clarify aiLoading=false (бо `aiLoading=false` встановлено перед `showClarify`); Send у головному Inbox не блокувався → дві паралельні AI-відповіді можливі. **Bonus** знайдено по дорозі: `let primaryHandled = false` оригінально оголошено всередині `if (msg.tool_calls && ...)` блоку, а `else if (!primaryHandled)` посилався поза тим scope → ReferenceError-prone. Фікс: `if (aiLoading) return; aiLoading = true; try { ... } finally { aiLoading = false; }` + `primaryHandled` піднято на верх try.
+3. **B-130 reminder cross-tab silent failure** (`boot.js:177-187`) — `set_reminder`/`delete_reminder` диспатчили `nm-data-changed` з `detail:'reminder'`, але `DETAIL_TO_KEY` не мала цього ключа → `handleSyncKey` не викликався → друга вкладка не оновлювалась. Фікс: `'reminder': 'nm_reminders'` у мапу.
+4. **B-131 sendClarifyText без aiLoading guard** (`inbox.js:1048`) — при відкритому clarify aiLoading=false → дві паралельні AI-відповіді можливі. Bonus: `let primaryHandled` scope leak ReferenceError-prone. Фікс: try/finally + flag piднято на верх.
 
 #### B. i18n обгортка 110 рядків (4 файли)
 
-5. **`habits.js`** (~50 рядків у `processUniversalAction`) — create_task, edit_task, delete_task, edit_habit, delete_habit, complete_*, add_step, add_moment, create_habit, create_event, edit_event, delete_event, edit_note, create_folder, delete_folder, move_note, save_finance amount-error, set_reminder time-empty, save_routine + `Пн-Нд` для habit dots + `N% за 30 днів`.
-6. **`health.js`** (~34 рядки `buildHealthExportText`) — МЕДИЧНА КАРТКА, АЛЕРГІЇ, АКТИВНІ СТАНИ, ВСІ ПРЕПАРАТИ, ВІЗИТИ ДО ЛІКАРЯ, ЗАВЕРШЕНІ СТАНИ, disclaimer.
-7. **`nav.js`** (~10) — TAB_LABELS для tab-order list (`Продуктив./Нотатки/Я/Вечір/Фінанси/Здоров'я/Проекти`) + memory source (`фон/вручну/стара пам'ять/онбординг`). ALL_TABS_CONFIG.label не чіпав через `ALL_TABS_CONFIG.map(function(t) { ... t.id })` — параметр `t` shadows import `t` (це окремий силент-баг — див. Відкладене).
-8. **`finance-analytics.js`** (~15) — Найбільша операція, Прогноз місяця, Доходи місяця, Розподіл доходу edit, benchmark warnings (Готово/Скинути до 50/30/20/(ціль X%)).
+5. `habits.js` (~50) processUniversalAction addMsg + Пн-Нд + N% за 30 днів. `health.js` (~34) buildHealthExportText. `nav.js` (~10) TAB_LABELS + memory source. `finance-analytics.js` (~15) metric labels + benchmark. baseline 685 → 575 (-110).
 
-baseline `i18n-baseline.json`: 685 → 575 необгорнутих (-110, -16%).
+#### C. TESTS_TODO.md — чек-ліст ручного тестування
 
-#### C. TESTS_TODO.md — чек-ліст ручного тестування (1 файл)
+#### D. Хвости (B-132 + B-133)
 
-9. **`TESTS_TODO.md`** у корені — 5 розділів (4 баги + i18n smoke), 12 кроків тестування на iPhone PWA + десктопі. Перерахування ризиків: B-128 (барабан події), B-129 (set_reminder text), B-130 (cross-tab), B-131 (clarify race), i18n (5 точок).
+10. **B-132 nav.js openTabSelector t-shadow** — `function(t)` shadows import `t` → TypeError при відкритті tab-selector. Фікс: `t → cfg`, `cfg.label` обгорнуто `t('tab.' + cfg.id, cfg.label)`.
+11. **B-133 calendar.js routine-panel swipe duplicate** — `setupModalSwipeClose` викликалась з 2 opener'ів. Фікс: helper `_ensureRoutineSwipeClose()`.
+
+#### E. iPhone smoke-test live з Романом (Блоки 1-9) — критичний live debugging день
+
+12. **B-134 AI auto-reminder без слова "нагадай"** — Роман натиснув чіп «Розкажи про день», описав день з фразою «завтра закінчу її» → AI створив **подію** + **set_reminder** без явного запиту. Council `prompt-engineer-auditor` Sonnet знайшов 4 точки. Фікси: REMINDER_RULES жорстке правило «set_reminder ТIЛЬКИ за явним «нагадай»», create_event description ban на рефлексії/підсумки, getOwlChatSystemPrompt ПРАВИЛА з 2 заборонами, G13 BRAIN DUMP застереження проти «завтра» auto-trigger.
+
+#### F. Memory modal (B-135 + B-136 + B-137 + B-149)
+
+13. **B-135** скрол по картках закривав модалку — `tasks.js:72` whitelist додано `#memory-cards-list`.
+14. **B-136** «↻ Оновити через OWL» зависала disabled назавжди при reject AI-запиту — `try/finally` гарантує btn.disabled=false.
+15. **B-137** ДУБЛЬ id="memory-refresh-btn" у HTML (settings card + modal button) — getElementById повертав settings, мутував textContent у Налаштуваннях, modal-кнопка лишалася disabled. Фікс: split на `memory-refresh-btn-settings` + `memory-refresh-btn-modal`.
+16. **B-149** `modal-overlay-sync._setupSwipeClose` вішав свій listener на init → handleOnly не діяв. Фікс: `data-skip-auto-swipe="1"` атрибут на `#memory-modal` + skip перевірка у sync.
+
+#### G. Аналітика Фінансів — повний redesign (B-138 → B-148)
+
+17. **6 фіксів-наосліп B-138..B-141** провалились: dy>8 поріг, _findChildOverlay class match, removeWatcher, refactor на event-edit pattern, прибирання setupModalSwipeClose. Жоден не був коренем.
+18. **B-142 (CSS scale)** — Council 5 агентів Sonnet знайшов: `button:active { transform: scale(0.87) }` без override для children модалок створював composite layer на iOS → click cancel. Фікс: extended override `[id$="-modal"] button:active { transform:none }`. Це **глобальний баг ВСІХ модалок**.
+19. **B-143 REAL КОРІНЬ Аналітики** — `_refreshAnalyticsContent` шукав `modal.querySelector('div[style*="overflow-y:auto"]')`. Браузер нормалізував inline style → `overflow-y: auto` зі space → substring не match → scrollEl=null → `if(!scrollEl) return` → DOM ніколи не оновлювався. Юзер бачив зміни ТIЛЬКИ після close+open. Фікс: `id="fin-analytics-scroll"` + `getElementById`. + `cloneNode/replaceChild` для force iOS DOM update.
+20. **B-144 viewBox cosmetic** — `viewBox 100x100` + контейнер 4:1 → лінія тонка по горизонталі. Фікс: `viewBox 0 0 400 100` пропорційний + stroke 4 + r 5.
+21. **B-145 redesign графіків** — 8→7 точок. Витрати/Доходи bars з рамкою. Капітал лінія. Перемикач «Тижні / Дні» спільний для всіх 3 режимів. Daily mode 7 останніх днів. State `_analyticsGranularity`.
+22. **B-146 handleOnly swipe-close mode** — нова опція у `setupModalSwipeClose` — closes ТIЛЬКИ при touchstart на `.modal-handle`. Аналітика і Memory модалки використовують. Кнопки/контент свайп ігнорують.
+23. **B-147 polish графіки** — рамка тільки навколо bars. Дати+суми ПIД рамкою (3 окремі flex-рядки). Max bar 80→90px.
+24. **B-148 Y-шкала Капітал** — 50px колонка зліва max/min (або max/0/min якщо мінус). viewBox 0 0 400 100 + y range 8..92.
+25. **Стрілки міні-метрик** — латте gradient `#a67c52→#7a4e2d` + box-shadow (стандарт `style.css:623`). Раніше пропонував фіолетовий — ❌ training-bias.
+26. **Матове скло Аналітики** + **внутрішня рамка** навколо графіка (як інші bottom-sheets).
+
+#### H. Календарна модалка (B-150)
+
+27. **Блок «Події·Травень»** + **«Найближче»** + **Day-Schedule timeline** — текст подій уніфіковано до `#1e1040` (без синього `#3b82f6`). Сьогодні залишається помаранчевий. Emoji 📅/⏰/☑️ → SVG calendar icon stroke `rgba(0.55)` + 6px кольорова крапка-індикатор (синій=event, блакитний=task, бурштин=reminder — узгоджено з `inbox.js CAT_DOT_SOLID`). Helper `_calendarEventIcon(type)`.
 
 ### Обговорено (без виконання)
 
-- **silent-bug-scout #5 — `setupModalSwipeClose` двічі на routine-panel** (`calendar.js:595, 608`) — зараз працює завдяки `_swipeClose` guard у `tasks.js:63`, але fragile при будь-якому refactor `routine-panel`. Залишено на наступну сесію (10 хв).
-- **`nav.js openTabSelector` t-shadow** (`nav.js:202` `ALL_TABS_CONFIG.map(function(t)`) — параметр `t` shadows import `t` з `utils.js`. Виклик `t('nav.tabsel.always', 'завжди')` всередині цього map (line 212) спробує викликати об'єкт як функцію → **TypeError** при відкритті селектора активних вкладок. Не помічено бо модалка рідко відкривається. Знайшов дорогою при i18n обгортці. **Fix:** перейменувати параметр на `cfg`, замінити `t.id`/`t.label`/`t.svg`/`t.bg`/`t.accent` на `cfg.*`. ~15 хв з тестом. Залишено на наступну сесію.
+- **Фіолетовий заборонений у проекті** — Роман помітив що я повторно пропоную фіолет (training-bias Anthropic). DESIGN_SYSTEM.md:70 явно «Фіолет заборонений». Запропонував механіч hook (pre-push grep на нові `#7c3aed/#a78bfa/purple` як background) + lessons.md як перший анти-патерн + CLAUDE.md §9 уточнення. Роман відклав: «не сильно заважає».
+- **Проекти 60-65%** — наступна велика тема. ROADMAP line 236-242. 2-3 сесії: інтерв'ю-flow, 5 точок-стагнації, синк Витрати→Фінанси, аналітика. Окрема сесія зі свіжим контекстом.
+- **Cross-tab reminder тест (B-130)** — складно тестувати на 1 iPhone PWA, відкладено.
 
 ### Ключові рішення
 
-- **silent-bug-scout проактивний звіт ДО `/audit`** — перед обгортанням i18n запустив агента → 4 знахідки одразу + ще 1 в Відкладене. Виправлено 4 за одну сесію. Сценарій: «дивись по сторонам».
-- **NE чіпати `ALL_TABS_CONFIG.label` у openTabSelector** — `t` shadowed параметром map. Обгорнув TAB_LABELS (lines 335-338) і memory-source (lines 884-887) — це окремі точки.
-- **Скиннути baseline після обгортки** — `node check-i18n.js --update-baseline`. CI exit 0 з 575.
-- **TESTS_TODO.md як артефакт** — Роман явно попросив «пиши в файл що тестити».
+- **Council 5 паралельних агентів Sonnet — критичний механізм після 6 фіксів-наосліп B-138..B-141.** Знайшов 2 співпадаючі корені (CSS scale + animation forwards). Урок: правило #5 CLAUDE.md «Корінь vs симптом — 2-3 невдалі спроби → крок назад» — порушив на 5+ спробах. Council треба запускати з 2-ї невдалої спроби, не після 6-ї.
+- **Diagnostic logging замість фіксу-наосліп** — після 6 невдач додав `logError('log', ...)` у openFinAnalytics + click handlers + _refreshAnalyticsContent. Логи показали що функції викликаються, але `scrollEl=null` — це і дало B-143 REAL корінь.
+- **silent-bug-scout проактивно ДО /audit** — 5 знахідок за 6 хв. Сценарій «дивись по сторонам» працює.
+- **handleOnly swipe-close** як спільне рішення для Аналітики + Memory — модалки зі скрольним контентом ловлять свайп ТIЛЬКИ за полоску, не за контент.
+- **CACHE_NAME bump після КОЖНОЇ значимої зміни** — раніше пропускав, юзер бачив стару версію навіть з новим деплоєм. Тепер: фікс+bump в одному коміті.
 
 ### Інциденти
 
-- **Жодних регресій.** `node build.js` прохід чистий. `node check-i18n.js` exit 0. `node -c bundle.js` syntax OK.
-- **Збереглись `Date.now()` IDs у habits.js** create_event/set_reminder — supabase-migration-scout candidate, але це не нова регресія, лишаю як є.
+- **6 фіксів-наосліп B-138..B-141** — 5 спроб виправити «кнопки Аналітики не клікаються» провалилися. Реальний корінь B-143 (`scrollEl=null` через нормалізацію inline style браузером). 5 спроб коштували ~2 години + Роман вказав «не роби на осліп», після того запустив Council. **Це найбільший інцидент сесії — урок дисципліни.**
+- **CACHE_NAME пропустив на перших 3 комітах** — Роман побачив старий v707/v708 при тесті, не отримав мої фікси. Потім додавав bump до кожного коміту окремо.
+- Жодних git reset / push --force / skip hooks. Усі 152 коміти першою спробою.
 
 ### Конфлікти/суперечності
 
-- Жодних. silent-bug-scout звіт + i18n-finder звіт обидва дали чіткі рекомендації, виконано буквально.
+- **Фіолетовий ↔ Латте** — пропонував фіолет (`#1e1040 → #2d1a5c`) для стрілок метрик, Роман не задоволений → переробив на латте `#a67c52 → #7a4e2d`. Урок: training-bias Claude (Anthropic=фіолет), DESIGN_SYSTEM.md явно це забороняє.
+- **Знаття setupModalSwipeClose у B-141 hot vs повернення з handleOnly у B-146** — спочатку прибрав думаючи touch handler ламає click. Реальний корінь був у B-143. Потім повернув swipe-close з handleOnly опцією для UX (свайп вниз закриває).
+- **Аналітика linе-only vs bars** — спочатку (B-145) переробив усі 3 режими на лінії. Роман не задоволений → повернув bars для Витрат/Доходів, Капітал лишився лінія.
 
-### Хвости (B-132 + B-133) — закрито у doіграні цієї сесії
+### Метрики
 
-10. **B-132 nav.js openTabSelector t-shadow** (`nav.js:202`) — `ALL_TABS_CONFIG.map(function(t)` shadows import `t` з utils.js → TypeError при відкритті селектора активних вкладок. Фікс: параметр `function(t)` → `function(cfg)` + `t.*` → `cfg.*`; `cfg.label` обгорнуто динамічним ключем `t('tab.' + cfg.id, cfg.label)`. Aux callbacks 278/284 теж `c =>` для consistency.
-11. **B-133 calendar.js routine-panel swipe duplicate** (`calendar.js:595, 608`) — `setupModalSwipeClose` викликалась з двох opener'ів. Фікс: helper `_ensureRoutineSwipeClose()` з module-scope, обидва opener виклики через нього.
+- Коміти: `0c01a7b` → `401c669` = **152 коміти** за день (найбільша сесія)
+- Версії: v707 → v724+ (CI ще збирає останні)
+- CACHE_NAME: `nm-20260506-1230` → `nm-20260507-0110` (~25 bumps)
+- Гілка: `claude/start-session-MPVly`
+- baseline i18n: 685 → 575 (-110, -16%)
+- Закриті баги: B-128..B-150 (23 баги!)
+- Sonnet агенти: 4 запуски (silent-bug-scout, prompt-engineer-auditor, ios-bug-hunter, Council 5×general-purpose) — ~700K токенів
+
+### Спостереження Claude
+
+- Роман **дуже інтенсивна сесія** — 7+ годин live-debugging з iPhone, ~30 скрінів. Не втомлювався, передавав чіткі звіти.
+- Сигнал болю «А чо ти взагалі фіксиш на осліп? Там є правило» — критичний момент сесії, повернув мене до Council механізму. Без цього міг продовжити фіксити-наосліп ще години.
+- «Ти знов фіолетовий пропонуєш» — Роман помічає training-bias. Спостерігає мене як модель.
+- Швидкі переключення тем без закриття: тестив Аналітику → переключився на Календар → повернувся до Аналітики. Я тримав контекст бо все одне модалкове.
 
 ### Відкладене
 
-- **`onboarding.js` ~80 рядків** — Роман явно просив не чіпати, чекає редизайн.
-- **Supabase migration prep** — Date.now() IDs у habits.js нагадування + nm_reminders прямий localStorage.setItem (не через saveX). Окрема сесія з `/supabase-prep`.
+- **`onboarding.js` ~80 рядків i18n** — Роман явно просив не чіпати, чекає редизайн.
+- **Supabase migration prep** — Date.now() IDs у habits.js, прямий `localStorage.setItem` для nm_reminders. Окрема сесія `/supabase-prep`.
+- **Cross-tab reminder тест (B-130)** — потребує 2-х девайсів.
+- **Фіолетовий механічний hook + lessons.md урок** — Роман відклав «не сильно заважає». Залишається training-bias ризик.
+- **Проекти 60→100%** — наступна велика сесія. ROADMAP Active.
 
 ---
 
