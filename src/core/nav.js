@@ -846,7 +846,9 @@ function openMemoryModal() {
   renderMemoryCards();
   // B-92 fix (20.04 NRw8G): свайп вниз закриває модалку, як у інших панелях.
   const panel = modal.querySelector(':scope > div:last-child');
-  if (panel) setupModalSwipeClose(panel, closeMemoryModal);
+  // MPVly-day2 06.05 (B-146): handleOnly — свайп закриває тільки від полоски
+  // вгорі (.modal-handle), не по картках фактів (юзер скролить список).
+  if (panel) setupModalSwipeClose(panel, closeMemoryModal, { handleOnly: true });
 }
 
 function closeMemoryModal() {

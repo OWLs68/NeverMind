@@ -416,10 +416,10 @@ export function openFinAnalytics() {
       </div>
     </div>`;
   document.body.appendChild(modal);
-  // DIAGNOSTIC (B-142+): чи функції на window? чи modal має DOM?
-  logError('log', `[analytics-open] window.setMode=${typeof window.setAnalyticsChartMode} window.shiftMini=${typeof window.shiftAnalyticsMini} window.toggleEdit=${typeof window.toggleAnalyticsBenchmarkEdit}`, 'finance-analytics');
+  // MPVly-day2 06.05 (B-146): swipe-close ТIЛЬКИ від полоски (.modal-handle).
+  // По кнопках/контенту тач не ловиться → click event працює.
   const card = modal.querySelector(':scope > div');
-  if (card) card._swipeClose = true;
+  if (card) setupModalSwipeClose(card, closeFinAnalytics, { handleOnly: true });
 }
 
 export function closeFinAnalytics() {

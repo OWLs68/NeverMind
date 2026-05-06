@@ -15130,13 +15130,18 @@ ${JSON.stringify(contextData, null, 2)}` : "";
     document.getElementById("task-modal").style.display = "flex";
     setupModalSwipeClose(document.querySelector("#task-modal > div:last-child"), closeTaskModal);
   }
-  function setupModalSwipeClose(contentEl, closeFn) {
+  function setupModalSwipeClose(contentEl, closeFn, options = {}) {
     if (!contentEl || contentEl._swipeClose) return;
     contentEl._swipeClose = true;
     const swipeRoot = contentEl.parentElement || contentEl;
+    const handleOnly = !!options.handleOnly;
     let startY = 0, startX = 0, dy = 0, _swipeBlocked = false;
     swipeRoot.addEventListener("touchstart", (e) => {
-      _swipeBlocked = !!e.target.closest(".drum-col, .drum-item, .settings-scroll, #memory-cards-list, input, textarea, select");
+      if (handleOnly) {
+        _swipeBlocked = !e.target.closest(".modal-handle");
+      } else {
+        _swipeBlocked = !!e.target.closest(".drum-col, .drum-item, .settings-scroll, #memory-cards-list, input, textarea, select");
+      }
       startY = e.touches[0].clientY;
       startX = e.touches[0].clientX;
       dy = 0;
@@ -21076,7 +21081,7 @@ ${logLines}
     modal.style.display = "flex";
     renderMemoryCards();
     const panel = modal.querySelector(":scope > div:last-child");
-    if (panel) setupModalSwipeClose(panel, closeMemoryModal);
+    if (panel) setupModalSwipeClose(panel, closeMemoryModal, { handleOnly: true });
   }
   function closeMemoryModal() {
     document.getElementById("memory-modal").style.display = "none";
@@ -22477,9 +22482,8 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
       </div>
     </div>`;
     document.body.appendChild(modal);
-    logError("log", `[analytics-open] window.setMode=${typeof window.setAnalyticsChartMode} window.shiftMini=${typeof window.shiftAnalyticsMini} window.toggleEdit=${typeof window.toggleAnalyticsBenchmarkEdit}`, "finance-analytics");
     const card = modal.querySelector(":scope > div");
-    if (card) card._swipeClose = true;
+    if (card) setupModalSwipeClose(card, closeFinAnalytics, { handleOnly: true });
   }
   function closeFinAnalytics() {
     document.getElementById("fin-analytics-modal")?.remove();
