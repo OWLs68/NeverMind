@@ -12,6 +12,7 @@ import { setupModalSwipeClose } from './tasks.js';
 
 // State аналітики
 let _analyticsChartMode = 'expenses-weekly'; // 'balance' | 'expenses-weekly' | 'income-vs-expense'
+let _analyticsGranularity = 'weekly'; // 'weekly' | 'daily' — спільний для всіх 3 режимів
 let _analyticsMiniIdx = [0, 0, 0]; // 3 незалежні блоки міні-метрик
 let _analyticsBenchmarkEdit = false; // режим редагування benchmark
 
@@ -24,94 +25,137 @@ function _buildAnalyticsContent(allTxs) {
 }
 
 // B-62 Крок 1: Головний графік з 3 метриками на вибір.
-// MPVly-day2 06.05 (B-145): 8 → 7 тижнів. Усі 3 режими тепер ЛIНIЇ
-// замість bars/точок різного типу — однорідний вигляд.
+// MPVly-day2 06.05 (B-145): 7 точок + перемикач weekly/daily (спільний для
+// всіх 3 режимів). Капітал = лінія (накопичувальний). Витрати/Доходи = bars.
 function _analyticsChart(allTxs) {
   const now = new Date();
-  const WEEKS = 7;
-  const weeks = [];
-  for (let w = WEEKS - 1; w >= 0; w--) {
-    const weekEnd = new Date(now);
-    weekEnd.setDate(now.getDate() - w * 7);
-    weekEnd.setHours(23, 59, 59, 999);
-    const weekStart = new Date(weekEnd);
-    weekStart.setDate(weekEnd.getDate() - 6);
-    weekStart.setHours(0, 0, 0, 0);
-    const exp = allTxs.filter(t => t.type === 'expense' && t.ts >= weekStart.getTime() && t.ts <= weekEnd.getTime()).reduce((s, t) => s + t.amount, 0);
-    const inc = allTxs.filter(t => t.type === 'income' && t.ts >= weekStart.getTime() && t.ts <= weekEnd.getTime()).reduce((s, t) => s + t.amount, 0);
-    const label = `${weekStart.getDate()}.${String(weekStart.getMonth() + 1).padStart(2, '0')}`;
-    weeks.push({ label, exp, inc, isCurrent: w === 0 });
+  const POINTS = 7;
+  const isDaily = _analyticsGranularity === 'daily';
+  const buckets = [];
+  // Будуємо 7 точок (тижнів або днів) з даними
+  for (let i = POINTS - 1; i >= 0; i--) {
+    const end = new Date(now);
+    let start;
+    if (isDaily) {
+      end.setDate(now.getDate() - i);
+      end.setHours(23, 59, 59, 999);
+      start = new Date(end);
+      start.setHours(0, 0, 0, 0);
+    } else {
+      end.setDate(now.getDate() - i * 7);
+      end.setHours(23, 59, 59, 999);
+      start = new Date(end);
+      start.setDate(end.getDate() - 6);
+      start.setHours(0, 0, 0, 0);
+    }
+    const exp = allTxs.filter(t => t.type === 'expense' && t.ts >= start.getTime() && t.ts <= end.getTime()).reduce((s, t) => s + t.amount, 0);
+    const inc = allTxs.filter(t => t.type === 'income' && t.ts >= start.getTime() && t.ts <= end.getTime()).reduce((s, t) => s + t.amount, 0);
+    const label = `${start.getDate()}.${String(start.getMonth() + 1).padStart(2, '0')}`;
+    buckets.push({ label, exp, inc, isCurrent: i === 0 });
   }
 
-  // Капітал = накопичувальний баланс
+  // Капітал = накопичувальний баланс на кінець кожної точки
   const balances = [];
   let cumBalance = 0;
-  const firstWeekStart = new Date(now);
-  firstWeekStart.setDate(now.getDate() - (WEEKS - 1) * 7 - 6);
-  firstWeekStart.setHours(0, 0, 0, 0);
-  allTxs.filter(t => t.ts < firstWeekStart.getTime()).forEach(t => {
+  const firstStart = new Date(now);
+  if (isDaily) {
+    firstStart.setDate(now.getDate() - (POINTS - 1));
+  } else {
+    firstStart.setDate(now.getDate() - (POINTS - 1) * 7 - 6);
+  }
+  firstStart.setHours(0, 0, 0, 0);
+  allTxs.filter(t => t.ts < firstStart.getTime()).forEach(t => {
     cumBalance += (t.type === 'income' ? t.amount : -t.amount);
   });
-  weeks.forEach(w => { cumBalance += w.inc - w.exp; balances.push(cumBalance); });
+  buckets.forEach(b => { cumBalance += b.inc - b.exp; balances.push(cumBalance); });
 
   const modes = [
     { id: 'balance',          label: t('finstat.chart.balance_label', 'Капітал'),  desc: t('finstat.chart.balance_desc', 'Накопичувальний баланс') },
-    { id: 'expenses-weekly',  label: t('finstat.chart.expenses_label', 'Витрати'),  desc: t('finstat.chart.expenses_desc', 'Сума витрат по тижнях') },
+    { id: 'expenses-weekly',  label: t('finstat.chart.expenses_label', 'Витрати'),  descW: t('finstat.chart.expenses_desc', 'Сума витрат по тижнях'), descD: t('finstat.chart.expenses_desc_d', 'Сума витрат по днях') },
     { id: 'income-vs-expense',label: t('finstat.chart.income_label', 'Доходи'),   desc: t('finstat.chart.income_vs_exp', 'Доходи vs витрати') },
   ];
-  const toggleHtml = `<div style="display:flex;gap:4px;background:rgba(30,16,64,0.04);border-radius:10px;padding:3px;margin-bottom:10px">
+  const modeToggleHtml = `<div style="display:flex;gap:4px;background:rgba(30,16,64,0.04);border-radius:10px;padding:3px;margin-bottom:8px">
     ${modes.map(m => {
       const active = m.id === _analyticsChartMode;
       return `<button onclick="setAnalyticsChartMode('${m.id}')" style="flex:1;padding:6px;border-radius:8px;border:none;background:${active ? 'white' : 'transparent'};color:${active ? '#c2410c' : 'rgba(30,16,64,0.5)'};font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;box-shadow:${active ? '0 2px 6px rgba(30,16,64,0.08)' : 'none'}">${m.label}</button>`;
     }).join('')}
   </div>`;
+  // Перемикач Тижні / Дні — спільний для всіх 3 режимів
+  const granToggleHtml = `<div style="display:flex;gap:6px;justify-content:flex-end;margin-bottom:6px">
+    <button onclick="setAnalyticsGranularity('weekly')" style="padding:4px 10px;border-radius:7px;border:none;background:${!isDaily ? '#1e1040' : 'rgba(30,16,64,0.06)'};color:${!isDaily ? 'white' : 'rgba(30,16,64,0.5)'};font-size:10px;font-weight:700;cursor:pointer;font-family:inherit">${t('finstat.gran.weekly', 'Тижні')}</button>
+    <button onclick="setAnalyticsGranularity('daily')" style="padding:4px 10px;border-radius:7px;border:none;background:${isDaily ? '#1e1040' : 'rgba(30,16,64,0.06)'};color:${isDaily ? 'white' : 'rgba(30,16,64,0.5)'};font-size:10px;font-weight:700;cursor:pointer;font-family:inherit">${t('finstat.gran.daily', 'Дні')}</button>
+  </div>`;
   const modeObj = modes.find(m => m.id === _analyticsChartMode) || modes[1];
+  const subtitle = _analyticsChartMode === 'expenses-weekly'
+    ? (isDaily ? modeObj.descD : modeObj.descW)
+    : modeObj.desc;
+  const periodLabel = isDaily
+    ? t('finstat.chart.days_suffix', '7 днів')
+    : t('finstat.chart.weeks_suffix', '7 тижнів');
 
-  // Helper для лінійного графіку — усі 3 режими використовують
-  const _buildLine = (values, color, range, minV) => {
-    const pts = values.map((v, i) => {
-      const x = (i / (WEEKS - 1)) * 400;
-      const y = 100 - ((v - minV) / range) * 100;
-      return `${x},${y}`;
-    }).join(' ');
-    const dots = values.map((v, i) => {
-      const x = (i / (WEEKS - 1)) * 400;
-      const y = 100 - ((v - minV) / range) * 100;
-      return `<circle cx="${x}" cy="${y}" r="5" fill="${color}"/>`;
-    }).join('');
-    return `<polyline points="${pts}" fill="none" stroke="${color}" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>${dots}`;
-  };
-
-  let chartSvg = '';
-  let extraBelow = '';
+  let chartHtml = '';
   if (_analyticsChartMode === 'balance') {
+    // Капітал — лінія
     const minB = Math.min(0, ...balances);
     const maxB = Math.max(1, ...balances);
     const range = maxB - minB || 1;
+    const pts = balances.map((b, i) => {
+      const x = (i / (POINTS - 1)) * 400;
+      const y = 100 - ((b - minB) / range) * 100;
+      return `${x},${y}`;
+    }).join(' ');
     const zeroY = 100 - ((0 - minB) / range) * 100;
-    chartSvg = `<line x1="0" y1="${zeroY}" x2="400" y2="${zeroY}" stroke="rgba(30,16,64,0.12)" stroke-width="1" stroke-dasharray="3,3"/>${_buildLine(balances, '#0ea5e9', range, minB)}`;
-    extraBelow = `<div style="font-size:10px;color:rgba(30,16,64,0.4);margin-top:6px;text-align:center">${t('finstat.chart.current', 'Поточний')}: <span style="color:#0ea5e9;font-weight:700">${formatMoney(cumBalance)}</span></div>`;
+    chartHtml = `<svg viewBox="-12 -12 424 124" preserveAspectRatio="none" style="width:100%;height:100px;display:block">
+      <line x1="0" y1="${zeroY}" x2="400" y2="${zeroY}" stroke="rgba(30,16,64,0.12)" stroke-width="1" stroke-dasharray="3,3"/>
+      <polyline points="${pts}" fill="none" stroke="#0ea5e9" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+      ${balances.map((b, i) => {
+        const x = (i / (POINTS - 1)) * 400;
+        const y = 100 - ((b - minB) / range) * 100;
+        return `<circle cx="${x}" cy="${y}" r="5" fill="#0ea5e9"/>`;
+      }).join('')}
+    </svg>
+    <div style="display:flex;gap:2px;margin-top:4px">${buckets.map(b => `<div style="flex:1;font-size:9px;font-weight:${b.isCurrent?'700':'500'};color:${b.isCurrent?'#c2410c':'rgba(30,16,64,0.35)'};text-align:center">${b.label}</div>`).join('')}</div>
+    <div style="font-size:10px;color:rgba(30,16,64,0.4);margin-top:6px;text-align:center">${t('finstat.chart.current', 'Поточний')}: <span style="color:#0ea5e9;font-weight:700">${formatMoney(cumBalance)}</span></div>`;
   } else if (_analyticsChartMode === 'expenses-weekly') {
-    const expVals = weeks.map(w => w.exp);
-    const maxV = Math.max(1, ...expVals);
-    chartSvg = _buildLine(expVals, '#f97316', maxV, 0);
+    // Витрати — bars (помаранчеві)
+    const maxVal = Math.max(1, ...buckets.map(b => b.exp));
+    const barsHtml = buckets.map(b => {
+      const h = b.exp > 0 ? Math.max(4, Math.round(b.exp / maxVal * 80)) : 0;
+      const col = b.isCurrent ? '#c2410c' : '#f97316';
+      return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;min-width:0">
+        <div style="flex:1;width:100%;display:flex;align-items:flex-end;justify-content:center">
+          <div style="width:70%;height:${h}px;background:${col};border-radius:3px 3px 0 0"></div>
+        </div>
+        <div style="font-size:9px;font-weight:${b.isCurrent?'700':'500'};color:${b.isCurrent?'#c2410c':'rgba(30,16,64,0.35)'};margin-top:4px">${b.label}</div>
+        ${b.exp > 0 ? `<div style="font-size:8px;font-weight:600;color:rgba(30,16,64,0.4);margin-top:1px">${formatMoney(b.exp)}</div>` : ''}
+      </div>`;
+    }).join('');
+    chartHtml = `<div style="display:flex;gap:3px;align-items:flex-end;height:100px">${barsHtml}</div>`;
   } else {
-    const expVals = weeks.map(w => w.exp);
-    const incVals = weeks.map(w => w.inc);
-    const maxV = Math.max(1, ...expVals, ...incVals);
-    chartSvg = _buildLine(expVals, '#f97316', maxV, 0) + _buildLine(incVals, '#16a34a', maxV, 0);
-    extraBelow = `<div style="display:flex;gap:10px;justify-content:center;margin-top:6px">
+    // Доходи vs Витрати — двоколірні bars
+    const maxVal = Math.max(1, ...buckets.map(b => Math.max(b.exp, b.inc)));
+    const barsHtml = buckets.map(b => {
+      const expH = b.exp > 0 ? Math.max(4, Math.round(b.exp / maxVal * 80)) : 0;
+      const incH = b.inc > 0 ? Math.max(4, Math.round(b.inc / maxVal * 80)) : 0;
+      return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:0;min-width:0">
+        <div style="flex:1;width:100%;display:flex;gap:2px;align-items:flex-end">
+          <div style="flex:1;height:${expH}px;background:#f97316;border-radius:3px 3px 0 0"></div>
+          <div style="flex:1;height:${incH}px;background:#16a34a;border-radius:3px 3px 0 0"></div>
+        </div>
+        <div style="font-size:9px;font-weight:${b.isCurrent?'700':'500'};color:${b.isCurrent?'#c2410c':'rgba(30,16,64,0.35)'};margin-top:4px">${b.label}</div>
+      </div>`;
+    }).join('');
+    chartHtml = `<div style="display:flex;gap:4px;align-items:flex-end;height:100px">${barsHtml}</div>
+    <div style="display:flex;gap:10px;justify-content:center;margin-top:6px">
       <div style="display:flex;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:50%;background:#f97316"></div><span style="font-size:10px;font-weight:600;color:rgba(30,16,64,0.4)">${t('finstat.legend.expenses', 'Витрати')}</span></div>
       <div style="display:flex;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:50%;background:#16a34a"></div><span style="font-size:10px;font-weight:600;color:rgba(30,16,64,0.4)">${t('finstat.legend.income', 'Доходи')}</span></div>
     </div>`;
   }
-  const chartHtml = `<svg viewBox="-12 -12 424 124" preserveAspectRatio="none" style="width:100%;height:100px;display:block">${chartSvg}</svg>
-    <div style="display:flex;gap:2px;margin-top:4px">${weeks.map(w => `<div style="flex:1;font-size:9px;font-weight:${w.isCurrent?'700':'500'};color:${w.isCurrent?'#c2410c':'rgba(30,16,64,0.35)'};text-align:center">${w.label}</div>`).join('')}</div>
-    ${extraBelow}`;
 
   return `<div style="background:white;border-radius:20px;box-shadow:0 2px 12px rgba(30,16,64,0.06);padding:14px;margin-bottom:12px">
-    ${toggleHtml}
-    <div style="font-size:11px;color:rgba(30,16,64,0.4);margin-bottom:8px">${escapeHtml(modeObj.desc)} · ${t('finstat.chart.weeks_suffix', '7 тижнів')}</div>
+    ${modeToggleHtml}
+    ${granToggleHtml}
+    <div style="font-size:11px;color:rgba(30,16,64,0.4);margin-bottom:8px">${escapeHtml(subtitle)} · ${periodLabel}</div>
     ${chartHtml}
   </div>`;
 }
@@ -385,6 +429,7 @@ export function closeFinAnalytics() {
 
 // === Обробники ===
 export function setAnalyticsChartMode(mode) { logError('log', `[analytics-click] setAnalyticsChartMode(${mode})`, 'finance-analytics'); _analyticsChartMode = mode; _refreshAnalyticsContent(); }
+export function setAnalyticsGranularity(g) { _analyticsGranularity = g; _refreshAnalyticsContent(); }
 export function shiftAnalyticsMini(blockIdx, delta) {
   logError('log', `[analytics-click] shiftAnalyticsMini(${blockIdx}, ${delta})`, 'finance-analytics');
   _analyticsMiniIdx[blockIdx] = (_analyticsMiniIdx[blockIdx] + delta + 999) % 9;
@@ -405,6 +450,6 @@ export function resetBenchmarkConfig() {
 // === Window exports (для inline onclick у HTML) ===
 Object.assign(window, {
   openFinAnalytics, closeFinAnalytics,
-  setAnalyticsChartMode, shiftAnalyticsMini, toggleAnalyticsBenchmarkEdit,
+  setAnalyticsChartMode, setAnalyticsGranularity, shiftAnalyticsMini, toggleAnalyticsBenchmarkEdit,
   setBenchmarkField, resetBenchmarkConfig,
 });
