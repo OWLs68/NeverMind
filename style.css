@@ -1559,9 +1559,17 @@ button:active,
    по фону, але глобальне [onclick]:active scale(0.87) скейлило ВСЮ
    модалку при будь-якому tap всередині (event bubbles до overlay).
    Це 4-й корінь scale-glitch у settings (mask-image, flex, nested
-   backdrop-filter, body-lock були false leads). */
+   backdrop-filter, body-lock були false leads).
+   MPVly-day2 06.05 (B-142): додано селектори для button/[onclick] ВСЕРЕДИНІ
+   модалок. Override line 1563 скасовує scale тільки на сам modal-div, але
+   children button:active отримували scale(0.87) → iOS Safari cancel click
+   event (composite layer mismatch при transform під час тапу). Кнопки у
+   Аналітиці, fin-budget, fin-all-txs, settings drawer — мертві. Голова
+   зробив 5 фіксів-наосліп; ось РЕАЛЬНИЙ корінь — Council Свіжий погляд. */
 #settings-overlay:active,
 [id$="-modal"]:active,
+[id$="-modal"] button:active,
+[id$="-modal"] [onclick]:active,
 #help-drawer-dim:active {
   transform: none;
 }

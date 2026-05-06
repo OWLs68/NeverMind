@@ -22436,7 +22436,7 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
     const allTxs = getFinance();
     const content = _buildAnalyticsContent(allTxs);
     modal.innerHTML = `
-    <div style="position:relative;width:100%;max-width:480px;background:white;border-radius:24px 24px 0 0;z-index:1;max-height:92vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 -4px 24px rgba(30,16,64,0.1);animation:slideUp 0.3s ease-out;pointer-events:auto">
+    <div style="position:relative;width:100%;max-width:480px;background:white;border-radius:24px 24px 0 0;z-index:1;max-height:92vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 -4px 24px rgba(30,16,64,0.1);animation:slideUp 0.3s ease-out forwards;pointer-events:auto">
       <div class="modal-handle" style="margin:8px auto"></div>
       <div style="padding:0 16px 8px;text-align:center">
         <div style="font-size:17px;font-weight:800;color:#1e1040">\u{1F4CA} ${t("finstat.title", "\u0410\u043D\u0430\u043B\u0456\u0442\u0438\u043A\u0430")}</div>
@@ -22446,6 +22446,8 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
       </div>
     </div>`;
     document.body.appendChild(modal);
+    const card = modal.querySelector(":scope > div");
+    if (card) card._swipeClose = true;
   }
   function closeFinAnalytics() {
     document.getElementById("fin-analytics-modal")?.remove();
