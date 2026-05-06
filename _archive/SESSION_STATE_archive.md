@@ -1,5 +1,42 @@
 # SESSION_STATE — архів попередніх сесій
 
+## 🔧 Сесія RGisY — Шар 6 chip-system (5 фаз) + Council/Gemini синтез + B1+B2 (04.05.2026)
+
+### Зроблено
+
+#### A. B1 + B2 точкові фікси (2 коміти)
+1. **B1 — pre-push-check.js: SMOKE/CLEANUP тригери з тексту → git diff** (`1a41385`): корінь регресії 12+ false positives за UvEHE+rC4TO+NpBmN. Старі регекси `/міграц/` і `/(create|add|repeat|save)_/` матчили слова у текстових поясненнях Claude (commit messages, обговорення) — тепер шукають реальні зміни схеми у `git diff src/+sw.js` через `getRealCodeDiff()`. SMOKE_DIFF_TRIGGERS / CLEANUP_DIFF_TRIGGERS — нові регекси для `name:'create_*'` у tools-array, `function migrate*`, `nm_*_v*_done` прапори, `generateUUID()` точки. Bypass haystack-фрази `pre-push: ok` лишається.
+2. **B2 — silent-bug-scout правило + урок** (`a0fd9f1`): regression NpBmN 04.05 — агент звітував «stale bundle.js» не знаючи що `auto-merge.yml:108` його перегенеровує після merge у main. Регресія правила «Critic always reads» з 4xJ7n. Фікс: нова секція у `silent-bug-scout.md` «ПЕРЕД звітом про stale/missing/broken» — 4 перевірки (.gitignore, CI yml, build.js, git log). lessons.md урок у Анти-патерни.
+
+#### B. Шар 6 — 5 фаз (5 чекпоінт-комітів)
+3. **Phase 1 — saveChatMsg+chips для 7 чатів** (`d2f4f4b`, Р1): 7 чатів обривали 4-й параметр chips → reload бара = chips зникають з історії. Фікс точковий: 7 файлів × 1 рядок + addMsgMap.tasks branch у core.js:763.
+4. **Phase 2 — action='complete' як 5-й enum** (`6531ab8`, Р2): action='chat' мав ДВА семантичні значення (діалог + completion ✔️). Розв'язка: явний action='complete'.
+5. **Phase 3 — nm_chip_payloads denormalized + chip.id UUID** (`1343eb6`, Р7): payload жив inline у chat_log[].chips[].payload → ризик iPhone quota 5MB. Тепер payload у окремому ключі, chip.id === payloadId (1:1).
+6. **Phase 5 — saveChatMsg QuotaExceeded захист** (`46e4817`): try-catch у saveChatMsg раніше ковтав ВСІ помилки → юзер бачив «повідомлення зникають» без розуміння. Тепер console.error + on-screen toast один раз на сесію.
+7. **Phase 7 — Migration v10 + GC** (`f713667`): легалізує chip-формат у localStorage (~150-200 chips у 3 тестерів). Per-key backup `nm_chat_<tab>_backup_v10` (quota-safe). _gcChipPayloads weekly.
+
+#### B2. Регресія-фікси Phase 9 (3 коміти)
+8. **Phase 9 — 4 регресії** (`0e280ff`): Council регресія-сканер після Phase 1-7 знайшов 4 справжні баги (Inbox chips ігнор при restoreChatUI, filterStaleChips тільки за ✔️, backup_v10 живуть вічно, saveTabMessage без normalize).
+9. **Phase 9b — legacy fallback** (`88fc2a2`): edge-case міграції — `v10_done='1'` БЕЗ ts → таймер не запускається. Фікс: записуємо Date.now() якщо ts=0.
+10. **Phase 9c — Шари 3+4 у CHIP_PROMPT_RULES** (`bd862d5`): часові питання (4 чіпи) і destructive confirm (3 чіпи). Промпт-only підхід.
+
+#### C. ROADMAP оновлення + DATA_SCHEMA
+- ROADMAP Active Шар 6 переписано: формат «уніфікація формату» (формат уже єдиний — Verifier grep'нув) → «інфраструктурна гігієна + майбутнє-готовність».
+- DATA_SCHEMA.md: додано 5 нових ключів (`nm_chip_payloads`, `nm_chip_payloads_lastGC`, `nm_chips_v10_done`, `nm_chat_<tab>_backup_v10`, in-memory `_nm_quota_warned`).
+
+### Ключові рішення
+- Council 8 агентів + Gemini 3 раунди дав 4:1 проти Gemini-2 effects[] архітектурного підходу.
+- Точкові фікси > Big Bang для solo-dev на iPhone. 5 чекпоінт-комітів × 20-100 рядків.
+- chip.id === payloadId (економія поля + 1:1 mapping + простіший GC).
+
+### Метрики
+- Коміти: `1a41385` → `f713667` = 7 чекпоінт-комітів (B1+B2 + 5 фаз Шар 6).
+- CACHE_NAME: `nm-20260504-0210` → `nm-20260504-0907` (5 bumps).
+- Гілка: `claude/start-session-RGisY`. Council: 8 агентів + Gemini 3 раунди (~70K токенів агентами).
+- Ризиків Critic закрито: Р1 (Phase 1), Р2 (Phase 2), Р7 (Phase 3+5+7).
+
+---
+
 ## 🔧 Сесія rC4TO — silent failures trio + Health swipe-delete + Dynamic chips Шар 1 (04.05.2026)
 
 ### Зроблено
