@@ -840,6 +840,15 @@ function _renderInboxChatMsg(role, text, el, chips = null) {
   // не створювати static circular dependency core.js ↔ chips.js (вже двостороння).
   if (isAgent && Array.isArray(chips) && chips.length > 0) {
     import('../owl/chips.js').then(m => {
+      // MPVly 06.05 fix (Council Agent 2): cleanup ВНУТРІ async .then() щоб
+      // встигнути ПІСЛЯ resolve інших паралельних import()'ів. Раніше cleanup
+      // був синхронний (рядок 828) — при restore історії 4 agent повідомлень
+      // 4 import().then() запускались паралельно, кожен cleanup видаляв 0
+      // existing chipsRow (бо .then() ще не виконались) → кінцевий DOM мав 4
+      // chipsRow одночасно. Тепер кожен resolve очищає ВСІ попередні перед
+      // appendChild — у DOM лишається chipsRow тільки ОСТАННЬОГО resolve'у
+      // (= останнє повідомлення в історії, бо Promise FIFO у V8/JSC).
+      el.querySelectorAll('.chat-chips-row').forEach(n => n.remove());
       const chipsRow = document.createElement('div');
       chipsRow.className = 'chat-chips-row';
       m.renderChips(chipsRow, chips, 'inbox');
