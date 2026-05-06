@@ -15146,7 +15146,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
       if (_swipeBlocked) return;
       dy = e.touches[0].clientY - startY;
       const dx = Math.abs(e.touches[0].clientX - startX);
-      if (dy > 0 && dy > dx) {
+      if (dy > 8 && dy > dx) {
         contentEl.style.transform = `translateY(${dy}px)`;
       }
     }, { passive: true });
@@ -21837,7 +21837,7 @@ ${legacy}`;
       if (blocked) return;
       dy = e.touches[0].clientY - startY;
       const dx = Math.abs(e.touches[0].clientX - startX);
-      if (dy > 0 && dy > dx) {
+      if (dy > 8 && dy > dx) {
         card.style.transform = `translateY(${dy}px)`;
       }
     }, { passive: true });
