@@ -17099,9 +17099,9 @@ ${userText}
     const gapContext = gapMs > 5 * 60 * 1e3 ? `
 
 [\u041F\u0430\u0443\u0437\u0430 ${Math.round(gapMs / 6e4)} \u0445\u0432 \u2014 \u043C\u043E\u0436\u0435 \u0431\u0443\u0442\u0438 \u043D\u043E\u0432\u0430 \u0434\u0443\u043C\u043A\u0430, \u043D\u0435 \u043F\u0440\u043E\u0434\u043E\u0432\u0436\u0435\u043D\u043D\u044F]` : "";
-    const fullPrompt = aiContext ? `${INBOX_SYSTEM_PROMPT}${gapContext}
+    const fullPrompt = aiContext ? `${INBOX_SYSTEM_PROMPT}
 
-${aiContext}` : `${INBOX_SYSTEM_PROMPT}${gapContext}`;
+${aiContext}${gapContext}` : `${INBOX_SYSTEM_PROMPT}${gapContext}`;
     let aiText = text;
     if (fromChip) {
       try {

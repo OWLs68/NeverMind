@@ -489,7 +489,11 @@ export async function sendToAI(fromChip = false) {
   const gapContext = gapMs > 5 * 60 * 1000
     ? `\n\n[Пауза ${Math.round(gapMs/60000)} хв — може бути нова думка, не продовження]`
     : '';
-  const fullPrompt = aiContext ? `${INBOX_SYSTEM_PROMPT}${gapContext}\n\n${aiContext}` : `${INBOX_SYSTEM_PROMPT}${gapContext}`;
+  // MPVly 06.05 latency: gapContext перенесено у КІНЕЦЬ після aiContext.
+  // Раніше: INBOX_SYSTEM_PROMPT + gapContext + aiContext — gapContext ламав
+  // OpenAI auto-caching (1024+ токенів префіксу). Тепер static INBOX_SYSTEM_PROMPT
+  // йде ПЕРШИМ без перебоїв → cache hit на повторних запитах = -5x pre-fill.
+  const fullPrompt = aiContext ? `${INBOX_SYSTEM_PROMPT}\n\n${aiContext}${gapContext}` : `${INBOX_SYSTEM_PROMPT}${gapContext}`;
   // Якщо це відповідь на чіп — вставити повідомлення табло прямо в текст для AI
   let aiText = text;
   if (fromChip) {
