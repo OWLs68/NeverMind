@@ -53,10 +53,13 @@ baseline `i18n-baseline.json`: 685 → 575 необгорнутих (-110, -16%)
 
 - Жодних. silent-bug-scout звіт + i18n-finder звіт обидва дали чіткі рекомендації, виконано буквально.
 
+### Хвости (B-132 + B-133) — закрито у doіграні цієї сесії
+
+10. **B-132 nav.js openTabSelector t-shadow** (`nav.js:202`) — `ALL_TABS_CONFIG.map(function(t)` shadows import `t` з utils.js → TypeError при відкритті селектора активних вкладок. Фікс: параметр `function(t)` → `function(cfg)` + `t.*` → `cfg.*`; `cfg.label` обгорнуто динамічним ключем `t('tab.' + cfg.id, cfg.label)`. Aux callbacks 278/284 теж `c =>` для consistency.
+11. **B-133 calendar.js routine-panel swipe duplicate** (`calendar.js:595, 608`) — `setupModalSwipeClose` викликалась з двох opener'ів. Фікс: helper `_ensureRoutineSwipeClose()` з module-scope, обидва opener виклики через нього.
+
 ### Відкладене
 
-- **`nav.js` t-shadow у openTabSelector** (TypeError при відкритті tab-selector модалки) — наступна сесія, 15 хв.
-- **`calendar.js setupModalSwipeClose` двічі** — fragile, наступна сесія, 10 хв.
 - **`onboarding.js` ~80 рядків** — Роман явно просив не чіпати, чекає редизайн.
 - **Supabase migration prep** — Date.now() IDs у habits.js нагадування + nm_reminders прямий localStorage.setItem (не через saveX). Окрема сесія з `/supabase-prep`.
 

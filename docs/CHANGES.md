@@ -30,10 +30,10 @@ baseline `i18n-baseline.json`: 685 → 575 необгорнутих (-110, -16%)
 
 - **`TESTS_TODO.md`** у корені — 5 розділів × 12 кроків для ручного тесту: 4 баги (drum-col, set_reminder text, cross-tab sync, clarify race) + i18n smoke (5 точок). Роман явно попросив «пиши в файл що тестити».
 
-### Знайдено + відкладено (не в скоупі цієї сесії)
+### Хвости doіграні цієї ж сесії (B-132 + B-133)
 
-- **`nav.js:202` t-shadow у `openTabSelector`** — `ALL_TABS_CONFIG.map(function(t) { ... t.id ... })`, виклик `t('nav.tabsel.always', 'завжди')` всередині (line 212) спробує викликати об'єкт як функцію → TypeError при відкритті селектора активних вкладок. Не помічено бо модалка рідко відкривається. Fix ~15 хв (rename `t` → `cfg`).
-- **silent-bug-scout #5 calendar.js setupModalSwipeClose двічі на routine-panel** (lines 595, 608) — fragile при майбутньому refactor. Fix ~10 хв (винести в init).
+- **B-132 `nav.js:202` t-shadow у `openTabSelector`** — `ALL_TABS_CONFIG.map(function(t) { ... })` shadows import `t` з utils.js → виклик `t('nav.tabsel.always', 'завжди')` всередині (line 212) кидав TypeError при відкритті селектора активних вкладок. Фікс: `function(t)` → `function(cfg)` + `t.id`/`t.accent`/`t.bg`/`t.svg` → `cfg.*` + `cfg.label` обгорнуто `t('tab.' + cfg.id, cfg.label)`. Aux callbacks 278/284 переіменовано для consistency.
+- **B-133 `calendar.js:595, 608` setupModalSwipeClose дубль** — два opener'и (`openRoutineFromCalendar` + `openRoutineModal`) викликали `setupModalSwipeClose(routine-panel, closeRoutineModal)`. Фікс: винесено у helper `_ensureRoutineSwipeClose()`.
 
 ### Файли змінені
 
