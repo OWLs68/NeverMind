@@ -3491,6 +3491,13 @@ ${lines.join("\n")}`;
     return parts.join("\n");
   }
   function addHealthChatMsg(role, text, _noSave = false, chips = null) {
+    if (role === "agent" && (!chips || chips.length === 0) && text) {
+      const _p = parseContentChips(text);
+      if (_p.chips) {
+        text = _p.text;
+        chips = _p.chips;
+      }
+    }
     const el = document.getElementById("health-chat-messages");
     if (!el) return;
     if (_healthTypingEl) {
@@ -5256,6 +5263,13 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
     return parts.join("\n");
   }
   function addProjectsChatMsg(role, text, _noSave = false, chips = null) {
+    if (role === "agent" && (!chips || chips.length === 0) && text) {
+      const _p = parseContentChips(text);
+      if (_p.chips) {
+        text = _p.text;
+        chips = _p.chips;
+      }
+    }
     const el = document.getElementById("projects-chat-messages");
     if (!el) return;
     if (_projectsTypingEl) {
@@ -7047,6 +7061,13 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
 
   // src/tabs/finance-chat.js
   function addFinanceChatMsg(role, text, _noSave = false, chips = null) {
+    if (role === "agent" && (!chips || chips.length === 0) && text) {
+      const _p = parseContentChips(text);
+      if (_p.chips) {
+        text = _p.text;
+        chips = _p.chips;
+      }
+    }
     const el = document.getElementById("finance-chat-messages");
     if (!el) return;
     if (_financeTypingEl) {
@@ -8700,6 +8721,13 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
     openChatBar("me");
   }
   function addMeChatMsg(role, text, _noSave = false, id = "", chips = null) {
+    if (role === "agent" && (!chips || chips.length === 0) && text) {
+      const _p = parseContentChips(text);
+      if (_p.chips) {
+        text = _p.text;
+        chips = _p.chips;
+      }
+    }
     const el = document.getElementById("me-chat-messages");
     if (!el) return;
     if (role === "agent") el.querySelectorAll(".chat-chips-row").forEach((n) => n.remove());
@@ -9927,6 +9955,13 @@ ${recent}`;
     if (greeting) addNoteChatMsg("agent", greeting);
   }
   function addNoteChatMsg(role, text, chips = null) {
+    if (role === "agent" && (!chips || chips.length === 0) && text) {
+      const _p = parseContentChips(text);
+      if (_p.chips) {
+        text = _p.text;
+        chips = _p.chips;
+      }
+    }
     const el = document.getElementById("note-chat-messages");
     const isAgent = role === "agent";
     if (isAgent) el.querySelectorAll(".chat-chips-row").forEach((n) => n.remove());
@@ -10155,6 +10190,13 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
     renderNotes();
   }
   function addNotesChatMsg(role, text, _noSave = false, chips = null) {
+    if (role === "agent" && (!chips || chips.length === 0) && text) {
+      const _p = parseContentChips(text);
+      if (_p.chips) {
+        text = _p.text;
+        chips = _p.chips;
+      }
+    }
     const el = document.getElementById("notes-chat-messages");
     if (!el) return;
     if (_notesTypingEl) {
@@ -11181,6 +11223,13 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
     openChatBar("evening");
   }
   function addEveningBarMsg(role, text, _noSave = false, chips = null) {
+    if (role === "agent" && (!chips || chips.length === 0) && text) {
+      const _p = parseContentChips(text);
+      if (_p.chips) {
+        text = _p.text;
+        chips = _p.chips;
+      }
+    }
     const el = document.getElementById("evening-bar-messages");
     if (!el) return;
     if (_eveningTypingEl) {
@@ -15318,6 +15367,13 @@ ${JSON.stringify(contextData, null, 2)}` : "";
     taskChatHistory = [];
   }
   function addTaskChatMsg(role, text, id = "", chips = null) {
+    if (role === "agent" && (!chips || chips.length === 0) && text) {
+      const _p = parseContentChips(text);
+      if (_p.chips) {
+        text = _p.text;
+        chips = _p.chips;
+      }
+    }
     const el = document.getElementById("task-chat-messages");
     const isAgent = role === "agent";
     if (isAgent) el.querySelectorAll(".chat-chips-row").forEach((n) => n.remove());
@@ -15481,6 +15537,13 @@ ${JSON.stringify(contextData, null, 2)}` : "";
     taskBarLoading = v;
   }
   function addTaskBarMsg(role, text, _noSave = false, chips = null) {
+    if (role === "agent" && (!chips || chips.length === 0) && text) {
+      const _p = parseContentChips(text);
+      if (_p.chips) {
+        text = _p.text;
+        chips = _p.chips;
+      }
+    }
     const el = document.getElementById("tasks-chat-messages");
     if (!el) return;
     if (_taskTypingEl) {
@@ -16651,6 +16714,13 @@ ${userText}
   function addInboxChatMsg(role, text, chips = null) {
     const el = document.getElementById("inbox-chat-messages");
     if (!el) return;
+    if (role === "agent" && (!chips || chips.length === 0) && text) {
+      const _p = parseContentChips(text);
+      if (_p.chips) {
+        text = _p.text;
+        chips = _p.chips;
+      }
+    }
     if (_inboxTypingEl) {
       _inboxTypingEl.remove();
       _inboxTypingEl = null;
