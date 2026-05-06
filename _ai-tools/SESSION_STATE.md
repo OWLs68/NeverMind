@@ -4,11 +4,65 @@
 >
 > Старіші сесії (до 6GoDe 19.04) — в [`_archive/SESSION_STATE_archive.md`](../_archive/SESSION_STATE_archive.md).
 
-**Оновлено:** 2026-05-04 (сесія **RGisY** — Шар 6 chip-system: Council 8 агентів + Gemini 3 раунди → перевизначення з «уніфікація формату» на «інфраструктурна гігієна». 8 фаз: Phase 1 saveChatMsg+chips для 7 чатів (Р1) + Phase 2 5-й enum action='complete' (Р2) + Phase 3 nm_chip_payloads denormalized + chip.id UUID (Р7) + Phase 5 QuotaExceeded захист + Phase 7 v10 міграція + GC weekly + **Phase 9** 4 регресії знайдені post-Phase-7 аудитом: Inbox chips restore (Р1крит) + filterStaleChips action='complete' (Р2серед) + backup_v10 cleanup (Р3серед) + saveTabMessage normalize (Р4мінор). **Phase 9b** legacy fallback timestamp. **Phase 9c** Шари 3+4 (Час+Destructive) у CHIP_PROMPT_RULES. Шар 2 Лікарі верифіковано як готовий. B1 pre-push-check тригери з тексту → у git diff. B2 silent-bug-scout правило перед звітом stale/missing. Гілка `claude/start-session-RGisY`, 11 чекпоінт-комітів, CACHE `nm-20260504-0948`).
+**Оновлено:** 2026-05-06 (сесія **MPVly-day2** — silent-bug-scout 4-pack + i18n 110 рядків). Раніше: 2026-05-04 (сесія **RGisY** — Шар 6 chip-system: Council 8 агентів + Gemini 3 раунди → перевизначення з «уніфікація формату» на «інфраструктурна гігієна». 8 фаз: Phase 1 saveChatMsg+chips для 7 чатів (Р1) + Phase 2 5-й enum action='complete' (Р2) + Phase 3 nm_chip_payloads denormalized + chip.id UUID (Р7) + Phase 5 QuotaExceeded захист + Phase 7 v10 міграція + GC weekly + **Phase 9** 4 регресії знайдені post-Phase-7 аудитом: Inbox chips restore (Р1крит) + filterStaleChips action='complete' (Р2серед) + backup_v10 cleanup (Р3серед) + saveTabMessage normalize (Р4мінор). **Phase 9b** legacy fallback timestamp. **Phase 9c** Шари 3+4 (Час+Destructive) у CHIP_PROMPT_RULES. Шар 2 Лікарі верифіковано як готовий. B1 pre-push-check тригери з тексту → у git diff. B2 silent-bug-scout правило перед звітом stale/missing. Гілка `claude/start-session-RGisY`, 11 чекпоінт-комітів, CACHE `nm-20260504-0948`).
 
 ---
 
-## 🔧 Поточна сесія QDIGl — Розпорядок merge + delete_project + B-117 fix + 19 раундів i18n (-319) + audit (05.05.2026)
+## 🔧 Поточна сесія MPVly-day2 — silent-bug-scout 4-pack (B-128/129/130/131) + i18n 110 рядків (06.05.2026)
+
+### Зроблено
+
+#### A. 4 силент-баги виправлено перед тим як Роман натрапив (1 коміт)
+
+1. **B-128 drum-col mask-image** (`style.css:1505-1517`) — той самий клас бага що Settings UvEHE 03.05. `event-edit-modal` + `health-dt-picker-modal` обидва мають parent `backdrop-filter:blur(32px)+overflow:hidden`. На iOS Safari при scroll барабана дати/часу composite layer ламався → модалка стискалась. Не проявилось ще тільки бо barrel рідко відкривається. Фікс: видалено `mask-image` / `-webkit-mask-image` — fade на краях прибрано (border ramp + центральна acent-смуга залишилися). Знайдено `silent-bug-scout` агентом проактивно.
+2. **B-129 set_reminder без t()** (`habits.js:1452`) — `addMsg('agent', \`⏰ Нагадаю о ${time}: "${text}"\`)` стояв необгорнутим хоч `delete_reminder` поряд був повністю обгорнутий (B-126 з MPVly day1). Фікс: `t('habits.reminder.set.ok', '⏰ Нагадаю о {time}: "{text}"', { time, text })`.
+3. **B-130 reminder cross-tab silent failure** (`boot.js:177-187`) — `set_reminder`/`delete_reminder` диспатчили `nm-data-changed` з `detail:'reminder'`, але `DETAIL_TO_KEY` не мала цього ключа → `handleSyncKey` не викликався → друга вкладка не оновлювалась. Зараз непомітно (1 девайс), станеться видно з Supabase. Фікс: `'reminder': 'nm_reminders'` у мапу.
+4. **B-131 sendClarifyText без aiLoading guard** (`inbox.js:1048`) — при відкритому clarify aiLoading=false (бо `aiLoading=false` встановлено перед `showClarify`); Send у головному Inbox не блокувався → дві паралельні AI-відповіді можливі. **Bonus** знайдено по дорозі: `let primaryHandled = false` оригінально оголошено всередині `if (msg.tool_calls && ...)` блоку, а `else if (!primaryHandled)` посилався поза тим scope → ReferenceError-prone. Фікс: `if (aiLoading) return; aiLoading = true; try { ... } finally { aiLoading = false; }` + `primaryHandled` піднято на верх try.
+
+#### B. i18n обгортка 110 рядків (4 файли)
+
+5. **`habits.js`** (~50 рядків у `processUniversalAction`) — create_task, edit_task, delete_task, edit_habit, delete_habit, complete_*, add_step, add_moment, create_habit, create_event, edit_event, delete_event, edit_note, create_folder, delete_folder, move_note, save_finance amount-error, set_reminder time-empty, save_routine + `Пн-Нд` для habit dots + `N% за 30 днів`.
+6. **`health.js`** (~34 рядки `buildHealthExportText`) — МЕДИЧНА КАРТКА, АЛЕРГІЇ, АКТИВНІ СТАНИ, ВСІ ПРЕПАРАТИ, ВІЗИТИ ДО ЛІКАРЯ, ЗАВЕРШЕНІ СТАНИ, disclaimer.
+7. **`nav.js`** (~10) — TAB_LABELS для tab-order list (`Продуктив./Нотатки/Я/Вечір/Фінанси/Здоров'я/Проекти`) + memory source (`фон/вручну/стара пам'ять/онбординг`). ALL_TABS_CONFIG.label не чіпав через `ALL_TABS_CONFIG.map(function(t) { ... t.id })` — параметр `t` shadows import `t` (це окремий силент-баг — див. Відкладене).
+8. **`finance-analytics.js`** (~15) — Найбільша операція, Прогноз місяця, Доходи місяця, Розподіл доходу edit, benchmark warnings (Готово/Скинути до 50/30/20/(ціль X%)).
+
+baseline `i18n-baseline.json`: 685 → 575 необгорнутих (-110, -16%).
+
+#### C. TESTS_TODO.md — чек-ліст ручного тестування (1 файл)
+
+9. **`TESTS_TODO.md`** у корені — 5 розділів (4 баги + i18n smoke), 12 кроків тестування на iPhone PWA + десктопі. Перерахування ризиків: B-128 (барабан події), B-129 (set_reminder text), B-130 (cross-tab), B-131 (clarify race), i18n (5 точок).
+
+### Обговорено (без виконання)
+
+- **silent-bug-scout #5 — `setupModalSwipeClose` двічі на routine-panel** (`calendar.js:595, 608`) — зараз працює завдяки `_swipeClose` guard у `tasks.js:63`, але fragile при будь-якому refactor `routine-panel`. Залишено на наступну сесію (10 хв).
+- **`nav.js openTabSelector` t-shadow** (`nav.js:202` `ALL_TABS_CONFIG.map(function(t)`) — параметр `t` shadows import `t` з `utils.js`. Виклик `t('nav.tabsel.always', 'завжди')` всередині цього map (line 212) спробує викликати об'єкт як функцію → **TypeError** при відкритті селектора активних вкладок. Не помічено бо модалка рідко відкривається. Знайшов дорогою при i18n обгортці. **Fix:** перейменувати параметр на `cfg`, замінити `t.id`/`t.label`/`t.svg`/`t.bg`/`t.accent` на `cfg.*`. ~15 хв з тестом. Залишено на наступну сесію.
+
+### Ключові рішення
+
+- **silent-bug-scout проактивний звіт ДО `/audit`** — перед обгортанням i18n запустив агента → 4 знахідки одразу + ще 1 в Відкладене. Виправлено 4 за одну сесію. Сценарій: «дивись по сторонам».
+- **NE чіпати `ALL_TABS_CONFIG.label` у openTabSelector** — `t` shadowed параметром map. Обгорнув TAB_LABELS (lines 335-338) і memory-source (lines 884-887) — це окремі точки.
+- **Скиннути baseline після обгортки** — `node check-i18n.js --update-baseline`. CI exit 0 з 575.
+- **TESTS_TODO.md як артефакт** — Роман явно попросив «пиши в файл що тестити».
+
+### Інциденти
+
+- **Жодних регресій.** `node build.js` прохід чистий. `node check-i18n.js` exit 0. `node -c bundle.js` syntax OK.
+- **Збереглись `Date.now()` IDs у habits.js** create_event/set_reminder — supabase-migration-scout candidate, але це не нова регресія, лишаю як є.
+
+### Конфлікти/суперечності
+
+- Жодних. silent-bug-scout звіт + i18n-finder звіт обидва дали чіткі рекомендації, виконано буквально.
+
+### Відкладене
+
+- **`nav.js` t-shadow у openTabSelector** (TypeError при відкритті tab-selector модалки) — наступна сесія, 15 хв.
+- **`calendar.js setupModalSwipeClose` двічі** — fragile, наступна сесія, 10 хв.
+- **`onboarding.js` ~80 рядків** — Роман явно просив не чіпати, чекає редизайн.
+- **Supabase migration prep** — Date.now() IDs у habits.js нагадування + nm_reminders прямий localStorage.setItem (не через saveX). Окрема сесія з `/supabase-prep`.
+
+---
+
+## 🔧 Сесія QDIGl — Розпорядок merge + delete_project + B-117 fix + 19 раундів i18n (-319) + audit (05.05.2026)
 
 ### Зроблено
 

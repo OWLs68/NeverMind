@@ -183,6 +183,7 @@ function setupSync() {
     'health': 'nm_health_cards',
     'projects': 'nm_projects',
     'evening': 'nm_evening_summary',
+    'reminder': 'nm_reminders',
   };
   window.addEventListener('nm-data-changed', e => {
     const detail = e.detail;

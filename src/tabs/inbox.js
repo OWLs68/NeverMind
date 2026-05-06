@@ -1049,47 +1049,55 @@ async function sendClarifyText() {
   const input = document.getElementById('clarify-input');
   const text = input.value.trim();
   if (!text) return;
+  // MPVly 06.05: aiLoading guard — без нього юзер може спамити Send у головному
+  // інбоксі поки clarify-резолв ще йде → дві паралельні AI-відповіді у чаті.
+  if (aiLoading) return;
   const origText = clarifyOriginalText;
   closeClarify();
   const key = localStorage.getItem('nm_gemini_key');
   if (!key) return;
-  const fullPrompt = getAIContext() ? `${INBOX_SYSTEM_PROMPT}\n\n${getAIContext()}` : INBOX_SYSTEM_PROMPT;
-  const combinedMsg = `Оригінальний запис: "${origText}". Уточнення від користувача: "${text}"`;
-  // Tool calling для уточнення
-  const msg = await callAIWithTools(fullPrompt, [{ role: 'user', content: combinedMsg }], INBOX_TOOLS, 'inbox-clarify');
-  if (msg) {
-    try {
-      if (msg.tool_calls && msg.tool_calls.length > 0) {
-        // Обробляємо ВСІ tool_calls (AI може emit save_memory_fact РАЗОМ з primary action)
+  aiLoading = true;
+  try {
+    const fullPrompt = getAIContext() ? `${INBOX_SYSTEM_PROMPT}\n\n${getAIContext()}` : INBOX_SYSTEM_PROMPT;
+    const combinedMsg = `Оригінальний запис: "${origText}". Уточнення від користувача: "${text}"`;
+    // Tool calling для уточнення
+    const msg = await callAIWithTools(fullPrompt, [{ role: 'user', content: combinedMsg }], INBOX_TOOLS, 'inbox-clarify');
+    if (msg) {
+      try {
         let primaryHandled = false;
-        for (const tc of msg.tool_calls) {
-          const args = JSON.parse(tc.function.arguments);
-          // V3 Фаза 1: strip _reasoning_log (already logged in primary dispatch)
-          if (args._reasoning_log) delete args._reasoning_log;
-          const action = _toolCallToAction(tc.function.name, args);
-          if (!action) continue;
-          // Тихий канал: пам'ять — зберігаємо без UI
-          if (action.action === 'save_memory_fact') {
-            try { addFact({ text: action.fact, category: action.category, ttlDays: action.ttl_days, source: 'inbox' }); } catch {}
-            continue;
+        if (msg.tool_calls && msg.tool_calls.length > 0) {
+          // Обробляємо ВСІ tool_calls (AI може emit save_memory_fact РАЗОМ з primary action)
+          for (const tc of msg.tool_calls) {
+            const args = JSON.parse(tc.function.arguments);
+            // V3 Фаза 1: strip _reasoning_log (already logged in primary dispatch)
+            if (args._reasoning_log) delete args._reasoning_log;
+            const action = _toolCallToAction(tc.function.name, args);
+            if (!action) continue;
+            // Тихий канал: пам'ять — зберігаємо без UI
+            if (action.action === 'save_memory_fact') {
+              try { addFact({ text: action.fact, category: action.category, ttlDays: action.ttl_days, source: 'inbox' }); } catch {}
+              continue;
+            }
+            if (primaryHandled) continue; // основна дія вже виконана
+            if (action.action === 'save') { await processSaveAction(action, combinedMsg); primaryHandled = true; }
+            else if (action.action === 'complete_habit') { processCompleteHabit(action, combinedMsg); primaryHandled = true; }
+            else if (action.action === 'complete_task') { processCompleteTask(action, combinedMsg); primaryHandled = true; }
+            else if (processUniversalAction(action, combinedMsg, addInboxChatMsg)) { primaryHandled = true; }
+            else if (action.comment) { addInboxChatMsg('agent', action.comment); primaryHandled = true; }
           }
-          if (primaryHandled) continue; // основна дія вже виконана
-          if (action.action === 'save') { await processSaveAction(action, combinedMsg); primaryHandled = true; }
-          else if (action.action === 'complete_habit') { processCompleteHabit(action, combinedMsg); primaryHandled = true; }
-          else if (action.action === 'complete_task') { processCompleteTask(action, combinedMsg); primaryHandled = true; }
-          else if (processUniversalAction(action, combinedMsg, addInboxChatMsg)) { primaryHandled = true; }
-          else if (action.comment) { addInboxChatMsg('agent', action.comment); primaryHandled = true; }
         }
-      }
-      // msg.content показуємо ЗАВЖДИ якщо є (і з tool_calls, і без) —
-      // AI при save_memory_fact має надіслати "Запам'ятав..."
-      if (msg.content) {
-        const { text: replyText, chips } = _parseContentChips(msg.content);
-        if (replyText) addInboxChatMsg('agent', replyText, chips);
-      } else if (!primaryHandled) {
-        addInboxChatMsg('agent', t('inbox.chat.memorized', 'Запамʼятав ✓'));
-      }
-    } catch(e) {}
+        // msg.content показуємо ЗАВЖДИ якщо є (і з tool_calls, і без) —
+        // AI при save_memory_fact має надіслати "Запам'ятав..."
+        if (msg.content) {
+          const { text: replyText, chips } = _parseContentChips(msg.content);
+          if (replyText) addInboxChatMsg('agent', replyText, chips);
+        } else if (!primaryHandled) {
+          addInboxChatMsg('agent', t('inbox.chat.memorized', 'Запамʼятав ✓'));
+        }
+      } catch(e) {}
+    }
+  } finally {
+    aiLoading = false;
   }
 }
 

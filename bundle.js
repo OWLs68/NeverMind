@@ -2425,53 +2425,54 @@ ${lines.join("\n")}`;
     const done = cards.filter((c) => c.status === "done");
     const todayStr = (/* @__PURE__ */ new Date()).toLocaleDateString("uk-UA");
     const lines = [];
-    lines.push(`\u041C\u0415\u0414\u0418\u0427\u041D\u0410 \u041A\u0410\u0420\u0422\u041A\u0410`);
-    lines.push(`\u0414\u0430\u0442\u0430 \u0435\u043A\u0441\u043F\u043E\u0440\u0442\u0443: ${todayStr}`);
+    lines.push(t("health.export.title", "\u041C\u0415\u0414\u0418\u0427\u041D\u0410 \u041A\u0410\u0420\u0422\u041A\u0410"));
+    lines.push(t("health.export.date", "\u0414\u0430\u0442\u0430 \u0435\u043A\u0441\u043F\u043E\u0440\u0442\u0443: {date}", { date: todayStr }));
     lines.push(``);
     if (allergies.length > 0) {
-      lines.push(`\u{1F6A8} \u0410\u041B\u0415\u0420\u0413\u0406\u0407:`);
+      lines.push(t("health.export.allergies", "\u{1F6A8} \u0410\u041B\u0415\u0420\u0413\u0406\u0407:"));
       allergies.forEach((a) => {
         lines.push(`  \u2022 ${a.name}${a.notes ? " \u2014 " + a.notes : ""}`);
       });
     } else {
-      lines.push(`\u{1F6A8} \u0410\u041B\u0415\u0420\u0413\u0406\u0407: \u043D\u0435 \u0432\u043A\u0430\u0437\u0430\u043D\u043E`);
+      lines.push(t("health.export.allergies_none", "\u{1F6A8} \u0410\u041B\u0415\u0420\u0413\u0406\u0407: \u043D\u0435 \u0432\u043A\u0430\u0437\u0430\u043D\u043E"));
     }
     lines.push(``);
     lines.push(`\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500`);
     lines.push(``);
     if (active.length > 0) {
-      lines.push(`\u0410\u041A\u0422\u0418\u0412\u041D\u0406 \u0421\u0422\u0410\u041D\u0418 (${active.length}):`);
+      lines.push(t("health.export.active", "\u0410\u041A\u0422\u0418\u0412\u041D\u0406 \u0421\u0422\u0410\u041D\u0418 ({n}):", { n: active.length }));
       lines.push(``);
       active.forEach((card, i) => {
         lines.push(`${i + 1}. ${card.name.toUpperCase()}${card.subtitle ? " \u2014 " + card.subtitle : ""}`);
-        lines.push(`   \u0421\u0442\u0430\u0442\u0443\u0441: ${_statusDef(card.status).label} \xB7 \u043F\u0440\u043E\u0433\u0440\u0435\u0441 \u043A\u0443\u0440\u0441\u0443: ${card.progress || 0}%`);
+        lines.push(t("health.export.status_line", "   \u0421\u0442\u0430\u0442\u0443\u0441: {status} \xB7 \u043F\u0440\u043E\u0433\u0440\u0435\u0441 \u043A\u0443\u0440\u0441\u0443: {pct}%", { status: _statusDef(card.status).label, pct: card.progress || 0 }));
         if (card.startDate) {
           const d = new Date(card.startDate);
           if (!isNaN(d)) {
             const daysSince = Math.round((Date.now() - d.getTime()) / 864e5);
-            lines.push(`   \u041F\u043E\u0447\u0430\u0442\u043E\u043A: ${card.startDate} (${daysSince} \u0434\u043D \u0442\u043E\u043C\u0443)`);
+            lines.push(t("health.export.start_line", "   \u041F\u043E\u0447\u0430\u0442\u043E\u043A: {date} ({n} \u0434\u043D \u0442\u043E\u043C\u0443)", { date: card.startDate, n: daysSince }));
           }
         }
-        if (card.doctor) lines.push(`   \u041B\u0456\u043A\u0430\u0440: ${card.doctor}`);
-        if (card.doctorRecommendations) lines.push(`   \u0420\u0435\u043A\u043E\u043C\u0435\u043D\u0434\u0430\u0446\u0456\u0457: ${card.doctorRecommendations}`);
-        if (card.doctorConclusion) lines.push(`   \u0412\u0438\u0441\u043D\u043E\u0432\u043E\u043A: ${card.doctorConclusion}`);
+        if (card.doctor) lines.push(t("health.export.doctor", "   \u041B\u0456\u043A\u0430\u0440: {name}", { name: card.doctor }));
+        if (card.doctorRecommendations) lines.push(t("health.export.recommendations", "   \u0420\u0435\u043A\u043E\u043C\u0435\u043D\u0434\u0430\u0446\u0456\u0457: {text}", { text: card.doctorRecommendations }));
+        if (card.doctorConclusion) lines.push(t("health.export.conclusion", "   \u0412\u0438\u0441\u043D\u043E\u0432\u043E\u043A: {text}", { text: card.doctorConclusion }));
         if (card.nextAppointment && card.nextAppointment.date) {
-          lines.push(`   \u041D\u0430\u0441\u0442\u0443\u043F\u043D\u0438\u0439 \u043F\u0440\u0438\u0439\u043E\u043C: ${card.nextAppointment.date}${card.nextAppointment.time ? " \u043E " + card.nextAppointment.time : ""}`);
+          const apptTime = card.nextAppointment.time ? " " + t("health.export.at_time", "\u043E {time}", { time: card.nextAppointment.time }) : "";
+          lines.push(t("health.export.next_appt", "   \u041D\u0430\u0441\u0442\u0443\u043F\u043D\u0438\u0439 \u043F\u0440\u0438\u0439\u043E\u043C: {date}{time}", { date: card.nextAppointment.date, time: apptTime }));
         }
         if (Array.isArray(card.medications) && card.medications.length > 0) {
-          lines.push(`   \u041F\u0440\u0435\u043F\u0430\u0440\u0430\u0442\u0438:`);
+          lines.push(t("health.export.meds_header", "   \u041F\u0440\u0435\u043F\u0430\u0440\u0430\u0442\u0438:"));
           card.medications.forEach((m) => {
             const sched = Array.isArray(m.schedule) && m.schedule.length ? m.schedule.join(", ") : "";
-            const course = m.courseDuration ? " \xB7 \u043A\u0443\u0440\u0441 " + m.courseDuration : "";
+            const course = m.courseDuration ? " \xB7 " + t("health.export.course", "\u043A\u0443\u0440\u0441 {dur}", { dur: m.courseDuration }) : "";
             lines.push(`     - ${m.name}${m.dosage ? " " + m.dosage : ""}${sched ? " (" + sched + ")" : ""}${course}`);
           });
         }
         const lastTrend = (card.history || []).find((h) => h.type === "status_change");
-        if (lastTrend) lines.push(`   \u041E\u0441\u0442\u0430\u043D\u043D\u0456\u0439 \u0442\u0440\u0435\u043D\u0434: ${lastTrend.text}`);
+        if (lastTrend) lines.push(t("health.export.last_trend", "   \u041E\u0441\u0442\u0430\u043D\u043D\u0456\u0439 \u0442\u0440\u0435\u043D\u0434: {text}", { text: lastTrend.text }));
         lines.push(``);
       });
     } else {
-      lines.push(`\u0410\u041A\u0422\u0418\u0412\u041D\u0406 \u0421\u0422\u0410\u041D\u0418: \u043D\u0435\u043C\u0430\u0454`);
+      lines.push(t("health.export.active_none", "\u0410\u041A\u0422\u0418\u0412\u041D\u0406 \u0421\u0422\u0410\u041D\u0418: \u043D\u0435\u043C\u0430\u0454"));
       lines.push(``);
     }
     const allMedsMap = /* @__PURE__ */ new Map();
@@ -2485,11 +2486,17 @@ ${lines.join("\n")}`;
     if (allMedsMap.size > 0) {
       lines.push(`\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500`);
       lines.push(``);
-      lines.push(`\u0412\u0421\u0406 \u041F\u0420\u0415\u041F\u0410\u0420\u0410\u0422\u0418 (${allMedsMap.size}):`);
+      lines.push(t("health.export.all_meds", "\u0412\u0421\u0406 \u041F\u0420\u0415\u041F\u0410\u0420\u0410\u0422\u0418 ({n}):", { n: allMedsMap.size }));
       Array.from(allMedsMap.values()).forEach(({ med, cardName }) => {
         const sched = Array.isArray(med.schedule) && med.schedule.length ? med.schedule.join(", ") : "";
-        const course = med.courseDuration ? " \xB7 \u043A\u0443\u0440\u0441 " + med.courseDuration : "";
-        lines.push(`  \u2022 ${med.name}${med.dosage ? " " + med.dosage : ""}${sched ? " (" + sched + ")" : ""}${course} \u2014 \u043F\u043E \u0441\u0442\u0430\u043D\u0443 "${cardName}"`);
+        const course = med.courseDuration ? " \xB7 " + t("health.export.course", "\u043A\u0443\u0440\u0441 {dur}", { dur: med.courseDuration }) : "";
+        lines.push(t("health.export.med_line", '  \u2022 {name}{dosage}{sched}{course} \u2014 \u043F\u043E \u0441\u0442\u0430\u043D\u0443 "{card}"', {
+          name: med.name,
+          dosage: med.dosage ? " " + med.dosage : "",
+          sched: sched ? " (" + sched + ")" : "",
+          course,
+          card: cardName
+        }));
       });
       lines.push(``);
     }
@@ -2506,7 +2513,7 @@ ${lines.join("\n")}`;
     if (visits.length > 0) {
       lines.push(`\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500`);
       lines.push(``);
-      lines.push(`\u0412\u0406\u0417\u0418\u0422\u0418 \u0414\u041E \u041B\u0406\u041A\u0410\u0420\u042F (\u0437\u0430 \u0440\u0456\u043A, ${visits.length}):`);
+      lines.push(t("health.export.visits", "\u0412\u0406\u0417\u0418\u0422\u0418 \u0414\u041E \u041B\u0406\u041A\u0410\u0420\u042F (\u0437\u0430 \u0440\u0456\u043A, {n}):", { n: visits.length }));
       visits.forEach((v) => {
         const d = new Date(v.ts);
         const dateStr = isNaN(d) ? "" : d.toLocaleDateString("uk-UA");
@@ -2517,7 +2524,7 @@ ${lines.join("\n")}`;
     if (done.length > 0) {
       lines.push(`\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500`);
       lines.push(``);
-      lines.push(`\u0417\u0410\u0412\u0415\u0420\u0428\u0415\u041D\u0406 \u0421\u0422\u0410\u041D\u0418 (${done.length}):`);
+      lines.push(t("health.export.done", "\u0417\u0410\u0412\u0415\u0420\u0428\u0415\u041D\u0406 \u0421\u0422\u0410\u041D\u0418 ({n}):", { n: done.length }));
       done.forEach((card) => {
         lines.push(`  \u2022 ${card.name}${card.subtitle ? " \u2014 " + card.subtitle : ""}`);
       });
@@ -2525,7 +2532,7 @@ ${lines.join("\n")}`;
     }
     lines.push(`\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500`);
     lines.push(``);
-    lines.push(`\u0417\u0433\u0435\u043D\u0435\u0440\u043E\u0432\u0430\u043D\u043E \u0443 \u0437\u0430\u0441\u0442\u043E\u0441\u0443\u043D\u043A\u0443 NeverMind. \u041D\u0435 \u0454 \u043C\u0435\u0434\u0438\u0447\u043D\u0438\u043C \u0434\u043E\u043A\u0443\u043C\u0435\u043D\u0442\u043E\u043C \u2014 \u0434\u043B\u044F \u043F\u043E\u043F\u0435\u0440\u0435\u0434\u043D\u044C\u043E\u0433\u043E \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F \u0437 \u043B\u0456\u043A\u0430\u0440\u0435\u043C.`);
+    lines.push(t("health.export.disclaimer", "\u0417\u0433\u0435\u043D\u0435\u0440\u043E\u0432\u0430\u043D\u043E \u0443 \u0437\u0430\u0441\u0442\u043E\u0441\u0443\u043D\u043A\u0443 NeverMind. \u041D\u0435 \u0454 \u043C\u0435\u0434\u0438\u0447\u043D\u0438\u043C \u0434\u043E\u043A\u0443\u043C\u0435\u043D\u0442\u043E\u043C \u2014 \u0434\u043B\u044F \u043F\u043E\u043F\u0435\u0440\u0435\u0434\u043D\u044C\u043E\u0433\u043E \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F \u0437 \u043B\u0456\u043A\u0430\u0440\u0435\u043C."));
     return lines.join("\n");
   }
   function openHealthExport() {
@@ -13068,7 +13075,7 @@ ${UI_TOOLS_RULES}`;
     return done;
   }
   function makeHabitDayDots(h, weekState, todayDow) {
-    const labels = ["\u041F\u043D", "\u0412\u0442", "\u0421\u0440", "\u0427\u0442", "\u041F\u0442", "\u0421\u0431", "\u041D\u0434"];
+    const labels = [t("day.mon", "\u041F\u043D"), t("day.tue", "\u0412\u0442"), t("day.wed", "\u0421\u0440"), t("day.thu", "\u0427\u0442"), t("day.fri", "\u041F\u0442"), t("day.sat", "\u0421\u0431"), t("day.sun", "\u041D\u0434")];
     return labels.map(function(label, i) {
       const isPlanned = (h.days || [0, 1, 2, 3, 4]).includes(i);
       const entry = weekState.find((x) => x.i === i);
@@ -13157,7 +13164,7 @@ ${UI_TOOLS_RULES}`;
         squaresHtml += "</div>";
       }
       const countLabel = target > 1 ? `<span style="font-size:11px;font-weight:700;color:${cur >= target ? "#16a34a" : "rgba(30,16,64,0.4)"};margin-left:4px">${cur}/${target}</span>` : "";
-      return '<div class="habit-me-item-wrap" data-id="' + h.id + '" style="position:relative;overflow:hidden;border-radius:14px;margin-bottom:6px"><div id="habit-me-item-' + h.id + '" class="inbox-item" style="padding:10px 12px;cursor:pointer;width:100%;box-sizing:border-box;-webkit-tap-highlight-color:transparent" onclick="openEditHabit(' + h.id + ')"><div style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><div onclick="event.stopPropagation();toggleHabitToday(' + h.id + ')" data-habit-check="1" style="width:36px;height:36px;border-radius:50%;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.25s;-webkit-tap-highlight-color:transparent;' + checkBg + `"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${checkStroke}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></div><div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:6px"><span style="font-size:15px;font-weight:700;color:#1e1040">` + escapeHtml(shortName) + "</span>" + countLabel + streakHtml + '</div><div style="font-size:11px;font-weight:600;color:' + pctColor + ';margin-top:1px">' + pct + "% \u0437\u0430 30 \u0434\u043D\u0456\u0432</div></div></div>" + squaresHtml + '<div style="display:flex;gap:4px;padding-left:46px">' + dayDots + "</div></div></div>";
+      return '<div class="habit-me-item-wrap" data-id="' + h.id + '" style="position:relative;overflow:hidden;border-radius:14px;margin-bottom:6px"><div id="habit-me-item-' + h.id + '" class="inbox-item" style="padding:10px 12px;cursor:pointer;width:100%;box-sizing:border-box;-webkit-tap-highlight-color:transparent" onclick="openEditHabit(' + h.id + ')"><div style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><div onclick="event.stopPropagation();toggleHabitToday(' + h.id + ')" data-habit-check="1" style="width:36px;height:36px;border-radius:50%;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.25s;-webkit-tap-highlight-color:transparent;' + checkBg + `"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${checkStroke}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></div><div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:6px"><span style="font-size:15px;font-weight:700;color:#1e1040">` + escapeHtml(shortName) + "</span>" + countLabel + streakHtml + '</div><div style="font-size:11px;font-weight:600;color:' + pctColor + ';margin-top:1px">' + t("habits.stat.pct_30d", "{pct}% \u0437\u0430 30 \u0434\u043D\u0456\u0432", { pct }) + "</div></div></div>" + squaresHtml + '<div style="display:flex;gap:4px;padding-left:46px">' + dayDots + "</div></div></div>";
     }).join("");
     _attachHabitsSwipeDelete();
   }
@@ -13517,7 +13524,7 @@ ${UI_TOOLS_RULES}`;
         const ev = { id: Date.now(), title: eventDetected.title || title, date: eventDetected.date, time: null, priority: parsed.priority || "normal", createdAt: Date.now() };
         const res = addEventDedup(ev);
         if (!res.added) {
-          addMsg("agent", `\u0422\u0430\u043A\u0430 \u043F\u043E\u0434\u0456\u044F "${ev.title}" \u0432\u0436\u0435 \u0454 \u0432 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440\u0456.`);
+          addMsg("agent", t("habits.event.dup", '\u0422\u0430\u043A\u0430 \u043F\u043E\u0434\u0456\u044F "{title}" \u0432\u0436\u0435 \u0454 \u0432 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440\u0456.', { title: ev.title }));
           return true;
         }
         const dateObj = new Date(eventDetected.date);
@@ -13525,7 +13532,7 @@ ${UI_TOOLS_RULES}`;
         const items2 = getInbox();
         items2.unshift({ id: Date.now(), text: title, category: "event", ts: Date.now(), processed: true });
         saveInbox(items2);
-        addMsg("agent", `\u{1F4C5} \u041F\u043E\u0434\u0456\u044E "${ev.title}" \u0434\u043E\u0434\u0430\u043D\u043E \u043D\u0430 ${dayStr}`);
+        addMsg("agent", t("habits.event.added", '\u{1F4C5} \u041F\u043E\u0434\u0456\u044E "{title}" \u0434\u043E\u0434\u0430\u043D\u043E \u043D\u0430 {date}', { title: ev.title, date: dayStr }));
         return true;
       }
       const steps = Array.isArray(parsed.steps) ? parsed.steps.map((s) => ({ id: Date.now() + Math.random(), text: s, done: false })) : [];
@@ -13539,7 +13546,7 @@ ${UI_TOOLS_RULES}`;
       const items = getInbox();
       items.unshift({ id: Date.now(), text: title, category: "task", ts: Date.now(), processed: true });
       saveInbox(items);
-      addMsg("agent", '\u2705 \u0417\u0430\u0434\u0430\u0447\u0443 "' + title + '" \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E');
+      addMsg("agent", t("habits.task.created", '\u2705 \u0417\u0430\u0434\u0430\u0447\u0443 "{title}" \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E', { title }));
       if (parsed.ask_after) setTimeout(() => addMsg("agent", parsed.ask_after), 600);
       return true;
     }
@@ -13550,7 +13557,7 @@ ${UI_TOOLS_RULES}`;
         const nameQ = (parsed.name || parsed.habit_name || "").toLowerCase();
         const found = habits.find((x) => x.name.toLowerCase().includes(nameQ.slice(0, 6)));
         if (!found) {
-          addMsg("agent", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u0446\u044E \u0437\u0432\u0438\u0447\u043A\u0443.");
+          addMsg("agent", t("habits.err.habit_not_found", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u0446\u044E \u0437\u0432\u0438\u0447\u043A\u0443."));
           return true;
         }
         if (parsed.name) found.name = parsed.name;
@@ -13559,7 +13566,7 @@ ${UI_TOOLS_RULES}`;
         saveHabits(habits);
         renderProdHabits();
         renderHabits();
-        addMsg("agent", '\u270F\uFE0F \u0417\u0432\u0438\u0447\u043A\u0443 "' + found.name + '" \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043E');
+        addMsg("agent", t("habits.habit.updated", '\u270F\uFE0F \u0417\u0432\u0438\u0447\u043A\u0443 "{name}" \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043E', { name: found.name }));
         return true;
       }
       if (parsed.name) h.name = parsed.name;
@@ -13568,7 +13575,7 @@ ${UI_TOOLS_RULES}`;
       saveHabits(habits);
       renderProdHabits();
       renderHabits();
-      addMsg("agent", '\u270F\uFE0F \u0417\u0432\u0438\u0447\u043A\u0443 "' + h.name + '" \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043E');
+      addMsg("agent", t("habits.habit.updated", '\u270F\uFE0F \u0417\u0432\u0438\u0447\u043A\u0443 "{name}" \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043E', { name: h.name }));
       return true;
     }
     if (action === "edit_task") {
@@ -13578,7 +13585,7 @@ ${UI_TOOLS_RULES}`;
         const nameQ = (parsed.title || "").toLowerCase();
         const found = tasks.find((x) => x.title.toLowerCase().includes(nameQ.slice(0, 8)));
         if (!found) {
-          addMsg("agent", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u0446\u044E \u0437\u0430\u0434\u0430\u0447\u0443.");
+          addMsg("agent", t("habits.err.task_not_found_short", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u0446\u044E \u0437\u0430\u0434\u0430\u0447\u0443."));
           return true;
         }
         if (parsed.title) found.title = parsed.title;
@@ -13590,7 +13597,7 @@ ${UI_TOOLS_RULES}`;
         if (parsed.priority && ["normal", "important", "critical"].includes(parsed.priority)) found.priority = parsed.priority;
         saveTasks(tasks);
         if (currentTab === "tasks") renderTasks();
-        addMsg("agent", '\u270F\uFE0F \u0417\u0430\u0434\u0430\u0447\u0443 "' + found.title + '" \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043E');
+        addMsg("agent", t("habits.task.updated", '\u270F\uFE0F \u0417\u0430\u0434\u0430\u0447\u0443 "{title}" \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043E', { title: found.title }));
         return true;
       }
       if (parsed.title) task.title = parsed.title;
@@ -13602,7 +13609,7 @@ ${UI_TOOLS_RULES}`;
       if (parsed.priority && ["normal", "important", "critical"].includes(parsed.priority)) task.priority = parsed.priority;
       saveTasks(tasks);
       if (currentTab === "tasks") renderTasks();
-      addMsg("agent", '\u270F\uFE0F \u0417\u0430\u0434\u0430\u0447\u0443 "' + task.title + '" \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043E');
+      addMsg("agent", t("habits.task.updated", '\u270F\uFE0F \u0417\u0430\u0434\u0430\u0447\u0443 "{title}" \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043E', { title: task.title }));
       return true;
     }
     if (action === "delete_task") {
@@ -13615,14 +13622,14 @@ ${UI_TOOLS_RULES}`;
         }
       }
       if (!target) {
-        addMsg("agent", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u0446\u044E \u0437\u0430\u0434\u0430\u0447\u0443. \u0423\u0442\u043E\u0447\u043D\u0438 \u043D\u0430\u0437\u0432\u0443.");
+        addMsg("agent", t("habits.err.task_not_found", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u0446\u044E \u0437\u0430\u0434\u0430\u0447\u0443. \u0423\u0442\u043E\u0447\u043D\u0438 \u043D\u0430\u0437\u0432\u0443."));
         return true;
       }
       addToTrash("task", target, null);
       const remaining = tasks.filter((x) => x.id !== target.id);
       saveTasks(remaining);
       if (currentTab === "tasks") renderTasks();
-      addMsg("agent", '\u{1F5D1}\uFE0F \u0417\u0430\u0434\u0430\u0447\u0443 "' + target.title + '" \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E');
+      addMsg("agent", t("habits.task.deleted", '\u{1F5D1}\uFE0F \u0417\u0430\u0434\u0430\u0447\u0443 "{title}" \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E', { title: target.title }));
       showUndoToast();
       return true;
     }
@@ -13632,7 +13639,7 @@ ${UI_TOOLS_RULES}`;
       const nameQ = (parsed.name || parsed.query || "").toLowerCase();
       const target = h || habits.find((x) => x.name.toLowerCase().includes(nameQ.slice(0, 6)));
       if (!target) {
-        addMsg("agent", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u0446\u044E \u0437\u0432\u0438\u0447\u043A\u0443.");
+        addMsg("agent", t("habits.err.habit_not_found", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u0446\u044E \u0437\u0432\u0438\u0447\u043A\u0443."));
         return true;
       }
       addToTrash("habit", target, null);
@@ -13640,7 +13647,7 @@ ${UI_TOOLS_RULES}`;
       saveHabits(remaining);
       renderProdHabits();
       renderHabits();
-      addMsg("agent", '\u{1F5D1}\uFE0F \u0417\u0432\u0438\u0447\u043A\u0443 "' + target.name + '" \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E');
+      addMsg("agent", t("habits.habit.deleted", '\u{1F5D1}\uFE0F \u0417\u0432\u0438\u0447\u043A\u0443 "{name}" \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E', { name: target.name }));
       showUndoToast();
       return true;
     }
@@ -13650,28 +13657,28 @@ ${UI_TOOLS_RULES}`;
       const nameQ = (parsed.title || parsed.query || "").toLowerCase();
       const target = task || tasks.find((x) => x.status === "done" && x.title.toLowerCase().includes(nameQ.slice(0, 8)));
       if (!target) {
-        addMsg("agent", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u0437\u0430\u043A\u0440\u0438\u0442\u0443 \u0437\u0430\u0434\u0430\u0447\u0443 \u0437 \u0442\u0430\u043A\u043E\u044E \u043D\u0430\u0437\u0432\u043E\u044E.");
+        addMsg("agent", t("habits.err.closed_task_not_found", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u0437\u0430\u043A\u0440\u0438\u0442\u0443 \u0437\u0430\u0434\u0430\u0447\u0443 \u0437 \u0442\u0430\u043A\u043E\u044E \u043D\u0430\u0437\u0432\u043E\u044E."));
         return true;
       }
       target.status = "active";
       delete target.completedAt;
       saveTasks(tasks);
       if (currentTab === "tasks") renderTasks();
-      addMsg("agent", '\u{1F504} \u0417\u0430\u0434\u0430\u0447\u0443 "' + target.title + '" \u043F\u0435\u0440\u0435\u0432\u0456\u0434\u043A\u0440\u0438\u0442\u043E');
+      addMsg("agent", t("habits.task.reopened", '\u{1F504} \u0417\u0430\u0434\u0430\u0447\u0443 "{title}" \u043F\u0435\u0440\u0435\u0432\u0456\u0434\u043A\u0440\u0438\u0442\u043E', { title: target.title }));
       return true;
     }
     if (action === "complete_task") {
       const tasks = getTasks();
       const task = tasks.find((x) => String(x.id) === String(parsed.task_id));
       if (!task) {
-        addMsg("agent", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u0437\u0430\u0434\u0430\u0447\u0443 \u0437 \u0442\u0430\u043A\u0438\u043C ID.");
+        addMsg("agent", t("habits.err.task_not_found_by_id", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u0437\u0430\u0434\u0430\u0447\u0443 \u0437 \u0442\u0430\u043A\u0438\u043C ID."));
         return true;
       }
       if (task.status === "done") {
-        addMsg("agent", `\u0417\u0430\u0434\u0430\u0447\u0430 "${task.title}" \u0432\u0436\u0435 \u0437\u0430\u043A\u0440\u0438\u0442\u0430.`);
+        addMsg("agent", t("habits.task.already_done", '\u0417\u0430\u0434\u0430\u0447\u0430 "{title}" \u0432\u0436\u0435 \u0437\u0430\u043A\u0440\u0438\u0442\u0430.', { title: task.title }));
         return true;
       }
-      addMsg("agent", `\u2705 \u0417\u0430\u0434\u0430\u0447\u0443 "${task.title}" \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E!`);
+      addMsg("agent", t("habits.task.done", '\u2705 \u0417\u0430\u0434\u0430\u0447\u0443 "{title}" \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E!', { title: task.title }));
       if (currentTab === "tasks") {
         toggleTaskStatus(task.id);
       } else {
@@ -13691,7 +13698,7 @@ ${UI_TOOLS_RULES}`;
         h = habits.find((x) => x.name.toLowerCase().includes(q.slice(0, 6)));
       }
       if (!h) {
-        addMsg("agent", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u0437\u0432\u0438\u0447\u043A\u0443.");
+        addMsg("agent", t("habits.err.habit_not_found_short", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u0437\u0432\u0438\u0447\u043A\u0443."));
         return true;
       }
       const todayStr = (/* @__PURE__ */ new Date()).toDateString();
@@ -13701,19 +13708,19 @@ ${UI_TOOLS_RULES}`;
       saveHabitLog(log);
       renderProdHabits();
       renderHabits();
-      addMsg("agent", `\u2705 \u0412\u0456\u0434\u043C\u0456\u0442\u0438\u0432 \u0437\u0432\u0438\u0447\u043A\u0443 "${h.name}" \u044F\u043A \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u0443 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456`);
+      addMsg("agent", t("habits.habit.marked_today", '\u2705 \u0412\u0456\u0434\u043C\u0456\u0442\u0438\u0432 \u0437\u0432\u0438\u0447\u043A\u0443 "{name}" \u044F\u043A \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u0443 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456', { name: h.name }));
       return true;
     }
     if (action === "add_step") {
       const tasks = getTasks();
       const task = tasks.find((x) => String(x.id) === String(parsed.task_id));
       if (!task) {
-        addMsg("agent", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u0437\u0430\u0434\u0430\u0447\u0443 \u0434\u043B\u044F \u0434\u043E\u0434\u0430\u0432\u0430\u043D\u043D\u044F \u043A\u0440\u043E\u043A\u0443.");
+        addMsg("agent", t("habits.err.task_for_step", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u0437\u0430\u0434\u0430\u0447\u0443 \u0434\u043B\u044F \u0434\u043E\u0434\u0430\u0432\u0430\u043D\u043D\u044F \u043A\u0440\u043E\u043A\u0443."));
         return true;
       }
       const stepText = (parsed.step || "").trim();
       if (!stepText) {
-        addMsg("agent", "\u041D\u0435 \u0432\u043A\u0430\u0437\u0430\u043D\u043E \u0442\u0435\u043A\u0441\u0442 \u043A\u0440\u043E\u043A\u0443.");
+        addMsg("agent", t("habits.err.step_empty", "\u041D\u0435 \u0432\u043A\u0430\u0437\u0430\u043D\u043E \u0442\u0435\u043A\u0441\u0442 \u043A\u0440\u043E\u043A\u0443."));
         return true;
       }
       if (!Array.isArray(task.steps)) task.steps = [];
@@ -13721,7 +13728,7 @@ ${UI_TOOLS_RULES}`;
       task.updatedAt = Date.now();
       saveTasks(tasks);
       if (currentTab === "tasks") renderTasks();
-      addMsg("agent", `\u2705 \u0414\u043E\u0434\u0430\u0432 \u043A\u0440\u043E\u043A "${stepText}"`);
+      addMsg("agent", t("habits.step.added", '\u2705 \u0414\u043E\u0434\u0430\u0432 \u043A\u0440\u043E\u043A "{step}"', { step: stepText }));
       return true;
     }
     if (action === "add_moment") {
@@ -13731,7 +13738,7 @@ ${UI_TOOLS_RULES}`;
       const moments = getMoments();
       moments.push({ id: Date.now(), text, mood, ts: Date.now() });
       saveMoments(moments);
-      addMsg("agent", "\u2728 \u041C\u043E\u043C\u0435\u043D\u0442 \u0437\u0430\u043F\u0438\u0441\u0430\u043D\u043E");
+      addMsg("agent", t("habits.moment.added", "\u2728 \u041C\u043E\u043C\u0435\u043D\u0442 \u0437\u0430\u043F\u0438\u0441\u0430\u043D\u043E"));
       return true;
     }
     if (action === "create_habit") {
@@ -13742,14 +13749,14 @@ ${UI_TOOLS_RULES}`;
       saveHabits(habits);
       renderProdHabits();
       renderHabits();
-      addMsg("agent", '\u{1F331} \u0417\u0432\u0438\u0447\u043A\u0443 "' + name + '" \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E');
+      addMsg("agent", t("habits.habit.created", '\u{1F331} \u0417\u0432\u0438\u0447\u043A\u0443 "{name}" \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E', { name }));
       if (parsed.ask_after) setTimeout(() => addMsg("agent", parsed.ask_after), 600);
       return true;
     }
     if (action === "create_note") {
       addNoteFromInbox(parsed.text, "note", parsed.folder || null, "agent");
       if (currentTab === "notes") renderNotes();
-      addMsg("agent", "\u2713 \u041D\u043E\u0442\u0430\u0442\u043A\u0443 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E" + (parsed.folder ? ' \u0432 \u043F\u0430\u043F\u043A\u0443 "' + parsed.folder + '"' : ""));
+      addMsg("agent", parsed.folder ? t("habits.note.saved_to", '\u2713 \u041D\u043E\u0442\u0430\u0442\u043A\u0443 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E \u0432 \u043F\u0430\u043F\u043A\u0443 "{folder}"', { folder: parsed.folder }) : t("habits.note.saved", "\u2713 \u041D\u043E\u0442\u0430\u0442\u043A\u0443 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E"));
       if (parsed.ask_after) setTimeout(() => addMsg("agent", parsed.ask_after), 600);
       return true;
     }
@@ -13766,7 +13773,7 @@ ${UI_TOOLS_RULES}`;
       const ev = { id: Date.now(), title, date: parsed.date, time: parsed.time || null, endTime, priority: parsed.priority || "normal", createdAt: Date.now() };
       const res = addEventDedup(ev);
       if (!res.added) {
-        addMsg("agent", `\u0422\u0430\u043A\u0430 \u043F\u043E\u0434\u0456\u044F "${title}" \u0432\u0436\u0435 \u0454 \u0432 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440\u0456.`);
+        addMsg("agent", t("habits.event.dup", '\u0422\u0430\u043A\u0430 \u043F\u043E\u0434\u0456\u044F "{title}" \u0432\u0436\u0435 \u0454 \u0432 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440\u0456.', { title }));
         return true;
       }
       const dateObj = new Date(parsed.date);
@@ -13775,16 +13782,15 @@ ${UI_TOOLS_RULES}`;
       items.unshift({ id: Date.now(), text: title, category: "event", ts: Date.now(), processed: true });
       saveInbox(items);
       const timeStr = parsed.time ? ` \u043E ${parsed.time}${endTime ? "\u2013" + endTime : ""}` : "";
-      const warn = conflict ? `
-\u26A0\uFE0F \u041D\u0430 \u0446\u0435\u0439 \u0447\u0430\u0441 \u0443\u0436\u0435 \u0454 "${conflict.title}". \u041B\u0438\u0448\u0438\u0442\u0438 \u043E\u0431\u0438\u0434\u0432\u0456 \u0447\u0438 \u043F\u0435\u0440\u0435\u043D\u0435\u0441\u0442\u0438?` : "";
-      addMsg("agent", `\u{1F4C5} \u041F\u043E\u0434\u0456\u044E "${title}" \u0434\u043E\u0434\u0430\u043D\u043E \u043D\u0430 ${dayStr}${timeStr}${warn}`);
+      const warn = conflict ? "\n" + t("habits.event.conflict", '\u26A0\uFE0F \u041D\u0430 \u0446\u0435\u0439 \u0447\u0430\u0441 \u0443\u0436\u0435 \u0454 "{title}". \u041B\u0438\u0448\u0438\u0442\u0438 \u043E\u0431\u0438\u0434\u0432\u0456 \u0447\u0438 \u043F\u0435\u0440\u0435\u043D\u0435\u0441\u0442\u0438?', { title: conflict.title }) : "";
+      addMsg("agent", t("habits.event.added_full", '\u{1F4C5} \u041F\u043E\u0434\u0456\u044E "{title}" \u0434\u043E\u0434\u0430\u043D\u043E \u043D\u0430 {date}{time}{warn}', { title, date: dayStr, time: timeStr, warn }));
       return true;
     }
     if (action === "edit_event") {
       const events = getEvents();
       const idx = events.findIndex((e) => e.id === parsed.event_id);
       if (idx === -1) {
-        addMsg("agent", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u043F\u043E\u0434\u0456\u044E \u0434\u043B\u044F \u0440\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u043D\u043D\u044F.");
+        addMsg("agent", t("habits.err.event_for_edit", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u043F\u043E\u0434\u0456\u044E \u0434\u043B\u044F \u0440\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u043D\u043D\u044F."));
         return true;
       }
       if (parsed.date) events[idx].date = parsed.date;
@@ -13803,7 +13809,7 @@ ${UI_TOOLS_RULES}`;
       const tm = events[idx].time;
       const et = events[idx].endTime;
       const timeStr = tm ? ` \u043E ${tm}${et ? "\u2013" + et : ""}` : "";
-      const editText = `\u270F\uFE0F \u0417\u043C\u0456\u043D\u0435\u043D\u043E: "${events[idx].title}" \u2192 ${dayStr}${timeStr}`;
+      const editText = t("habits.event.edited", '\u270F\uFE0F \u0417\u043C\u0456\u043D\u0435\u043D\u043E: "{title}" \u2192 {date}{time}', { title: events[idx].title, date: dayStr, time: timeStr });
       addMsg("agent", editText);
       try {
         const inbox = getInbox();
@@ -13818,14 +13824,14 @@ ${UI_TOOLS_RULES}`;
       const events = getEvents();
       const idx = events.findIndex((e) => e.id === parsed.event_id);
       if (idx === -1) {
-        addMsg("agent", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u043F\u043E\u0434\u0456\u044E.");
+        addMsg("agent", t("habits.err.event_not_found", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u043F\u043E\u0434\u0456\u044E."));
         return true;
       }
       const title = events[idx].title;
       addToTrash("event", events[idx]);
       events.splice(idx, 1);
       saveEvents(events);
-      addMsg("agent", `\u{1F5D1} \u041F\u043E\u0434\u0456\u044E "${title}" \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E`);
+      addMsg("agent", t("habits.event.deleted", '\u{1F5D1} \u041F\u043E\u0434\u0456\u044E "{title}" \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E', { title }));
       showUndoToast("event", title);
       return true;
     }
@@ -13833,14 +13839,14 @@ ${UI_TOOLS_RULES}`;
       const notes = getNotes();
       const idx = notes.findIndex((n) => n.id === parsed.note_id);
       if (idx === -1) {
-        addMsg("agent", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u043D\u043E\u0442\u0430\u0442\u043A\u0443.");
+        addMsg("agent", t("habits.err.note_not_found", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u043D\u043E\u0442\u0430\u0442\u043A\u0443."));
         return true;
       }
       if (parsed.text) notes[idx].text = parsed.text;
       if (parsed.folder) notes[idx].folder = parsed.folder;
       notes[idx].updatedAt = Date.now();
       saveNotes(notes);
-      addMsg("agent", `\u2713 \u041D\u043E\u0442\u0430\u0442\u043A\u0443 \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043E${parsed.folder ? ' \u2192 \u043F\u0430\u043F\u043A\u0430 "' + parsed.folder + '"' : ""}`);
+      addMsg("agent", parsed.folder ? t("habits.note.updated_folder", '\u2713 \u041D\u043E\u0442\u0430\u0442\u043A\u0443 \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043E \u2192 \u043F\u0430\u043F\u043A\u0430 "{folder}"', { folder: parsed.folder }) : t("habits.note.updated", "\u2713 \u041D\u043E\u0442\u0430\u0442\u043A\u0443 \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043E"));
       return true;
     }
     if (action === "create_folder") {
@@ -13849,9 +13855,9 @@ ${UI_TOOLS_RULES}`;
       const notes = getNotes();
       const exists = notes.some((n) => (n.folder || "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435") === folderName);
       if (exists) {
-        addMsg("agent", `\u041F\u0430\u043F\u043A\u0430 "${folderName}" \u0432\u0436\u0435 \u0454.`);
+        addMsg("agent", t("habits.folder.exists", '\u041F\u0430\u043F\u043A\u0430 "{folder}" \u0432\u0436\u0435 \u0454.', { folder: folderName }));
       } else {
-        addMsg("agent", `\u041F\u0430\u043F\u043A\u0430 "${folderName}" \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u0430. \u041D\u0430\u043F\u0438\u0448\u0438 \u043D\u043E\u0442\u0430\u0442\u043A\u0443 \u0456 \u044F \u043F\u043E\u043A\u043B\u0430\u0434\u0443 \u0457\u0457 \u0442\u0443\u0434\u0438.`);
+        addMsg("agent", t("habits.folder.created_hint", '\u041F\u0430\u043F\u043A\u0430 "{folder}" \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u0430. \u041D\u0430\u043F\u0438\u0448\u0438 \u043D\u043E\u0442\u0430\u0442\u043A\u0443 \u0456 \u044F \u043F\u043E\u043A\u043B\u0430\u0434\u0443 \u0457\u0457 \u0442\u0443\u0434\u0438.', { folder: folderName }));
       }
       return true;
     }
@@ -13862,7 +13868,7 @@ ${UI_TOOLS_RULES}`;
       const folders = [...new Set(notes.map((n) => n.folder || "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435"))];
       const matched = _fuzzyFindFolder(targetName, folders);
       if (!matched) {
-        addMsg("agent", `\u041F\u0430\u043F\u043A\u0443 "${targetName}" \u043D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432. \u0414\u043E\u0441\u0442\u0443\u043F\u043D\u0456: ${folders.join(", ")}`);
+        addMsg("agent", t("habits.folder.not_found", '\u041F\u0430\u043F\u043A\u0443 "{folder}" \u043D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432. \u0414\u043E\u0441\u0442\u0443\u043F\u043D\u0456: {list}', { folder: targetName, list: folders.join(", ") }));
         return true;
       }
       const toDelete = notes.filter((n) => (n.folder || "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435") === matched);
@@ -13873,7 +13879,7 @@ ${UI_TOOLS_RULES}`;
         setCurrentNotesFolder(null);
         renderNotes();
       }
-      addMsg("agent", `\u2713 \u041F\u0430\u043F\u043A\u0443 "${matched}" \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E (${toDelete.length} \u043D\u043E\u0442\u0430\u0442\u043E\u043A)`);
+      addMsg("agent", t("habits.folder.deleted", '\u2713 \u041F\u0430\u043F\u043A\u0443 "{folder}" \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E ({n} \u043D\u043E\u0442\u0430\u0442\u043E\u043A)', { folder: matched, n: toDelete.length }));
       return true;
     }
     if (action === "move_note") {
@@ -13885,7 +13891,7 @@ ${UI_TOOLS_RULES}`;
       const resolvedFolder = _fuzzyFindFolder(targetFolder, folders) || targetFolder;
       const idx = notes.findIndex((n) => n.text.toLowerCase().includes(noteQuery));
       if (idx === -1) {
-        addMsg("agent", `\u041D\u043E\u0442\u0430\u0442\u043A\u0443 "${noteQuery}" \u043D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432.`);
+        addMsg("agent", t("habits.note.not_found_q", '\u041D\u043E\u0442\u0430\u0442\u043A\u0443 "{q}" \u043D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432.', { q: noteQuery }));
         return true;
       }
       const oldFolder = notes[idx].folder || "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435";
@@ -13893,14 +13899,14 @@ ${UI_TOOLS_RULES}`;
       notes[idx] = { ...notes[idx], folder: resolvedFolder, updatedAt: Date.now() };
       saveNotes(notes);
       if (currentTab === "notes") renderNotes();
-      addMsg("agent", `\u2713 \u041D\u043E\u0442\u0430\u0442\u043A\u0443 \u043F\u0435\u0440\u0435\u043C\u0456\u0449\u0435\u043D\u043E \u0437 "${oldFolder}" \u0434\u043E "${resolvedFolder}"`);
+      addMsg("agent", t("habits.note.moved", '\u2713 \u041D\u043E\u0442\u0430\u0442\u043A\u0443 \u043F\u0435\u0440\u0435\u043C\u0456\u0449\u0435\u043D\u043E \u0437 "{from}" \u0434\u043E "{to}"', { from: oldFolder, to: resolvedFolder }));
       return true;
     }
     if (action === "save_finance" || action === "save_expense" || action === "save_income") {
       const type = action === "save_income" ? "income" : parsed.fin_type || "expense";
       const amount = parseFloat(parsed.amount) || 0;
       if (!amount || amount <= 0) {
-        addMsg("agent", "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u0440\u043E\u0437\u043F\u0456\u0437\u043D\u0430\u0442\u0438 \u0441\u0443\u043C\u0443.");
+        addMsg("agent", t("habits.err.amount_unparsed", "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u0440\u043E\u0437\u043F\u0456\u0437\u043D\u0430\u0442\u0438 \u0441\u0443\u043C\u0443."));
         return true;
       }
       const category = parsed.category || "\u0406\u043D\u0448\u0435";
@@ -13931,13 +13937,13 @@ ${UI_TOOLS_RULES}`;
       const blocks = (parsed.blocks || []).map((b) => ({ time: b.time, activity: b.activity }));
       const days = Array.isArray(parsed.day) ? parsed.day : [parsed.day || "default"];
       if (days.length > 1) {
-        _splitReply(`\u041A\u043E\u043F\u0456\u044E\u044E \u0440\u043E\u0437\u043F\u043E\u0440\u044F\u0434\u043E\u043A \u043D\u0430 ${days.length} \u0434\u043D\u0456\u0432...`, () => {
+        _splitReply(t("habits.routine.copying", "\u041A\u043E\u043F\u0456\u044E\u044E \u0440\u043E\u0437\u043F\u043E\u0440\u044F\u0434\u043E\u043A \u043D\u0430 {n} \u0434\u043D\u0456\u0432...", { n: days.length }), () => {
           const routine = getRoutine();
           days.forEach((d) => {
             routine[d] = [...blocks];
           });
           saveRoutine(routine);
-          addMsg("agent", `\u{1F550} \u0413\u043E\u0442\u043E\u0432\u043E! \u0420\u043E\u0437\u043F\u043E\u0440\u044F\u0434\u043E\u043A \u043D\u0430 ${days.length} \u0434\u043D. (${blocks.length} \u0431\u043B\u043E\u043A\u0456\u0432)`);
+          addMsg("agent", t("habits.routine.done_multi", "\u{1F550} \u0413\u043E\u0442\u043E\u0432\u043E! \u0420\u043E\u0437\u043F\u043E\u0440\u044F\u0434\u043E\u043A \u043D\u0430 {n} \u0434\u043D. ({blocks} \u0431\u043B\u043E\u043A\u0456\u0432)", { n: days.length, blocks: blocks.length }));
         });
       } else {
         const routine = getRoutine();
@@ -13945,7 +13951,7 @@ ${UI_TOOLS_RULES}`;
           routine[d] = [...blocks];
         });
         saveRoutine(routine);
-        addMsg("agent", `\u{1F550} \u0420\u043E\u0437\u043F\u043E\u0440\u044F\u0434\u043E\u043A \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E (${blocks.length} \u0431\u043B\u043E\u043A\u0456\u0432)`);
+        addMsg("agent", t("habits.routine.saved", "\u{1F550} \u0420\u043E\u0437\u043F\u043E\u0440\u044F\u0434\u043E\u043A \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E ({blocks} \u0431\u043B\u043E\u043A\u0456\u0432)", { blocks: blocks.length }));
       }
       return true;
     }
@@ -13954,7 +13960,7 @@ ${UI_TOOLS_RULES}`;
       const text = parsed.text || "\u041D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F";
       const date = parsed.date || (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
       if (!time) {
-        addMsg("agent", "\u0412\u043A\u0430\u0436\u0438 \u0447\u0430\u0441 \u043D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F.");
+        addMsg("agent", t("habits.err.reminder_time", "\u0412\u043A\u0430\u0436\u0438 \u0447\u0430\u0441 \u043D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F."));
         return true;
       }
       const reminderId = Date.now();
@@ -13986,7 +13992,7 @@ ${UI_TOOLS_RULES}`;
       } catch (e) {
       }
       window.dispatchEvent(new CustomEvent("nm-data-changed", { detail: "reminder" }));
-      addMsg("agent", `\u23F0 \u041D\u0430\u0433\u0430\u0434\u0430\u044E \u043E ${time}: "${text}"`);
+      addMsg("agent", t("habits.reminder.set.ok", '\u23F0 \u041D\u0430\u0433\u0430\u0434\u0430\u044E \u043E {time}: "{text}"', { time, text }));
       return true;
     }
     if (action === "delete_reminder") {
@@ -17612,57 +17618,63 @@ ${aiContext}`;
     const input = document.getElementById("clarify-input");
     const text = input.value.trim();
     if (!text) return;
+    if (aiLoading) return;
     const origText = clarifyOriginalText;
     closeClarify();
     const key = localStorage.getItem("nm_gemini_key");
     if (!key) return;
-    const fullPrompt = getAIContext() ? `${INBOX_SYSTEM_PROMPT}
+    aiLoading = true;
+    try {
+      const fullPrompt = getAIContext() ? `${INBOX_SYSTEM_PROMPT}
 
 ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
-    const combinedMsg = `\u041E\u0440\u0438\u0433\u0456\u043D\u0430\u043B\u044C\u043D\u0438\u0439 \u0437\u0430\u043F\u0438\u0441: "${origText}". \u0423\u0442\u043E\u0447\u043D\u0435\u043D\u043D\u044F \u0432\u0456\u0434 \u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447\u0430: "${text}"`;
-    const msg = await callAIWithTools(fullPrompt, [{ role: "user", content: combinedMsg }], INBOX_TOOLS, "inbox-clarify");
-    if (msg) {
-      try {
-        if (msg.tool_calls && msg.tool_calls.length > 0) {
-          let primaryHandled2 = false;
-          for (const tc of msg.tool_calls) {
-            const args = JSON.parse(tc.function.arguments);
-            if (args._reasoning_log) delete args._reasoning_log;
-            const action = _toolCallToAction(tc.function.name, args);
-            if (!action) continue;
-            if (action.action === "save_memory_fact") {
-              try {
-                addFact({ text: action.fact, category: action.category, ttlDays: action.ttl_days, source: "inbox" });
-              } catch {
+      const combinedMsg = `\u041E\u0440\u0438\u0433\u0456\u043D\u0430\u043B\u044C\u043D\u0438\u0439 \u0437\u0430\u043F\u0438\u0441: "${origText}". \u0423\u0442\u043E\u0447\u043D\u0435\u043D\u043D\u044F \u0432\u0456\u0434 \u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447\u0430: "${text}"`;
+      const msg = await callAIWithTools(fullPrompt, [{ role: "user", content: combinedMsg }], INBOX_TOOLS, "inbox-clarify");
+      if (msg) {
+        try {
+          let primaryHandled = false;
+          if (msg.tool_calls && msg.tool_calls.length > 0) {
+            for (const tc of msg.tool_calls) {
+              const args = JSON.parse(tc.function.arguments);
+              if (args._reasoning_log) delete args._reasoning_log;
+              const action = _toolCallToAction(tc.function.name, args);
+              if (!action) continue;
+              if (action.action === "save_memory_fact") {
+                try {
+                  addFact({ text: action.fact, category: action.category, ttlDays: action.ttl_days, source: "inbox" });
+                } catch {
+                }
+                continue;
               }
-              continue;
-            }
-            if (primaryHandled2) continue;
-            if (action.action === "save") {
-              await processSaveAction(action, combinedMsg);
-              primaryHandled2 = true;
-            } else if (action.action === "complete_habit") {
-              processCompleteHabit(action, combinedMsg);
-              primaryHandled2 = true;
-            } else if (action.action === "complete_task") {
-              processCompleteTask(action, combinedMsg);
-              primaryHandled2 = true;
-            } else if (processUniversalAction(action, combinedMsg, addInboxChatMsg)) {
-              primaryHandled2 = true;
-            } else if (action.comment) {
-              addInboxChatMsg("agent", action.comment);
-              primaryHandled2 = true;
+              if (primaryHandled) continue;
+              if (action.action === "save") {
+                await processSaveAction(action, combinedMsg);
+                primaryHandled = true;
+              } else if (action.action === "complete_habit") {
+                processCompleteHabit(action, combinedMsg);
+                primaryHandled = true;
+              } else if (action.action === "complete_task") {
+                processCompleteTask(action, combinedMsg);
+                primaryHandled = true;
+              } else if (processUniversalAction(action, combinedMsg, addInboxChatMsg)) {
+                primaryHandled = true;
+              } else if (action.comment) {
+                addInboxChatMsg("agent", action.comment);
+                primaryHandled = true;
+              }
             }
           }
+          if (msg.content) {
+            const { text: replyText, chips } = _parseContentChips2(msg.content);
+            if (replyText) addInboxChatMsg("agent", replyText, chips);
+          } else if (!primaryHandled) {
+            addInboxChatMsg("agent", t("inbox.chat.memorized", "\u0417\u0430\u043F\u0430\u043C\u02BC\u044F\u0442\u0430\u0432 \u2713"));
+          }
+        } catch (e) {
         }
-        if (msg.content) {
-          const { text: replyText, chips } = _parseContentChips2(msg.content);
-          if (replyText) addInboxChatMsg("agent", replyText, chips);
-        } else if (!primaryHandled) {
-          addInboxChatMsg("agent", t("inbox.chat.memorized", "\u0417\u0430\u043F\u0430\u043C\u02BC\u044F\u0442\u0430\u0432 \u2713"));
-        }
-      } catch (e) {
       }
+    } finally {
+      aiLoading = false;
     }
   }
   function _detectEventDate(text) {
@@ -19759,7 +19771,8 @@ ${logLines}
       "finance": "nm_finance",
       "health": "nm_health_cards",
       "projects": "nm_projects",
-      "evening": "nm_evening_summary"
+      "evening": "nm_evening_summary",
+      "reminder": "nm_reminders"
     };
     window.addEventListener("nm-data-changed", (e) => {
       const detail = e.detail;
@@ -20582,13 +20595,13 @@ ${logLines}
     const tabs = _pendingTabs || getActiveTabs();
     const TAB_LABELS = {
       inbox: "Inbox",
-      tasks: "\u041F\u0440\u043E\u0434\u0443\u043A\u0442\u0438\u0432.",
-      notes: "\u041D\u043E\u0442\u0430\u0442\u043A\u0438",
-      me: "\u042F",
-      evening: "\u0412\u0435\u0447\u0456\u0440",
-      finance: "\u0424\u0456\u043D\u0430\u043D\u0441\u0438",
-      health: "\u0417\u0434\u043E\u0440\u043E\u0432'\u044F",
-      projects: "\u041F\u0440\u043E\u0435\u043A\u0442\u0438"
+      tasks: t("tab.tasks", "\u041F\u0440\u043E\u0434\u0443\u043A\u0442\u0438\u0432."),
+      notes: t("tab.notes", "\u041D\u043E\u0442\u0430\u0442\u043A\u0438"),
+      me: t("tab.me", "\u042F"),
+      evening: t("tab.evening", "\u0412\u0435\u0447\u0456\u0440"),
+      finance: t("tab.finance", "\u0424\u0456\u043D\u0430\u043D\u0441\u0438"),
+      health: t("tab.health", "\u0417\u0434\u043E\u0440\u043E\u0432'\u044F"),
+      projects: t("tab.projects", "\u041F\u0440\u043E\u0435\u043A\u0442\u0438")
     };
     list.innerHTML = tabs.map((id, idx) => {
       const cfg = ALL_TABS_CONFIG.find((t2) => t2.id === id);
@@ -21086,10 +21099,10 @@ ${logLines}
         const ttlNote = f.ttl ? ` \xB7 \u0436\u0438\u0432\u0435 ${f.ttl} \u0434\u043D` : "";
         const sourceLabel = {
           inbox: "Inbox",
-          auto: "\u0444\u043E\u043D",
-          manual: "\u0432\u0440\u0443\u0447\u043D\u0443",
-          migration: "\u0441\u0442\u0430\u0440\u0430 \u043F\u0430\u043C'\u044F\u0442\u044C",
-          onboarding: "\u043E\u043D\u0431\u043E\u0440\u0434\u0438\u043D\u0433"
+          auto: t("mem.source.auto", "\u0444\u043E\u043D"),
+          manual: t("mem.source.manual", "\u0432\u0440\u0443\u0447\u043D\u0443"),
+          migration: t("mem.source.migration", "\u0441\u0442\u0430\u0440\u0430 \u043F\u0430\u043C'\u044F\u0442\u044C"),
+          onboarding: t("mem.source.onboarding", "\u043E\u043D\u0431\u043E\u0440\u0434\u0438\u043D\u0433")
         }[f.source] || "";
         const escId = escapeHtml(f.id);
         parts.push(`
@@ -22224,25 +22237,25 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
       {
         label: t("finstat.metric.max_day", "\u041C\u0430\u043A\u0441\u0438\u043C\u0443\u043C \u0437\u0430 \u0434\u0435\u043D\u044C"),
         value: formatMoney(Math.round(maxDay)),
-        desc: dayTotals.length > 0 ? `\u043D\u0430\u0439\u0434\u043E\u0440\u043E\u0436\u0447\u0438\u0439 \u0437 ${dayTotals.length} \u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0445 \u0434\u043D\u0456\u0432` : "\u043D\u0435\u043C\u0430\u0454 \u0434\u0430\u043D\u0438\u0445",
+        desc: dayTotals.length > 0 ? t("finstat.metric.max_day_desc", "\u043D\u0430\u0439\u0434\u043E\u0440\u043E\u0436\u0447\u0438\u0439 \u0437 {n} \u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0445 \u0434\u043D\u0456\u0432", { n: dayTotals.length }) : t("finstat.metric.no_data", "\u043D\u0435\u043C\u0430\u0454 \u0434\u0430\u043D\u0438\u0445"),
         color: "#c2410c"
       },
       {
-        label: "\u041D\u0430\u0439\u0431\u0456\u043B\u044C\u0448\u0430 \u043E\u043F\u0435\u0440\u0430\u0446\u0456\u044F",
+        label: t("finstat.metric.max_tx", "\u041D\u0430\u0439\u0431\u0456\u043B\u044C\u0448\u0430 \u043E\u043F\u0435\u0440\u0430\u0446\u0456\u044F"),
         value: formatMoney(Math.round(maxTx)),
-        desc: amounts.length > 0 ? `\u0437 ${amounts.length} \u043E\u043F\u0435\u0440\u0430\u0446\u0456\u0439` : "\u043D\u0435\u043C\u0430\u0454 \u0434\u0430\u043D\u0438\u0445",
+        desc: amounts.length > 0 ? t("finstat.metric.max_tx_desc", "\u0437 {n} \u043E\u043F\u0435\u0440\u0430\u0446\u0456\u0439", { n: amounts.length }) : t("finstat.metric.no_data", "\u043D\u0435\u043C\u0430\u0454 \u0434\u0430\u043D\u0438\u0445"),
         color: "#c2410c"
       },
       {
-        label: "\u041F\u0440\u043E\u0433\u043D\u043E\u0437 \u043C\u0456\u0441\u044F\u0446\u044F",
+        label: t("finstat.metric.forecast", "\u041F\u0440\u043E\u0433\u043D\u043E\u0437 \u043C\u0456\u0441\u044F\u0446\u044F"),
         value: formatMoney(Math.round(forecastEnd)),
-        desc: `\u0437\u0430 \u043F\u043E\u0442\u043E\u0447\u043D\u0438\u043C \u0442\u0435\u043C\u043F\u043E\u043C \u0434\u043E ${daysInMonth}.${String(now.getMonth() + 1).padStart(2, "0")}`,
+        desc: t("finstat.metric.forecast_desc", "\u0437\u0430 \u043F\u043E\u0442\u043E\u0447\u043D\u0438\u043C \u0442\u0435\u043C\u043F\u043E\u043C \u0434\u043E {date}", { date: `${daysInMonth}.${String(now.getMonth() + 1).padStart(2, "0")}` }),
         color: "#0ea5e9"
       },
       {
-        label: "\u0414\u043E\u0445\u043E\u0434\u0438 \u043C\u0456\u0441\u044F\u0446\u044F",
+        label: t("finstat.metric.income", "\u0414\u043E\u0445\u043E\u0434\u0438 \u043C\u0456\u0441\u044F\u0446\u044F"),
         value: formatMoney(curInc),
-        desc: monthInc.length > 0 ? `${monthInc.length} \u043D\u0430\u0434\u0445\u043E\u0434\u0436\u0435\u043D\u044C` : "\u0434\u043E\u0445\u043E\u0434\u0456\u0432 \u043D\u0435 \u0431\u0443\u043B\u043E",
+        desc: monthInc.length > 0 ? t("finstat.metric.income_desc", "{n} \u043D\u0430\u0434\u0445\u043E\u0434\u0436\u0435\u043D\u044C", { n: monthInc.length }) : t("finstat.metric.income_none", "\u0434\u043E\u0445\u043E\u0434\u0456\u0432 \u043D\u0435 \u0431\u0443\u043B\u043E"),
         color: "#16a34a"
       }
     ];
@@ -22289,7 +22302,7 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
         <div class="fin-section-label">${t("finstat.bench.title", "\u0420\u043E\u0437\u043F\u043E\u0434\u0456\u043B \u0434\u043E\u0445\u043E\u0434\u0443")}</div>
         <button onclick="toggleAnalyticsBenchmarkEdit()" aria-label="\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438" style="width:28px;height:28px;border-radius:50%;border:none;background:rgba(30,16,64,0.05);color:rgba(30,16,64,0.5);cursor:pointer;font-family:inherit"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></button>
       </div>
-      <div style="font-size:13px;color:rgba(30,16,64,0.45)">\u0414\u043E\u0434\u0430\u0439 \u0434\u043E\u0445\u0456\u0434 \u0449\u043E\u0431 \u043F\u043E\u0431\u0430\u0447\u0438\u0442\u0438 \u0440\u043E\u0437\u043F\u043E\u0434\u0456\u043B</div>
+      <div style="font-size:13px;color:rgba(30,16,64,0.45)">${t("finstat.bench.no_income", "\u0414\u043E\u0434\u0430\u0439 \u0434\u043E\u0445\u0456\u0434 \u0449\u043E\u0431 \u043F\u043E\u0431\u0430\u0447\u0438\u0442\u0438 \u0440\u043E\u0437\u043F\u043E\u0434\u0456\u043B")}</div>
     </div>`;
     }
     const spent = curExp;
@@ -22316,17 +22329,17 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
       </div>`;
       };
       const totalPct = cfg.needs.pct + cfg.wants.pct + cfg.savings.pct;
-      const sumWarning = totalPct !== 100 ? `<div style="font-size:11px;color:#c2410c;margin-bottom:8px">\u26A0\uFE0F \u0421\u0443\u043C\u0430 ${totalPct}% \u2014 \u0440\u0435\u043A\u043E\u043C\u0435\u043D\u0434\u043E\u0432\u0430\u043D\u043E 100%</div>` : "";
+      const sumWarning = totalPct !== 100 ? `<div style="font-size:11px;color:#c2410c;margin-bottom:8px">${t("finstat.bench.sum_warn", "\u26A0\uFE0F \u0421\u0443\u043C\u0430 {pct}% \u2014 \u0440\u0435\u043A\u043E\u043C\u0435\u043D\u0434\u043E\u0432\u0430\u043D\u043E 100%", { pct: totalPct })}</div>` : "";
       return `<div style="background:white;border-radius:20px;box-shadow:0 2px 12px rgba(30,16,64,0.06);padding:16px;margin-bottom:12px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-        <div class="fin-section-label">\u0420\u043E\u0437\u043F\u043E\u0434\u0456\u043B \u0434\u043E\u0445\u043E\u0434\u0443 \xB7 \u0440\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u043D\u043D\u044F</div>
-        <button onclick="toggleAnalyticsBenchmarkEdit()" style="padding:5px 12px;border-radius:10px;border:none;background:#c2410c;color:white;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">\u0413\u043E\u0442\u043E\u0432\u043E</button>
+        <div class="fin-section-label">${t("finstat.bench.title_edit", "\u0420\u043E\u0437\u043F\u043E\u0434\u0456\u043B \u0434\u043E\u0445\u043E\u0434\u0443 \xB7 \u0440\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u043D\u043D\u044F")}</div>
+        <button onclick="toggleAnalyticsBenchmarkEdit()" style="padding:5px 12px;border-radius:10px;border:none;background:#c2410c;color:white;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">${t("finstat.bench.done_btn", "\u0413\u043E\u0442\u043E\u0432\u043E")}</button>
       </div>
       ${sumWarning}
       ${editRow("needs", needsPct, "#f97316")}
       ${editRow("wants", wantsPct, "#0ea5e9")}
       ${editRow("savings", savedPct, "#22c55e")}
-      <button onclick="resetBenchmarkConfig()" style="width:100%;padding:8px;border-radius:10px;border:1.5px dashed rgba(30,16,64,0.15);background:transparent;color:rgba(30,16,64,0.5);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">\u0421\u043A\u0438\u043D\u0443\u0442\u0438 \u0434\u043E 50/30/20</button>
+      <button onclick="resetBenchmarkConfig()" style="width:100%;padding:8px;border-radius:10px;border:1.5px dashed rgba(30,16,64,0.15);background:transparent;color:rgba(30,16,64,0.5);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">${t("finstat.bench.reset_btn", "\u0421\u043A\u0438\u043D\u0443\u0442\u0438 \u0434\u043E 50/30/20")}</button>
     </div>`;
     }
     const bar = (cfgItem, realPct, color) => {
@@ -22336,7 +22349,7 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
       return `<div style="margin-bottom:10px">
       <div style="display:flex;justify-content:space-between;font-size:12px;font-weight:600;margin-bottom:4px">
         <span style="color:#1e1040">${escapeHtml(cfgItem.name)}</span>
-        <span style="color:${isOver ? "#c2410c" : color};font-weight:700">${realPct}% <span style="font-weight:400;color:rgba(30,16,64,0.35)">(\u0446\u0456\u043B\u044C ${target}%)</span></span>
+        <span style="color:${isOver ? "#c2410c" : color};font-weight:700">${realPct}% <span style="font-weight:400;color:rgba(30,16,64,0.35)">${t("finstat.bench.goal", "(\u0446\u0456\u043B\u044C {pct}%)", { pct: target })}</span></span>
       </div>
       <div style="height:8px;background:rgba(30,16,64,0.06);border-radius:4px;overflow:hidden;position:relative">
         <div style="height:100%;width:${w}%;background:${color};border-radius:4px;transition:width 0.5s"></div>

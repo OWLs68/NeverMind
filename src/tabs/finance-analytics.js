@@ -176,16 +176,22 @@ function _analyticsMiniMetrics(allTxs) {
       desc: t('finstat.metric.ops_avg', 'середня {sum}', { sum: formatMoney(Math.round(avgTx)) }),
       color: '#0ea5e9' },
     { label: t('finstat.metric.max_day', 'Максимум за день'), value: formatMoney(Math.round(maxDay)),
-      desc: dayTotals.length > 0 ? `найдорожчий з ${dayTotals.length} активних днів` : 'немає даних',
+      desc: dayTotals.length > 0
+        ? t('finstat.metric.max_day_desc', 'найдорожчий з {n} активних днів', { n: dayTotals.length })
+        : t('finstat.metric.no_data', 'немає даних'),
       color: '#c2410c' },
-    { label: 'Найбільша операція', value: formatMoney(Math.round(maxTx)),
-      desc: amounts.length > 0 ? `з ${amounts.length} операцій` : 'немає даних',
+    { label: t('finstat.metric.max_tx', 'Найбільша операція'), value: formatMoney(Math.round(maxTx)),
+      desc: amounts.length > 0
+        ? t('finstat.metric.max_tx_desc', 'з {n} операцій', { n: amounts.length })
+        : t('finstat.metric.no_data', 'немає даних'),
       color: '#c2410c' },
-    { label: 'Прогноз місяця', value: formatMoney(Math.round(forecastEnd)),
-      desc: `за поточним темпом до ${daysInMonth}.${String(now.getMonth() + 1).padStart(2, '0')}`,
+    { label: t('finstat.metric.forecast', 'Прогноз місяця'), value: formatMoney(Math.round(forecastEnd)),
+      desc: t('finstat.metric.forecast_desc', 'за поточним темпом до {date}', { date: `${daysInMonth}.${String(now.getMonth() + 1).padStart(2, '0')}` }),
       color: '#0ea5e9' },
-    { label: 'Доходи місяця', value: formatMoney(curInc),
-      desc: monthInc.length > 0 ? `${monthInc.length} надходжень` : 'доходів не було',
+    { label: t('finstat.metric.income', 'Доходи місяця'), value: formatMoney(curInc),
+      desc: monthInc.length > 0
+        ? t('finstat.metric.income_desc', '{n} надходжень', { n: monthInc.length })
+        : t('finstat.metric.income_none', 'доходів не було'),
       color: '#16a34a' },
   ];
 
@@ -234,7 +240,7 @@ function _analyticsBenchmark(allTxs) {
         <div class="fin-section-label">${t('finstat.bench.title', 'Розподіл доходу')}</div>
         <button onclick="toggleAnalyticsBenchmarkEdit()" aria-label="Редагувати" style="width:28px;height:28px;border-radius:50%;border:none;background:rgba(30,16,64,0.05);color:rgba(30,16,64,0.5);cursor:pointer;font-family:inherit"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></button>
       </div>
-      <div style="font-size:13px;color:rgba(30,16,64,0.45)">Додай дохід щоб побачити розподіл</div>
+      <div style="font-size:13px;color:rgba(30,16,64,0.45)">${t('finstat.bench.no_income', 'Додай дохід щоб побачити розподіл')}</div>
     </div>`;
   }
 
@@ -264,17 +270,19 @@ function _analyticsBenchmark(allTxs) {
       </div>`;
     };
     const totalPct = cfg.needs.pct + cfg.wants.pct + cfg.savings.pct;
-    const sumWarning = totalPct !== 100 ? `<div style="font-size:11px;color:#c2410c;margin-bottom:8px">⚠️ Сума ${totalPct}% — рекомендовано 100%</div>` : '';
+    const sumWarning = totalPct !== 100
+      ? `<div style="font-size:11px;color:#c2410c;margin-bottom:8px">${t('finstat.bench.sum_warn', '⚠️ Сума {pct}% — рекомендовано 100%', { pct: totalPct })}</div>`
+      : '';
     return `<div style="background:white;border-radius:20px;box-shadow:0 2px 12px rgba(30,16,64,0.06);padding:16px;margin-bottom:12px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-        <div class="fin-section-label">Розподіл доходу · редагування</div>
-        <button onclick="toggleAnalyticsBenchmarkEdit()" style="padding:5px 12px;border-radius:10px;border:none;background:#c2410c;color:white;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">Готово</button>
+        <div class="fin-section-label">${t('finstat.bench.title_edit', 'Розподіл доходу · редагування')}</div>
+        <button onclick="toggleAnalyticsBenchmarkEdit()" style="padding:5px 12px;border-radius:10px;border:none;background:#c2410c;color:white;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">${t('finstat.bench.done_btn', 'Готово')}</button>
       </div>
       ${sumWarning}
       ${editRow('needs', needsPct, '#f97316')}
       ${editRow('wants', wantsPct, '#0ea5e9')}
       ${editRow('savings', savedPct, '#22c55e')}
-      <button onclick="resetBenchmarkConfig()" style="width:100%;padding:8px;border-radius:10px;border:1.5px dashed rgba(30,16,64,0.15);background:transparent;color:rgba(30,16,64,0.5);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">Скинути до 50/30/20</button>
+      <button onclick="resetBenchmarkConfig()" style="width:100%;padding:8px;border-radius:10px;border:1.5px dashed rgba(30,16,64,0.15);background:transparent;color:rgba(30,16,64,0.5);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">${t('finstat.bench.reset_btn', 'Скинути до 50/30/20')}</button>
     </div>`;
   }
 
@@ -285,7 +293,7 @@ function _analyticsBenchmark(allTxs) {
     return `<div style="margin-bottom:10px">
       <div style="display:flex;justify-content:space-between;font-size:12px;font-weight:600;margin-bottom:4px">
         <span style="color:#1e1040">${escapeHtml(cfgItem.name)}</span>
-        <span style="color:${isOver ? '#c2410c' : color};font-weight:700">${realPct}% <span style="font-weight:400;color:rgba(30,16,64,0.35)">(ціль ${target}%)</span></span>
+        <span style="color:${isOver ? '#c2410c' : color};font-weight:700">${realPct}% <span style="font-weight:400;color:rgba(30,16,64,0.35)">${t('finstat.bench.goal', '(ціль {pct}%)', { pct: target })}</span></span>
       </div>
       <div style="height:8px;background:rgba(30,16,64,0.06);border-radius:4px;overflow:hidden;position:relative">
         <div style="height:100%;width:${w}%;background:${color};border-radius:4px;transition:width 0.5s"></div>

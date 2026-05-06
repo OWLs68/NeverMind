@@ -371,7 +371,7 @@ function getHabitWeekDays(id, target) {
 }
 
 function makeHabitDayDots(h, weekState, todayDow) {
-  const labels = ['Пн','Вт','Ср','Чт','Пт','Сб','Нд'];
+  const labels = [t('day.mon','Пн'),t('day.tue','Вт'),t('day.wed','Ср'),t('day.thu','Чт'),t('day.fri','Пт'),t('day.sat','Сб'),t('day.sun','Нд')];
   return labels.map(function(label, i) {
     const isPlanned = (h.days || [0,1,2,3,4]).includes(i);
     const entry = weekState.find(x => x.i === i);
@@ -469,7 +469,7 @@ export function renderHabits() {
               + '<span style="font-size:15px;font-weight:700;color:#1e1040">' + escapeHtml(shortName) + '</span>'
               + countLabel + streakHtml
             + '</div>'
-            + '<div style="font-size:11px;font-weight:600;color:' + pctColor + ';margin-top:1px">' + pct + '% за 30 днів</div>'
+            + '<div style="font-size:11px;font-weight:600;color:' + pctColor + ';margin-top:1px">' + t('habits.stat.pct_30d', '{pct}% за 30 днів', { pct }) + '</div>'
           + '</div>'
         + '</div>'
         + squaresHtml
@@ -1001,11 +1001,11 @@ export function processUniversalAction(parsed, originalText, addMsg) {
     if (eventDetected) {
       const ev = { id: Date.now(), title: eventDetected.title || title, date: eventDetected.date, time: null, priority: parsed.priority || 'normal', createdAt: Date.now() };
       const res = addEventDedup(ev);
-      if (!res.added) { addMsg('agent', `Така подія "${ev.title}" вже є в календарі.`); return true; }
+      if (!res.added) { addMsg('agent', t('habits.event.dup', 'Така подія "{title}" вже є в календарі.', { title: ev.title })); return true; }
       const dateObj = new Date(eventDetected.date);
       const dayStr = `${dateObj.getDate()} ${monthGenitive(dateObj.getMonth())}`;
       const items = getInbox(); items.unshift({ id: Date.now(), text: title, category: 'event', ts: Date.now(), processed: true }); saveInbox(items);
-      addMsg('agent', `📅 Подію "${ev.title}" додано на ${dayStr}`);
+      addMsg('agent', t('habits.event.added', '📅 Подію "{title}" додано на {date}', { title: ev.title, date: dayStr }));
       return true;
     }
     const steps = Array.isArray(parsed.steps) ? parsed.steps.map(s => ({ id: Date.now() + Math.random(), text: s, done: false })) : [];
@@ -1017,7 +1017,7 @@ export function processUniversalAction(parsed, originalText, addMsg) {
     saveTasks(tasks);
     if (currentTab === 'tasks') renderTasks();
     const items = getInbox(); items.unshift({ id: Date.now(), text: title, category: 'task', ts: Date.now(), processed: true }); saveInbox(items);
-    addMsg('agent', '✅ Задачу "' + title + '" створено');
+    addMsg('agent', t('habits.task.created', '✅ Задачу "{title}" створено', { title }));
     if (parsed.ask_after) setTimeout(() => addMsg('agent', parsed.ask_after), 600);
     return true;
   }
@@ -1029,13 +1029,13 @@ export function processUniversalAction(parsed, originalText, addMsg) {
       // Fuzzy match по назві
       const nameQ = (parsed.name || parsed.habit_name || '').toLowerCase();
       const found = habits.find(x => x.name.toLowerCase().includes(nameQ.slice(0, 6)));
-      if (!found) { addMsg('agent', 'Не знайшов цю звичку.'); return true; }
+      if (!found) { addMsg('agent', t('habits.err.habit_not_found', 'Не знайшов цю звичку.')); return true; }
       if (parsed.name) found.name = parsed.name;
       if (parsed.days) found.days = parsed.days;
       if (parsed.details !== undefined) found.details = parsed.details;
       saveHabits(habits);
       renderProdHabits(); renderHabits();
-      addMsg('agent', '✏️ Звичку "' + found.name + '" оновлено');
+      addMsg('agent', t('habits.habit.updated', '✏️ Звичку "{name}" оновлено', { name: found.name }));
       return true;
     }
     if (parsed.name) h.name = parsed.name;
@@ -1043,7 +1043,7 @@ export function processUniversalAction(parsed, originalText, addMsg) {
     if (parsed.details !== undefined) h.details = parsed.details;
     saveHabits(habits);
     renderProdHabits(); renderHabits();
-    addMsg('agent', '✏️ Звичку "' + h.name + '" оновлено');
+    addMsg('agent', t('habits.habit.updated', '✏️ Звичку "{name}" оновлено', { name: h.name }));
     return true;
   }
 
@@ -1053,7 +1053,7 @@ export function processUniversalAction(parsed, originalText, addMsg) {
     if (!task) {
       const nameQ = (parsed.title || '').toLowerCase();
       const found = tasks.find(x => x.title.toLowerCase().includes(nameQ.slice(0, 8)));
-      if (!found) { addMsg('agent', 'Не знайшов цю задачу.'); return true; }
+      if (!found) { addMsg('agent', t('habits.err.task_not_found_short', 'Не знайшов цю задачу.')); return true; }
       if (parsed.title) found.title = parsed.title;
       if (parsed.dueDate && parsed.dueDate !== found.dueDate) {
         if (found.dueDate) found.rescheduleCount = (found.rescheduleCount || 0) + 1;
@@ -1063,7 +1063,7 @@ export function processUniversalAction(parsed, originalText, addMsg) {
       if (parsed.priority && ['normal','important','critical'].includes(parsed.priority)) found.priority = parsed.priority;
       saveTasks(tasks);
       if (currentTab === 'tasks') renderTasks();
-      addMsg('agent', '✏️ Задачу "' + found.title + '" оновлено');
+      addMsg('agent', t('habits.task.updated', '✏️ Задачу "{title}" оновлено', { title: found.title }));
       return true;
     }
     if (parsed.title) task.title = parsed.title;
@@ -1075,7 +1075,7 @@ export function processUniversalAction(parsed, originalText, addMsg) {
     if (parsed.priority && ['normal','important','critical'].includes(parsed.priority)) task.priority = parsed.priority;
     saveTasks(tasks);
     if (currentTab === 'tasks') renderTasks();
-    addMsg('agent', '✏️ Задачу "' + task.title + '" оновлено');
+    addMsg('agent', t('habits.task.updated', '✏️ Задачу "{title}" оновлено', { title: task.title }));
     return true;
   }
 
@@ -1092,12 +1092,12 @@ export function processUniversalAction(parsed, originalText, addMsg) {
         target = tasks.find(x => x.title.toLowerCase().includes(nameQ.slice(0, 8)));
       }
     }
-    if (!target) { addMsg('agent', 'Не знайшов цю задачу. Уточни назву.'); return true; }
+    if (!target) { addMsg('agent', t('habits.err.task_not_found', 'Не знайшов цю задачу. Уточни назву.')); return true; }
     addToTrash('task', target, null);
     const remaining = tasks.filter(x => x.id !== target.id);
     saveTasks(remaining);
     if (currentTab === 'tasks') renderTasks();
-    addMsg('agent', '🗑️ Задачу "' + target.title + '" видалено');
+    addMsg('agent', t('habits.task.deleted', '🗑️ Задачу "{title}" видалено', { title: target.title }));
     showUndoToast();
     return true;
   }
@@ -1107,12 +1107,12 @@ export function processUniversalAction(parsed, originalText, addMsg) {
     const h = habits.find(x => x.id === parsed.habit_id);
     const nameQ = (parsed.name || parsed.query || '').toLowerCase();
     const target = h || habits.find(x => x.name.toLowerCase().includes(nameQ.slice(0, 6)));
-    if (!target) { addMsg('agent', 'Не знайшов цю звичку.'); return true; }
+    if (!target) { addMsg('agent', t('habits.err.habit_not_found', 'Не знайшов цю звичку.')); return true; }
     addToTrash('habit', target, null);
     const remaining = habits.filter(x => x.id !== target.id);
     saveHabits(remaining);
     renderProdHabits(); renderHabits();
-    addMsg('agent', '🗑️ Звичку "' + target.name + '" видалено');
+    addMsg('agent', t('habits.habit.deleted', '🗑️ Звичку "{name}" видалено', { name: target.name }));
     showUndoToast();
     return true;
   }
@@ -1122,12 +1122,12 @@ export function processUniversalAction(parsed, originalText, addMsg) {
     const task = tasks.find(x => String(x.id) === String(parsed.task_id) && x.status === 'done');
     const nameQ = (parsed.title || parsed.query || '').toLowerCase();
     const target = task || tasks.find(x => x.status === 'done' && x.title.toLowerCase().includes(nameQ.slice(0, 8)));
-    if (!target) { addMsg('agent', 'Не знайшов закриту задачу з такою назвою.'); return true; }
+    if (!target) { addMsg('agent', t('habits.err.closed_task_not_found', 'Не знайшов закриту задачу з такою назвою.')); return true; }
     target.status = 'active';
     delete target.completedAt;
     saveTasks(tasks);
     if (currentTab === 'tasks') renderTasks();
-    addMsg('agent', '🔄 Задачу "' + target.title + '" перевідкрито');
+    addMsg('agent', t('habits.task.reopened', '🔄 Задачу "{title}" перевідкрито', { title: target.title }));
     return true;
   }
 
@@ -1138,9 +1138,9 @@ export function processUniversalAction(parsed, originalText, addMsg) {
   if (action === 'complete_task') {
     const tasks = getTasks();
     const task = tasks.find(x => String(x.id) === String(parsed.task_id));
-    if (!task) { addMsg('agent', 'Не знайшов задачу з таким ID.'); return true; }
-    if (task.status === 'done') { addMsg('agent', `Задача "${task.title}" вже закрита.`); return true; }
-    addMsg('agent', `✅ Задачу "${task.title}" виконано!`);
+    if (!task) { addMsg('agent', t('habits.err.task_not_found_by_id', 'Не знайшов задачу з таким ID.')); return true; }
+    if (task.status === 'done') { addMsg('agent', t('habits.task.already_done', 'Задача "{title}" вже закрита.', { title: task.title })); return true; }
+    addMsg('agent', t('habits.task.done', '✅ Задачу "{title}" виконано!', { title: task.title }));
     // Викликаємо ту саму 3-фазну анімацію що й при ручному тапі ✓:
     // галочка → 250мс пауза → сповзання картки → save+render через 620мс.
     if (currentTab === 'tasks') {
@@ -1163,7 +1163,7 @@ export function processUniversalAction(parsed, originalText, addMsg) {
       const q = parsed.habit_name.toLowerCase();
       h = habits.find(x => x.name.toLowerCase().includes(q.slice(0, 6)));
     }
-    if (!h) { addMsg('agent', 'Не знайшов звичку.'); return true; }
+    if (!h) { addMsg('agent', t('habits.err.habit_not_found_short', 'Не знайшов звичку.')); return true; }
     const todayStr = new Date().toDateString();
     const log = getHabitLog();
     if (!log[todayStr]) log[todayStr] = {};
@@ -1171,22 +1171,22 @@ export function processUniversalAction(parsed, originalText, addMsg) {
     saveHabitLog(log);
     renderProdHabits();
     renderHabits();
-    addMsg('agent', `✅ Відмітив звичку "${h.name}" як виконану сьогодні`);
+    addMsg('agent', t('habits.habit.marked_today', '✅ Відмітив звичку "{name}" як виконану сьогодні', { name: h.name }));
     return true;
   }
 
   if (action === 'add_step') {
     const tasks = getTasks();
     const task = tasks.find(x => String(x.id) === String(parsed.task_id));
-    if (!task) { addMsg('agent', 'Не знайшов задачу для додавання кроку.'); return true; }
+    if (!task) { addMsg('agent', t('habits.err.task_for_step', 'Не знайшов задачу для додавання кроку.')); return true; }
     const stepText = (parsed.step || '').trim();
-    if (!stepText) { addMsg('agent', 'Не вказано текст кроку.'); return true; }
+    if (!stepText) { addMsg('agent', t('habits.err.step_empty', 'Не вказано текст кроку.')); return true; }
     if (!Array.isArray(task.steps)) task.steps = [];
     task.steps.push({ id: Date.now(), text: stepText, done: false });
     task.updatedAt = Date.now();
     saveTasks(tasks);
     if (currentTab === 'tasks') renderTasks();
-    addMsg('agent', `✅ Додав крок "${stepText}"`);
+    addMsg('agent', t('habits.step.added', '✅ Додав крок "{step}"', { step: stepText }));
     return true;
   }
 
@@ -1198,7 +1198,7 @@ export function processUniversalAction(parsed, originalText, addMsg) {
     const moments = getMoments();
     moments.push({ id: Date.now(), text, mood, ts: Date.now() });
     saveMoments(moments);
-    addMsg('agent', '✨ Момент записано');
+    addMsg('agent', t('habits.moment.added', '✨ Момент записано'));
     return true;
   }
 
@@ -1209,7 +1209,7 @@ export function processUniversalAction(parsed, originalText, addMsg) {
     habits.push({ id: Date.now(), name, details: parsed.details || '', emoji: '⭕', days: parsed.days || [0,1,2,3,4,5,6], createdAt: Date.now() });
     saveHabits(habits);
     renderProdHabits(); renderHabits();
-    addMsg('agent', '🌱 Звичку "' + name + '" створено');
+    addMsg('agent', t('habits.habit.created', '🌱 Звичку "{name}" створено', { name }));
     if (parsed.ask_after) setTimeout(() => addMsg('agent', parsed.ask_after), 600);
     return true;
   }
@@ -1217,7 +1217,9 @@ export function processUniversalAction(parsed, originalText, addMsg) {
   if (action === 'create_note') {
     addNoteFromInbox(parsed.text, 'note', parsed.folder || null, 'agent');
     if (currentTab === 'notes') renderNotes();
-    addMsg('agent', '✓ Нотатку збережено' + (parsed.folder ? ' в папку "' + parsed.folder + '"' : ''));
+    addMsg('agent', parsed.folder
+      ? t('habits.note.saved_to', '✓ Нотатку збережено в папку "{folder}"', { folder: parsed.folder })
+      : t('habits.note.saved', '✓ Нотатку збережено'));
     if (parsed.ask_after) setTimeout(() => addMsg('agent', parsed.ask_after), 600);
     return true;
   }
@@ -1234,20 +1236,20 @@ export function processUniversalAction(parsed, originalText, addMsg) {
     }
     const ev = { id: Date.now(), title, date: parsed.date, time: parsed.time || null, endTime, priority: parsed.priority || 'normal', createdAt: Date.now() };
     const res = addEventDedup(ev);
-    if (!res.added) { addMsg('agent', `Така подія "${title}" вже є в календарі.`); return true; }
+    if (!res.added) { addMsg('agent', t('habits.event.dup', 'Така подія "{title}" вже є в календарі.', { title })); return true; }
     const dateObj = new Date(parsed.date);
     const dayStr = `${dateObj.getDate()} ${monthGenitive(dateObj.getMonth())}`;
     const items = getInbox(); items.unshift({ id: Date.now(), text: title, category: 'event', ts: Date.now(), processed: true }); saveInbox(items);
     const timeStr = parsed.time ? ` о ${parsed.time}${endTime ? '–' + endTime : ''}` : '';
-    const warn = conflict ? `\n⚠️ На цей час уже є "${conflict.title}". Лишити обидві чи перенести?` : '';
-    addMsg('agent', `📅 Подію "${title}" додано на ${dayStr}${timeStr}${warn}`);
+    const warn = conflict ? '\n' + t('habits.event.conflict', '⚠️ На цей час уже є "{title}". Лишити обидві чи перенести?', { title: conflict.title }) : '';
+    addMsg('agent', t('habits.event.added_full', '📅 Подію "{title}" додано на {date}{time}{warn}', { title, date: dayStr, time: timeStr, warn }));
     return true;
   }
 
   if (action === 'edit_event') {
     const events = getEvents();
     const idx = events.findIndex(e => e.id === parsed.event_id);
-    if (idx === -1) { addMsg('agent', 'Не знайшов подію для редагування.'); return true; }
+    if (idx === -1) { addMsg('agent', t('habits.err.event_for_edit', 'Не знайшов подію для редагування.')); return true; }
     if (parsed.date) events[idx].date = parsed.date;
     if (parsed.time !== undefined) events[idx].time = parsed.time || null;
     if (parsed.end_time !== undefined) {
@@ -1266,7 +1268,7 @@ export function processUniversalAction(parsed, originalText, addMsg) {
     const tm = events[idx].time;
     const et = events[idx].endTime;
     const timeStr = tm ? ` о ${tm}${et ? '–' + et : ''}` : '';
-    const editText = `✏️ Змінено: "${events[idx].title}" → ${dayStr}${timeStr}`;
+    const editText = t('habits.event.edited', '✏️ Змінено: "{title}" → {date}{time}', { title: events[idx].title, date: dayStr, time: timeStr });
     addMsg('agent', editText);
     // Карточка в Inbox стрічку щоб юзер бачив що було змінено
     try {
@@ -1281,12 +1283,12 @@ export function processUniversalAction(parsed, originalText, addMsg) {
   if (action === 'delete_event') {
     const events = getEvents();
     const idx = events.findIndex(e => e.id === parsed.event_id);
-    if (idx === -1) { addMsg('agent', 'Не знайшов подію.'); return true; }
+    if (idx === -1) { addMsg('agent', t('habits.err.event_not_found', 'Не знайшов подію.')); return true; }
     const title = events[idx].title;
     addToTrash('event', events[idx]);
     events.splice(idx, 1);
     saveEvents(events);
-    addMsg('agent', `🗑 Подію "${title}" видалено`);
+    addMsg('agent', t('habits.event.deleted', '🗑 Подію "{title}" видалено', { title }));
     showUndoToast('event', title);
     return true;
   }
@@ -1294,12 +1296,14 @@ export function processUniversalAction(parsed, originalText, addMsg) {
   if (action === 'edit_note') {
     const notes = getNotes();
     const idx = notes.findIndex(n => n.id === parsed.note_id);
-    if (idx === -1) { addMsg('agent', 'Не знайшов нотатку.'); return true; }
+    if (idx === -1) { addMsg('agent', t('habits.err.note_not_found', 'Не знайшов нотатку.')); return true; }
     if (parsed.text) notes[idx].text = parsed.text;
     if (parsed.folder) notes[idx].folder = parsed.folder;
     notes[idx].updatedAt = Date.now();
     saveNotes(notes);
-    addMsg('agent', `✓ Нотатку оновлено${parsed.folder ? ' → папка "' + parsed.folder + '"' : ''}`);
+    addMsg('agent', parsed.folder
+      ? t('habits.note.updated_folder', '✓ Нотатку оновлено → папка "{folder}"', { folder: parsed.folder })
+      : t('habits.note.updated', '✓ Нотатку оновлено'));
     return true;
   }
 
@@ -1310,11 +1314,11 @@ export function processUniversalAction(parsed, originalText, addMsg) {
     const notes = getNotes();
     const exists = notes.some(n => (n.folder || 'Загальне') === folderName);
     if (exists) {
-      addMsg('agent', `Папка "${folderName}" вже є.`);
+      addMsg('agent', t('habits.folder.exists', 'Папка "{folder}" вже є.', { folder: folderName }));
     } else {
       // Створюємо папку через додавання порожньої нотатки-заглушки яку одразу прибираємо
       // Правильний спосіб — просто кажемо юзеру що папка з'явиться при першій нотатці
-      addMsg('agent', `Папка "${folderName}" створена. Напиши нотатку і я покладу її туди.`);
+      addMsg('agent', t('habits.folder.created_hint', 'Папка "{folder}" створена. Напиши нотатку і я покладу її туди.', { folder: folderName }));
     }
     return true;
   }
@@ -1327,7 +1331,7 @@ export function processUniversalAction(parsed, originalText, addMsg) {
     // Fuzzy match — знаходимо найближчу папку
     const matched = _fuzzyFindFolder(targetName, folders);
     if (!matched) {
-      addMsg('agent', `Папку "${targetName}" не знайшов. Доступні: ${folders.join(', ')}`);
+      addMsg('agent', t('habits.folder.not_found', 'Папку "{folder}" не знайшов. Доступні: {list}', { folder: targetName, list: folders.join(', ') }));
       return true;
     }
     const toDelete = notes.filter(n => (n.folder || 'Загальне') === matched);
@@ -1335,7 +1339,7 @@ export function processUniversalAction(parsed, originalText, addMsg) {
     const remaining = notes.filter(n => (n.folder || 'Загальне') !== matched);
     saveNotes(remaining);
     if (currentTab === 'notes') { setCurrentNotesFolder(null); renderNotes(); }
-    addMsg('agent', `✓ Папку "${matched}" видалено (${toDelete.length} нотаток)`);
+    addMsg('agent', t('habits.folder.deleted', '✓ Папку "{folder}" видалено ({n} нотаток)', { folder: matched, n: toDelete.length }));
     return true;
   }
 
@@ -1349,7 +1353,7 @@ export function processUniversalAction(parsed, originalText, addMsg) {
     // Знаходимо нотатку по тексту
     const idx = notes.findIndex(n => n.text.toLowerCase().includes(noteQuery));
     if (idx === -1) {
-      addMsg('agent', `Нотатку "${noteQuery}" не знайшов.`);
+      addMsg('agent', t('habits.note.not_found_q', 'Нотатку "{q}" не знайшов.', { q: noteQuery }));
       return true;
     }
     const oldFolder = notes[idx].folder || 'Загальне';
@@ -1358,14 +1362,14 @@ export function processUniversalAction(parsed, originalText, addMsg) {
     notes[idx] = { ...notes[idx], folder: resolvedFolder, updatedAt: Date.now() };
     saveNotes(notes);
     if (currentTab === 'notes') renderNotes();
-    addMsg('agent', `✓ Нотатку переміщено з "${oldFolder}" до "${resolvedFolder}"`);
+    addMsg('agent', t('habits.note.moved', '✓ Нотатку переміщено з "{from}" до "{to}"', { from: oldFolder, to: resolvedFolder }));
     return true;
   }
 
   if (action === 'save_finance' || action === 'save_expense' || action === 'save_income') {
     const type = action === 'save_income' ? 'income' : (parsed.fin_type || 'expense');
     const amount = parseFloat(parsed.amount) || 0;
-    if (!amount || amount <= 0) { addMsg('agent', 'Не вдалось розпізнати суму.'); return true; }
+    if (!amount || amount <= 0) { addMsg('agent', t('habits.err.amount_unparsed', 'Не вдалось розпізнати суму.')); return true; }
     const category = parsed.category || 'Інше';
     const comment = parsed.comment || originalText;
     // B-70 fix: catList — масив об'єктів, не рядків. Раніше .includes('Їжа') завжди false
@@ -1398,17 +1402,17 @@ export function processUniversalAction(parsed, originalText, addMsg) {
     const blocks = (parsed.blocks || []).map(b => ({ time: b.time, activity: b.activity }));
     const days = Array.isArray(parsed.day) ? parsed.day : [parsed.day || 'default'];
     if (days.length > 1) {
-      _splitReply(`Копіюю розпорядок на ${days.length} днів...`, () => {
+      _splitReply(t('habits.routine.copying', 'Копіюю розпорядок на {n} днів...', { n: days.length }), () => {
         const routine = getRoutine();
         days.forEach(d => { routine[d] = [...blocks]; });
         saveRoutine(routine);
-        addMsg('agent', `🕐 Готово! Розпорядок на ${days.length} дн. (${blocks.length} блоків)`);
+        addMsg('agent', t('habits.routine.done_multi', '🕐 Готово! Розпорядок на {n} дн. ({blocks} блоків)', { n: days.length, blocks: blocks.length }));
       });
     } else {
       const routine = getRoutine();
       days.forEach(d => { routine[d] = [...blocks]; });
       saveRoutine(routine);
-      addMsg('agent', `🕐 Розпорядок збережено (${blocks.length} блоків)`);
+      addMsg('agent', t('habits.routine.saved', '🕐 Розпорядок збережено ({blocks} блоків)', { blocks: blocks.length }));
     }
     return true;
   }
@@ -1417,7 +1421,7 @@ export function processUniversalAction(parsed, originalText, addMsg) {
     const time = parsed.time;
     const text = parsed.text || 'Нагадування';
     const date = parsed.date || new Date().toISOString().slice(0, 10);
-    if (!time) { addMsg('agent', 'Вкажи час нагадування.'); return true; }
+    if (!time) { addMsg('agent', t('habits.err.reminder_time', 'Вкажи час нагадування.')); return true; }
     const reminderId = Date.now();
     // 1. nm_reminders — для тригера спливаючого попередження
     const reminders = JSON.parse(localStorage.getItem('nm_reminders') || '[]');
@@ -1449,7 +1453,7 @@ export function processUniversalAction(parsed, originalText, addMsg) {
     saveInbox(items);
     try { renderInbox(); } catch(e) {}
     window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'reminder' }));
-    addMsg('agent', `⏰ Нагадаю о ${time}: "${text}"`);
+    addMsg('agent', t('habits.reminder.set.ok', '⏰ Нагадаю о {time}: "{text}"', { time, text }));
     return true;
   }
 

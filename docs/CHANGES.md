@@ -6,6 +6,53 @@
 
 ---
 
+## 2026-05-06 — MPVly-day2: silent-bug-scout 4-pack (B-128/129/130/131) + i18n 110 рядків
+
+**Гілка:** `claude/start-session-MPVly` · 1 fix-коміт · v? → v?
+
+### Силент-баги виправлено перед тим як Роман натрапив
+
+- **B-128 drum-col mask-image у backdrop-filter:blur composite** (`style.css:1505-1517`) — той самий клас бага що Settings UvEHE 03.05. `event-edit-modal` (`index.html:1037-1085`) та `health-dt-picker-modal` (`index.html:1768-1789`) обидва мають parent `backdrop-filter:blur(32px) + overflow:hidden`. На iOS Safari при scroll барабана дати/часу composite layer ламався — модалка стискалась. Не проявилось бо barrel рідко відкривається. **Фікс:** видалено `mask-image` / `-webkit-mask-image` з `.drum-col`; fade на краях прибрано (border ramp + центральна acent-смуга залишилися — досить).
+- **B-129 set_reminder без t()** (`habits.js:1452`) — `addMsg('agent', \`⏰ Нагадаю о ${time}: "${text}"\`)` стояв необгорнутим хоч `delete_reminder` поряд (B-126 з MPVly day1) повністю обгорнутий. **Фікс:** `t('habits.reminder.set.ok', '⏰ Нагадаю о {time}: "{text}"', { time, text })`.
+- **B-130 reminder cross-tab silent failure** (`boot.js:177-187`) — `set_reminder` / `delete_reminder` диспатчили `nm-data-changed` з `detail:'reminder'`, але `DETAIL_TO_KEY` не мала ключа → `handleSyncKey` не викликався → друга вкладка не оновлювалась. Зараз непомітно (1 девайс), стало б видно з Supabase. **Фікс:** `'reminder': 'nm_reminders'` у мапу.
+- **B-131 sendClarifyText без aiLoading guard** (`inbox.js:1048`) — при відкритому clarify `aiLoading=false` (бо встановлено перед `showClarify`); Send у головному Inbox не блокувався → дві паралельні AI-відповіді можливі. Бонус: `let primaryHandled = false` оригінально оголошено всередині `if (msg.tool_calls && ...)` блоку, а `else if (!primaryHandled)` посилався поза тим scope → ReferenceError-prone. **Фікс:** `if (aiLoading) return; aiLoading = true; try { ... } finally { aiLoading = false; }` + `primaryHandled` піднято на верх try.
+
+### i18n обгортка 110 рядків (4 файли)
+
+- **`src/tabs/habits.js`** — ~50 рядків у `processUniversalAction`: create_task, edit_task, delete_task, edit_habit, delete_habit, complete_*, add_step, add_moment, create_habit, create_event, edit_event, delete_event, edit_note, create_folder, delete_folder, move_note, save_finance amount-error, set_reminder time-empty, save_routine + `Пн-Нд` для habit dots + `N% за 30 днів`.
+- **`src/tabs/health.js`** — ~34 рядки `buildHealthExportText`: МЕДИЧНА КАРТКА, АЛЕРГІЇ, АКТИВНІ СТАНИ, ВСІ ПРЕПАРАТИ, ВІЗИТИ ДО ЛІКАРЯ, ЗАВЕРШЕНІ СТАНИ, disclaimer.
+- **`src/core/nav.js`** — ~10: TAB_LABELS для tab-order list (`Продуктив./Нотатки/Я/Вечір/Фінанси/Здоров'я/Проекти`) + memory source (`фон/вручну/стара пам'ять/онбординг`). ALL_TABS_CONFIG.label НЕ обгорнуто бо `function(t)` параметр shadows import `t` (окремий силент-баг — див. Відкладене).
+- **`src/tabs/finance-analytics.js`** — ~15: Найбільша операція, Прогноз місяця, Доходи місяця, Розподіл доходу edit, benchmark warnings.
+
+baseline `i18n-baseline.json`: 685 → 575 необгорнутих (-110, -16%).
+
+### Артефакт для тестування
+
+- **`TESTS_TODO.md`** у корені — 5 розділів × 12 кроків для ручного тесту: 4 баги (drum-col, set_reminder text, cross-tab sync, clarify race) + i18n smoke (5 точок). Роман явно попросив «пиши в файл що тестити».
+
+### Знайдено + відкладено (не в скоупі цієї сесії)
+
+- **`nav.js:202` t-shadow у `openTabSelector`** — `ALL_TABS_CONFIG.map(function(t) { ... t.id ... })`, виклик `t('nav.tabsel.always', 'завжди')` всередині (line 212) спробує викликати об'єкт як функцію → TypeError при відкритті селектора активних вкладок. Не помічено бо модалка рідко відкривається. Fix ~15 хв (rename `t` → `cfg`).
+- **silent-bug-scout #5 calendar.js setupModalSwipeClose двічі на routine-panel** (lines 595, 608) — fragile при майбутньому refactor. Fix ~10 хв (винести в init).
+
+### Файли змінені
+
+- `style.css` (drum-col mask-image видалено)
+- `src/tabs/habits.js` (B-129 + ~50 i18n)
+- `src/core/boot.js` (B-130)
+- `src/tabs/inbox.js` (B-131)
+- `src/tabs/health.js` (~34 i18n)
+- `src/core/nav.js` (~10 i18n)
+- `src/tabs/finance-analytics.js` (~15 i18n)
+- `i18n-baseline.json` (575 ↓ 685)
+- `bundle.js` (rebuild)
+- `NEVERMIND_BUGS.md` (B-128 → B-131)
+- `_ai-tools/SESSION_STATE.md` (нова секція MPVly-day2)
+- `lessons.md` (проактивний silent-bug-scout pattern)
+- `TESTS_TODO.md` (новий)
+
+---
+
 ## 2026-05-03 — UvEHE: модалки calendar-pattern + Settings 4-ітерац scale-glitch + sub-агенти + pre-commit-i18n
 
 **Гілка:** `claude/start-session-UvEHE` · ~30 комітів · v570 → ~v603
