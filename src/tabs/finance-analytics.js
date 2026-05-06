@@ -24,9 +24,11 @@ function _buildAnalyticsContent(allTxs) {
 }
 
 // B-62 Крок 1: Головний графік з 3 метриками на вибір.
+// MPVly-day2 06.05 (B-145): 8 → 7 тижнів. Усі 3 режими тепер ЛIНIЇ
+// замість bars/точок різного типу — однорідний вигляд.
 function _analyticsChart(allTxs) {
   const now = new Date();
-  const WEEKS = 8;
+  const WEEKS = 7;
   const weeks = [];
   for (let w = WEEKS - 1; w >= 0; w--) {
     const weekEnd = new Date(now);
@@ -65,69 +67,51 @@ function _analyticsChart(allTxs) {
   </div>`;
   const modeObj = modes.find(m => m.id === _analyticsChartMode) || modes[1];
 
-  let chartHtml = '';
+  // Helper для лінійного графіку — усі 3 режими використовують
+  const _buildLine = (values, color, range, minV) => {
+    const pts = values.map((v, i) => {
+      const x = (i / (WEEKS - 1)) * 400;
+      const y = 100 - ((v - minV) / range) * 100;
+      return `${x},${y}`;
+    }).join(' ');
+    const dots = values.map((v, i) => {
+      const x = (i / (WEEKS - 1)) * 400;
+      const y = 100 - ((v - minV) / range) * 100;
+      return `<circle cx="${x}" cy="${y}" r="5" fill="${color}"/>`;
+    }).join('');
+    return `<polyline points="${pts}" fill="none" stroke="${color}" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>${dots}`;
+  };
+
+  let chartSvg = '';
+  let extraBelow = '';
   if (_analyticsChartMode === 'balance') {
     const minB = Math.min(0, ...balances);
     const maxB = Math.max(1, ...balances);
     const range = maxB - minB || 1;
-    // MPVly-day2 06.05 (B-144 cosmetic): viewBox 100x100 → 400x100 для пропорції
-    // ~4:1 (iPhone modal width 360-430px, height 100px). Раніше viewBox 100x100
-    // на container 400x100 з preserveAspectRatio="none" розтягувало X×4 → лінія
-    // тонка по horizontal. Тепер 1:1 mapping → stroke реалістичний, circles круглі.
-    const pts = balances.map((b, i) => {
-      const x = (i / (WEEKS - 1)) * 400;
-      const y = 100 - ((b - minB) / range) * 100;
-      return `${x},${y}`;
-    }).join(' ');
     const zeroY = 100 - ((0 - minB) / range) * 100;
-    chartHtml = `<svg viewBox="-12 -12 424 124" preserveAspectRatio="none" style="width:100%;height:100px;display:block">
-      <line x1="0" y1="${zeroY}" x2="400" y2="${zeroY}" stroke="rgba(30,16,64,0.12)" stroke-width="1" stroke-dasharray="3,3"/>
-      <polyline points="${pts}" fill="none" stroke="#0ea5e9" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-      ${balances.map((b, i) => {
-        const x = (i / (WEEKS - 1)) * 400;
-        const y = 100 - ((b - minB) / range) * 100;
-        return `<circle cx="${x}" cy="${y}" r="5" fill="#0ea5e9"/>`;
-      }).join('')}
-    </svg>
-    <div style="display:flex;gap:2px;margin-top:4px">${weeks.map(w => `<div style="flex:1;font-size:9px;font-weight:${w.isCurrent?'700':'500'};color:${w.isCurrent?'#c2410c':'rgba(30,16,64,0.35)'};text-align:center">${w.label}</div>`).join('')}</div>
-    <div style="font-size:10px;color:rgba(30,16,64,0.4);margin-top:6px;text-align:center">${t('finstat.chart.current', 'Поточний')}: <span style="color:#0ea5e9;font-weight:700">${formatMoney(cumBalance)}</span></div>`;
+    chartSvg = `<line x1="0" y1="${zeroY}" x2="400" y2="${zeroY}" stroke="rgba(30,16,64,0.12)" stroke-width="1" stroke-dasharray="3,3"/>${_buildLine(balances, '#0ea5e9', range, minB)}`;
+    extraBelow = `<div style="font-size:10px;color:rgba(30,16,64,0.4);margin-top:6px;text-align:center">${t('finstat.chart.current', 'Поточний')}: <span style="color:#0ea5e9;font-weight:700">${formatMoney(cumBalance)}</span></div>`;
   } else if (_analyticsChartMode === 'expenses-weekly') {
-    const maxVal = Math.max(1, ...weeks.map(w => w.exp));
-    const barsHtml = weeks.map(w => {
-      const h = w.exp > 0 ? Math.max(4, Math.round(w.exp / maxVal * 80)) : 0;
-      const col = w.isCurrent ? '#c2410c' : '#f97316';
-      return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;min-width:0">
-        <div style="flex:1;width:100%;display:flex;align-items:flex-end;justify-content:center">
-          <div style="width:70%;height:${h}px;background:${col};border-radius:3px 3px 0 0"></div>
-        </div>
-        <div style="font-size:9px;font-weight:${w.isCurrent?'700':'500'};color:${w.isCurrent?'#c2410c':'rgba(30,16,64,0.35)'};margin-top:4px">${w.label}</div>
-        ${w.exp > 0 ? `<div style="font-size:8px;font-weight:600;color:rgba(30,16,64,0.4);margin-top:1px">${formatMoney(w.exp)}</div>` : ''}
-      </div>`;
-    }).join('');
-    chartHtml = `<div style="display:flex;gap:3px;align-items:flex-end;height:100px">${barsHtml}</div>`;
+    const expVals = weeks.map(w => w.exp);
+    const maxV = Math.max(1, ...expVals);
+    chartSvg = _buildLine(expVals, '#f97316', maxV, 0);
   } else {
-    const maxVal = Math.max(1, ...weeks.map(w => Math.max(w.exp, w.inc)));
-    const barsHtml = weeks.map(w => {
-      const expH = w.exp > 0 ? Math.max(4, Math.round(w.exp / maxVal * 80)) : 0;
-      const incH = w.inc > 0 ? Math.max(4, Math.round(w.inc / maxVal * 80)) : 0;
-      return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:0;min-width:0">
-        <div style="flex:1;width:100%;display:flex;gap:2px;align-items:flex-end">
-          <div style="flex:1;height:${expH}px;background:#f97316;border-radius:3px 3px 0 0"></div>
-          <div style="flex:1;height:${incH}px;background:#16a34a;border-radius:3px 3px 0 0"></div>
-        </div>
-        <div style="font-size:9px;font-weight:${w.isCurrent?'700':'500'};color:${w.isCurrent?'#c2410c':'rgba(30,16,64,0.35)'};margin-top:4px">${w.label}</div>
-      </div>`;
-    }).join('');
-    chartHtml = `<div style="display:flex;gap:4px;align-items:flex-end;height:100px">${barsHtml}</div>
-    <div style="display:flex;gap:10px;justify-content:center;margin-top:6px">
+    const expVals = weeks.map(w => w.exp);
+    const incVals = weeks.map(w => w.inc);
+    const maxV = Math.max(1, ...expVals, ...incVals);
+    chartSvg = _buildLine(expVals, '#f97316', maxV, 0) + _buildLine(incVals, '#16a34a', maxV, 0);
+    extraBelow = `<div style="display:flex;gap:10px;justify-content:center;margin-top:6px">
       <div style="display:flex;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:50%;background:#f97316"></div><span style="font-size:10px;font-weight:600;color:rgba(30,16,64,0.4)">${t('finstat.legend.expenses', 'Витрати')}</span></div>
       <div style="display:flex;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:50%;background:#16a34a"></div><span style="font-size:10px;font-weight:600;color:rgba(30,16,64,0.4)">${t('finstat.legend.income', 'Доходи')}</span></div>
     </div>`;
   }
+  const chartHtml = `<svg viewBox="-12 -12 424 124" preserveAspectRatio="none" style="width:100%;height:100px;display:block">${chartSvg}</svg>
+    <div style="display:flex;gap:2px;margin-top:4px">${weeks.map(w => `<div style="flex:1;font-size:9px;font-weight:${w.isCurrent?'700':'500'};color:${w.isCurrent?'#c2410c':'rgba(30,16,64,0.35)'};text-align:center">${w.label}</div>`).join('')}</div>
+    ${extraBelow}`;
 
   return `<div style="background:white;border-radius:20px;box-shadow:0 2px 12px rgba(30,16,64,0.06);padding:14px;margin-bottom:12px">
     ${toggleHtml}
-    <div style="font-size:11px;color:rgba(30,16,64,0.4);margin-bottom:8px">${escapeHtml(modeObj.desc)} · ${t('finstat.chart.weeks_suffix', '8 тижнів')}</div>
+    <div style="font-size:11px;color:rgba(30,16,64,0.4);margin-bottom:8px">${escapeHtml(modeObj.desc)} · ${t('finstat.chart.weeks_suffix', '7 тижнів')}</div>
     ${chartHtml}
   </div>`;
 }
