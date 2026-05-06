@@ -105,7 +105,7 @@ function _analyticsChart(allTxs) {
       return `${x},${y}`;
     }).join(' ');
     const zeroY = 100 - ((0 - minB) / range) * 100;
-    chartHtml = `<svg viewBox="-12 -12 424 124" preserveAspectRatio="none" style="width:100%;height:100px;display:block">
+    chartHtml = `<svg viewBox="-12 -12 424 124" preserveAspectRatio="none" style="width:100%;height:100px;display:block;border:1px solid rgba(30,16,64,0.10);border-radius:8px;background:rgba(255,255,255,0.4);box-sizing:border-box">
       <line x1="0" y1="${zeroY}" x2="400" y2="${zeroY}" stroke="rgba(30,16,64,0.12)" stroke-width="1" stroke-dasharray="3,3"/>
       <polyline points="${pts}" fill="none" stroke="#0ea5e9" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
       ${balances.map((b, i) => {
@@ -130,7 +130,7 @@ function _analyticsChart(allTxs) {
         ${b.exp > 0 ? `<div style="font-size:8px;font-weight:600;color:rgba(30,16,64,0.4);margin-top:1px">${formatMoney(b.exp)}</div>` : ''}
       </div>`;
     }).join('');
-    chartHtml = `<div style="display:flex;gap:3px;align-items:flex-end;height:100px">${barsHtml}</div>`;
+    chartHtml = `<div style="display:flex;gap:3px;align-items:flex-end;height:100px;border:1px solid rgba(30,16,64,0.10);border-radius:8px;padding:4px;box-sizing:border-box;background:rgba(255,255,255,0.4)">${barsHtml}</div>`;
   } else {
     // Доходи vs Витрати — двоколірні bars
     const maxVal = Math.max(1, ...buckets.map(b => Math.max(b.exp, b.inc)));
@@ -145,7 +145,7 @@ function _analyticsChart(allTxs) {
         <div style="font-size:9px;font-weight:${b.isCurrent?'700':'500'};color:${b.isCurrent?'#c2410c':'rgba(30,16,64,0.35)'};margin-top:4px">${b.label}</div>
       </div>`;
     }).join('');
-    chartHtml = `<div style="display:flex;gap:4px;align-items:flex-end;height:100px">${barsHtml}</div>
+    chartHtml = `<div style="display:flex;gap:4px;align-items:flex-end;height:100px;border:1px solid rgba(30,16,64,0.10);border-radius:8px;padding:4px;box-sizing:border-box;background:rgba(255,255,255,0.4)">${barsHtml}</div>
     <div style="display:flex;gap:10px;justify-content:center;margin-top:6px">
       <div style="display:flex;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:50%;background:#f97316"></div><span style="font-size:10px;font-weight:600;color:rgba(30,16,64,0.4)">${t('finstat.legend.expenses', 'Витрати')}</span></div>
       <div style="display:flex;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:50%;background:#16a34a"></div><span style="font-size:10px;font-weight:600;color:rgba(30,16,64,0.4)">${t('finstat.legend.income', 'Доходи')}</span></div>
@@ -406,7 +406,7 @@ export function openFinAnalytics() {
   const allTxs = getFinance();
   const content = _buildAnalyticsContent(allTxs);
   modal.innerHTML = `
-    <div style="position:relative;width:100%;max-width:480px;background:white;border-radius:24px 24px 0 0;z-index:1;max-height:92vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 -4px 24px rgba(30,16,64,0.1);animation:slideUp 0.3s ease-out forwards;pointer-events:auto">
+    <div style="position:relative;width:100%;max-width:480px;background:rgba(255,255,255,0.30);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border-radius:24px 24px 0 0;z-index:1;max-height:92vh;display:flex;flex-direction:column;overflow:hidden;border:1.5px solid rgba(255,255,255,0.5);box-shadow:0 -4px 24px rgba(30,16,64,0.1);animation:slideUp 0.3s ease-out forwards;pointer-events:auto">
       <div class="modal-handle" style="margin:8px auto"></div>
       <div style="padding:0 16px 8px;text-align:center">
         <div style="font-size:17px;font-weight:800;color:#1e1040">📊 ${t('finstat.title', 'Аналітика')}</div>
