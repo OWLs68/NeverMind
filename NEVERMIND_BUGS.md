@@ -9,20 +9,30 @@
 
 ## 🔴 Критичні (зламана функціональність)
 
-_Немає відкритих критичних багів станом на 05.05.2026 (QDIGl)._
+> Знахідки `silent-bug-scout` агентом проактивно у LfA6w 07.05 (нічний аудит, поки Роман спав). Не виправлено — потребують ОК Романа на ранку.
+
+| B-151 | `src/ai/memory.js:80-87` `_saveFacts()` | Регресія Один-Мозок-V2: AI зберігає факт через `save_memory_fact`, але інші агенти (board, brain-pulse, owl) не дізнаються до наступного `nm-data-changed` від ІНШОГО джерела. `_saveFacts()` НЕ диспатчить `window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'memory' }))` як інші save-функції. Фікс: 1 рядок dispatchEvent. ~5 хв. |
+| B-152 | `src/tabs/finance-modals.js:220, 231, 506` + `src/tabs/health.js:1005` + `src/tabs/projects.js:363` | Категорія/папка/картка з апострофом у назві (`Roman's coffee`, `Mom's medicine`) ламає `onclick`: `selectFinTxMainCat('Roman's coffee')` → SyntaxError при кліку. Корінь: `escapeHtml()` (`utils.js:56`) екранує тільки `& < >`, не апостроф/лапки. Лише `notes.js` додає `.replace(/'/g, "\\'")`. Той самий клас бага що B-13 (старий апостроф у чіпах). Фікс: helper `escapeJsArg()` або розширити `escapeHtml`; замінити в 5 точках. ~30 хв. |
+| B-153 | `src/tabs/inbox.js:169` `saveInbox()` | Дублює патерн B-151. `saveInbox()` НЕ диспатчить `nm-data-changed`. Inbox-картки додаються через AI (`processSaveAction`), але board/brain-pulse не реагують миттєво. Фікс: 1 рядок dispatchEvent. ~5 хв. |
 
 ---
 
 ## 🟡 Середні (є обхідний шлях або рідко трапляється)
 
-_Немає відкритих середніх багів станом на 06.05.2026 (MPVly-day2 + LfA6w cleanup). B-125 насправді закрито у MPVly 05.05 (`4082a0c`) — дубль у відкритих прибрано LfA6w 06.05._
+| B-154 | `src/tabs/inbox.js:580` tool-loop | `JSON.parse(tc.function.arguments)` без try/catch. Якщо OpenAI поверне зламаний JSON у одному з кількох `tool_calls` — throw → catch на рядку 995 → `addInboxChatMsg('agent', '✓ Збережено')` залишає юзера в омані (не зберіг, але показав успіх). Фікс: `try { args = JSON.parse(...) } catch { continue; }`. ~15 хв. |
+| B-155 | `src/owl/brain-pulse.js:122-134` `startBrainPulseCycle()` | Додає global listener на `nm-data-changed` без guard від повторного виклику. Якщо boot.js випадково викличе двічі (regression) — `_debounceTimer` затиратиметься, але listener-ів буде 2 → подвійні brainPulse запити (2× cost). Фікс: idempotency flag. ~10 хв. |
+| B-156 | `src/tabs/calendar.js:806-807` event-edit-modal | `<input type="time">` з `flex:0 0 110px` без `min-width:0` всередині flex-row. На iOS Safari intrinsic min-width нативного picker може overflow контейнер у вузьких viewports (iPhone SE 320px). Фікс: додати `min-width:0`. ~5 хв. |
+
+_B-125 закрито у MPVly 05.05 (`4082a0c`) — у списку відкритих був дубль через документаційну дірку, прибрано LfA6w 07.05._
 _B-126 закрито у MPVly 05.05 — див. секцію "✅ Закриті" нижче._
 
 ---
 
 ## 🟢 Дрібні (косметика, не ламає функціонал)
 
-_Немає відкритих дрібних багів._
+| B-157 | `src/tabs/notes.js:355` | `escapeHtml(folder).replace(/'/g, "\\'")` працює, але паттерн крихкий: якщо хтось додасть escape для апострофа в `utils.js` — `replace` не знайде, baked-in `\\'` зникне. Тех-борг (technical debt). Фікс: винести у спільний `escapeJsArg()` (зробити разом з B-152). ~15 хв. |
+| B-158 | `src/tabs/health.js:113, 1515` | `id: Date.now()` без `Math.random()` (на відміну від інших ID у тому ж файлі). Якщо AI створить 2 алергії за <1 мс (batch tool_calls) — ID колізія → друга перезапише першу через filter-by-id. Фікс: `+ Math.floor(Math.random()*1000)`. ~5 хв. |
+| B-159 | `src/tabs/notes.js:355` + `src/tabs/projects.js:363` | `setTimeout(()=>openNotesFolder('${escapeHtml(p.name)}'),150)` у onclick проєкту. Якщо name = `<>` — onclick стає `&lt;&gt;` всередині JS-string → `openNotesFolder` викликається з literally `&lt;&gt;` (не `<>`) → notes filter не знайде папку. Фікс: розшифровувати назад або зберігати у data-attr і читати з нього. ~30 хв. |
 
 ---
 
