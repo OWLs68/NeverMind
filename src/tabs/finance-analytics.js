@@ -70,19 +70,23 @@ function _analyticsChart(allTxs) {
     const minB = Math.min(0, ...balances);
     const maxB = Math.max(1, ...balances);
     const range = maxB - minB || 1;
+    // MPVly-day2 06.05 (B-144 cosmetic): viewBox 100x100 → 400x100 для пропорції
+    // ~4:1 (iPhone modal width 360-430px, height 100px). Раніше viewBox 100x100
+    // на container 400x100 з preserveAspectRatio="none" розтягувало X×4 → лінія
+    // тонка по horizontal. Тепер 1:1 mapping → stroke реалістичний, circles круглі.
     const pts = balances.map((b, i) => {
-      const x = (i / (WEEKS - 1)) * 100;
+      const x = (i / (WEEKS - 1)) * 400;
       const y = 100 - ((b - minB) / range) * 100;
       return `${x},${y}`;
     }).join(' ');
     const zeroY = 100 - ((0 - minB) / range) * 100;
-    chartHtml = `<svg viewBox="0 0 100 100" preserveAspectRatio="none" style="width:100%;height:100px;display:block">
-      <line x1="0" y1="${zeroY}" x2="100" y2="${zeroY}" stroke="rgba(30,16,64,0.12)" stroke-width="0.3" stroke-dasharray="1,1"/>
-      <polyline points="${pts}" fill="none" stroke="#0ea5e9" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round"/>
+    chartHtml = `<svg viewBox="0 0 400 100" preserveAspectRatio="none" style="width:100%;height:100px;display:block">
+      <line x1="0" y1="${zeroY}" x2="400" y2="${zeroY}" stroke="rgba(30,16,64,0.12)" stroke-width="1" stroke-dasharray="3,3"/>
+      <polyline points="${pts}" fill="none" stroke="#0ea5e9" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
       ${balances.map((b, i) => {
-        const x = (i / (WEEKS - 1)) * 100;
+        const x = (i / (WEEKS - 1)) * 400;
         const y = 100 - ((b - minB) / range) * 100;
-        return `<circle cx="${x}" cy="${y}" r="1.2" fill="#0ea5e9"/>`;
+        return `<circle cx="${x}" cy="${y}" r="3.5" fill="#0ea5e9"/>`;
       }).join('')}
     </svg>
     <div style="display:flex;gap:2px;margin-top:4px">${weeks.map(w => `<div style="flex:1;font-size:9px;font-weight:${w.isCurrent?'700':'500'};color:${w.isCurrent?'#c2410c':'rgba(30,16,64,0.35)'};text-align:center">${w.label}</div>`).join('')}</div>
