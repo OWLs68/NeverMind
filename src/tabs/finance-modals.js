@@ -159,11 +159,11 @@ export function openAddTransaction(prefill = {}) {
 
 export function openEditTransaction(id) {
   const txs = getFinance();
-  const t = txs.find(x => x.id === id);
-  if (!t) return;
+  const tx = txs.find(x => x.id === id);
+  if (!tx) return;
   _finEditId = id;
-  _finTxComment = t.comment || '';
-  _showTransactionModal(t);
+  _finTxComment = tx.comment || '';
+  _showTransactionModal(tx);
 }
 
 function _showTransactionModal(data) {
@@ -324,8 +324,8 @@ export function saveFinTransaction() {
 
 export function deleteFinTransaction() {
   if (!_finEditId) return;
-  const item = getFinance().find(t => t.id === _finEditId);
-  saveFinance(getFinance().filter(t => t.id !== _finEditId));
+  const item = getFinance().find(tx => tx.id === _finEditId);
+  saveFinance(getFinance().filter(tx => tx.id !== _finEditId));
   closeFinTxModal();
   renderFinance();
   try { localStorage.setItem('nm_owl_tab_ts_finance', '0'); tryBoardUpdate('finance'); } catch(e) {}
