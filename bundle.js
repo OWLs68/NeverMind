@@ -471,14 +471,14 @@
       const isPast = item.date < todayStr;
       const isToday = item.date === todayStr;
       const dayLabel = isToday ? t("calendar.day.today", "\u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456") : `${d.getDate()} ${monthGenitive(d.getMonth())}`;
-      const icon = item.type === "event" ? "\u{1F4C5}" : "\u23F0";
       const prio = prioIcons[item.priority] || "";
       const timeStr = item.time ? ` \xB7 ${item.time}${item.endTime ? "\u2013" + item.endTime : ""}` : "";
       const opacity = isPast ? "opacity:0.4;" : "";
-      const dateColor = isToday ? "#ea580c" : item.type === "event" ? "#3b82f6" : "rgba(30,16,64,0.45)";
+      const dateColor = isToday ? "#ea580c" : "rgba(30,16,64,0.4)";
+      const iconHtml = _calendarEventIcon(item.type);
       const tapAttr = item.type === "event" && item.id ? `onclick="openEventEditModal(${item.id})" style="cursor:pointer;` : `style="`;
       html += `<div ${tapAttr}display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(30,16,64,0.06);${opacity}">
-      <div style="font-size:15px;flex-shrink:0">${icon}</div>
+      ${iconHtml}
       <div style="flex:1;min-width:0">
         <div style="font-size:13.5px;font-weight:600;color:#1e1040;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${prio}${escapeHtml(item.title)}</div>
         <div style="font-size:11px;font-weight:600;color:${dateColor};margin-top:1px">${dayLabel}${timeStr}</div>
@@ -538,18 +538,28 @@
     el.innerHTML = `<div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px">${t("calendar.section.upcoming", "\u041D\u0430\u0439\u0431\u043B\u0438\u0436\u0447\u0435")}</div>` + items.map((item) => {
       const isToday = item.date.toDateString() === todayStr;
       const dayLabel = isToday ? t("calendar.day.today", "\u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456") : `${item.date.getDate()} ${monthGenitive(item.date.getMonth())}`;
-      const icon = item.type === "event" ? "\u{1F4C5}" : "\u2611\uFE0F";
+      const iconHtml = _calendarEventIcon(item.type);
       const prio = prioIcons[item.priority] || "";
       const timeStr = item.time ? ` \xB7 ${item.time}${item.endTime ? "\u2013" + item.endTime : ""}` : "";
       const tapAttr = item.type === "event" && item.id ? `onclick="openEventEditModal(${item.id})" ` : "";
       return `<div ${tapAttr}style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid rgba(30,16,64,0.06);${tapAttr ? "cursor:pointer;" : ""}">
-        <div style="font-size:16px;flex-shrink:0">${icon}</div>
+        ${iconHtml}
         <div style="flex:1">
           <div style="font-size:14px;font-weight:600;color:#1e1040">${prio} ${escapeHtml(item.title)}</div>
           <div style="font-size:11px;font-weight:600;color:${prioColors[item.priority]};margin-top:1px">${dayLabel}${timeStr}</div>
         </div>
       </div>`;
     }).join("");
+  }
+  function _calendarEventIcon(type) {
+    const colors = { event: "#3b82f6", task: "#2fd0f9", reminder: "#c2790a" };
+    const color = colors[type] || colors.event;
+    return `<div style="display:flex;align-items:center;gap:5px;flex-shrink:0">
+    <div style="width:6px;height:6px;border-radius:50%;background:${color}"></div>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.55)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:block">
+      <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+    </svg>
+  </div>`;
   }
   function renderCalendar() {
     const label = document.getElementById("calendar-month-label");
