@@ -324,9 +324,16 @@ function _refreshAnalyticsContent() {
   const prevScroll = scrollEl.scrollTop;
   const activeId = document.activeElement?.id || '';
   const activeSelStart = document.activeElement?.selectionStart;
-  scrollEl.innerHTML = _buildAnalyticsContent(getFinance());
-  logError('log', `[analytics-refresh] OK mode=${_analyticsChartMode} idx=[${_analyticsMiniIdx.join(',')}] htmlLen=${scrollEl.innerHTML.length}`, 'finance-analytics');
-  scrollEl.scrollTop = prevScroll;
+  // MPVly-day2 06.05 (B-143): на iPhone Safari `scrollEl.innerHTML = ...`
+  // НЕ оновлює UI у відкритій модалці (юзер бачив зміни тільки коли
+  // закрив+відкрив модалку → stale rebuild). Замість innerHTML робимо
+  // replaceChild з cloneNode — це force повний DOM update що iOS Safari
+  // не може ігнорувати (виходимо з стейлу composite layer reuse).
+  const newScrollEl = scrollEl.cloneNode(false);
+  newScrollEl.innerHTML = _buildAnalyticsContent(getFinance());
+  scrollEl.parentNode.replaceChild(newScrollEl, scrollEl);
+  logError('log', `[analytics-refresh] OK mode=${_analyticsChartMode} idx=[${_analyticsMiniIdx.join(',')}] htmlLen=${newScrollEl.innerHTML.length}`, 'finance-analytics');
+  newScrollEl.scrollTop = prevScroll;
   if (activeId) {
     const el = document.getElementById(activeId);
     if (el && typeof el.focus === 'function') {
