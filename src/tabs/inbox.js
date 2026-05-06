@@ -38,6 +38,14 @@ export function addInboxChatMsg(role, text, chips = null) {
   const el = document.getElementById('inbox-chat-messages');
   if (!el) return;
 
+  // MPVly 05.05 — інлайн-парсинг чіпів (один мозок для всіх 8 add*Msg). Якщо
+  // викликач передав chips окремо — лишаємо. Інакше витягуємо з {"chips":[...]} у тексті.
+  // Захист від забутого parseContentChips у викликачів — раніше було розкидано по 8 файлам.
+  if (role === 'agent' && (!chips || chips.length === 0) && text) {
+    const _p = parseContentChips(text);
+    if (_p.chips) { text = _p.text; chips = _p.chips; }
+  }
+
   // Видаляємо typing індикатор якщо є
   if (_inboxTypingEl) { _inboxTypingEl.remove(); _inboxTypingEl = null; }
 
