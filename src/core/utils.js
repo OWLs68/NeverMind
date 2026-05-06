@@ -175,5 +175,30 @@ export function t(key, fallback, params) {
   return result;
 }
 
+// Levenshtein distance — для fuzzy match (B-126 follow-up MPVly 05.05).
+// Кейс: юзер сказав "поприбирати", AI зберіг "поприбрати" (опечатка) → юзер
+// повторює правильно → delete_reminder з .includes() не знаходить (ні одне
+// не substring іншого), створюється дубль. Levenshtein ловить такі пари
+// як distance=1 (одна вставка/видалення/заміна літери).
+export function levenshtein(a, b) {
+  if (a === b) return 0;
+  if (!a || !b) return (a || b).length;
+  const al = a.length, bl = b.length;
+  if (Math.abs(al - bl) > Math.max(al, bl)) return Math.max(al, bl);
+  const prev = new Array(al + 1);
+  for (let i = 0; i <= al; i++) prev[i] = i;
+  for (let j = 1; j <= bl; j++) {
+    let curr = j;
+    for (let i = 1; i <= al; i++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      const next = Math.min(prev[i] + 1, curr + 1, prev[i - 1] + cost);
+      prev[i - 1] = curr;
+      curr = next;
+    }
+    prev[al] = curr;
+  }
+  return prev[al];
+}
+
 // Functions called from HTML event handlers
 window.autoResizeTextarea = autoResizeTextarea;

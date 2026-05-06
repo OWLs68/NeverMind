@@ -4,7 +4,7 @@
 // ============================================================
 
 import { currentTab, showToast } from '../core/nav.js';
-import { escapeHtml, logRecentAction, extractJsonBlocks, parseContentChips, t } from '../core/utils.js';
+import { escapeHtml, logRecentAction, extractJsonBlocks, parseContentChips, levenshtein, t } from '../core/utils.js';
 import { logUsage } from '../core/usage-meter.js';
 import { generateUUID } from '../core/uuid.js';
 import { addToTrash, showUndoToast } from '../core/trash.js';
@@ -1463,9 +1463,22 @@ export function processUniversalAction(parsed, originalText, addMsg) {
     if (!qText && !qTime && !qDate) { addMsg('agent', t('habits.reminder.del.unclear', 'Не зрозумів яке нагадування видалити.')); return true; }
 
     const reminders = JSON.parse(localStorage.getItem('nm_reminders') || '[]');
+    // MPVly 05.05 follow-up: 3-рівневий fuzzy match для опечаток.
+    // 1) substring (швидко) → 2) Levenshtein ≤2 для слів ≥5 літер (опечатки) →
+    // 3) ні те, ні те — пропускаємо.
+    // Кейс: AI зберіг "поприбрати" (опечатка), юзер каже "поприбирати" — distance=1.
+    const _textMatch = (rText) => {
+      if (!qText) return true;
+      if (rText.includes(qText) || qText.includes(rText)) return true;
+      if (qText.length >= 5 && rText.length >= 5) {
+        const dist = levenshtein(qText, rText);
+        if (dist <= 2) return true;
+      }
+      return false;
+    };
     const idx = reminders.findIndex(r => {
       const rText = (r.text || '').toLowerCase();
-      const tMatch = !qText || rText.includes(qText) || qText.includes(rText);
+      const tMatch = _textMatch(rText);
       const timeMatch = !qTime || r.time === qTime;
       const dateMatch = !qDate || r.date === qDate;
       return tMatch && timeMatch && dateMatch;
