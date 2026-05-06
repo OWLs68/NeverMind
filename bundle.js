@@ -22087,6 +22087,7 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
 
   // src/tabs/finance-analytics.js
   init_utils();
+  init_logger();
   init_finance();
   init_tasks();
   var _analyticsChartMode = "expenses-weekly";
@@ -22446,6 +22447,7 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
       </div>
     </div>`;
     document.body.appendChild(modal);
+    logError("log", `[analytics-open] window.setMode=${typeof window.setAnalyticsChartMode} window.shiftMini=${typeof window.shiftAnalyticsMini} window.toggleEdit=${typeof window.toggleAnalyticsBenchmarkEdit}`, "finance-analytics");
     const card = modal.querySelector(":scope > div");
     if (card) card._swipeClose = true;
   }
@@ -22454,14 +22456,17 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
     document.getElementById("fin-analytics-modal-overlay")?.remove();
   }
   function setAnalyticsChartMode(mode) {
+    logError("log", `[analytics-click] setAnalyticsChartMode(${mode})`, "finance-analytics");
     _analyticsChartMode = mode;
     _refreshAnalyticsContent();
   }
   function shiftAnalyticsMini(blockIdx, delta) {
+    logError("log", `[analytics-click] shiftAnalyticsMini(${blockIdx}, ${delta})`, "finance-analytics");
     _analyticsMiniIdx[blockIdx] = (_analyticsMiniIdx[blockIdx] + delta + 999) % 9;
     _refreshAnalyticsContent();
   }
   function toggleAnalyticsBenchmarkEdit() {
+    logError("log", `[analytics-click] toggleAnalyticsBenchmarkEdit`, "finance-analytics");
     _analyticsBenchmarkEdit = !_analyticsBenchmarkEdit;
     _refreshAnalyticsContent();
   }
