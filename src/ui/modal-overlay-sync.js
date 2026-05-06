@@ -36,7 +36,14 @@ function _findChildOverlay(modal) {
     const hasBlur = /backdrop-filter\s*:\s*blur/i.test(s) || /modal-backdrop/.test(cls);
     const isAbsolute = /position\s*:\s*absolute/i.test(s);
     const hasInset = /inset\s*:\s*0/i.test(s) || (/top\s*:\s*0/i.test(s) && /left\s*:\s*0/i.test(s));
-    if (hasBlur && (isAbsolute || hasInset)) return child;
+    // MPVly-day2 06.05 (B-139): додано матч на клас modal-backdrop. Раніше
+    // умова перевіряла position/inset ТІЛЬКИ у inline style — а .modal-backdrop
+    // має ці властивості у CSS-класі (style.css:1481). Тому backdrop НЕ виносився
+    // як sibling → лишався child з backdrop-filter БЕЗ pointer-events:none →
+    // на iOS Safari composite layer backdrop захоплював тачі → клік на кнопці
+    // йшов у backdrop → onclick="closeFinAnalytics()" → модалка закривалась
+    // замість тапу. Кнопки виглядали мертвими у Аналітиці, fin-budget, fin-all-txs.
+    if (hasBlur && (isAbsolute || hasInset || /modal-backdrop/.test(cls))) return child;
   }
   return null;
 }
