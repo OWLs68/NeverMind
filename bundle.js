@@ -22189,32 +22189,31 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
     <div style="font-size:10px;color:rgba(30,16,64,0.4);margin-top:6px;text-align:center">${t("finstat.chart.current", "\u041F\u043E\u0442\u043E\u0447\u043D\u0438\u0439")}: <span style="color:#0ea5e9;font-weight:700">${formatMoney(cumBalance)}</span></div>`;
     } else if (_analyticsChartMode === "expenses-weekly") {
       const maxVal = Math.max(1, ...buckets.map((b) => b.exp));
-      const barsHtml = buckets.map((b) => {
-        const h = b.exp > 0 ? Math.max(4, Math.round(b.exp / maxVal * 80)) : 0;
+      const barsRow = buckets.map((b) => {
+        const h = b.exp > 0 ? Math.max(4, Math.round(b.exp / maxVal * 90)) : 0;
         const col = b.isCurrent ? "#c2410c" : "#f97316";
-        return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;min-width:0">
-        <div style="flex:1;width:100%;display:flex;align-items:flex-end;justify-content:center">
-          <div style="width:70%;height:${h}px;background:${col};border-radius:3px 3px 0 0"></div>
-        </div>
-        <div style="font-size:9px;font-weight:${b.isCurrent ? "700" : "500"};color:${b.isCurrent ? "#c2410c" : "rgba(30,16,64,0.35)"};margin-top:4px">${b.label}</div>
-        ${b.exp > 0 ? `<div style="font-size:8px;font-weight:600;color:rgba(30,16,64,0.4);margin-top:1px">${formatMoney(b.exp)}</div>` : ""}
+        return `<div style="flex:1;display:flex;align-items:flex-end;justify-content:center;min-width:0">
+        <div style="width:70%;height:${h}px;background:${col};border-radius:3px 3px 0 0"></div>
       </div>`;
       }).join("");
-      chartHtml = `<div style="display:flex;gap:3px;align-items:flex-end;height:100px;border:1px solid rgba(30,16,64,0.10);border-radius:8px;padding:4px;box-sizing:border-box;background:rgba(255,255,255,0.4)">${barsHtml}</div>`;
+      const datesRow = buckets.map((b) => `<div style="flex:1;font-size:9px;font-weight:${b.isCurrent ? "700" : "500"};color:${b.isCurrent ? "#c2410c" : "rgba(30,16,64,0.35)"};text-align:center;min-width:0">${b.label}</div>`).join("");
+      const sumsRow = buckets.map((b) => `<div style="flex:1;font-size:8px;font-weight:600;color:rgba(30,16,64,0.4);text-align:center;min-width:0">${b.exp > 0 ? formatMoney(b.exp) : ""}</div>`).join("");
+      chartHtml = `<div style="display:flex;gap:3px;align-items:flex-end;height:100px;border:1px solid rgba(30,16,64,0.10);border-radius:8px;padding:4px;box-sizing:border-box;background:rgba(255,255,255,0.4)">${barsRow}</div>
+    <div style="display:flex;gap:3px;margin-top:4px">${datesRow}</div>
+    <div style="display:flex;gap:3px;margin-top:1px">${sumsRow}</div>`;
     } else {
       const maxVal = Math.max(1, ...buckets.map((b) => Math.max(b.exp, b.inc)));
-      const barsHtml = buckets.map((b) => {
-        const expH = b.exp > 0 ? Math.max(4, Math.round(b.exp / maxVal * 80)) : 0;
-        const incH = b.inc > 0 ? Math.max(4, Math.round(b.inc / maxVal * 80)) : 0;
-        return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:0;min-width:0">
-        <div style="flex:1;width:100%;display:flex;gap:2px;align-items:flex-end">
-          <div style="flex:1;height:${expH}px;background:#f97316;border-radius:3px 3px 0 0"></div>
-          <div style="flex:1;height:${incH}px;background:#16a34a;border-radius:3px 3px 0 0"></div>
-        </div>
-        <div style="font-size:9px;font-weight:${b.isCurrent ? "700" : "500"};color:${b.isCurrent ? "#c2410c" : "rgba(30,16,64,0.35)"};margin-top:4px">${b.label}</div>
+      const barsRow = buckets.map((b) => {
+        const expH = b.exp > 0 ? Math.max(4, Math.round(b.exp / maxVal * 90)) : 0;
+        const incH = b.inc > 0 ? Math.max(4, Math.round(b.inc / maxVal * 90)) : 0;
+        return `<div style="flex:1;display:flex;gap:2px;align-items:flex-end;min-width:0">
+        <div style="flex:1;height:${expH}px;background:#f97316;border-radius:3px 3px 0 0"></div>
+        <div style="flex:1;height:${incH}px;background:#16a34a;border-radius:3px 3px 0 0"></div>
       </div>`;
       }).join("");
-      chartHtml = `<div style="display:flex;gap:4px;align-items:flex-end;height:100px;border:1px solid rgba(30,16,64,0.10);border-radius:8px;padding:4px;box-sizing:border-box;background:rgba(255,255,255,0.4)">${barsHtml}</div>
+      const datesRow = buckets.map((b) => `<div style="flex:1;font-size:9px;font-weight:${b.isCurrent ? "700" : "500"};color:${b.isCurrent ? "#c2410c" : "rgba(30,16,64,0.35)"};text-align:center;min-width:0">${b.label}</div>`).join("");
+      chartHtml = `<div style="display:flex;gap:4px;align-items:flex-end;height:100px;border:1px solid rgba(30,16,64,0.10);border-radius:8px;padding:4px;box-sizing:border-box;background:rgba(255,255,255,0.4)">${barsRow}</div>
+    <div style="display:flex;gap:4px;margin-top:4px">${datesRow}</div>
     <div style="display:flex;gap:10px;justify-content:center;margin-top:6px">
       <div style="display:flex;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:50%;background:#f97316"></div><span style="font-size:10px;font-weight:600;color:rgba(30,16,64,0.4)">${t("finstat.legend.expenses", "\u0412\u0438\u0442\u0440\u0430\u0442\u0438")}</span></div>
       <div style="display:flex;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:50%;background:#16a34a"></div><span style="font-size:10px;font-weight:600;color:rgba(30,16,64,0.4)">${t("finstat.legend.income", "\u0414\u043E\u0445\u043E\u0434\u0438")}</span></div>
