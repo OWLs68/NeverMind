@@ -720,14 +720,17 @@ const SEND_BTN_MAP = {
   projects: 'projects-send-btn',
 };
 
-export function addMsgForTab(tab, role, text) {
+export function addMsgForTab(tab, role, text, chips = null) {
+  // MPVly 05.05 — 4-й параметр chips (Council Agent 1+3 знахідка): проактивні
+  // повідомлення (Brain Pulse, followups, OWL board) не передавали chips →
+  // Inbox й 7 інших чатів втрачали кнопки у localStorage + DOM.
   // Inbox — спеціальний: addInboxChatMsg сам зберігає + показує бейдж
   if (tab === 'inbox') {
-    addInboxChatMsg(role, text);
+    addInboxChatMsg(role, text, chips);
     return;
   }
   // Інші вкладки: зберігаємо у localStorage (при відкритті чат-бара restoreChatUI прочитає)
-  saveChatMsg(tab, role, text);
+  saveChatMsg(tab, role, text, chips);
   // Якщо DOM контейнер уже був відновлений (юзер відкривав бар) — додаємо у DOM зараз
   const containerMap = {
     tasks:    'tasks-chat-messages',
@@ -738,19 +741,19 @@ export function addMsgForTab(tab, role, text) {
     health:   'health-chat-messages',
     projects: 'projects-chat-messages',
   };
+  // me має сигнатуру (role, text, _noSave, id, chips) — позиція 5; решта (role, text, _noSave, chips) — 4.
   const renderMap = {
-    tasks:    addTaskBarMsg,
-    notes:    addNotesChatMsg,
-    me:       addMeChatMsg,
-    evening:  addEveningBarMsg,
-    finance:  addFinanceChatMsg,
-    health:   addHealthChatMsg,
-    projects: addProjectsChatMsg,
+    tasks:    (r, t, c) => addTaskBarMsg(r, t, true, c),
+    notes:    (r, t, c) => addNotesChatMsg(r, t, true, c),
+    me:       (r, t, c) => addMeChatMsg(r, t, true, '', c),
+    evening:  (r, t, c) => addEveningBarMsg(r, t, true, c),
+    finance:  (r, t, c) => addFinanceChatMsg(r, t, true, c),
+    health:   (r, t, c) => addHealthChatMsg(r, t, true, c),
+    projects: (r, t, c) => addProjectsChatMsg(r, t, true, c),
   };
   const el = document.getElementById(containerMap[tab]);
   if (el && el.dataset.restored && renderMap[tab]) {
-    // _noSave=true — не відкриває чат-бар і не зберігає повторно
-    renderMap[tab](role, text, true);
+    renderMap[tab](role, text, chips);
   }
   // Універсальний бейдж непрочитаних для всіх вкладок з чат-баром.
   // Evening має локальний виклик у addEveningBarMsg — не дублюємо щоб не було +2.
@@ -818,6 +821,11 @@ export function restoreChatUI(tab) {
 // Внутрішній рендер без запису в storage (щоб не дублювати при відновленні)
 function _renderInboxChatMsg(role, text, el, chips = null) {
   const isAgent = role === 'agent';
+  // MPVly 05.05 fix: cleanup попередніх chips ПЕРЕД appending нового agent повідомлення.
+  // Live addInboxChatMsg це робить (рядок 46), але restore (цей шлях) пропускав → всі
+  // історичні chips накопичувались на екрані. Тепер restore matchиться live: лишається
+  // тільки chips ОСТАННЬОГО agent повідомлення.
+  if (isAgent) el.querySelectorAll('.chat-chips-row').forEach(n => n.remove());
   const div = document.createElement('div');
   div.style.cssText = `display:flex;${isAgent ? 'gap:8px;align-items:flex-start' : 'justify-content:flex-end'}`;
   if (isAgent) {
