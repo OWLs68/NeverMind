@@ -15136,7 +15136,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
     const swipeRoot = contentEl.parentElement || contentEl;
     let startY = 0, startX = 0, dy = 0, _swipeBlocked = false;
     swipeRoot.addEventListener("touchstart", (e) => {
-      _swipeBlocked = !!e.target.closest(".drum-col, .drum-item, .settings-scroll, input, textarea, select");
+      _swipeBlocked = !!e.target.closest(".drum-col, .drum-item, .settings-scroll, #memory-cards-list, input, textarea, select");
       startY = e.touches[0].clientY;
       startX = e.touches[0].clientX;
       dy = 0;
@@ -21285,13 +21285,16 @@ ${logLines}
       btn.textContent = "\u2026";
       btn.disabled = true;
     }
-    await doRefreshMemory(true);
-    if (btn) {
-      btn.textContent = t("nav.mem.refresh_btn", "\u21BB \u041E\u043D\u043E\u0432\u0438\u0442\u0438 \u0447\u0435\u0440\u0435\u0437 OWL");
-      btn.disabled = false;
-    }
-    if (document.getElementById("memory-modal")?.style.display !== "none") {
-      renderMemoryCards();
+    try {
+      await doRefreshMemory(true);
+    } finally {
+      if (btn) {
+        btn.textContent = t("nav.mem.refresh_btn", "\u21BB \u041E\u043D\u043E\u0432\u0438\u0442\u0438 \u0447\u0435\u0440\u0435\u0437 OWL");
+        btn.disabled = false;
+      }
+      if (document.getElementById("memory-modal")?.style.display !== "none") {
+        renderMemoryCards();
+      }
     }
   }
   async function doRefreshMemory(showResult) {
