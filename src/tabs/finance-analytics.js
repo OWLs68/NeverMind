@@ -6,6 +6,7 @@
 // ============================================================
 
 import { escapeHtml, t } from '../core/utils.js';
+import { logError } from '../core/logger.js';
 import { getFinance, formatMoney } from './finance.js';
 import { setupModalSwipeClose } from './tasks.js';
 
@@ -370,13 +371,8 @@ export function openFinAnalytics() {
       </div>
     </div>`;
   document.body.appendChild(modal);
-  // MPVly-day2 06.05 (B-141 + B-142):
-  // (1) setupModalSwipeClose ПРИБРАНО — touchmove перехоплював дрейф пальця.
-  // (2) Блокуємо modal-overlay-sync._setupSwipeClose через _swipeClose flag —
-  //     інакше MutationObserver автоматично навісить СВІЙ touch handler на
-  //     modal (з тим самим dy>8 порогом) → той самий cancel-click баг.
-  //     Голова витратив 5 фіксів через те що modal-overlay-sync «тихо» вішав
-  //     handler знову після кожного відкриття. Council Critic + Стратег знайшли.
+  // DIAGNOSTIC (B-142+): чи функції на window? чи modal має DOM?
+  logError('log', `[analytics-open] window.setMode=${typeof window.setAnalyticsChartMode} window.shiftMini=${typeof window.shiftAnalyticsMini} window.toggleEdit=${typeof window.toggleAnalyticsBenchmarkEdit}`, 'finance-analytics');
   const card = modal.querySelector(':scope > div');
   if (card) card._swipeClose = true;
 }
@@ -387,12 +383,13 @@ export function closeFinAnalytics() {
 }
 
 // === Обробники ===
-export function setAnalyticsChartMode(mode) { _analyticsChartMode = mode; _refreshAnalyticsContent(); }
+export function setAnalyticsChartMode(mode) { logError('log', `[analytics-click] setAnalyticsChartMode(${mode})`, 'finance-analytics'); _analyticsChartMode = mode; _refreshAnalyticsContent(); }
 export function shiftAnalyticsMini(blockIdx, delta) {
+  logError('log', `[analytics-click] shiftAnalyticsMini(${blockIdx}, ${delta})`, 'finance-analytics');
   _analyticsMiniIdx[blockIdx] = (_analyticsMiniIdx[blockIdx] + delta + 999) % 9;
   _refreshAnalyticsContent();
 }
-export function toggleAnalyticsBenchmarkEdit() { _analyticsBenchmarkEdit = !_analyticsBenchmarkEdit; _refreshAnalyticsContent(); }
+export function toggleAnalyticsBenchmarkEdit() { logError('log', `[analytics-click] toggleAnalyticsBenchmarkEdit`, 'finance-analytics'); _analyticsBenchmarkEdit = !_analyticsBenchmarkEdit; _refreshAnalyticsContent(); }
 export function setBenchmarkField(key, field, value) {
   const cfg = _getBenchmarkConfig();
   if (!cfg[key]) return;
