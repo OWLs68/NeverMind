@@ -82,11 +82,11 @@ function _analyticsChart(allTxs) {
     const zeroY = 100 - ((0 - minB) / range) * 100;
     chartHtml = `<svg viewBox="0 0 400 100" preserveAspectRatio="none" style="width:100%;height:100px;display:block">
       <line x1="0" y1="${zeroY}" x2="400" y2="${zeroY}" stroke="rgba(30,16,64,0.12)" stroke-width="1" stroke-dasharray="3,3"/>
-      <polyline points="${pts}" fill="none" stroke="#0ea5e9" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <polyline points="${pts}" fill="none" stroke="#0ea5e9" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
       ${balances.map((b, i) => {
         const x = (i / (WEEKS - 1)) * 400;
         const y = 100 - ((b - minB) / range) * 100;
-        return `<circle cx="${x}" cy="${y}" r="3.5" fill="#0ea5e9"/>`;
+        return `<circle cx="${x}" cy="${y}" r="5" fill="#0ea5e9"/>`;
       }).join('')}
     </svg>
     <div style="display:flex;gap:2px;margin-top:4px">${weeks.map(w => `<div style="flex:1;font-size:9px;font-weight:${w.isCurrent?'700':'500'};color:${w.isCurrent?'#c2410c':'rgba(30,16,64,0.35)'};text-align:center">${w.label}</div>`).join('')}</div>
