@@ -319,7 +319,12 @@ function _analyticsBenchmark(allTxs) {
 function _refreshAnalyticsContent() {
   const modal = document.getElementById('fin-analytics-modal');
   if (!modal) { logError('log', '[analytics-refresh] NO MODAL', 'finance-analytics'); return; }
-  const scrollEl = modal.querySelector('div[style*="overflow-y:auto"]');
+  // MPVly-day2 06.05 (B-143): replaced fragile selector `div[style*="overflow-y:auto"]`
+  // (браузер нормалізував inline style → "overflow-y: auto" зі space → null match)
+  // на стабільний #id. Це РЕАЛЬНИЙ корінь "кнопок не клікається у аналітиці":
+  // state змінювався, refresh викликався, але scrollEl=null → if(!scrollEl) return →
+  // UI ніколи не оновлювався. Юзер бачив зміни тільки після close+open.
+  const scrollEl = document.getElementById('fin-analytics-scroll');
   if (!scrollEl) { logError('log', `[analytics-refresh] NO scrollEl, modal.children=${modal.children.length}`, 'finance-analytics'); return; }
   const prevScroll = scrollEl.scrollTop;
   const activeId = document.activeElement?.id || '';
@@ -374,7 +379,7 @@ export function openFinAnalytics() {
       <div style="padding:0 16px 8px;text-align:center">
         <div style="font-size:17px;font-weight:800;color:#1e1040">📊 ${t('finstat.title', 'Аналітика')}</div>
       </div>
-      <div style="flex:1;overflow-y:auto;padding:0 14px calc(env(safe-area-inset-bottom,0px) + 16px)">
+      <div id="fin-analytics-scroll" style="flex:1;overflow-y:auto;padding:0 14px calc(env(safe-area-inset-bottom,0px) + 16px)">
         ${content}
       </div>
     </div>`;

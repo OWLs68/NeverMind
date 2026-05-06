@@ -22404,7 +22404,7 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
       logError("log", "[analytics-refresh] NO MODAL", "finance-analytics");
       return;
     }
-    const scrollEl = modal.querySelector('div[style*="overflow-y:auto"]');
+    const scrollEl = document.getElementById("fin-analytics-scroll");
     if (!scrollEl) {
       logError("log", `[analytics-refresh] NO scrollEl, modal.children=${modal.children.length}`, "finance-analytics");
       return;
@@ -22451,7 +22451,7 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
       <div style="padding:0 16px 8px;text-align:center">
         <div style="font-size:17px;font-weight:800;color:#1e1040">\u{1F4CA} ${t("finstat.title", "\u0410\u043D\u0430\u043B\u0456\u0442\u0438\u043A\u0430")}</div>
       </div>
-      <div style="flex:1;overflow-y:auto;padding:0 14px calc(env(safe-area-inset-bottom,0px) + 16px)">
+      <div id="fin-analytics-scroll" style="flex:1;overflow-y:auto;padding:0 14px calc(env(safe-area-inset-bottom,0px) + 16px)">
         ${content}
       </div>
     </div>`;
