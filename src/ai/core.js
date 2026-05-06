@@ -818,6 +818,11 @@ export function restoreChatUI(tab) {
 // Внутрішній рендер без запису в storage (щоб не дублювати при відновленні)
 function _renderInboxChatMsg(role, text, el, chips = null) {
   const isAgent = role === 'agent';
+  // MPVly 05.05 fix: cleanup попередніх chips ПЕРЕД appending нового agent повідомлення.
+  // Live addInboxChatMsg це робить (рядок 46), але restore (цей шлях) пропускав → всі
+  // історичні chips накопичувались на екрані. Тепер restore matchиться live: лишається
+  // тільки chips ОСТАННЬОГО agent повідомлення.
+  if (isAgent) el.querySelectorAll('.chat-chips-row').forEach(n => n.remove());
   const div = document.createElement('div');
   div.style.cssText = `display:flex;${isAgent ? 'gap:8px;align-items:flex-start' : 'justify-content:flex-end'}`;
   if (isAgent) {
