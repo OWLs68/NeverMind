@@ -475,18 +475,18 @@ function buildHealthExportText() {
   const todayStr = new Date().toLocaleDateString('uk-UA');
   const lines = [];
 
-  lines.push(`МЕДИЧНА КАРТКА`);
-  lines.push(`Дата експорту: ${todayStr}`);
+  lines.push(t('health.export.title', 'МЕДИЧНА КАРТКА'));
+  lines.push(t('health.export.date', 'Дата експорту: {date}', { date: todayStr }));
   lines.push(``);
 
   // АЛЕРГІЇ — ЗАВЖДИ ЗВЕРХУ, великими
   if (allergies.length > 0) {
-    lines.push(`🚨 АЛЕРГІЇ:`);
+    lines.push(t('health.export.allergies', '🚨 АЛЕРГІЇ:'));
     allergies.forEach(a => {
       lines.push(`  • ${a.name}${a.notes ? ' — ' + a.notes : ''}`);
     });
   } else {
-    lines.push(`🚨 АЛЕРГІЇ: не вказано`);
+    lines.push(t('health.export.allergies_none', '🚨 АЛЕРГІЇ: не вказано'));
   }
   lines.push(``);
   lines.push(`─────────────`);
@@ -494,39 +494,40 @@ function buildHealthExportText() {
 
   // Активні стани
   if (active.length > 0) {
-    lines.push(`АКТИВНІ СТАНИ (${active.length}):`);
+    lines.push(t('health.export.active', 'АКТИВНІ СТАНИ ({n}):', { n: active.length }));
     lines.push(``);
     active.forEach((card, i) => {
       lines.push(`${i + 1}. ${card.name.toUpperCase()}${card.subtitle ? ' — ' + card.subtitle : ''}`);
-      lines.push(`   Статус: ${_statusDef(card.status).label} · прогрес курсу: ${card.progress || 0}%`);
+      lines.push(t('health.export.status_line', '   Статус: {status} · прогрес курсу: {pct}%', { status: _statusDef(card.status).label, pct: card.progress || 0 }));
       if (card.startDate) {
         const d = new Date(card.startDate);
         if (!isNaN(d)) {
           const daysSince = Math.round((Date.now() - d.getTime()) / 86400000);
-          lines.push(`   Початок: ${card.startDate} (${daysSince} дн тому)`);
+          lines.push(t('health.export.start_line', '   Початок: {date} ({n} дн тому)', { date: card.startDate, n: daysSince }));
         }
       }
-      if (card.doctor) lines.push(`   Лікар: ${card.doctor}`);
-      if (card.doctorRecommendations) lines.push(`   Рекомендації: ${card.doctorRecommendations}`);
-      if (card.doctorConclusion) lines.push(`   Висновок: ${card.doctorConclusion}`);
+      if (card.doctor) lines.push(t('health.export.doctor', '   Лікар: {name}', { name: card.doctor }));
+      if (card.doctorRecommendations) lines.push(t('health.export.recommendations', '   Рекомендації: {text}', { text: card.doctorRecommendations }));
+      if (card.doctorConclusion) lines.push(t('health.export.conclusion', '   Висновок: {text}', { text: card.doctorConclusion }));
       if (card.nextAppointment && card.nextAppointment.date) {
-        lines.push(`   Наступний прийом: ${card.nextAppointment.date}${card.nextAppointment.time ? ' о ' + card.nextAppointment.time : ''}`);
+        const apptTime = card.nextAppointment.time ? ' ' + t('health.export.at_time', 'о {time}', { time: card.nextAppointment.time }) : '';
+        lines.push(t('health.export.next_appt', '   Наступний прийом: {date}{time}', { date: card.nextAppointment.date, time: apptTime }));
       }
       if (Array.isArray(card.medications) && card.medications.length > 0) {
-        lines.push(`   Препарати:`);
+        lines.push(t('health.export.meds_header', '   Препарати:'));
         card.medications.forEach(m => {
           const sched = Array.isArray(m.schedule) && m.schedule.length ? m.schedule.join(', ') : '';
-          const course = m.courseDuration ? ' · курс ' + m.courseDuration : '';
+          const course = m.courseDuration ? ' · ' + t('health.export.course', 'курс {dur}', { dur: m.courseDuration }) : '';
           lines.push(`     - ${m.name}${m.dosage ? ' ' + m.dosage : ''}${sched ? ' (' + sched + ')' : ''}${course}`);
         });
       }
       // Останній тренд
       const lastTrend = (card.history || []).find(h => h.type === 'status_change');
-      if (lastTrend) lines.push(`   Останній тренд: ${lastTrend.text}`);
+      if (lastTrend) lines.push(t('health.export.last_trend', '   Останній тренд: {text}', { text: lastTrend.text }));
       lines.push(``);
     });
   } else {
-    lines.push(`АКТИВНІ СТАНИ: немає`);
+    lines.push(t('health.export.active_none', 'АКТИВНІ СТАНИ: немає'));
     lines.push(``);
   }
 
@@ -542,11 +543,17 @@ function buildHealthExportText() {
   if (allMedsMap.size > 0) {
     lines.push(`─────────────`);
     lines.push(``);
-    lines.push(`ВСІ ПРЕПАРАТИ (${allMedsMap.size}):`);
+    lines.push(t('health.export.all_meds', 'ВСІ ПРЕПАРАТИ ({n}):', { n: allMedsMap.size }));
     Array.from(allMedsMap.values()).forEach(({ med, cardName }) => {
       const sched = Array.isArray(med.schedule) && med.schedule.length ? med.schedule.join(', ') : '';
-      const course = med.courseDuration ? ' · курс ' + med.courseDuration : '';
-      lines.push(`  • ${med.name}${med.dosage ? ' ' + med.dosage : ''}${sched ? ' (' + sched + ')' : ''}${course} — по стану "${cardName}"`);
+      const course = med.courseDuration ? ' · ' + t('health.export.course', 'курс {dur}', { dur: med.courseDuration }) : '';
+      lines.push(t('health.export.med_line', '  • {name}{dosage}{sched}{course} — по стану "{card}"', {
+        name: med.name,
+        dosage: med.dosage ? ' ' + med.dosage : '',
+        sched: sched ? ' (' + sched + ')' : '',
+        course,
+        card: cardName,
+      }));
     });
     lines.push(``);
   }
@@ -565,7 +572,7 @@ function buildHealthExportText() {
   if (visits.length > 0) {
     lines.push(`─────────────`);
     lines.push(``);
-    lines.push(`ВІЗИТИ ДО ЛІКАРЯ (за рік, ${visits.length}):`);
+    lines.push(t('health.export.visits', 'ВІЗИТИ ДО ЛІКАРЯ (за рік, {n}):', { n: visits.length }));
     visits.forEach(v => {
       const d = new Date(v.ts);
       const dateStr = isNaN(d) ? '' : d.toLocaleDateString('uk-UA');
@@ -578,7 +585,7 @@ function buildHealthExportText() {
   if (done.length > 0) {
     lines.push(`─────────────`);
     lines.push(``);
-    lines.push(`ЗАВЕРШЕНІ СТАНИ (${done.length}):`);
+    lines.push(t('health.export.done', 'ЗАВЕРШЕНІ СТАНИ ({n}):', { n: done.length }));
     done.forEach(card => {
       lines.push(`  • ${card.name}${card.subtitle ? ' — ' + card.subtitle : ''}`);
     });
@@ -587,7 +594,7 @@ function buildHealthExportText() {
 
   lines.push(`─────────────`);
   lines.push(``);
-  lines.push(`Згенеровано у застосунку NeverMind. Не є медичним документом — для попереднього обговорення з лікарем.`);
+  lines.push(t('health.export.disclaimer', 'Згенеровано у застосунку NeverMind. Не є медичним документом — для попереднього обговорення з лікарем.'));
 
   return lines.join('\n');
 }

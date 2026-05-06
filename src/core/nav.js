@@ -333,8 +333,14 @@ function renderTabOrderList() {
   if (!list) return;
   const tabs = _pendingTabs || getActiveTabs();
   const TAB_LABELS = {
-    inbox:'Inbox', tasks:'Продуктив.', notes:'Нотатки', me:'Я',
-    evening:'Вечір', finance:'Фінанси', health:"Здоров'я", projects:'Проекти',
+    inbox: 'Inbox',
+    tasks: t('tab.tasks', 'Продуктив.'),
+    notes: t('tab.notes', 'Нотатки'),
+    me: t('tab.me', 'Я'),
+    evening: t('tab.evening', 'Вечір'),
+    finance: t('tab.finance', 'Фінанси'),
+    health: t('tab.health', "Здоров'я"),
+    projects: t('tab.projects', 'Проекти'),
   };
   list.innerHTML = tabs.map((id, idx) => {
     const cfg = ALL_TABS_CONFIG.find(t => t.id === id);
@@ -881,10 +887,10 @@ function renderMemoryCards() {
       const ttlNote = f.ttl ? ` · живе ${f.ttl} дн` : '';
       const sourceLabel = {
         inbox: 'Inbox',
-        auto: 'фон',
-        manual: 'вручну',
-        migration: 'стара пам\'ять',
-        onboarding: 'онбординг',
+        auto: t('mem.source.auto', 'фон'),
+        manual: t('mem.source.manual', 'вручну'),
+        migration: t('mem.source.migration', 'стара пам\'ять'),
+        onboarding: t('mem.source.onboarding', 'онбординг'),
       }[f.source] || '';
       const escId = escapeHtml(f.id);
       parts.push(`
