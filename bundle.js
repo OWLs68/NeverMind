@@ -22151,7 +22151,7 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
         return `${x},${y}`;
       }).join(" ");
       const zeroY = 100 - (0 - minB) / range * 100;
-      chartHtml = `<svg viewBox="0 0 400 100" preserveAspectRatio="none" style="width:100%;height:100px;display:block">
+      chartHtml = `<svg viewBox="-12 -12 424 124" preserveAspectRatio="none" style="width:100%;height:100px;display:block">
       <line x1="0" y1="${zeroY}" x2="400" y2="${zeroY}" stroke="rgba(30,16,64,0.12)" stroke-width="1" stroke-dasharray="3,3"/>
       <polyline points="${pts}" fill="none" stroke="#0ea5e9" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
       ${balances.map((b, i) => {
