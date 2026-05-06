@@ -21817,6 +21817,13 @@ ${legacy}`;
     }
     modal.parentNode.insertBefore(newOverlay, modal);
     childOverlay.remove();
+    const removeWatcher = new MutationObserver(() => {
+      if (!document.body.contains(modal)) {
+        newOverlay.remove();
+        removeWatcher.disconnect();
+      }
+    });
+    removeWatcher.observe(document.body, { childList: true, subtree: true });
     return newOverlay;
   }
   function _setupSwipeClose(modal) {
@@ -22416,27 +22423,34 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
   function openFinAnalytics() {
     const existing = document.getElementById("fin-analytics-modal");
     if (existing) existing.remove();
+    const existingOverlay = document.getElementById("fin-analytics-modal-overlay");
+    if (existingOverlay) existingOverlay.remove();
+    const overlay = document.createElement("div");
+    overlay.id = "fin-analytics-modal-overlay";
+    overlay.style.cssText = "position:fixed;inset:0;z-index:499;background:rgba(10,5,30,0.35);backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);pointer-events:none";
+    document.body.appendChild(overlay);
     const modal = document.createElement("div");
     modal.id = "fin-analytics-modal";
+    modal.setAttribute("onclick", "if(event.target===this)closeFinAnalytics()");
     modal.style.cssText = "position:fixed;inset:0;z-index:500;display:flex;align-items:flex-end;justify-content:center";
     const allTxs = getFinance();
     const content = _buildAnalyticsContent(allTxs);
     modal.innerHTML = `
-    <div onclick="closeFinAnalytics()" class="modal-backdrop"></div>
     <div style="position:relative;width:100%;max-width:480px;background:white;border-radius:24px 24px 0 0;z-index:1;max-height:92vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 -4px 24px rgba(30,16,64,0.1);animation:slideUp 0.3s ease-out">
       <div class="modal-handle" style="margin:8px auto"></div>
       <div style="padding:0 16px 8px;text-align:center">
-        <div style="font-size:17px;font-weight:800;color:#1e1040">\u{1F4CA} \u0410\u043D\u0430\u043B\u0456\u0442\u0438\u043A\u0430</div>
+        <div style="font-size:17px;font-weight:800;color:#1e1040">\u{1F4CA} ${t("finstat.title", "\u0410\u043D\u0430\u043B\u0456\u0442\u0438\u043A\u0430")}</div>
       </div>
       <div style="flex:1;overflow-y:auto;padding:0 14px calc(env(safe-area-inset-bottom,0px) + 16px)">
         ${content}
       </div>
     </div>`;
     document.body.appendChild(modal);
-    setupModalSwipeClose(modal.querySelector("div:nth-child(2)"), closeFinAnalytics);
+    setupModalSwipeClose(modal.querySelector(":scope > div"), closeFinAnalytics);
   }
   function closeFinAnalytics() {
     document.getElementById("fin-analytics-modal")?.remove();
+    document.getElementById("fin-analytics-modal-overlay")?.remove();
   }
   function setAnalyticsChartMode(mode) {
     _analyticsChartMode = mode;
