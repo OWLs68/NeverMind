@@ -236,9 +236,9 @@ function _analyticsMiniMetrics(allTxs) {
       <div style="font-size:${typeof m.value === 'string' && m.value.length > 6 ? '15px' : '19px'};font-weight:900;color:${m.color};line-height:1.1;margin:6px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(String(m.value))}</div>
       <div style="font-size:9px;color:rgba(30,16,64,0.45);line-height:1.3;min-height:24px">${escapeHtml(m.desc)}</div>
       <div style="display:flex;gap:4px;margin-top:6px">
-        <button onclick="shiftAnalyticsMini(${blockIdx}, -1)" aria-label="Попередня" style="flex:1;padding:6px;border-radius:8px;border:none;background:linear-gradient(135deg,#1e1040,#2d1a5c);color:white;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;box-shadow:0 2px 6px rgba(30,16,64,0.18)">‹</button>
+        <button onclick="shiftAnalyticsMini(${blockIdx}, -1)" aria-label="Попередня" style="flex:1;padding:6px;border-radius:8px;border:none;background:linear-gradient(135deg,#a67c52,#7a4e2d);color:white;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;box-shadow:0 2px 6px rgba(122,78,45,0.25)">‹</button>
         <div style="font-size:9px;color:rgba(30,16,64,0.3);align-self:center">${idx + 1}/${metrics.length}</div>
-        <button onclick="shiftAnalyticsMini(${blockIdx}, 1)" aria-label="Наступна" style="flex:1;padding:6px;border-radius:8px;border:none;background:linear-gradient(135deg,#1e1040,#2d1a5c);color:white;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;box-shadow:0 2px 6px rgba(30,16,64,0.18)">›</button>
+        <button onclick="shiftAnalyticsMini(${blockIdx}, 1)" aria-label="Наступна" style="flex:1;padding:6px;border-radius:8px;border:none;background:linear-gradient(135deg,#a67c52,#7a4e2d);color:white;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;box-shadow:0 2px 6px rgba(122,78,45,0.25)">›</button>
       </div>
     </div>`;
   };
