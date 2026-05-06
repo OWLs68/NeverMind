@@ -701,6 +701,11 @@ async function initNoteChatGreeting(note) {
 }
 
 function addNoteChatMsg(role, text, chips = null) {
+  // MPVly 05.05 — інлайн-парсинг чіпів (один мозок).
+  if (role === 'agent' && (!chips || chips.length === 0) && text) {
+    const _p = parseContentChips(text);
+    if (_p.chips) { text = _p.text; chips = _p.chips; }
+  }
   const el = document.getElementById('note-chat-messages');
   const isAgent = role === 'agent';
   if (isAgent) el.querySelectorAll('.chat-chips-row').forEach(n => n.remove());
@@ -990,6 +995,11 @@ let notesBarHistory = [];
 let notesBarLoading = false;
 
 export function addNotesChatMsg(role, text, _noSave = false, chips = null) {
+  // MPVly 05.05 — інлайн-парсинг чіпів (один мозок).
+  if (role === 'agent' && (!chips || chips.length === 0) && text) {
+    const _p = parseContentChips(text);
+    if (_p.chips) { text = _p.text; chips = _p.chips; }
+  }
   const el = document.getElementById('notes-chat-messages');
   if (!el) return;
   if (_notesTypingEl) { _notesTypingEl.remove(); _notesTypingEl = null; }

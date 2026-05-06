@@ -383,6 +383,11 @@ function closeTaskChat() {
 }
 
 function addTaskChatMsg(role, text, id = '', chips = null) {
+  // MPVly 05.05 — інлайн-парсинг чіпів (один мозок).
+  if (role === 'agent' && (!chips || chips.length === 0) && text) {
+    const _p = parseContentChips(text);
+    if (_p.chips) { text = _p.text; chips = _p.chips; }
+  }
   const el = document.getElementById('task-chat-messages');
   const isAgent = role === 'agent';
   if (isAgent) el.querySelectorAll('.chat-chips-row').forEach(n => n.remove());
@@ -593,6 +598,11 @@ function showTasksChatMessages() {
 let _taskTypingEl = null;
 
 export function addTaskBarMsg(role, text, _noSave = false, chips = null) {
+  // MPVly 05.05 — інлайн-парсинг чіпів (один мозок).
+  if (role === 'agent' && (!chips || chips.length === 0) && text) {
+    const _p = parseContentChips(text);
+    if (_p.chips) { text = _p.text; chips = _p.chips; }
+  }
   const el = document.getElementById('tasks-chat-messages');
   if (!el) return;
   if (_taskTypingEl) { _taskTypingEl.remove(); _taskTypingEl = null; }

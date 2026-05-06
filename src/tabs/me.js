@@ -747,6 +747,11 @@ function showMeChatMessages() {
 }
 
 export function addMeChatMsg(role, text, _noSave = false, id = '', chips = null) {
+  // MPVly 05.05 — інлайн-парсинг чіпів (один мозок).
+  if (role === 'agent' && (!chips || chips.length === 0) && text) {
+    const _p = parseContentChips(text);
+    if (_p.chips) { text = _p.text; chips = _p.chips; }
+  }
   const el = document.getElementById('me-chat-messages');
   if (!el) return;
   if (role === 'agent') el.querySelectorAll('.chat-chips-row').forEach(n => n.remove());
