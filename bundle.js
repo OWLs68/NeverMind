@@ -21834,6 +21834,7 @@ ${legacy}`;
   function _setupSwipeClose(modal) {
     const style = modal.getAttribute("style") || "";
     if (!/align-items\s*:\s*flex-end/i.test(style)) return;
+    if (modal.hasAttribute("data-skip-auto-swipe")) return;
     const card = modal.querySelector(":scope > div");
     if (!card || card._swipeClose) return;
     card._swipeClose = true;
