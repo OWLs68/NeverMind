@@ -4,7 +4,7 @@
 // ============================================================
 
 import { currentTab, switchTab, showToast } from '../core/nav.js';
-import { escapeHtml } from '../core/utils.js';
+import { escapeHtml, parseContentChips } from '../core/utils.js';
 import { generateUUID } from '../core/uuid.js';
 import { activeChatBar, callOwlChat, closeChatBar, lastChatClosedTs, openChatBar, restoreChatUI, setActiveChatBar } from '../ai/core.js';
 import { _owlTabApplyState, _owlTabStates, renderTabBoard } from './board.js';
@@ -973,7 +973,16 @@ export async function sendOwlReply(text) {
         if (parsed.chips) {
           renderOwlChips({ chips: parsed.chips });
         }
-      } catch(e) {}
+      } catch(e) {
+        // MPVly 05.05 fallback: AI повернув інлайн `Текст {"chips":[...]}` замість
+        // top-level JSON. Раніше падало у silent catch → reply виводився як сирий
+        // текст з JSON. Тепер витягуємо chips через parseContentChips як у 7 інших.
+        const { text: cleanText, chips: extractedChips } = parseContentChips(reply);
+        if (extractedChips && extractedChips.length > 0) {
+          replyText = cleanText;
+          renderOwlChips({ chips: extractedChips });
+        }
+      }
 
       saveOwlChatMsg('agent', replyText);
       renderOwlChatMessages();
