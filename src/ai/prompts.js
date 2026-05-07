@@ -206,7 +206,7 @@ export function getOWLPersonality() {
   const state = _detectOwlState();
   const stateStyle = _STATE_STYLES[state] || '';
 
-  return persona + stateStyle + universal;
+  return persona + stateStyle + universal + '\n\n' + CHIP_PROMPT_RULES;
 }
 
 // ===== 2. UI_TOOLS_RULES — спільний блок правил UI-навігації =====
@@ -467,7 +467,9 @@ C) Не знайдено: якщо назва вказана але кандид
 
 НЕ вигадуй ліміти, бюджети або плани яких немає в контексті.
 
-${UI_TOOLS_RULES}`;
+${UI_TOOLS_RULES}
+
+${CHIP_PROMPT_RULES}`;
 
 // ===== 3. INBOX_TOOLS — 31 function definition для OpenAI tool calling =====
 export const INBOX_TOOLS = [
