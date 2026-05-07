@@ -1565,6 +1565,10 @@
       trimmed = [...trimmed].sort((a, b) => (b.lastSeen || b.ts) - (a.lastSeen || a.ts)).slice(0, MAX_FACTS);
     }
     localStorage.setItem(NM_FACTS_KEY, JSON.stringify(trimmed));
+    try {
+      window.dispatchEvent(new CustomEvent("nm-data-changed", { detail: "memory" }));
+    } catch (e) {
+    }
   }
   function _rejectReason(text) {
     const trimmed = (text || "").trim();
@@ -2706,7 +2710,7 @@ ${lines.join("\n")}`;
         <div style="font-size:10px;color:rgba(30,16,64,0.5);font-weight:600;margin-top:1px">${escapeHtml(d.cardName)} \xB7 ${escapeHtml(d.scheduledTime)}</div>
       </div>
       <button onclick="logHealthMedDose(${d.cardId},${d.medId})" style="font-size:11px;font-weight:800;padding:5px 10px;border-radius:8px;border:none;background:#16a34a;color:white;cursor:pointer;white-space:nowrap">${t("health.dose.took_btn", "\u2713 \u041F\u0440\u0438\u0439\u043D\u044F\u0432")}</button>
-      <button onclick="skipHealthMedDose(${d.cardId},${d.medId},'${escapeHtml(d.scheduledTime)}')" style="font-size:11px;font-weight:700;padding:5px 10px;border-radius:8px;border:1.5px solid rgba(30,16,64,0.15);background:white;color:rgba(30,16,64,0.55);cursor:pointer;white-space:nowrap">${t("health.dose.skip_btn", "\u041F\u0440\u043E\u043F\u0443\u0449\u0443")}</button>
+      <button onclick="skipHealthMedDose(${d.cardId},${d.medId},'${escapeJsArg(d.scheduledTime)}')" style="font-size:11px;font-weight:700;padding:5px 10px;border-radius:8px;border:1.5px solid rgba(30,16,64,0.15);background:white;color:rgba(30,16,64,0.55);cursor:pointer;white-space:nowrap">${t("health.dose.skip_btn", "\u041F\u0440\u043E\u043F\u0443\u0449\u0443")}</button>
     </div>`).join("")}
     ${missed.length > 5 ? `<div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:600;text-align:center">${t("health.dose.more_missed", "+ \u0449\u0435 {n} \u043F\u0440\u043E\u043F\u0443\u0449\u0435\u043D\u0438\u0445", { n: missed.length - 5 })}</div>` : ""}
   </div>`;
@@ -2907,7 +2911,7 @@ ${lines.join("\n")}`;
     </div>` : ""}
 
     <!-- \u041D\u043E\u0442\u0430\u0442\u043A\u0438 \u2192 \u043F\u0430\u043F\u043A\u0430 (B-29 fix: switchTab + delayed openNotesFolder) -->
-    <div onclick="openHealthNotesFolder('${escapeHtml(card.name)}')" style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.55);border:1.5px dashed rgba(30,16,64,0.14);border-radius:12px;padding:10px 12px;margin-bottom:10px;cursor:pointer">
+    <div onclick="openHealthNotesFolder('${escapeJsArg(card.name)}')" style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.55);border:1.5px dashed rgba(30,16,64,0.14);border-radius:12px;padding:10px 12px;margin-bottom:10px;cursor:pointer">
       <div class="icon-circle" style="width:30px;height:30px">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1a5c2a" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
       </div>
@@ -5105,7 +5109,7 @@ ${lines.join("\n")}`;
     </div>` : ""}
 
     <!-- \u041D\u043E\u0442\u0430\u0442\u043A\u0438 \u2192 \u043F\u0430\u043F\u043A\u0430 -->
-    <div onclick="switchTab('notes');setTimeout(()=>openNotesFolder('${escapeHtml(p.name)}'),150)" style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.55);border:1.5px dashed rgba(30,16,64,0.14);border-radius:12px;padding:10px 12px;margin-bottom:10px;cursor:pointer">
+    <div onclick="switchTab('notes');setTimeout(()=>openNotesFolder('${escapeJsArg(p.name)}'),150)" style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.55);border:1.5px dashed rgba(30,16,64,0.14);border-radius:12px;padding:10px 12px;margin-bottom:10px;cursor:pointer">
       <div style="width:30px;height:30px;border-radius:9px;background:rgba(61,46,30,0.08);display:flex;align-items:center;justify-content:center;flex-shrink:0">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3d2e1e" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
       </div>
@@ -7476,12 +7480,12 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
       const sum = catMap[cat.name] || 0;
       const sumStr = sum > 0 ? formatMoney(sum) : "0 " + getCurrency();
       const sumCol = sum > 0 ? cat.color : "rgba(30,16,64,0.25)";
-      const onClick = _finEditMode ? `openCategoryEditModal('${escapeHtml(cat.id)}')` : `openAddTransaction({category: '${escapeHtml(cat.name)}', type: '${isExpense ? "expense" : "income"}'})`;
+      const onClick = _finEditMode ? `openCategoryEditModal('${escapeJsArg(cat.id)}')` : `openAddTransaction({category: '${escapeJsArg(cat.name)}', type: '${isExpense ? "expense" : "income"}'})`;
       const levitShadow = `box-shadow:0 4px 10px rgba(0,0,0,0.32), 0 2px 4px rgba(0,0,0,0.22);`;
       const editStyle = _finEditMode ? `box-shadow:0 4px 10px rgba(0,0,0,0.32), 0 2px 4px rgba(0,0,0,0.22), 0 0 0 2px ${cat.color}55;` : levitShadow;
       const arrows = _finEditMode ? `
-      <button onclick="event.stopPropagation();moveFinCategory('${escapeHtml(cat.id)}',-1);renderFinance()" aria-label="${t("finance.cat.move_left", "\u0412\u043B\u0456\u0432\u043E")}" style="position:absolute;left:-6px;top:50%;transform:translateY(-50%);width:22px;height:22px;border-radius:50%;border:none;background:rgba(255,255,255,0.95);color:#1e1040;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;padding:0;box-shadow:0 2px 6px rgba(30,16,64,0.18);z-index:2">\u2039</button>
-      <button onclick="event.stopPropagation();moveFinCategory('${escapeHtml(cat.id)}',+1);renderFinance()" aria-label="${t("finance.cat.move_right", "\u0412\u043F\u0440\u0430\u0432\u043E")}" style="position:absolute;right:-6px;top:50%;transform:translateY(-50%);width:22px;height:22px;border-radius:50%;border:none;background:rgba(255,255,255,0.95);color:#1e1040;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;padding:0;box-shadow:0 2px 6px rgba(30,16,64,0.18);z-index:2">\u203A</button>` : "";
+      <button onclick="event.stopPropagation();moveFinCategory('${escapeJsArg(cat.id)}',-1);renderFinance()" aria-label="${t("finance.cat.move_left", "\u0412\u043B\u0456\u0432\u043E")}" style="position:absolute;left:-6px;top:50%;transform:translateY(-50%);width:22px;height:22px;border-radius:50%;border:none;background:rgba(255,255,255,0.95);color:#1e1040;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;padding:0;box-shadow:0 2px 6px rgba(30,16,64,0.18);z-index:2">\u2039</button>
+      <button onclick="event.stopPropagation();moveFinCategory('${escapeJsArg(cat.id)}',+1);renderFinance()" aria-label="${t("finance.cat.move_right", "\u0412\u043F\u0440\u0430\u0432\u043E")}" style="position:absolute;right:-6px;top:50%;transform:translateY(-50%);width:22px;height:22px;border-radius:50%;border:none;background:rgba(255,255,255,0.95);color:#1e1040;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;padding:0;box-shadow:0 2px 6px rgba(30,16,64,0.18);z-index:2">\u203A</button>` : "";
       return `<div onclick="${onClick}" style="display:flex;flex-direction:column;align-items:center;cursor:pointer;padding:4px 0;min-width:0;position:relative">
       <div style="font-size:11px;font-weight:600;color:rgba(30,16,64,0.55);margin-bottom:4px;text-align:center;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(cat.name)}</div>
       <div style="position:relative;width:48px;height:48px">
@@ -9691,7 +9695,7 @@ ${recent}`;
       const fc = colorDef ? { bg: colorDef.bg, border: "rgba(255,255,255,0.5)" } : getFolderColor(folder);
       const firstText = items[0] && typeof items[0].text === "string" ? items[0].text : "";
       const preview = firstText.length > 60 ? firstText.substring(0, 60) + "\u2026" : firstText;
-      const safeFolder = escapeHtml(folder).replace(/'/g, "\\'");
+      const safeFolder = escapeJsArg(folder);
       const key = btoa(unescape(encodeURIComponent(folder))).replace(/[^a-zA-Z0-9]/g, "_");
       const pinBadge = meta.pinned ? '<div style="position:absolute;top:8px;right:8px;font-size:10px;opacity:0.4">\u{1F4CC}</div>' : "";
       const desc = meta.desc ? `<div style="font-size:11px;color:rgba(30,16,64,0.38);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(meta.desc)}</div>` : `<div style="font-size:12px;color:rgba(30,16,64,0.45);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(preview)}</div>`;
@@ -16826,6 +16830,10 @@ ${userText}
   }
   function saveInbox(arr) {
     localStorage.setItem("nm_inbox", JSON.stringify(arr));
+    try {
+      window.dispatchEvent(new CustomEvent("nm-data-changed", { detail: "inbox" }));
+    } catch (e) {
+    }
   }
   function _inboxFormatHour(ts) {
     const d = new Date(ts);
@@ -17191,7 +17199,13 @@ ${aiContext}`;
           }
         }
         for (const tc of msg.tool_calls) {
-          const args = JSON.parse(tc.function.arguments);
+          let args;
+          try {
+            args = JSON.parse(tc.function.arguments);
+          } catch (e) {
+            console.warn("[inbox] \u0437\u043B\u0430\u043C\u0430\u043D\u0438\u0439 JSON \u0443 tool_call", tc.function?.name, e);
+            continue;
+          }
           if (args._reasoning_log) {
             try {
               const log = JSON.parse(localStorage.getItem("nm_reasoning_log") || "[]");
@@ -18092,6 +18106,11 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
   }
   function escapeHtml(s) {
     return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+  function escapeJsArg(s) {
+    const str = String(s ?? "");
+    const jsEscaped = str.replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, '\\"').replace(/\n/g, "\\n").replace(/\r/g, "\\r");
+    return jsEscaped.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   }
   function extractJsonBlocks(text) {
     if (!text) return [];
@@ -22736,7 +22755,7 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
       <div style="display:flex;flex-wrap:wrap;gap:6px">
         ${catList.map((c) => {
       const active = c.name === _finTxCategory;
-      return `<button onclick="selectFinTxMainCat('${escapeHtml(c.name)}')" style="padding:7px 14px;border-radius:18px;font-size:13.5px;font-weight:800;cursor:pointer;font-family:inherit;border:2px solid ${active ? "#c2410c" : "rgba(30,16,64,0.12)"};background:${active ? "rgba(194,65,12,0.14)" : "white"};color:${active ? "#c2410c" : "#1e1040"}">${escapeHtml(c.name)}</button>`;
+      return `<button onclick="selectFinTxMainCat('${escapeJsArg(c.name)}')" style="padding:7px 14px;border-radius:18px;font-size:13.5px;font-weight:800;cursor:pointer;font-family:inherit;border:2px solid ${active ? "#c2410c" : "rgba(30,16,64,0.12)"};background:${active ? "rgba(194,65,12,0.14)" : "white"};color:${active ? "#c2410c" : "#1e1040"}">${escapeHtml(c.name)}</button>`;
     }).join("")}
       </div>
     </div>` : "";
@@ -22746,7 +22765,7 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
       <div style="display:flex;flex-wrap:wrap;gap:4px">
         ${subcats.map((s) => {
       const active = s === _finTxSubcategory;
-      return `<button onclick="selectFinTxSubcat('${escapeHtml(s)}')" style="padding:3px 9px;border-radius:12px;font-size:11.5px;font-weight:500;cursor:pointer;font-family:inherit;border:1px solid ${active ? "#c2410c" : "rgba(30,16,64,0.08)"};background:${active ? "rgba(194,65,12,0.06)" : "rgba(30,16,64,0.02)"};color:${active ? "#c2410c" : "rgba(30,16,64,0.5)"}">${escapeHtml(s)}</button>`;
+      return `<button onclick="selectFinTxSubcat('${escapeJsArg(s)}')" style="padding:3px 9px;border-radius:12px;font-size:11.5px;font-weight:500;cursor:pointer;font-family:inherit;border:1px solid ${active ? "#c2410c" : "rgba(30,16,64,0.08)"};background:${active ? "rgba(194,65,12,0.06)" : "rgba(30,16,64,0.02)"};color:${active ? "#c2410c" : "rgba(30,16,64,0.5)"}">${escapeHtml(s)}</button>`;
     }).join("")}
       </div>
     </div>` : "";
