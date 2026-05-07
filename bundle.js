@@ -7676,9 +7676,17 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     if (!catList.some((c) => c.name === category)) {
       createFinCategory(type, { name: category });
     }
+    let subcategory = (parsed.subcategory || "").trim();
+    if (subcategory) {
+      const cat = catList.find((c) => c.name === category);
+      const validSubs = cat && Array.isArray(cat.subcategories) ? cat.subcategories : [];
+      if (!validSubs.includes(subcategory)) subcategory = "";
+    }
     const ts = _resolveFinanceDate(parsed.date, originalText);
     const txs = getFinance();
-    txs.unshift({ id: Date.now(), type, amount, category, comment, ts });
+    const tx = { id: Date.now(), type, amount, category, comment, ts };
+    if (subcategory) tx.subcategory = subcategory;
+    txs.unshift(tx);
     saveFinance(txs);
     const items = getInbox();
     items.unshift({ id: Date.now(), text: originalText, category: "finance", ts, processed: true });
@@ -7735,7 +7743,16 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     if (top3) parts.push(`\u0442\u043E\u043F \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457: ${top3}`);
     if (todaySum > 0) parts.push(`[TODAY_EXPENSES:${formatMoney(todaySum)}] \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0432\u0438\u0442\u0440\u0430\u0447\u0435\u043D\u043E ${formatMoney(todaySum)}`);
     else parts.push("[TODAY_EXPENSES:0] \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0432\u0438\u0442\u0440\u0430\u0442 \u043D\u0435 \u0431\u0443\u043B\u043E");
-    const recentTxs = txs.slice(0, 5).map((t2) => `[ID:${t2.id}] ${t2.type === "expense" ? "-" : "+"}${t2.amount}${getCurrency()} ${t2.category}${t2.comment ? " (" + t2.comment + ")" : ""}`).join("; ");
+    try {
+      const cats = getFinCats();
+      const buildTree = (arr) => arr.filter((c) => Array.isArray(c.subcategories) && c.subcategories.length > 0).map((c) => `${c.name}: [${c.subcategories.join(", ")}]`).join(" \xB7 ");
+      const expTree = buildTree(cats.expense || []);
+      const incTree = buildTree(cats.income || []);
+      if (expTree) parts.push(t("finance.context.expense_cats_tree", "\u041A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457 \u0432\u0438\u0442\u0440\u0430\u0442 \u0437 \u043F\u0456\u0434\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F\u043C\u0438: {tree}", { tree: expTree }));
+      if (incTree) parts.push(t("finance.context.income_cats_tree", "\u041A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457 \u0434\u043E\u0445\u043E\u0434\u0456\u0432 \u0437 \u043F\u0456\u0434\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F\u043C\u0438: {tree}", { tree: incTree }));
+    } catch (e) {
+    }
+    const recentTxs = txs.slice(0, 5).map((t2) => `[ID:${t2.id}] ${t2.type === "expense" ? "-" : "+"}${t2.amount}${getCurrency()} ${t2.category}${t2.subcategory ? "/" + t2.subcategory : ""}${t2.comment ? " (" + t2.comment + ")" : ""}`).join("; ");
     if (recentTxs) parts.push(`\u041E\u0441\u0442\u0430\u043D\u043D\u0456 \u043E\u043F\u0435\u0440\u0430\u0446\u0456\u0457 (\u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 ID \u0434\u043B\u044F update_transaction): ${recentTxs}`);
     return parts.join("\n");
   }
