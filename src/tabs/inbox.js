@@ -583,7 +583,18 @@ ${aiContext}`;
 
       // === TOOL CALLING DISPATCH ===
       for (const tc of msg.tool_calls) {
-        const args = JSON.parse(tc.function.arguments);
+        // B-154 fix (LfA6w 07.05): try/catch навколо JSON.parse. Якщо OpenAI
+        // дав зламаний JSON у одному з кількох tool_calls — раніше throw
+        // прокидався у catch на ~995 → addInboxChatMsg('agent', '✓ Збережено')
+        // показував успіх, хоча нічого не зберіглося. Тепер пропускаємо
+        // зламаний tool, продовжуємо інші.
+        let args;
+        try {
+          args = JSON.parse(tc.function.arguments);
+        } catch (e) {
+          console.warn('[inbox] зламаний JSON у tool_call', tc.function?.name, e);
+          continue;
+        }
         // V3 Фаза 1: strip _reasoning_log + log for diagnostics (no handler should see it)
         if (args._reasoning_log) {
           try {
