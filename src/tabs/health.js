@@ -12,7 +12,7 @@ import { dispatchChatToolCalls } from '../ai/tool-dispatcher.js';
 import { shouldClarify } from '../owl/clarify-guard.js';
 import { getHealthChatSystem } from '../ai/prompts.js';
 import { renderChips } from '../owl/chips.js';
-import { openNotesFolder } from './notes.js';
+import { openNotesFolder, openNoteView, findOrCreateHealthCardNote } from './notes.js';
 import { getEvents, saveEvents, _initDrumCol } from './calendar.js';
 import { setupModalSwipeClose } from './tasks.js';
 import { monthShort } from '../data/months.js';
@@ -844,9 +844,18 @@ function closeHealthCard() {
 
 // B-29 fix: перемкнути вкладку + відкрити папку (аналог як у Проектах).
 // openNotesFolder сам по собі тільки рендерить, але не перемикає tab.
-function openHealthNotesFolder(folderName) {
+// LfA6w 07.05: тап «Нотатки» з картки Здоров'я тепер відкриває нотатку-журнал
+// тієї картки у спільній папці «Здоров'я» (а не окрему папку з ім'ям картки).
+// Якщо нотатки ще немає — створюється порожня з прив'язкою до card.id.
+// Старі папки-копії карток у юзерських даних лишаються — НЕ мігруємо.
+function openHealthCardNote(cardId) {
+  const cards = getHealthCards();
+  const card = cards.find(c => c.id === cardId);
+  if (!card) return;
+  const noteId = findOrCreateHealthCardNote(card);
+  if (noteId == null) return;
   switchTab('notes');
-  setTimeout(() => openNotesFolder(folderName), 150);
+  setTimeout(() => { try { openNoteView(noteId); } catch(e) {} }, 150);
 }
 
 function renderHealthWorkspace(id) {
@@ -1002,7 +1011,7 @@ function renderHealthWorkspace(id) {
     </div>` : ''}
 
     <!-- Нотатки → папка (B-29 fix: switchTab + delayed openNotesFolder) -->
-    <div onclick="openHealthNotesFolder('${escapeJsArg(card.name)}')" style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.55);border:1.5px dashed rgba(30,16,64,0.14);border-radius:12px;padding:10px 12px;margin-bottom:10px;cursor:pointer">
+    <div onclick="openHealthCardNote(${card.id})" style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.55);border:1.5px dashed rgba(30,16,64,0.14);border-radius:12px;padding:10px 12px;margin-bottom:10px;cursor:pointer">
       <div class="icon-circle" style="width:30px;height:30px">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1a5c2a" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
       </div>
@@ -1999,7 +2008,7 @@ Object.assign(window, {
   openAddHealthCard, sendHealthBarMessage,
   openHealthCard, closeHealthCard, setHealthCardStatus,
   openAddAllergy, deleteAllergyById,
-  openHealthNotesFolder,
+  openHealthCardNote,
   // B-27 + B-30 (15.04 6v2eR): модалка створення/редагування
   openEditHealthCard, closeHealthCardModal, saveHealthCardFromModal,
   deleteHealthCardFromModal, addHealthMedicationRow,

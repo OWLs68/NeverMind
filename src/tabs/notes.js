@@ -103,6 +103,33 @@ export function addNoteFromInbox(text, category, folder = null, source = 'inbox'
   return true;
 }
 
+// LfA6w 07.05: одна нотатка-журнал на кожну картку Здоров'я у спільній
+// папці «Здоров'я». Прив'язка через linkedHealthCardId. Викликається з
+// картки Здоров'я при тапі «Нотатки» — раніше відкривала окрему папку
+// з іменем картки (legacy лишається у юзерських даних, не чіпаємо).
+export function findOrCreateHealthCardNote(card) {
+  if (!card || card.id == null) return null;
+  const notes = getNotes();
+  const linked = notes.find(n => n.linkedHealthCardId === card.id);
+  if (linked) {
+    linked.lastViewed = Date.now();
+    saveNotes(notes);
+    return linked.id;
+  }
+  const newNote = {
+    id: Date.now(),
+    text: (card.name || '') + '\n\n',
+    folder: t('notes.folder_health', "Здоров'я"),
+    linkedHealthCardId: card.id,
+    source: 'health-card',
+    ts: Date.now(),
+    lastViewed: Date.now(),
+  };
+  notes.unshift(newNote);
+  saveNotes(notes);
+  return newNote.id;
+}
+
 function openAddNote() {
   editingNoteId = null;
   document.getElementById('note-modal-title').textContent = t('notes.modal.new_title', 'Нова нотатка');
@@ -369,7 +396,7 @@ export function renderNotes(searchQuery = '') {
             <div style="font-size:20px;font-weight:900;color:#1e1040;line-height:1">${items.length}</div>
             <div style="font-size:10px;font-weight:600;color:rgba(30,16,64,0.4)">${t('notes.folder.entries', 'записів')}</div>
           </div>
-          <div ontouchend="event.stopPropagation();event.preventDefault();openFolderEditModal('${safeFolder}')" onclick="event.stopPropagation();openFolderEditModal('${safeFolder}')" style="position:absolute;top:8px;right:8px;padding:6px 8px;cursor:pointer;color:rgba(30,16,64,0.35);font-size:18px;line-height:1;border-radius:8px;-webkit-tap-highlight-color:transparent;min-width:32px;text-align:center">···</div>
+          <div onclick="event.stopPropagation();openFolderEditModal('${safeFolder}')" style="position:absolute;top:8px;right:8px;padding:6px 8px;cursor:pointer;color:rgba(30,16,64,0.35);font-size:18px;line-height:1;border-radius:8px;-webkit-tap-highlight-color:transparent;min-width:32px;text-align:center">···</div>
         </div>
       </div>`;
     }).join('') + '</div>';
@@ -558,7 +585,7 @@ function getFolderColor(folder) {
   return DEFAULT_NOTE_FOLDER;
 }
 
-function openNoteView(id) {
+export function openNoteView(id) {
   const notes = getNotes();
   const n = notes.find(x => x.id === id);
   if (!n) return;
