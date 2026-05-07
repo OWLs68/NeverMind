@@ -103,6 +103,33 @@ export function addNoteFromInbox(text, category, folder = null, source = 'inbox'
   return true;
 }
 
+// LfA6w 07.05: одна нотатка-журнал на кожну картку Здоров'я у спільній
+// папці «Здоров'я». Прив'язка через linkedHealthCardId. Викликається з
+// картки Здоров'я при тапі «Нотатки» — раніше відкривала окрему папку
+// з іменем картки (legacy лишається у юзерських даних, не чіпаємо).
+export function findOrCreateHealthCardNote(card) {
+  if (!card || card.id == null) return null;
+  const notes = getNotes();
+  const linked = notes.find(n => n.linkedHealthCardId === card.id);
+  if (linked) {
+    linked.lastViewed = Date.now();
+    saveNotes(notes);
+    return linked.id;
+  }
+  const newNote = {
+    id: Date.now(),
+    text: (card.name || '') + '\n\n',
+    folder: t('notes.folder_health', "Здоров'я"),
+    linkedHealthCardId: card.id,
+    source: 'health-card',
+    ts: Date.now(),
+    lastViewed: Date.now(),
+  };
+  notes.unshift(newNote);
+  saveNotes(notes);
+  return newNote.id;
+}
+
 function openAddNote() {
   editingNoteId = null;
   document.getElementById('note-modal-title').textContent = t('notes.modal.new_title', 'Нова нотатка');
@@ -558,7 +585,7 @@ function getFolderColor(folder) {
   return DEFAULT_NOTE_FOLDER;
 }
 
-function openNoteView(id) {
+export function openNoteView(id) {
   const notes = getNotes();
   const n = notes.find(x => x.id === id);
   if (!n) return;
