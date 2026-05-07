@@ -1379,10 +1379,19 @@ export function processUniversalAction(parsed, originalText, addMsg) {
     if (!catList.some(c => c.name === category)) {
       createFinCategory(type, { name: category });
     }
+    // LfA6w 07.05: subcategory приймаємо тільки якщо реально існує у категорії
+    let subcategory = (parsed.subcategory || '').trim();
+    if (subcategory) {
+      const cat = catList.find(c => c.name === category);
+      const validSubs = cat && Array.isArray(cat.subcategories) ? cat.subcategories : [];
+      if (!validSubs.includes(subcategory)) subcategory = '';
+    }
     const txs = getFinance();
     const finTs = _resolveFinanceDate(parsed.date, originalText);
     const txId = Date.now();
-    txs.unshift({ id: txId, type, amount, category, comment, ts: finTs });
+    const tx = { id: txId, type, amount, category, comment, ts: finTs };
+    if (subcategory) tx.subcategory = subcategory;
+    txs.unshift(tx);
     saveFinance(txs);
     // B-71 fix: створюємо картку у Inbox стрічці — будь-яка операція видима скрізь,
     // незалежно від точки введення (чат Фінансів, Task chat, Me chat тощо).

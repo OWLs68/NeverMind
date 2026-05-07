@@ -413,7 +413,7 @@ function _toolCallToAction(name, args) {
     case 'save_habit': return { action: 'save', category: 'habit', text: args.name, details: args.details, days: args.days, targetCount: args.target_count, comment: args.comment };
     case 'save_moment': return { action: 'save', category: 'event', text: args.text, mood: args.mood, comment: args.comment };
     case 'create_event': return { action: 'create_event', title: args.title, date: args.date, time: args.time || null, end_time: args.end_time || null, priority: args.priority || 'normal', comment: args.comment };
-    case 'save_finance': return { action: 'save_finance', fin_type: args.fin_type, amount: args.amount, category: args.category, fin_comment: args.fin_comment, date: args.date, comment: args.fin_comment };
+    case 'save_finance': return { action: 'save_finance', fin_type: args.fin_type, amount: args.amount, category: args.category, subcategory: args.subcategory, fin_comment: args.fin_comment, date: args.date, comment: args.fin_comment };
     case 'complete_habit': return { action: 'complete_habit', habit_ids: args.habit_ids, comment: args.comment };
     case 'complete_task': return { action: 'complete_task', task_ids: args.task_ids, comment: args.comment };
     case 'create_project': return { action: 'create_project', name: args.name, subtitle: args.subtitle || '' };
