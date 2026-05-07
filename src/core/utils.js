@@ -59,6 +59,27 @@ export function escapeHtml(s) {
   return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
+// B-152 + B-159 fix (LfA6w 07.05.2026): безпечне вкладання у JS-string
+// усередині HTML-атрибуту. Покриває кейс `onclick="foo('${escapeJsArg(name)}')"`
+// де name може містити: апостроф (`Roman's coffee` → SyntaxError),
+// лапки, зворотний слеш, переніс рядка, тег `<>` (через нативний HTML-escape
+// далі в onclick стане &lt;&gt; → юзер не знайде запис). Послідовність
+// важлива: спершу JS-escape (\\, \', \", \n, \r), потім HTML-escape (&, <, >).
+// Розшифрування назад НЕ потрібне — браузер парсить HTML attr → JS string,
+// обидва рівні відновлюються правильно.
+export function escapeJsArg(s) {
+  const str = String(s ?? '');
+  // 1. JS-escape: backslash перший (інакше наступні \' стануть \\\')
+  const jsEscaped = str
+    .replace(/\\/g, '\\\\')
+    .replace(/'/g, "\\'")
+    .replace(/"/g, '\\"')
+    .replace(/\n/g, '\\n')
+    .replace(/\r/g, '\\r');
+  // 2. HTML-escape для &, <, > (щоб не зламати атрибут і не виконати XSS)
+  return jsEscaped.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
 // Розбиває AI-відповідь на окремі JSON-об'єкти (17.04.2026 сесія 14zLe).
 // Причина: AI на запит "видали X, Y, Z, додай A" повертає кілька {...} блоків
 // один за одним. Стара логіка з /\{[\s\S]*\}/ жадібно захоплювала все як один
