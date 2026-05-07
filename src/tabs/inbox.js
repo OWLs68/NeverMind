@@ -166,7 +166,13 @@ const CAT_META = {
 };
 
 export function getInbox() { return JSON.parse(localStorage.getItem('nm_inbox') || '[]'); }
-export function saveInbox(arr) { localStorage.setItem('nm_inbox', JSON.stringify(arr)); }
+export function saveInbox(arr) {
+  localStorage.setItem('nm_inbox', JSON.stringify(arr));
+  // B-153 fix (LfA6w 07.05): сповіщаємо інші вкладки + Brain Pulse + OWL board.
+  // Раніше Inbox-картка додавалась через AI processSaveAction, але board/brain-pulse
+  // не реагували миттєво — тільки після наступного nm-data-changed від ІНШОГО джерела.
+  try { window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'inbox' })); } catch(e) {}
+}
 
 
 // Датовий сепаратор для стрічки

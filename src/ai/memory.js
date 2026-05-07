@@ -84,6 +84,10 @@ function _saveFacts(facts) {
     trimmed = [...trimmed].sort((a, b) => (b.lastSeen || b.ts) - (a.lastSeen || a.ts)).slice(0, MAX_FACTS);
   }
   localStorage.setItem(NM_FACTS_KEY, JSON.stringify(trimmed));
+  // B-151 fix (LfA6w 07.05): сповіщаємо Brain Pulse / OWL board / інші
+  // tab-boards. Раніше факт зберігався, але інші частини «один мозок»
+  // не знали до наступного nm-data-changed від ІНШОГО джерела.
+  try { window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'memory' })); } catch(e) {}
 }
 
 // Список патернів які НЕ є фактами — захисний фільтр від "вгадування" AI.
