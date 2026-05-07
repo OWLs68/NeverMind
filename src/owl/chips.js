@@ -123,6 +123,13 @@ export const CHIP_PROMPT_RULES = `- G11 (ЗАВЖДИ): chips НІКОЛИ не 
   • {"label":"Завтра 08:00","action":"chat"}
   • {"label":"Інше","action":"chat"}
   Приклад: {"text":"Коли ти останній раз приймав ліки?","chips":[{"label":"Зараз","action":"chat"},{"label":"Через годину","action":"chat"},{"label":"Завтра 08:00","action":"chat"},{"label":"Інше","action":"chat"}]}
+- 🚫 ANTI-LEAK ЧАСОВИХ ЧІПІВ (LfA6w 07.05): часові чіпи [Зараз/Через годину/Завтра 08:00/Інше] — **ВИКЛЮЧНО для set_reminder**. ЗАБОРОНЕНО використовувати їх для finance-clarify, task-clarify, note-clarify, health-clarify. Це різні домени і різні очікувані відповіді юзера. Запит «80 бензин» НЕ є питанням про час — не давай часові чіпи.
+- 💰 ЧІПИ FINANCE-CLARIFY (LfA6w 07.05) — патерн «ЧИСЛО + ІМЕННИК БЕЗ ВАЛЮТИ» («80 бензин», «50 таксі», «15 кава», «200 продукти», «300 хімчистка»): неоднозначно — це може бути витрата, дохід або задача-нагадування «купити». НЕ викликай save_finance напряму. Замість цього питання + 4 чіпи categorical:
+  • {"label":"Витрата 80 ₴","action":"clarify_save","target":"save_finance","payload":{"_reasoning_log":"чіп юзера","fin_type":"expense","amount":80,"category":"Транспорт","fin_comment":"бензин"}}
+  • {"label":"Дохід 80 ₴","action":"clarify_save","target":"save_finance","payload":{"_reasoning_log":"чіп юзера","fin_type":"income","amount":80,"category":"Інше","fin_comment":"бензин"}}
+  • {"label":"Задача \"Купити бензин\"","action":"clarify_save","target":"save_task","payload":{"_reasoning_log":"чіп юзера","title":"Купити бензин","text":"Купити бензин","comment":""}}
+  • {"label":"Не зберігати","action":"clarify_save","target":"none","payload":{}}
+  Категорію вибирай за іменником: бензин/таксі/паркінг→Транспорт, кава/обід/їжа/продукти→Їжа, ліки/аптека→Здоров'я, оренда/комуналка→Житло. Якщо неясно — Інше.
 - ⚠️ DESTRUCTIVE-CHIP (Шар 4 Phase 9c — RGisY 04.05, фікс QDIGl 04.05): коли ставиш юзеру деструктивне питання («Видалити X?», «Закрити проект?», «Стерти запис?») — ОБОВ'ЯЗКОВО 3 чіпи у саме такому порядку:
   • Перший — destructive дія: {"label":"Так, видалити","action":"chat"} (або «Так, закрити», «Так, стерти» — підбирай під tool який буде викликаний)
   • Другий — ЗАВЖДИ safe default (відмова): {"label":"Не треба","action":"chat"}
