@@ -18,6 +18,7 @@ import { monthGenitive } from '../data/months.js';
 import { getTasks, saveTasks, renderTasks, openAddTask, addTaskBarMsg, taskBarHistory, taskBarLoading, setTaskBarLoading, setupModalSwipeClose, toggleTaskStatus } from './tasks.js';
 import { getNotes, saveNotes, renderNotes, addNoteFromInbox, currentNotesFolder, setCurrentNotesFolder } from './notes.js';
 import { getFinance, saveFinance, renderFinance, formatMoney, getFinCats, saveFinCats, _resolveFinanceDate, createFinCategory } from './finance.js';
+import { matchSubcategoryFromComment } from '../data/finance-subcat-keywords.js';
 import { getMoments, saveMoments } from './evening.js';
 import { getEvents, saveEvents, addEventDedup, getRoutine, saveRoutine } from './calendar.js';
 
@@ -1379,12 +1380,13 @@ export function processUniversalAction(parsed, originalText, addMsg) {
     if (!catList.some(c => c.name === category)) {
       createFinCategory(type, { name: category });
     }
-    // LfA6w 07.05: subcategory приймаємо тільки якщо реально існує у категорії
+    // LfA6w 07.05 v2: subcategory — валідація + code-side fallback за keywords
+    const cat = catList.find(c => c.name === category);
+    const validSubs = cat && Array.isArray(cat.subcategories) ? cat.subcategories : [];
     let subcategory = (parsed.subcategory || '').trim();
-    if (subcategory) {
-      const cat = catList.find(c => c.name === category);
-      const validSubs = cat && Array.isArray(cat.subcategories) ? cat.subcategories : [];
-      if (!validSubs.includes(subcategory)) subcategory = '';
+    if (subcategory && !validSubs.includes(subcategory)) subcategory = '';
+    if (!subcategory && comment && validSubs.length > 0) {
+      subcategory = matchSubcategoryFromComment(comment, validSubs);
     }
     const txs = getFinance();
     const finTs = _resolveFinanceDate(parsed.date, originalText);
