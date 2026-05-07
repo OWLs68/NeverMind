@@ -2748,9 +2748,19 @@ ${lines.join("\n")}`;
     activeHealthCardId = null;
     renderHealthList();
   }
-  function openHealthNotesFolder(folderName) {
+  function openHealthCardNote(cardId) {
+    const cards = getHealthCards();
+    const card = cards.find((c) => c.id === cardId);
+    if (!card) return;
+    const noteId = findOrCreateHealthCardNote(card);
+    if (noteId == null) return;
     switchTab("notes");
-    setTimeout(() => openNotesFolder(folderName), 150);
+    setTimeout(() => {
+      try {
+        openNoteView(noteId);
+      } catch (e) {
+      }
+    }, 150);
   }
   function renderHealthWorkspace(id) {
     const cards = getHealthCards();
@@ -2911,7 +2921,7 @@ ${lines.join("\n")}`;
     </div>` : ""}
 
     <!-- \u041D\u043E\u0442\u0430\u0442\u043A\u0438 \u2192 \u043F\u0430\u043F\u043A\u0430 (B-29 fix: switchTab + delayed openNotesFolder) -->
-    <div onclick="openHealthNotesFolder('${escapeJsArg(card.name)}')" style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.55);border:1.5px dashed rgba(30,16,64,0.14);border-radius:12px;padding:10px 12px;margin-bottom:10px;cursor:pointer">
+    <div onclick="openHealthCardNote(${card.id})" style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.55);border:1.5px dashed rgba(30,16,64,0.14);border-radius:12px;padding:10px 12px;margin-bottom:10px;cursor:pointer">
       <div class="icon-circle" style="width:30px;height:30px">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1a5c2a" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
       </div>
@@ -3837,7 +3847,7 @@ ${lines.join("\n")}`;
         setHealthCardStatus,
         openAddAllergy,
         deleteAllergyById,
-        openHealthNotesFolder,
+        openHealthCardNote,
         // B-27 + B-30 (15.04 6v2eR): модалка створення/редагування
         openEditHealthCard,
         closeHealthCardModal,
@@ -9525,6 +9535,28 @@ ${recent}`;
     saveNotes(notes);
     return true;
   }
+  function findOrCreateHealthCardNote(card) {
+    if (!card || card.id == null) return null;
+    const notes = getNotes();
+    const linked = notes.find((n) => n.linkedHealthCardId === card.id);
+    if (linked) {
+      linked.lastViewed = Date.now();
+      saveNotes(notes);
+      return linked.id;
+    }
+    const newNote = {
+      id: Date.now(),
+      text: (card.name || "") + "\n\n",
+      folder: t("notes.folder_health", "\u0417\u0434\u043E\u0440\u043E\u0432'\u044F"),
+      linkedHealthCardId: card.id,
+      source: "health-card",
+      ts: Date.now(),
+      lastViewed: Date.now()
+    };
+    notes.unshift(newNote);
+    saveNotes(notes);
+    return newNote.id;
+  }
   function openAddNote() {
     editingNoteId = null;
     document.getElementById("note-modal-title").textContent = t("notes.modal.new_title", "\u041D\u043E\u0432\u0430 \u043D\u043E\u0442\u0430\u0442\u043A\u0430");
@@ -9712,7 +9744,7 @@ ${recent}`;
             <div style="font-size:20px;font-weight:900;color:#1e1040;line-height:1">${items.length}</div>
             <div style="font-size:10px;font-weight:600;color:rgba(30,16,64,0.4)">${t("notes.folder.entries", "\u0437\u0430\u043F\u0438\u0441\u0456\u0432")}</div>
           </div>
-          <div ontouchend="event.stopPropagation();event.preventDefault();openFolderEditModal('${safeFolder}')" onclick="event.stopPropagation();openFolderEditModal('${safeFolder}')" style="position:absolute;top:8px;right:8px;padding:6px 8px;cursor:pointer;color:rgba(30,16,64,0.35);font-size:18px;line-height:1;border-radius:8px;-webkit-tap-highlight-color:transparent;min-width:32px;text-align:center">\xB7\xB7\xB7</div>
+          <div onclick="event.stopPropagation();openFolderEditModal('${safeFolder}')" style="position:absolute;top:8px;right:8px;padding:6px 8px;cursor:pointer;color:rgba(30,16,64,0.35);font-size:18px;line-height:1;border-radius:8px;-webkit-tap-highlight-color:transparent;min-width:32px;text-align:center">\xB7\xB7\xB7</div>
         </div>
       </div>`;
     }).join("") + "</div>";
