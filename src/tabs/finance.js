@@ -573,10 +573,22 @@ export function processFinanceAction(parsed, originalText) {
     createFinCategory(type, { name: category });
   }
 
+  // LfA6w 07.05: subcategory приймаємо ТIЛЬКИ якщо вона реально існує
+  // у списку категорії — захист від AI-вигаданих підкатегорій. Якщо AI
+  // дав subcategory якої немає → ігноруємо (зберігаємо без subcategory).
+  let subcategory = (parsed.subcategory || '').trim();
+  if (subcategory) {
+    const cat = catList.find(c => c.name === category);
+    const validSubs = cat && Array.isArray(cat.subcategories) ? cat.subcategories : [];
+    if (!validSubs.includes(subcategory)) subcategory = '';
+  }
+
   const ts = _resolveFinanceDate(parsed.date, originalText);
 
   const txs = getFinance();
-  txs.unshift({ id: Date.now(), type, amount, category, comment, ts });
+  const tx = { id: Date.now(), type, amount, category, comment, ts };
+  if (subcategory) tx.subcategory = subcategory;
+  txs.unshift(tx);
   saveFinance(txs);
 
   const items = getInbox();
@@ -642,7 +654,22 @@ export function getFinanceContext() {
   if (todaySum > 0) parts.push(`[TODAY_EXPENSES:${formatMoney(todaySum)}] сьогодні витрачено ${formatMoney(todaySum)}`);
   else parts.push('[TODAY_EXPENSES:0] сьогодні витрат не було');
 
-  const recentTxs = txs.slice(0, 5).map(t => `[ID:${t.id}] ${t.type === 'expense' ? '-' : '+'}${t.amount}${getCurrency()} ${t.category}${t.comment ? ' ('+t.comment+')' : ''}`).join('; ');
+  // LfA6w 07.05: дерево категорій з підкатегоріями для AI — щоб save_finance
+  // міг точно обрати subcategory ("80 бензин" → Транспорт/Паливо, не просто
+  // Транспорт). Показуємо тільки категорії з непорожніми підкатегоріями.
+  try {
+    const cats = getFinCats();
+    const buildTree = (arr) => arr
+      .filter(c => Array.isArray(c.subcategories) && c.subcategories.length > 0)
+      .map(c => `${c.name}: [${c.subcategories.join(', ')}]`)
+      .join(' · ');
+    const expTree = buildTree(cats.expense || []);
+    const incTree = buildTree(cats.income || []);
+    if (expTree) parts.push(t('finance.context.expense_cats_tree', 'Категорії витрат з підкатегоріями: {tree}', { tree: expTree }));
+    if (incTree) parts.push(t('finance.context.income_cats_tree', 'Категорії доходів з підкатегоріями: {tree}', { tree: incTree }));
+  } catch(e) {}
+
+  const recentTxs = txs.slice(0, 5).map(t => `[ID:${t.id}] ${t.type === 'expense' ? '-' : '+'}${t.amount}${getCurrency()} ${t.category}${t.subcategory ? '/' + t.subcategory : ''}${t.comment ? ' ('+t.comment+')' : ''}`).join('; ');
   if (recentTxs) parts.push(`Останні операції (використовуй ID для update_transaction): ${recentTxs}`);
 
   return parts.join('\n');
