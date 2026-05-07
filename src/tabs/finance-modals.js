@@ -5,7 +5,7 @@
 // ============================================================
 
 import { showToast } from '../core/nav.js';
-import { escapeHtml, t } from '../core/utils.js';
+import { escapeHtml, escapeJsArg, t } from '../core/utils.js';
 import { addToTrash, showUndoToast } from '../core/trash.js';
 import { tryBoardUpdate } from '../owl/proactive.js';
 import { setupModalSwipeClose } from './tasks.js';
@@ -217,7 +217,7 @@ function _renderTransactionModalBody() {
       <div style="display:flex;flex-wrap:wrap;gap:6px">
         ${catList.map(c => {
           const active = c.name === _finTxCategory;
-          return `<button onclick="selectFinTxMainCat('${escapeHtml(c.name)}')" style="padding:7px 14px;border-radius:18px;font-size:13.5px;font-weight:800;cursor:pointer;font-family:inherit;border:2px solid ${active ? '#c2410c' : 'rgba(30,16,64,0.12)'};background:${active ? 'rgba(194,65,12,0.14)' : 'white'};color:${active ? '#c2410c' : '#1e1040'}">${escapeHtml(c.name)}</button>`;
+          return `<button onclick="selectFinTxMainCat('${escapeJsArg(c.name)}')" style="padding:7px 14px;border-radius:18px;font-size:13.5px;font-weight:800;cursor:pointer;font-family:inherit;border:2px solid ${active ? '#c2410c' : 'rgba(30,16,64,0.12)'};background:${active ? 'rgba(194,65,12,0.14)' : 'white'};color:${active ? '#c2410c' : '#1e1040'}">${escapeHtml(c.name)}</button>`;
         }).join('')}
       </div>
     </div>` : '';
@@ -228,7 +228,7 @@ function _renderTransactionModalBody() {
       <div style="display:flex;flex-wrap:wrap;gap:4px">
         ${subcats.map(s => {
           const active = s === _finTxSubcategory;
-          return `<button onclick="selectFinTxSubcat('${escapeHtml(s)}')" style="padding:3px 9px;border-radius:12px;font-size:11.5px;font-weight:500;cursor:pointer;font-family:inherit;border:1px solid ${active ? '#c2410c' : 'rgba(30,16,64,0.08)'};background:${active ? 'rgba(194,65,12,0.06)' : 'rgba(30,16,64,0.02)'};color:${active ? '#c2410c' : 'rgba(30,16,64,0.5)'}">${escapeHtml(s)}</button>`;
+          return `<button onclick="selectFinTxSubcat('${escapeJsArg(s)}')" style="padding:3px 9px;border-radius:12px;font-size:11.5px;font-weight:500;cursor:pointer;font-family:inherit;border:1px solid ${active ? '#c2410c' : 'rgba(30,16,64,0.08)'};background:${active ? 'rgba(194,65,12,0.06)' : 'rgba(30,16,64,0.02)'};color:${active ? '#c2410c' : 'rgba(30,16,64,0.5)'}">${escapeHtml(s)}</button>`;
         }).join('')}
       </div>
     </div>` : '';

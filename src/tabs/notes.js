@@ -5,7 +5,7 @@
 // ============================================================
 
 import { currentTab, showToast } from '../core/nav.js';
-import { escapeHtml, formatTime, parseContentChips, t } from '../core/utils.js';
+import { escapeHtml, escapeJsArg, formatTime, parseContentChips, t } from '../core/utils.js';
 import { logUsage } from '../core/usage-meter.js';
 import { addToTrash, showUndoToast } from '../core/trash.js';
 import { callAI, callAIWithTools, getAIContext, getOWLPersonality, openChatBar, safeAgentReply, saveChatMsg, INBOX_TOOLS, handleChatError } from '../ai/core.js';
@@ -352,7 +352,7 @@ export function renderNotes(searchQuery = '') {
       // (хоча validNotes filter вже відсіює — друга лінія оборони).
       const firstText = (items[0] && typeof items[0].text === 'string') ? items[0].text : '';
       const preview = firstText.length > 60 ? firstText.substring(0,60) + '…' : firstText;
-      const safeFolder = escapeHtml(folder).replace(/'/g, "\\'");
+      const safeFolder = escapeJsArg(folder);
       const key = btoa(unescape(encodeURIComponent(folder))).replace(/[^a-zA-Z0-9]/g, '_');
       const pinBadge = meta.pinned ? '<div style="position:absolute;top:8px;right:8px;font-size:10px;opacity:0.4">📌</div>' : '';
       const desc = meta.desc ? `<div style="font-size:11px;color:rgba(30,16,64,0.38);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(meta.desc)}</div>` : `<div style="font-size:12px;color:rgba(30,16,64,0.45);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(preview)}</div>`;

@@ -5,7 +5,7 @@
 // ============================================================
 
 import { switchTab, showToast } from '../core/nav.js';
-import { escapeHtml, parseContentChips, t } from '../core/utils.js';
+import { escapeHtml, escapeJsArg, parseContentChips, t } from '../core/utils.js';
 import { addToTrash, showUndoToast } from '../core/trash.js';
 import { callAIWithTools, getAIContext, openChatBar, safeAgentReply, saveChatMsg, INBOX_TOOLS, handleChatError } from '../ai/core.js';
 import { dispatchChatToolCalls } from '../ai/tool-dispatcher.js';
@@ -790,7 +790,7 @@ function _buildMissedDosesBannerHtml() {
         <div style="font-size:10px;color:rgba(30,16,64,0.5);font-weight:600;margin-top:1px">${escapeHtml(d.cardName)} · ${escapeHtml(d.scheduledTime)}</div>
       </div>
       <button onclick="logHealthMedDose(${d.cardId},${d.medId})" style="font-size:11px;font-weight:800;padding:5px 10px;border-radius:8px;border:none;background:#16a34a;color:white;cursor:pointer;white-space:nowrap">${t('health.dose.took_btn', '✓ Прийняв')}</button>
-      <button onclick="skipHealthMedDose(${d.cardId},${d.medId},'${escapeHtml(d.scheduledTime)}')" style="font-size:11px;font-weight:700;padding:5px 10px;border-radius:8px;border:1.5px solid rgba(30,16,64,0.15);background:white;color:rgba(30,16,64,0.55);cursor:pointer;white-space:nowrap">${t('health.dose.skip_btn', 'Пропущу')}</button>
+      <button onclick="skipHealthMedDose(${d.cardId},${d.medId},'${escapeJsArg(d.scheduledTime)}')" style="font-size:11px;font-weight:700;padding:5px 10px;border-radius:8px;border:1.5px solid rgba(30,16,64,0.15);background:white;color:rgba(30,16,64,0.55);cursor:pointer;white-space:nowrap">${t('health.dose.skip_btn', 'Пропущу')}</button>
     </div>`).join('')}
     ${missed.length > 5 ? `<div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:600;text-align:center">${t('health.dose.more_missed', '+ ще {n} пропущених', { n: missed.length - 5 })}</div>` : ''}
   </div>`;
@@ -1002,7 +1002,7 @@ function renderHealthWorkspace(id) {
     </div>` : ''}
 
     <!-- Нотатки → папка (B-29 fix: switchTab + delayed openNotesFolder) -->
-    <div onclick="openHealthNotesFolder('${escapeHtml(card.name)}')" style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.55);border:1.5px dashed rgba(30,16,64,0.14);border-radius:12px;padding:10px 12px;margin-bottom:10px;cursor:pointer">
+    <div onclick="openHealthNotesFolder('${escapeJsArg(card.name)}')" style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.55);border:1.5px dashed rgba(30,16,64,0.14);border-radius:12px;padding:10px 12px;margin-bottom:10px;cursor:pointer">
       <div class="icon-circle" style="width:30px;height:30px">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1a5c2a" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
       </div>

@@ -166,7 +166,13 @@ const CAT_META = {
 };
 
 export function getInbox() { return JSON.parse(localStorage.getItem('nm_inbox') || '[]'); }
-export function saveInbox(arr) { localStorage.setItem('nm_inbox', JSON.stringify(arr)); }
+export function saveInbox(arr) {
+  localStorage.setItem('nm_inbox', JSON.stringify(arr));
+  // B-153 fix (LfA6w 07.05): сповіщаємо інші вкладки + Brain Pulse + OWL board.
+  // Раніше Inbox-картка додавалась через AI processSaveAction, але board/brain-pulse
+  // не реагували миттєво — тільки після наступного nm-data-changed від ІНШОГО джерела.
+  try { window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'inbox' })); } catch(e) {}
+}
 
 
 // Датовий сепаратор для стрічки
@@ -577,7 +583,18 @@ ${aiContext}`;
 
       // === TOOL CALLING DISPATCH ===
       for (const tc of msg.tool_calls) {
-        const args = JSON.parse(tc.function.arguments);
+        // B-154 fix (LfA6w 07.05): try/catch навколо JSON.parse. Якщо OpenAI
+        // дав зламаний JSON у одному з кількох tool_calls — раніше throw
+        // прокидався у catch на ~995 → addInboxChatMsg('agent', '✓ Збережено')
+        // показував успіх, хоча нічого не зберіглося. Тепер пропускаємо
+        // зламаний tool, продовжуємо інші.
+        let args;
+        try {
+          args = JSON.parse(tc.function.arguments);
+        } catch (e) {
+          console.warn('[inbox] зламаний JSON у tool_call', tc.function?.name, e);
+          continue;
+        }
         // V3 Фаза 1: strip _reasoning_log + log for diagnostics (no handler should see it)
         if (args._reasoning_log) {
           try {

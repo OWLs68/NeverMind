@@ -10,7 +10,7 @@
 // ============================================================
 
 import { currentTab, showToast } from '../core/nav.js';
-import { escapeHtml, t } from '../core/utils.js';
+import { escapeHtml, escapeJsArg, t } from '../core/utils.js';
 import { addToTrash, showUndoToast } from '../core/trash.js';
 import { SWIPE_DELETE_THRESHOLD, applySwipeTrail, clearSwipeTrail, attachSwipeDelete } from '../ui/swipe-delete.js';
 import { getAIContext, getOWLPersonality, openChatBar, safeAgentReply, saveChatMsg } from '../ai/core.js';
@@ -329,8 +329,8 @@ function _finCatsGrid(allTxs, win) {
     const sumCol = sum > 0 ? cat.color : 'rgba(30,16,64,0.25)';
     // У edit-режимі — тап = редагування. У звичайному — тап = додати транзакцію.
     const onClick = _finEditMode
-      ? `openCategoryEditModal('${escapeHtml(cat.id)}')`
-      : `openAddTransaction({category: '${escapeHtml(cat.name)}', type: '${isExpense ? 'expense' : 'income'}'})`;
+      ? `openCategoryEditModal('${escapeJsArg(cat.id)}')`
+      : `openAddTransaction({category: '${escapeJsArg(cat.name)}', type: '${isExpense ? 'expense' : 'income'}'})`;
     // B-61: тінь-левітація. Оновлено 17.04.2026 (14zLe) — чорна тінь замість
     // кольору категорії: виразніше "висить" над фоном, контрастніше.
     // У edit-режимі ще додатковий outline кольором категорії (вибраний стан).
@@ -338,8 +338,8 @@ function _finCatsGrid(allTxs, win) {
     const editStyle = _finEditMode ? `box-shadow:0 4px 10px rgba(0,0,0,0.32), 0 2px 4px rgba(0,0,0,0.22), 0 0 0 2px ${cat.color}55;` : levitShadow;
     // B-57: стрілки ‹ › у edit-режимі для переміщення категорії.
     const arrows = _finEditMode ? `
-      <button onclick="event.stopPropagation();moveFinCategory('${escapeHtml(cat.id)}',-1);renderFinance()" aria-label="${t('finance.cat.move_left', 'Вліво')}" style="position:absolute;left:-6px;top:50%;transform:translateY(-50%);width:22px;height:22px;border-radius:50%;border:none;background:rgba(255,255,255,0.95);color:#1e1040;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;padding:0;box-shadow:0 2px 6px rgba(30,16,64,0.18);z-index:2">‹</button>
-      <button onclick="event.stopPropagation();moveFinCategory('${escapeHtml(cat.id)}',+1);renderFinance()" aria-label="${t('finance.cat.move_right', 'Вправо')}" style="position:absolute;right:-6px;top:50%;transform:translateY(-50%);width:22px;height:22px;border-radius:50%;border:none;background:rgba(255,255,255,0.95);color:#1e1040;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;padding:0;box-shadow:0 2px 6px rgba(30,16,64,0.18);z-index:2">›</button>` : '';
+      <button onclick="event.stopPropagation();moveFinCategory('${escapeJsArg(cat.id)}',-1);renderFinance()" aria-label="${t('finance.cat.move_left', 'Вліво')}" style="position:absolute;left:-6px;top:50%;transform:translateY(-50%);width:22px;height:22px;border-radius:50%;border:none;background:rgba(255,255,255,0.95);color:#1e1040;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;padding:0;box-shadow:0 2px 6px rgba(30,16,64,0.18);z-index:2">‹</button>
+      <button onclick="event.stopPropagation();moveFinCategory('${escapeJsArg(cat.id)}',+1);renderFinance()" aria-label="${t('finance.cat.move_right', 'Вправо')}" style="position:absolute;right:-6px;top:50%;transform:translateY(-50%);width:22px;height:22px;border-radius:50%;border:none;background:rgba(255,255,255,0.95);color:#1e1040;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;padding:0;box-shadow:0 2px 6px rgba(30,16,64,0.18);z-index:2">›</button>` : '';
     return `<div onclick="${onClick}" style="display:flex;flex-direction:column;align-items:center;cursor:pointer;padding:4px 0;min-width:0;position:relative">
       <div style="font-size:11px;font-weight:600;color:rgba(30,16,64,0.55);margin-bottom:4px;text-align:center;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(cat.name)}</div>
       <div style="position:relative;width:48px;height:48px">
