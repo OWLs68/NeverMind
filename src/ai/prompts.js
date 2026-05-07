@@ -206,7 +206,15 @@ export function getOWLPersonality() {
   const state = _detectOwlState();
   const stateStyle = _STATE_STYLES[state] || '';
 
-  return persona + stateStyle + universal + '\n\n' + CHIP_PROMPT_RULES;
+  return persona + stateStyle + universal;
+}
+
+// LfA6w 07.05: окрема функція getOWLChatPersonality для chat-кейсів — додає
+// CHIP_PROMPT_RULES (правила про чіпи). НЕ використовується у JSON-аналітичних
+// промптах (me.js weekly/monthly, notes.js JSON action), бо chip-приклади
+// можуть забруднити очікувану JSON-схему виводу.
+export function getOWLChatPersonality() {
+  return getOWLPersonality() + '\n\n' + CHIP_PROMPT_RULES;
 }
 
 // ===== 2. UI_TOOLS_RULES — спільний блок правил UI-навігації =====

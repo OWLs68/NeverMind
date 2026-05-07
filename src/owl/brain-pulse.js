@@ -125,8 +125,14 @@ export function startBrainPulseCycle() {
   // Далі — кожні 10 хв
   setInterval(brainPulse, BRAIN_PULSE_INTERVAL);
   // Debounce на зміни даних (юзер додав транзакцію → може зʼявився budget-warn)
+  // LfA6w 07.05: фільтр detail — 'chat' (chat-message) і 'memory' (AI-факти)
+  // НЕ є тригерами для brainPulse, але диспатчаться часто. Без фільтра дебаунс
+  // обнуляється кожним AI-відповіддю → brainPulse ніколи не запускається поки
+  // юзер активний у чаті.
   if (typeof window !== 'undefined') {
-    window.addEventListener('nm-data-changed', () => {
+    window.addEventListener('nm-data-changed', e => {
+      const d = e && e.detail;
+      if (d === 'chat' || d === 'memory' || d === 'silence') return;
       clearTimeout(_debounceTimer);
       _debounceTimer = setTimeout(brainPulse, BRAIN_PULSE_DEBOUNCE);
     });
