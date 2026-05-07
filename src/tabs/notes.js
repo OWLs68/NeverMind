@@ -369,7 +369,7 @@ export function renderNotes(searchQuery = '') {
             <div style="font-size:20px;font-weight:900;color:#1e1040;line-height:1">${items.length}</div>
             <div style="font-size:10px;font-weight:600;color:rgba(30,16,64,0.4)">${t('notes.folder.entries', 'записів')}</div>
           </div>
-          <div ontouchend="event.stopPropagation();event.preventDefault();openFolderEditModal('${safeFolder}')" onclick="event.stopPropagation();openFolderEditModal('${safeFolder}')" style="position:absolute;top:8px;right:8px;padding:6px 8px;cursor:pointer;color:rgba(30,16,64,0.35);font-size:18px;line-height:1;border-radius:8px;-webkit-tap-highlight-color:transparent;min-width:32px;text-align:center">···</div>
+          <div onclick="event.stopPropagation();openFolderEditModal('${safeFolder}')" style="position:absolute;top:8px;right:8px;padding:6px 8px;cursor:pointer;color:rgba(30,16,64,0.35);font-size:18px;line-height:1;border-radius:8px;-webkit-tap-highlight-color:transparent;min-width:32px;text-align:center">···</div>
         </div>
       </div>`;
     }).join('') + '</div>';
