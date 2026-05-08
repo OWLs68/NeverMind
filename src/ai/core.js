@@ -167,7 +167,12 @@ export function getAIContext() {
   const habits = getHabits();
   const log = getHabitLog();
   const today = now.toDateString();
-  if (habits.length > 0) {
+  if (habits.length === 0) {
+    // PJi7l 08.05: явний сигнал AI коли звичок взагалі немає.
+    // Без цього AI плутається і пише «жодна звичка не виконана» хоч жодної не існує.
+    const hasTasks = getTasks().filter(t => t.status === 'active').length > 0;
+    parts.push(`Звичок поки не створено. НЕ кажи «жодна звичка не виконана» — звичок просто немає. ${hasTasks ? '' : 'Задач теж немає.'} Запропонуй або створити нову, або іншу дію.`);
+  } else if (habits.length > 0) {
     const habitList = habits.map(h => {
       const done = !!log[today]?.[h.id];
       return `- [ID:${h.id}] "${h.name}": ${done ? '✓ виконано' : '✗ не виконано'}`;
