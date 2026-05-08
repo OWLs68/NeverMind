@@ -163,12 +163,29 @@ export function normalizeChips(chips) {
   if (!Array.isArray(chips)) return [];
   // Phase 3 Шар 6: гарантуємо chip.id (UUID) + виносимо inline payload у map
   // (nm_chip_payloads). Ідемпотентно — якщо id/payloadId уже є, не змінюємо.
-  const normalized = chips.map(_ensureChipIdAndExternalize);
+  let normalized = chips.map(_ensureChipIdAndExternalize);
+  // LfA6w 08.05 safety net: action='complete' БЕЗ ✔️ у label → переписуємо
+  // на action='chat'. Реальний баг: AI генерував {"label":"Актуально","action":"complete"}
+  // → handleCompletionChip робив fuzzy-match і закривав задачу попри що юзер
+  // лиш підтвердив актуальність. Правило CHIP_PROMPT_RULES (рядок 116) явно
+  // вимагає ✔️ — якщо AI порушив, code-side виправляє.
+  normalized = _ensureCompleteHasMark(normalized);
   // Шар 4 safety net (QDIGl 04.05): якщо AI згенерував destructive-чіп
   // («Так, видалити»), але забув safe default — підставляємо «Не треба»
   // автоматично. Без цього юзер міг отримати лише одну опцію [Так, видалити]
   // у Шар 4 destructive — підвищений ризик випадкового видалення даних.
   return _ensureDestructiveSafety(normalized);
+}
+
+const COMPLETION_MARK_RE = /[✔✓✅]/;
+function _ensureCompleteHasMark(chips) {
+  return chips.map(c => {
+    if (c.action !== 'complete') return c;
+    const label = c.label || '';
+    if (COMPLETION_MARK_RE.test(label)) return c;
+    console.warn('[chips] action=complete без ✔️ — переписую на chat:', label);
+    return { ...c, action: 'chat' };
+  });
 }
 
 // Розпізнаємо destructive-чіпи саме за патерном «Так, дієслово»: AI генерує
