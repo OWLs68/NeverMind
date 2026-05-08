@@ -457,7 +457,9 @@ export function handleChipClick(tab, text, action, target, payloadRaw) {
   // (heuristic) — тепер AI може явно генерувати action='complete' без покладання
   // на emoji у label. Розщеплення action='chat' overload (Council Р2).
   if (action === 'complete') {
-    const handled = handleCompletionChip(text, tab);
+    let payload = {};
+    try { payload = payloadRaw ? JSON.parse(payloadRaw) : {}; } catch {}
+    const handled = handleCompletionChip(text, tab, payload);
     if (handled) return;
     // Якщо fuzzy match не знайшов — fallback на чат (юзер бачить що не вийшло)
     sendChipToChat(tab, text);
@@ -483,12 +485,30 @@ export function handleChipClick(tab, text, action, target, payloadRaw) {
 }
 
 // ============================================================
-// handleCompletionChip — локальне закриття задачі/звички по тексту чіпа
-// Без виклику AI! Fuzzy match по перших 4 літерах кожного слова.
-// Повертає true якщо знайшов і закрив.
-// ============================================================
-function handleCompletionChip(text, tab) {
-  // Прибираємо ✔️ і зайві символи
+// handleCompletionChip — локальне закриття задачі/звички.
+// LfA6w 08.05 Phase Б: payload.task_id — пріоритетна перевірка перед fuzzy.
+// Якщо AI передав task_id у payload — закриваємо точно ту задачу. Без AI
+// round-trip, без ризику silent wrong-close при подібних титулах
+// (наприклад «Купив ✔️» при 2 задачах «Купити продукти/ліки»).
+// Fuzzy match лишається як fallback для legacy chips без task_id.
+function handleCompletionChip(text, tab, payload) {
+  // ПРІОРИТЕТ 1: явний task_id з payload
+  if (payload && typeof payload.task_id !== 'undefined') {
+    const tasks = getTasks();
+    const idx = tasks.findIndex(t => String(t.id) === String(payload.task_id) && t.status === 'active');
+    if (idx !== -1) {
+      const title = tasks[idx].title;
+      tasks[idx] = { ...tasks[idx], status: 'done', completedAt: Date.now(), updatedAt: Date.now() };
+      saveTasks(tasks);
+      renderTasks();
+      const msg = `✓ "${title}" — виконано`;
+      showToast(msg);
+      saveChatMsg(tab || 'inbox', 'agent', '🦉 ' + msg);
+      logRecentAction('complete_task', title, tab || 'inbox');
+      return true;
+    }
+  }
+  // ПРІОРИТЕТ 2: fuzzy match (legacy fallback)
   const cleanText = text.replace(/✔️/g, '').trim().toLowerCase();
   if (!cleanText) return false;
 
