@@ -526,6 +526,7 @@ const _FOLLOWUP_TRIGGER_TYPE = {
   'streak-risk': 'concern',
   'project-stuck': 'concern',
   'appointment-soon': 'concern',
+  'brain-pulse': 'concern',  // PJi7l 08.05: brain-pulse дивиться concern-bucket (60хв CD між пульсами через concern_global). Раніше дефолт='info' → блокувався topic_* записами proactive board (info-bucket spam).
   'streak-milestone': 'praise',
   'achievement': 'praise',
   'morning-brief': 'overview',
