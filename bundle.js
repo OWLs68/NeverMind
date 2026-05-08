@@ -16418,7 +16418,13 @@ ${userText}
       document.getElementById("ob-step-2").style.display = "block";
     } else if (step === 2) {
       const key = document.getElementById("ob-key").value.trim();
-      if (key) localStorage.setItem("nm_gemini_key", key);
+      if (key) {
+        localStorage.setItem("nm_gemini_key", key);
+        try {
+          window.dispatchEvent(new CustomEvent("nm-data-changed", { detail: "api-key" }));
+        } catch (_) {
+        }
+      }
       document.getElementById("ob-step-2").style.display = "none";
       document.getElementById("ob-step-owl").style.display = "block";
       selectOwlMode("partner");
@@ -21427,6 +21433,10 @@ ${logLines}
     const memory = document.getElementById("input-memory").value.trim();
     if (key) localStorage.setItem("nm_gemini_key", key);
     else localStorage.removeItem("nm_gemini_key");
+    try {
+      window.dispatchEvent(new CustomEvent("nm-data-changed", { detail: "api-key" }));
+    } catch (_) {
+    }
     const settings = JSON.parse(localStorage.getItem("nm_settings") || "{}");
     const wakeEl = document.getElementById("input-wake-up");
     const wstartEl = document.getElementById("input-work-start");
