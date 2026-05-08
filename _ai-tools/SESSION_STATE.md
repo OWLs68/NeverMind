@@ -4,11 +4,39 @@
 >
 > Старіші сесії (до 6GoDe 19.04) — в [`_archive/SESSION_STATE_archive.md`](../_archive/SESSION_STATE_archive.md).
 
-**Оновлено:** 2026-05-08 (сесія **LfA6w day2** — decision-tree рефакторинг промптів через 3 ітерації Gemini + 2 агенти, subcategory у save_finance + apostrophe-нормалізація, контекстні чіпи Phase A+Б, 4 mental models у CLAUDE.md). Раніше: 2026-05-07 (сесія **LfA6w day1** — нічна doc-sync + silent-bug-scout 9 знахідок).
+**Оновлено:** 2026-05-08 (сесія **PJi7l** — хвости LfA6w: 2 уроки у lessons.md + B-158 фікс health.js ID колізія). Раніше: 2026-05-08 (сесія **LfA6w day2** — decision-tree рефакторинг промптів).
 
 ---
 
-## 🔧 Поточна сесія LfA6w day2 — Decision-tree промпти + subcategory + контекстні чіпи (07-08.05.2026)
+## 🔧 Поточна сесія PJi7l — Хвости LfA6w (08.05.2026)
+
+### Зроблено
+
+1. **2 уроки у `lessons.md`** (TODO з LfA6w):
+   - У секції «Після зміни коду» — `node --check недостатньо для template literal у prompts.js`. Підтверджений кейс LfA6w `be6f708` (4 коміти CI auto-merge fail). Рекомендація: `npm install esbuild --no-save && node build.js` локально перед push, або писати бектіки як unicode `U+0060`.
+   - У секції «Council 5 агентів» — після великого рефакторингу промптів/архітектури обов'язково Council 3 агенти (silent-bug-scout + prompt-engineer-auditor + code-regression-finder) на регресії. Не самотест. Підтверджений кейс LfA6w: 6 регресій від свіжих фіксів знайдено агентами, не мною.
+2. **B-158 закрито** — `src/tabs/health.js:113` (addAllergy) + `:1524` (newCard create-гілка). `id: Date.now()` без `Math.random()` → ID колізія при batch tool_calls. Уніфіковано до `+ Math.floor(Math.random()*1000)` як решта 7 точок у тому ж файлі. BUGS казав `:1515` — реально `:1524` (else-гілка після `_syncCardAppointmentToEvent`).
+
+### Обговорено (без виконання)
+
+- **Build-break фікс через pre-push hook** (запуск `node build.js` перед push) — план провалився на самому початку: `esbuild` не встановлений у локальному оточенні Claude Code Web (`node_modules/` gitignored, без `npm install`). Хук би блокував кожен push. Edit зроблено + одразу відкатано. Урок зафіксовано у lessons.md як приклад «структурний фікс який не структурний бо залежить від оточення якого нема».
+- **Автоматичний контролер документації** (Stop hook що нагадує оновити SESSION_STATE/BUGS після Edit src/) — Роман: «CI теж раніше працював добре поки ти не почав міняти». Відкладено повністю. Корінь — не «ще один hook», а викликати існуючий `doc-consistency-checker` коли тригер спрацьовує + дотримуватись карти документації CLAUDE.md рядки 179-194.
+- **Гіпотеза «1370 рядків правил → я тіряюсь»** — підтверджено цифрами (1370 рядків у 7 файлах, 35+ заголовків у lessons.md, 13 хуків). Декларативні правила не масштабуються. Працюють тільки структурні захисти. Але додавати нові ризиковано — поточна сесія саме це показала.
+
+### Ключові рішення
+
+- **Не додавати нові правила/хуки/уроки про external blame** — антипатерн «декларативне правило без автоматичного контролю» (lessons.md рядок 35). Додавання ще одного правила = повторити проблему.
+- **CACHE_NAME bump після зміни src/tabs/health.js** — обов'язковий формат `nm-YYYYMMDD-HHMM`.
+
+### Метрики
+
+- Гілка: `claude/start-session-PJi7l`
+- Закриті баги: B-158
+- Файли: `lessons.md` (+2 пункти), `src/tabs/health.js` (2 рядки), `NEVERMIND_BUGS.md` (B-158 → закрито)
+
+---
+
+## 🔧 Сесія LfA6w day2 — Decision-tree промпти + subcategory + контекстні чіпи (07-08.05.2026)
 
 ### Зроблено
 

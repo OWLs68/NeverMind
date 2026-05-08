@@ -110,7 +110,7 @@ export function addAllergy(name, notes = '') {
   const allergies = getAllergies();
   // Уникнути дублікату по назві (case-insensitive)
   if (allergies.some(a => a.name.toLowerCase() === clean.toLowerCase())) return null;
-  const entry = { id: Date.now(), name: clean, notes: (notes || '').trim(), createdAt: Date.now() };
+  const entry = { id: Date.now() + Math.floor(Math.random() * 1000), name: clean, notes: (notes || '').trim(), createdAt: Date.now() };
   allergies.push(entry);
   saveAllergies(allergies);
   return entry;
@@ -1521,7 +1521,7 @@ function saveHealthCardFromModal() {
   } else {
     // Create режим
     const newCard = {
-      id: Date.now(),
+      id: Date.now() + Math.floor(Math.random() * 1000),
       name, subtitle,
       status,
       progress: 0,

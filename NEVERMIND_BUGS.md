@@ -25,15 +25,19 @@ _B-126 закрито у MPVly 05.05 — див. секцію "✅ Закрит�
 
 ## 🟢 Дрібні (косметика, не ламає функціонал)
 
-| B-158 | `src/tabs/health.js:113, 1515` | `id: Date.now()` без `Math.random()` (на відміну від інших ID у тому ж файлі). Якщо AI створить 2 алергії за <1 мс (batch tool_calls) — ID колізія → друга перезапише першу через filter-by-id. Фікс: `+ Math.floor(Math.random()*1000)`. ~5 хв. |
+_Немає відкритих дрібних багів станом на 08.05.2026 (PJi7l — B-158 закрито)._
 
 _B-157 закрито у LfA6w 07.05 (`c18c7d1`) — крихкий escape патерн у `notes.js:355` замінено на спільний `escapeJsArg()` помилки усунено разом з B-152._
+_B-158 закрито у PJi7l 08.05 — див. секцію "✅ Закриті" нижче._
 
 ---
 
 ## ✅ Закриті (активні сесії)
 
 _Зберігаються закриті у 2 останніх активних сесіях (LfA6w + MPVly-day2). Старіші (MPVly + QDIGl + rC4TO) перенесено у [`_archive/BUGS_HISTORY.md`](_archive/BUGS_HISTORY.md) (TODO: ротація на наступному `/finish`)._
+
+_Сесія **PJi7l** (08.05.2026) — хвости LfA6w: 2 уроки у lessons.md + B-158 фікс:_
+- **B-158 закрито** — `src/tabs/health.js:113` (addAllergy) + `:1524` (newCard у processUniversalAction edit_card else-create) — `id: Date.now()` без `Math.random()` суфіксу. Якщо AI створить 2 алергії або 2 health-картки за <1 мс через batch tool_calls — ID колізія → друга перезапише першу через filter-by-id. Інші 7 точок з `Date.now()` у тому ж файлі (рядки 284, 292, 388, 653, 655, 1367, 1489) уже мали `+ Math.floor(Math.random()*N)`. Фікс: уніфіковано до `+ Math.floor(Math.random()*1000)` у обох вразливих точках. BUGS казав про `:1515` — реально `:1524` (else-гілка create після `_syncCardAppointmentToEvent`).
 
 _Сесія **LfA6w day2** (07-08.05.2026) — 33 коміти, decision-tree рефакторинг промптів через 3 ітерації Gemini + 5 Sonnet агентів, subcategory у save_finance, контекстні чіпи Phase A+Б, mental models у CLAUDE.md:_
 - **6 регресій від свіжих фіксів** (без B-номерів — внутрішні до LfA6w) знайдені 3 паралельними агентами Council (`dc76864`): (1) `tool-dispatcher.js:80` забув subcategory у dispatch — працювало тільки через Inbox, не через 7 tab-чатів. (2) `finance-chat.js:105` будував txSummary БЕЗ [ID:N] + дублював getFinanceContext → AI не міг update_transaction → робив дублі. (3) CHIP_PROMPT_RULES забруднював JSON-аналітику me.js (weekly/monthly insights) — інжектилось через getOWLPersonality, виокремлено у getOWLChatPersonality. (4) Brain Pulse + Followups debounce reset на КОЖНОМУ chat/memory event після LfA6w dispatchEvent → ніколи не спрацьовував у активному чаті. Фікс: фільтр `e.detail === 'chat'/'memory'/'silence'`. (5) Tab-чати без CHIP_PROMPT_RULES — рішення селективно (Finance/Evening мають). (6) inbox.js code-guard dedupe save_finance+save_task batch.
