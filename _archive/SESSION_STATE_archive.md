@@ -1,5 +1,70 @@
 # SESSION_STATE — архів попередніх сесій
 
+## 🔧 Сесія MPVly-day2 — silent-bug-scout 4-pack + i18n 110 + Аналітика redesign + Council 5 агентів (06.05.2026)
+
+### Зроблено
+
+#### A. 4 силент-баги виправлено перед тим як Роман натрапив (1 коміт)
+
+1. **B-128 drum-col mask-image** (`style.css:1505-1517`) — той самий клас бага що Settings UvEHE 03.05. `event-edit-modal` + `health-dt-picker-modal` обидва мають parent `backdrop-filter:blur(32px)+overflow:hidden`. На iOS Safari при scroll барабана дати/часу composite layer ламався → модалка стискалась. Не проявилось ще тільки бо barrel рідко відкривається. Фікс: видалено `mask-image` / `-webkit-mask-image` — fade на краях прибрано (border ramp + центральна acent-смуга залишилися). Знайдено `silent-bug-scout` агентом проактивно.
+2. **B-129 set_reminder без t()** (`habits.js:1452`) — `addMsg('agent', \`⏰ Нагадаю о ${time}: "${text}"\`)` стояв необгорнутим хоч `delete_reminder` поряд був повністю обгорнутий (B-126 з MPVly day1). Фікс: `t('habits.reminder.set.ok', '⏰ Нагадаю о {time}: "{text}"', { time, text })`.
+3. **B-130 reminder cross-tab silent failure** (`boot.js:177-187`) — `set_reminder`/`delete_reminder` диспатчили `nm-data-changed` з `detail:'reminder'`, але `DETAIL_TO_KEY` не мала цього ключа → `handleSyncKey` не викликався → друга вкладка не оновлювалась. Фікс: `'reminder': 'nm_reminders'` у мапу.
+4. **B-131 sendClarifyText без aiLoading guard** (`inbox.js:1048`) — при відкритому clarify aiLoading=false → дві паралельні AI-відповіді можливі. Bonus: `let primaryHandled` scope leak ReferenceError-prone. Фікс: try/finally + flag piднято на верх.
+
+#### B. i18n обгортка 110 рядків (4 файли)
+
+5. `habits.js` (~50) processUniversalAction addMsg + Пн-Нд + N% за 30 днів. `health.js` (~34) buildHealthExportText. `nav.js` (~10) TAB_LABELS + memory source. `finance-analytics.js` (~15) metric labels + benchmark. baseline 685 → 575 (-110).
+
+#### C. TESTS_TODO.md — чек-ліст ручного тестування
+
+#### D. Хвости (B-132 + B-133)
+
+10. **B-132 nav.js openTabSelector t-shadow** — `function(t)` shadows import `t` → TypeError при відкритті tab-selector. Фікс: `t → cfg`, `cfg.label` обгорнуто `t('tab.' + cfg.id, cfg.label)`.
+11. **B-133 calendar.js routine-panel swipe duplicate** — `setupModalSwipeClose` викликалась з 2 opener'ів. Фікс: helper `_ensureRoutineSwipeClose()`.
+
+#### E. iPhone smoke-test live з Романом (Блоки 1-9) — критичний live debugging день
+
+12. **B-134 AI auto-reminder без слова "нагадай"** — Роман натиснув чіп «Розкажи про день», описав день з фразою «завтра закінчу її» → AI створив **подію** + **set_reminder** без явного запиту. Council `prompt-engineer-auditor` Sonnet знайшов 4 точки. Фікси: REMINDER_RULES жорстке правило «set_reminder ТIЛЬКИ за явним «нагадай»», create_event description ban на рефлексії/підсумки, getOwlChatSystemPrompt ПРАВИЛА з 2 заборонами, G13 BRAIN DUMP застереження проти «завтра» auto-trigger.
+
+#### F. Memory modal (B-135 + B-136 + B-137 + B-149)
+
+13. **B-135** скрол по картках закривав модалку — `tasks.js:72` whitelist додано `#memory-cards-list`.
+14. **B-136** «↻ Оновити через OWL» зависала disabled назавжди при reject AI-запиту — `try/finally` гарантує btn.disabled=false.
+15. **B-137** ДУБЛЬ id="memory-refresh-btn" у HTML (settings card + modal button) — getElementById повертав settings, мутував textContent у Налаштуваннях, modal-кнопка лишалася disabled. Фікс: split на `memory-refresh-btn-settings` + `memory-refresh-btn-modal`.
+16. **B-149** `modal-overlay-sync._setupSwipeClose` вішав свій listener на init → handleOnly не діяв. Фікс: `data-skip-auto-swipe="1"` атрибут на `#memory-modal` + skip перевірка у sync.
+
+#### G. Аналітика Фінансів — повний redesign (B-138 → B-148)
+
+17. **6 фіксів-наосліп B-138..B-141** провалились: dy>8 поріг, _findChildOverlay class match, removeWatcher, refactor на event-edit pattern, прибирання setupModalSwipeClose. Жоден не був коренем.
+18. **B-142 (CSS scale)** — Council 5 агентів Sonnet знайшов: `button:active { transform: scale(0.87) }` без override для children модалок створював composite layer на iOS → click cancel. Фікс: extended override `[id$="-modal"] button:active { transform:none }`. Це **глобальний баг ВСІХ модалок**.
+19. **B-143 REAL КОРІНЬ Аналітики** — `_refreshAnalyticsContent` шукав `modal.querySelector('div[style*="overflow-y:auto"]')`. Браузер нормалізував inline style → `overflow-y: auto` зі space → substring не match → scrollEl=null → `if(!scrollEl) return` → DOM ніколи не оновлювався. Юзер бачив зміни ТIЛЬКИ після close+open. Фікс: `id="fin-analytics-scroll"` + `getElementById`. + `cloneNode/replaceChild` для force iOS DOM update.
+20. **B-144 viewBox cosmetic** — `viewBox 100x100` + контейнер 4:1 → лінія тонка по горизонталі. Фікс: `viewBox 0 0 400 100` пропорційний + stroke 4 + r 5.
+21. **B-145 redesign графіків** — 8→7 точок. Витрати/Доходи bars з рамкою. Капітал лінія. Перемикач «Тижні / Дні» спільний для всіх 3 режимів. Daily mode 7 останніх днів. State `_analyticsGranularity`.
+22. **B-146 handleOnly swipe-close mode** — нова опція у `setupModalSwipeClose` — closes ТIЛЬКИ при touchstart на `.modal-handle`. Аналітика і Memory модалки використовують. Кнопки/контент свайп ігнорують.
+23. **B-147 polish графіки** — рамка тільки навколо bars. Дати+суми ПIД рамкою (3 окремі flex-рядки). Max bar 80→90px.
+24. **B-148 Y-шкала Капітал** — 50px колонка зліва max/min (або max/0/min якщо мінус). viewBox 0 0 400 100 + y range 8..92.
+25. **Стрілки міні-метрик** — латте gradient `#a67c52→#7a4e2d` + box-shadow (стандарт `style.css:623`). Раніше пропонував фіолетовий — ❌ training-bias.
+26. **Матове скло Аналітики** + **внутрішня рамка** навколо графіка (як інші bottom-sheets).
+
+#### H. Календарна модалка (B-150)
+
+27. **Блок «Події·Травень»** + **«Найближче»** + **Day-Schedule timeline** — текст подій уніфіковано до `#1e1040` (без синього `#3b82f6`). Сьогодні залишається помаранчевий. Emoji 📅/⏰/☑️ → SVG calendar icon stroke `rgba(0.55)` + 6px кольорова крапка-індикатор (синій=event, блакитний=task, бурштин=reminder — узгоджено з `inbox.js CAT_DOT_SOLID`). Helper `_calendarEventIcon(type)`.
+
+### Ключові рішення MPVly
+
+- Council 5 агентів Sonnet після 6 наосліп B-138..B-141 → знайшов B-142 + B-143. Урок: правило #5 «корінь vs симптом» — Council з 2-ї невдалої спроби, не 6-ї.
+- handleOnly swipe-close для модалок зі скрольним контентом (Аналітика + Memory).
+- CACHE_NAME bump після КОЖНОЇ значимої зміни (раніше пропускав).
+
+### Метрики MPVly
+
+- Коміти: `0c01a7b` → `401c669` = 152 коміти за день
+- Гілка: `claude/start-session-MPVly`
+- Закриті баги: B-128..B-150 (23 баги)
+- Sonnet агенти: 4 запуски (~700K токенів)
+
+---
+
 ## 🔧 Сесія QDIGl — Розпорядок merge + delete_project + B-117 fix + 19 раундів i18n (-319) + audit (05.05.2026)
 
 ### Зроблено
