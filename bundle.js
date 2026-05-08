@@ -20171,6 +20171,18 @@ ${logLines}
       localStorage.setItem("nm_pruning_wipe_v1_done", "1");
       console.log("[boot] Pruning Engine v1: wiped legacy board history (no entityRefs)");
     }
+    if (!localStorage.getItem("nm_board_clean_pji7l_done")) {
+      [
+        "nm_owl_board_unified",
+        "nm_owl_board_unified_ts",
+        "nm_owl_board",
+        "nm_owl_board_ts",
+        "nm_owl_board_seen",
+        "nm_chip_payloads"
+      ].forEach((k) => localStorage.removeItem(k));
+      localStorage.setItem("nm_board_clean_pji7l_done", "1");
+      console.log("[boot] PJi7l: cleared board cache for fresh AI context");
+    }
     if (!localStorage.getItem("nm_tasks_uuid_migrated_v8")) {
       try {
         const tasksRaw = localStorage.getItem("nm_tasks");
