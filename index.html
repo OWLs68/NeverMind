@@ -1478,7 +1478,7 @@
     <div class="s-group-label" style="padding:4px 14px;font-size:11px;font-weight:700;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.09em">Розробник</div>
     <div class="s-group">
       <div class="s-row" style="cursor:default;flex-direction:column;align-items:stretch;gap:8px;padding:14px">
-        <input class="settings-input" type="password" id="input-api-key" placeholder="sk-proj-..." autocomplete="off" autocorrect="off" spellcheck="false" style="padding:10px 14px;font-size:15px;border-radius:12px;background:rgba(255,255,255,0.7);border:1px solid rgba(30,16,64,0.1)">
+        <input class="settings-input" type="password" id="input-api-key" placeholder="sk-proj-..." autocomplete="off" autocorrect="off" spellcheck="false" onblur="saveSettings()" style="padding:10px 14px;font-size:15px;border-radius:12px;background:rgba(255,255,255,0.7);border:1px solid rgba(30,16,64,0.1)">
         <div id="key-status" class="key-status no-key">⚠️ Ключ не встановлено</div>
       </div>
     </div>
