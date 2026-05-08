@@ -308,7 +308,11 @@ export const NM_KEYS = {
          'nm_chat_evening','nm_chat_finance','nm_chat_health','nm_chat_projects'],
   // Кеш/тимчасове (не потребує Supabase)
   cache: ['nm_owl_board','nm_owl_board_ts','nm_owl_cooldowns','nm_owl_schedule_asked',
-          'nm_owl_schedule_pending','nm_error_log'],
+          'nm_owl_schedule_pending','nm_error_log',
+          // PJi7l 08.05: unified board storage + chip payloads + seen-IDs
+          // Без них після clearAllData табло Inbox/Notes показувало стару інформацію.
+          'nm_owl_board_unified','nm_owl_board_unified_ts',
+          'nm_owl_board_migrated_v2','nm_chip_payloads','nm_owl_board_seen'],
   // Динамічні патерни (видаляти через startsWith)
   patterns: ['nm_task_chat_', 'nm_visited_', 'nm_owl_tab_'],
 };
