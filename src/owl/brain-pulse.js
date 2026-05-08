@@ -102,7 +102,7 @@ export async function brainPulse() {
     // 7 з 9 сигналів Brain Pulse саме про тривогу.
     const isPraise = /^(streak-milestone|achievement|streak_milestone)$/i.test(reason || '');
     setOwlCd(isPraise ? 'praise_global' : 'concern_global');
-    setOwlCd(`brain_tab_${tab}`);     // ця вкладка мовчить 24 год (info-тип, незалежний від global)
+    setOwlCd(`brain_tab_${tab}`);     // ця вкладка мовчить 24 год (overview-тип через _classifyCdTopic)
 
     // Per-signal cooldown — ставимо для ВСІХ сигналів тієї ж вкладки
     // (мозок вибрав один, інші того ж типу теж "погасилися")
