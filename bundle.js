@@ -14516,7 +14516,8 @@ ${CHIP_PROMPT_RULES}`;
 ${legacyMemory}`);
       }
     }
-    const tasks = getTasks().filter((t2) => t2.status === "active").slice(0, 8);
+    const allActiveTasks = getTasks().filter((t2) => t2.status === "active");
+    const tasks = allActiveTasks.slice(0, 8);
     if (tasks.length > 0) {
       const taskList = tasks.map((t2) => {
         const steps = t2.steps || [];
@@ -14528,6 +14529,8 @@ ${legacyMemory}`);
       }).join("\n");
       parts.push(`\u0410\u043A\u0442\u0438\u0432\u043D\u0456 \u0437\u0430\u0434\u0430\u0447\u0456 (\u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 ID \u0434\u043B\u044F complete_task):
 ${taskList}`);
+    } else {
+      parts.push(`\u0410\u043A\u0442\u0438\u0432\u043D\u0438\u0445 \u0437\u0430\u0434\u0430\u0447 \u043D\u0435\u043C\u0430\u0454. \u041D\u0415 \u043A\u0430\u0436\u0438 \xAB\u0436\u043E\u0434\u043D\u0430 \u0437\u0430\u0434\u0430\u0447\u0430 \u043D\u0435 \u0437\u0430\u043A\u0440\u0438\u0442\u0430\xBB \u0430\u0431\u043E \xAB\u0437\u0430\u0434\u0430\u0447\u0456 \u043D\u0435 \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u0456\xBB \u2014 \u0437\u0430\u0434\u0430\u0447 \u043F\u0440\u043E\u0441\u0442\u043E \u043D\u0435 \u0456\u0441\u043D\u0443\u0454. \u041D\u0435 \u043A\u0440\u0438\u0442\u0438\u043A\u0443\u0439 \u0437\u0430 \u043D\u0435\u0432\u0438\u043A\u043E\u043D\u0430\u043D\u0435 \u044F\u043A\u043E\u0433\u043E \u043D\u0435\u043C\u0430.`);
     }
     const recentlyDone = getTasks().filter((t2) => t2.status === "done" && t2.completedAt && now - t2.completedAt < 24 * 60 * 60 * 1e3).slice(0, 5);
     if (recentlyDone.length > 0) {
