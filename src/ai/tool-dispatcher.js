@@ -77,7 +77,7 @@ export function _toolCallToUniversalAction(name, args) {
     case 'create_event':
       return [{ action: 'create_event', title: args.title, date: args.date, time: args.time || null, priority: args.priority || 'normal' }];
     case 'save_finance':
-      return [{ action: 'save_finance', fin_type: args.fin_type, amount: args.amount, category: args.category, fin_comment: args.fin_comment, date: args.date }];
+      return [{ action: 'save_finance', fin_type: args.fin_type, amount: args.amount, category: args.category, subcategory: args.subcategory, fin_comment: args.fin_comment, date: args.date }];
     case 'complete_task': {
       const ids = Array.isArray(args.task_ids) ? args.task_ids : [];
       return ids.map(id => ({ action: 'complete_task', task_id: id }));

@@ -75,7 +75,12 @@ async function _generateEveningPrompt() {
 export function startFollowupsCycle() {
   setTimeout(checkFollowups, 30 * 1000);
   setInterval(checkFollowups, FOLLOWUP_CHECK_INTERVAL);
-  window.addEventListener('nm-data-changed', () => {
+  // LfA6w 07.05: фільтр detail — той самий що у brain-pulse. Chat/memory/silence
+  // не повинні reset'ити debounce, інакше followups ніколи не спрацьовує
+  // у активній чат-сесії.
+  window.addEventListener('nm-data-changed', e => {
+    const d = e && e.detail;
+    if (d === 'chat' || d === 'memory' || d === 'silence') return;
     clearTimeout(_debounceTimer);
     _debounceTimer = setTimeout(checkFollowups, FOLLOWUP_DEBOUNCE);
   });

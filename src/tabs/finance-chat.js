@@ -102,11 +102,13 @@ export async function sendFinanceBarMessage() {
   const budget = getFinBudget();
   const cats = getFinCats();
   const currency = getCurrency();
-  const txSummary = txs.slice(0, 20).map(t => `[${t.type}] ${t.category} ${t.amount}${currency} ${t.comment || ''}`).join('; ');
+  // LfA6w 07.05: txSummary прибрано — getAIContext() вже містить getFinanceContext
+  // з ID транзакцій. Раніше дублював без ID → AI не міг update_transaction({id})
+  // → робив дублі через save_finance або clarify spam на «За водафон».
   const systemPrompt = getFinanceChatSystem({
     currency,
     budget,
-    txSummary,
+    txSummary: '',
     expenseCats: (cats.expense || []).map(c => c.name || c).join(', '),
     incomeCats: (cats.income || []).map(c => c.name || c).join(', '),
   }) + (getAIContext() ? '\n\n' + getAIContext() : '');

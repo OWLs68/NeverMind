@@ -32,6 +32,7 @@ import {
   moveFinCategory,
 } from './finance-cats.js';
 import { finDailyInsight, refreshFinInsight } from './finance-insight.js';
+import { matchSubcategoryFromComment } from '../data/finance-subcat-keywords.js';
 // Chat bar винесено у finance-chat.js — re-export для backward compat (ai/core.js, chips.js)
 export { addFinanceChatMsg, sendFinanceBarMessage } from './finance-chat.js';
 
@@ -576,11 +577,17 @@ export function processFinanceAction(parsed, originalText) {
   // LfA6w 07.05: subcategory приймаємо ТIЛЬКИ якщо вона реально існує
   // у списку категорії — захист від AI-вигаданих підкатегорій. Якщо AI
   // дав subcategory якої немає → ігноруємо (зберігаємо без subcategory).
+  const cat = catList.find(c => c.name === category);
+  const validSubs = cat && Array.isArray(cat.subcategories) ? cat.subcategories : [];
   let subcategory = (parsed.subcategory || '').trim();
-  if (subcategory) {
-    const cat = catList.find(c => c.name === category);
-    const validSubs = cat && Array.isArray(cat.subcategories) ? cat.subcategories : [];
-    if (!validSubs.includes(subcategory)) subcategory = '';
+  if (subcategory && !validSubs.includes(subcategory)) subcategory = '';
+
+  // LfA6w 07.05 v2: code-side fallback — якщо AI не передав subcategory
+  // (типовий кейс «60 бензин» де AI ставить тільки category=Транспорт),
+  // матчимо ключові слова з comment проти реальних підкатегорій юзера.
+  // Працює універсально для будь-якої категорії з будь-якими підкатегоріями.
+  if (!subcategory && comment && validSubs.length > 0) {
+    subcategory = matchSubcategoryFromComment(comment, validSubs);
   }
 
   const ts = _resolveFinanceDate(parsed.date, originalText);
