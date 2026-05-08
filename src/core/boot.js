@@ -383,11 +383,30 @@ function runMigrations() {
   if (!localStorage.getItem('nm_board_clean_pji7l_done')) {
     [
       'nm_owl_board_unified', 'nm_owl_board_unified_ts',
+      'nm_owl_board_migrated_v2',  // інакше _migrateOnce думає що міграція вже виконана і не перезаповнює
       'nm_owl_board', 'nm_owl_board_ts',
       'nm_owl_board_seen', 'nm_chip_payloads',
+      'nm_owl_tab_ts_inbox', 'nm_owl_tab_ts_notes', 'nm_owl_tab_ts_me',
+      'nm_owl_tab_ts_evening', 'nm_owl_tab_ts_finance', 'nm_owl_tab_ts_health',
+      'nm_owl_tab_ts_projects', 'nm_owl_tab_ts_tasks',
     ].forEach(k => localStorage.removeItem(k));
     localStorage.setItem('nm_board_clean_pji7l_done', '1');
-    console.log('[boot] PJi7l: cleared board cache for fresh AI context');
+    console.log('[boot] PJi7l: cleared board cache + ts + migration flag for fresh AI generation');
+  }
+  // PJi7l 08.05 повторна міграція (v2): попередня очищала тільки unified, але AI-промпт
+  // все одно генерував те саме бо контекст не мав явного сигналу. Зараз дамп ще раз —
+  // AI перегенерує з оновленим _getInboxBoardContext (proactive.js: empty-state сигнали).
+  if (!localStorage.getItem('nm_board_clean_pji7l_v2_done')) {
+    [
+      'nm_owl_board_unified', 'nm_owl_board_unified_ts',
+      'nm_owl_board_migrated_v2',
+      'nm_owl_board', 'nm_owl_board_ts',
+      'nm_owl_tab_ts_inbox', 'nm_owl_tab_ts_notes', 'nm_owl_tab_ts_me',
+      'nm_owl_tab_ts_evening', 'nm_owl_tab_ts_finance', 'nm_owl_tab_ts_health',
+      'nm_owl_tab_ts_projects', 'nm_owl_tab_ts_tasks',
+    ].forEach(k => localStorage.removeItem(k));
+    localStorage.setItem('nm_board_clean_pji7l_v2_done', '1');
+    console.log('[boot] PJi7l-v2: re-cleared board for fresh empty-state-aware generation');
   }
   // v8 (27.04.2026 xGe1H Pre-Migration Hardening Підсесія 1B): Task.id Date.now() → UUID.
   // Пілот UUID-міграції перед Supabase. Supabase primary key очікує UUID, не number.
