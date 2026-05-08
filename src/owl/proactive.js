@@ -306,7 +306,7 @@ function _getInboxBoardContext() {
   const forgotten = activeTasks.filter(t => t.createdAt && t.createdAt < Date.now() - 5*24*60*60*1000);
   forgotten.forEach(t => {
     const days = Math.floor((Date.now() - t.createdAt) / (24*60*60*1000));
-    important.push(`[ЗАБУТА ЗАДАЧА] "${t.title}" [task_${t.id}] висить ${days} днів. М'яко запитай чи ще актуально — може видалити або переформулювати?`);
+    important.push(`[ЗАБУТА ЗАДАЧА] "${t.title}" [task_${t.id}] висить ${days} днів. М'яко запитай у text content чи ще актуально, чи переформулювати, чи видалити. ВАЖЛИВО: НЕ викликай complete_task / delete_task у цьому повідомленні — юзер ще не дав відповідь. Дай статусні чіпи action='chat': [Так, ще треба] [Виконано ✔️] [Видалити]. Юзер тапне → новий запит → тоді обери дію.`);
   });
 
   // Прокрастинація — задачі з 3+ переносами дедлайну (3.8)
