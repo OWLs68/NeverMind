@@ -1385,11 +1385,14 @@ export function processUniversalAction(parsed, originalText, addMsg) {
     } else {
       createFinCategory(type, { name: category });
     }
-    // LfA6w 07.05 v2: subcategory — валідація + code-side fallback за keywords
+    // LfA6w 08.05: subcategory + apostrophe-нормалізація (B-47 клас)
     const cat = catList.find(c => c.name === category);
     const validSubs = cat && Array.isArray(cat.subcategories) ? cat.subcategories : [];
     let subcategory = (parsed.subcategory || '').trim();
-    if (subcategory && !validSubs.includes(subcategory)) subcategory = '';
+    if (subcategory) {
+      const matchedSub = validSubs.find(s => _normCat(s) === _normCat(subcategory));
+      subcategory = matchedSub || '';
+    }
     if (!subcategory && comment && validSubs.length > 0) {
       subcategory = matchSubcategoryFromComment(comment, validSubs);
     }

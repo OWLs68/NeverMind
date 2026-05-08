@@ -583,12 +583,15 @@ export function processFinanceAction(parsed, originalText) {
   }
 
   // LfA6w 07.05: subcategory приймаємо ТIЛЬКИ якщо вона реально існує
-  // у списку категорії — захист від AI-вигаданих підкатегорій. Якщо AI
-  // дав subcategory якої немає → ігноруємо (зберігаємо без subcategory).
+  // у списку категорії — захист від AI-вигаданих підкатегорій.
+  // LfA6w 08.05: + apostrophe-нормалізація subcategory match.
   const cat = catList.find(c => c.name === category);
   const validSubs = cat && Array.isArray(cat.subcategories) ? cat.subcategories : [];
   let subcategory = (parsed.subcategory || '').trim();
-  if (subcategory && !validSubs.includes(subcategory)) subcategory = '';
+  if (subcategory) {
+    const matchedSub = validSubs.find(s => _normCat(s) === _normCat(subcategory));
+    subcategory = matchedSub || ''; // використовуємо юзерську форму або скидаємо
+  }
 
   // LfA6w 07.05 v2: code-side fallback — якщо AI не передав subcategory
   // (типовий кейс «60 бензин» де AI ставить тільки category=Транспорт),

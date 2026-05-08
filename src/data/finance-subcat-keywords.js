@@ -74,19 +74,22 @@ export const SUBCAT_SYNONYMS = {
   'подарунки': ['Подарунки'],
 };
 
-// 2-крокова логіка матчингу.
-//  1) Пряме substring у lowerComment проти кожної підкатегорії юзера.
-//  2) Synonym-мапа: для кожного keyword у comment шукаємо першу validSub.
+// 2-крокова логіка матчингу. Apostrophe-insensitive (LfA6w 08.05) — curly ʼ
+// та straight ' розглядаються однаково (той самий клас бага що B-47 для папок).
+const _normApos = s => String(s || '').replace(/[ʼ’`]/g, "'").toLowerCase();
 export function matchSubcategoryFromComment(comment, validSubs) {
   if (!comment || !Array.isArray(validSubs) || validSubs.length === 0) return '';
-  const lc = comment.toLowerCase();
+  const lc = _normApos(comment);
+  // 1) Пряме substring у lowerComment проти кожної підкатегорії юзера.
   for (const sub of validSubs) {
-    if (sub && lc.includes(sub.toLowerCase())) return sub;
+    if (sub && lc.includes(_normApos(sub))) return sub;
   }
+  // 2) Synonym-мапа: для кожного keyword у comment шукаємо першу validSub.
   for (const keyword in SUBCAT_SYNONYMS) {
-    if (!lc.includes(keyword)) continue;
+    if (!lc.includes(_normApos(keyword))) continue;
     for (const cand of SUBCAT_SYNONYMS[keyword]) {
-      if (validSubs.includes(cand)) return cand;
+      const matched = validSubs.find(v => _normApos(v) === _normApos(cand));
+      if (matched) return matched;
     }
   }
   return '';
