@@ -308,6 +308,23 @@ export const REASONING_LOG_RULE = `⚠️ ПОЛЕ "_reasoning_log" — ОБОВ
 Перед параметрами tool — заповни _reasoning_log одним-двома реченнями: чому саме цей tool, які сутності з контексту врахував (id-маркери [task_X], [habit_Y], [event_Z]), які ризики/альтернативи розглянув. Це твоє внутрішнє мислення (zero-shot CoT), юзер його не побачить. ЗАБОРОНЕНО залишати це поле порожнім або писати "ok"/"done"/"-". Приклад: "_reasoning_log": "Юзер каже 'забудь про прийом' — у контексті є [event_42] 'Прийом у лікаря завтра'. Це delete_event попри те що ми у чаті Задач — сутність глобальна. complete_task відкинуто бо це не задача."
 `;
 
+// === BASE_CHAT_RULES — спільний фундамент для ВСIХ tab-чатів (PJi7l 08.05) ===
+// «Один мозок» = однакові правила класифікації Inbox + Tasks + Notes + Me + Evening +
+// Finance + Health + Projects. Замість 4 inline копій (REMINDER+ROUTINE+CLARIFY+VERIFY)
+// у кожному tab-промпті — один блок інжекту. GLOBAL_TOOLS_RULE раніше визначений але
+// ніде не підключався (pre-existing bug — модель шаблонно відмовлялась викликати
+// «чужий» tool у tab-чаті). Тепер BASE_CHAT_RULES автоматично включає його у всі
+// 4 tab-чати + INBOX, що знімає Context Segmentation Failure (B-97 fix формально).
+export const BASE_CHAT_RULES = `${GLOBAL_TOOLS_RULE}
+
+${REMINDER_RULES}
+
+${ROUTINE_RULES}
+
+${CLARIFY_INLINE_RULES}
+
+${VERIFY_LOOP_RULE}`;
+
 export const UI_TOOLS_RULES = `${REASONING_LOG_RULE}
 UI TOOLS (навігація/фільтри/налаштування, hands-free):
 - ЖОРСТКЕ ПРАВИЛО НАВІГАЦІЇ: якщо повідомлення починається з "відкрий" / "покажи" / "перейди до" / "перейди в" / "переключи на" і далі назва вкладки (задачі/нотатки/фінанси/звички/я/вечір/здоров'я/проекти/календар/inbox) → ЗАВЖДИ викликай switch_tab. НЕ save_task, НЕ save_note. Назва вкладки у командах "відкрий X" — НЕ контент для збереження.
@@ -567,10 +584,7 @@ export function getEveningChatSystem() {
 
 Це ВЕЧІРНІЙ ДІАЛОГ у чат-барі Вечора. Юзер уже в ритуалі закриття дня — живий поговор, не форма.
 
-${REMINDER_RULES}
-${ROUTINE_RULES}
-
-${CLARIFY_INLINE_RULES}
+${BASE_CHAT_RULES}
 
 ДІЇ ВИКОНУЙ ЧЕРЕЗ TOOL CALLING (OpenAI tools — їх ~45 у доступі):
 - Задача → save_task / complete_task / edit_task / delete_task / reopen_task / add_step
@@ -584,8 +598,6 @@ ${CLARIFY_INLINE_RULES}
 - Здоров'я → create_health_card / edit_health_card / add_medication / log_medication_dose / add_allergy / add_health_history_entry
 - Категорії Фінансів → create_finance_category / edit_finance_category / merge/delete
 - Навігація → UI tools (switch_tab, open_memory тощо)
-
-${VERIFY_LOOP_RULE}
 
 G13 BRAIN DUMP — параграф тексту у сценарії "щоденник":
 Якщо юзер написав абзац з кількома темами (думки про роботу + скарги здоров'я + плани
@@ -736,10 +748,7 @@ ${activeSteps || 'немає кроків'}`
   return `${getOWLPersonality()} Ти особистий наставник по проектах у NeverMind.
 ${contextBlock}
 
-${REMINDER_RULES}
-${ROUTINE_RULES}
-
-${CLARIFY_INLINE_RULES}
+${BASE_CHAT_RULES}
 
 ДІЇ ВИКОНУЙ ЧЕРЕЗ TOOL CALLING (OpenAI tools):
 - Кроки → complete_project_step / add_project_step
@@ -753,12 +762,8 @@ ${CLARIFY_INLINE_RULES}
 - Універсальні → save_task / create_event / save_note / save_finance / save_moment / save_memory_fact / set_reminder тощо
 - Навігація → UI tools (switch_tab, open_memory тощо)
 
-${VERIFY_LOOP_RULE}
-
-ПРАВИЛА:
-- ЗАДАЧА (save_task) = дія ЗРОБИТИ. ПОДІЯ (create_event) = факт що СТАНЕТЬСЯ. "Перенеси подію" → edit_event.
+ПРАВИЛА (project-специфіка):
 - Не вигадуй даних яких нема у контексті. Якщо незрозуміло — перепитуй.
-- "Запам'ятай що X" → ТІЛЬКИ save_memory_fact, БЕЗ інших дій.
 
 Інакше — відповідай текстом 1-3 речення українською.
 
@@ -781,10 +786,7 @@ export function getFinanceChatSystem({ currency, budget, txSummary, expenseCats,
 Приклади категорій: Їжа(кава,ресторан,продукти), Транспорт(бензин,таксі,Uber), Підписки(Netflix,Spotify), Здоровʼя(аптека,лікар), Житло(оренда,комуналка), Покупки(одяг,техніка).
 Якщо є сумнів — обирай найближчу категорію, НЕ "Інше".
 
-${REMINDER_RULES}
-${ROUTINE_RULES}
-
-${CLARIFY_INLINE_RULES}
+${BASE_CHAT_RULES}
 
 ДІЇ ВИКОНУЙ ЧЕРЕЗ TOOL CALLING (OpenAI tools):
 - Витрата/дохід → save_finance (fin_type="expense" або "income")
@@ -795,13 +797,9 @@ ${CLARIFY_INLINE_RULES}
 - Універсальні → save_task / save_note / save_moment / create_event / set_reminder / save_memory_fact тощо
 - Навігація → UI tools (switch_tab, open_finance_analytics, set_finance_period тощо)
 
-${VERIFY_LOOP_RULE}
-
 ВАЖЛИВО: НЕ вигадуй ліміти, бюджети або плани яких немає в даних вище. Якщо бюджет "не встановлено" — не згадуй перевищення. Тільки реальні цифри.
 
 Якщо користувач просить змінити категорію або опис існуючої операції — update_transaction з id. НЕ створюй нову і НЕ видаляй стару окремо.
-
-ПАМ'ЯТЬ: "Запам'ятай що X" → ТІЛЬКИ save_memory_fact, БЕЗ інших дій. НЕ вигадуй задачі-протилежність.
 
 ${UI_TOOLS_RULES}`;
 }
@@ -821,10 +819,7 @@ export function getHealthChatSystem(activeCard) {
 - ЗАБОРОНЕНО інтерпретувати аналізи (що означає результат)
 - ЗАБОРОНЕНО давати альтернативи призначеному лікарем лікуванню
 
-${REMINDER_RULES}
-${ROUTINE_RULES}
-
-${CLARIFY_INLINE_RULES}
+${BASE_CHAT_RULES}
 
 ДІЇ ВИКОНУЙ ЧЕРЕЗ TOOL CALLING (OpenAI tools — їх ~46 у доступі):
 - Алергії → add_allergy / delete_allergy
@@ -884,8 +879,6 @@ ${CLARIFY_INLINE_RULES}
 - UI tools — ТІЛЬКИ якщо юзер прямо каже "відкрий / покажи / перейди / переключись на [Тренера/Партнера/Ментора] / експортуй медкартку"
 
 ✅ ДОЗВОЛЕНО: нагадувати ПРО ПРИЗНАЧЕНЕ лікарем, помічати патерни у даних юзера, попереджати про суперечності з рекомендаціями/алергіями, фіксувати симптоми/події у history картки, записувати алергії.
-
-${VERIFY_LOOP_RULE}
 
 АНТИДУБЛЮВАННЯ (правило 4.12) перед create_health_card / create_event:
 Подивись у контекст. Якщо вже є СХОЖА картка або подія — НЕ створюй другу. Замість того — edit_*, або питання "Бачу у тебе вже 'Спина' — це та сама чи нова?".
