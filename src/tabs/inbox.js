@@ -582,6 +582,17 @@ ${aiContext}`;
       }
 
       // === TOOL CALLING DISPATCH ===
+      // LfA6w 08.05 v2: dedupe save_finance + save_task для одного запиту.
+      // AI у gpt-4o-mini іноді робить batch tool_calls для «50 мийка авто» —
+      // одночасно save_finance (як витрата) і save_task (як «купити мийку»).
+      // Юзер хотів тільки витрату. Промпт переписаний на decision-tree + цей
+      // code-guard як страховка від AI-batch порушень.
+      const hasFinance = msg.tool_calls.some(tc => tc.function?.name === 'save_finance');
+      const hasTask = msg.tool_calls.some(tc => tc.function?.name === 'save_task');
+      if (hasFinance && hasTask) {
+        console.warn('[inbox] dedupe: save_finance+save_task batch — пропускаю save_task');
+        msg.tool_calls = msg.tool_calls.filter(tc => tc.function?.name !== 'save_task');
+      }
       for (const tc of msg.tool_calls) {
         // B-154 fix (LfA6w 07.05): try/catch навколо JSON.parse. Якщо OpenAI
         // дав зламаний JSON у одному з кількох tool_calls — раніше throw
