@@ -7103,19 +7103,20 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
   // src/data/finance-subcat-keywords.js
   function matchSubcategoryFromComment(comment, validSubs) {
     if (!comment || !Array.isArray(validSubs) || validSubs.length === 0) return "";
-    const lc = comment.toLowerCase();
+    const lc = _normApos(comment);
     for (const sub of validSubs) {
-      if (sub && lc.includes(sub.toLowerCase())) return sub;
+      if (sub && lc.includes(_normApos(sub))) return sub;
     }
     for (const keyword in SUBCAT_SYNONYMS) {
-      if (!lc.includes(keyword)) continue;
+      if (!lc.includes(_normApos(keyword))) continue;
       for (const cand of SUBCAT_SYNONYMS[keyword]) {
-        if (validSubs.includes(cand)) return cand;
+        const matched = validSubs.find((v) => _normApos(v) === _normApos(cand));
+        if (matched) return matched;
       }
     }
     return "";
   }
-  var SUBCAT_SYNONYMS;
+  var SUBCAT_SYNONYMS, _normApos;
   var init_finance_subcat_keywords = __esm({
     "src/data/finance-subcat-keywords.js"() {
       SUBCAT_SYNONYMS = {
@@ -7182,6 +7183,7 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
         "\u043A\u043D\u0438\u0433\u0438": ["\u041A\u043D\u0438\u0433\u0438"],
         "\u043F\u043E\u0434\u0430\u0440\u0443\u043D\u043A\u0438": ["\u041F\u043E\u0434\u0430\u0440\u0443\u043D\u043A\u0438"]
       };
+      _normApos = (s) => String(s || "").replace(/[ʼ’`]/g, "'").toLowerCase();
     }
   });
 
@@ -7767,7 +7769,10 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     const cat = catList.find((c) => c.name === category);
     const validSubs = cat && Array.isArray(cat.subcategories) ? cat.subcategories : [];
     let subcategory = (parsed.subcategory || "").trim();
-    if (subcategory && !validSubs.includes(subcategory)) subcategory = "";
+    if (subcategory) {
+      const matchedSub = validSubs.find((s) => _normCat(s) === _normCat(subcategory));
+      subcategory = matchedSub || "";
+    }
     if (!subcategory && comment && validSubs.length > 0) {
       subcategory = matchSubcategoryFromComment(comment, validSubs);
     }
@@ -14127,7 +14132,10 @@ ${CHIP_PROMPT_RULES}`;
       const cat = catList.find((c) => c.name === category);
       const validSubs = cat && Array.isArray(cat.subcategories) ? cat.subcategories : [];
       let subcategory = (parsed.subcategory || "").trim();
-      if (subcategory && !validSubs.includes(subcategory)) subcategory = "";
+      if (subcategory) {
+        const matchedSub = validSubs.find((s) => _normCat(s) === _normCat(subcategory));
+        subcategory = matchedSub || "";
+      }
       if (!subcategory && comment && validSubs.length > 0) {
         subcategory = matchSubcategoryFromComment(comment, validSubs);
       }
