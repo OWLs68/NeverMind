@@ -376,6 +376,19 @@ function runMigrations() {
     localStorage.setItem('nm_pruning_wipe_v1_done', '1');
     console.log('[boot] Pruning Engine v1: wiped legacy board history (no entityRefs)');
   }
+  // PJi7l 08.05: одноразова очистка board кешу для нової версії контексту AI.
+  // Старі повідомлення містять «жодна задача не закрита» бо до фіксу AI отримував
+  // контекст без сигналу про порожні дані. Чистимо щоб board згенерувалось наново
+  // з оновленим getAIContext (core.js: явний сигнал коли habits/tasks=0).
+  if (!localStorage.getItem('nm_board_clean_pji7l_done')) {
+    [
+      'nm_owl_board_unified', 'nm_owl_board_unified_ts',
+      'nm_owl_board', 'nm_owl_board_ts',
+      'nm_owl_board_seen', 'nm_chip_payloads',
+    ].forEach(k => localStorage.removeItem(k));
+    localStorage.setItem('nm_board_clean_pji7l_done', '1');
+    console.log('[boot] PJi7l: cleared board cache for fresh AI context');
+  }
   // v8 (27.04.2026 xGe1H Pre-Migration Hardening Підсесія 1B): Task.id Date.now() → UUID.
   // Пілот UUID-міграції перед Supabase. Supabase primary key очікує UUID, не number.
   // Бекап nm_tasks у nm_tasks_backup_v7 — на випадок rollback. Перевіряє typeof
