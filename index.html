@@ -352,28 +352,32 @@
               </div>
             </div>
 
-            <!-- Календар (іконка) — тінь на самому SVG (drop-shadow), не на блоці -->
-            <div onclick="openCalendarModal()" style="width:54px;border-radius:16px;padding:8px 0;cursor:pointer;background:rgba(255,255,255,0.5);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1.5px solid rgba(30,16,64,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.2s;-webkit-tap-highlight-color:transparent">
-              <svg id="cal-icon-svg" width="36" height="36" viewBox="0 0 28 28" fill="none" style="filter:drop-shadow(0 2px 3px rgba(30,16,64,0.25))">
-                <rect x="2" y="4" width="24" height="22" rx="4" stroke="#ea580c" stroke-width="2" fill="rgba(234,88,12,0.08)"/>
-                <line x1="2" y1="10" x2="26" y2="10" stroke="#ea580c" stroke-width="1.5"/>
-                <line x1="8" y1="2" x2="8" y2="6" stroke="#ea580c" stroke-width="2" stroke-linecap="round"/>
-                <line x1="20" y1="2" x2="20" y2="6" stroke="#ea580c" stroke-width="2" stroke-linecap="round"/>
-                <text id="cal-icon-day" x="14" y="22" text-anchor="middle" font-size="11" font-weight="800" fill="#ea580c">9</text>
-              </svg>
-            </div>
-
-            <!-- Розпорядок дня (іконка) — тінь на самому SVG (drop-shadow), не на блоці -->
-            <div onclick="openRoutineModal()" style="width:54px;border-radius:16px;padding:8px 0;cursor:pointer;background:rgba(255,255,255,0.5);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1.5px solid rgba(30,16,64,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.2s;-webkit-tap-highlight-color:transparent">
-              <svg width="36" height="36" viewBox="0 0 28 28" fill="none" style="filter:drop-shadow(0 2px 3px rgba(30,16,64,0.25))">
-                <rect x="4" y="2" width="18" height="24" rx="3" stroke="#ea580c" stroke-width="1.8" fill="rgba(234,88,12,0.06)"/>
-                <line x1="8" y1="9" x2="18" y2="9" stroke="#ea580c" stroke-width="1.3" stroke-linecap="round" opacity="0.5"/>
-                <line x1="8" y1="13" x2="18" y2="13" stroke="#ea580c" stroke-width="1.3" stroke-linecap="round" opacity="0.5"/>
-                <line x1="8" y1="17" x2="16" y2="17" stroke="#ea580c" stroke-width="1.3" stroke-linecap="round" opacity="0.5"/>
-                <circle cx="21" cy="21" r="6.5" fill="rgba(255,255,255,0.9)" stroke="#ea580c" stroke-width="1.5"/>
-                <line x1="21" y1="18" x2="21" y2="21" stroke="#ea580c" stroke-width="1.5" stroke-linecap="round"/>
-                <line x1="21" y1="21" x2="23.5" y2="22" stroke="#ea580c" stroke-width="1.5" stroke-linecap="round"/>
-              </svg>
+            <!-- Об'єднаний блок: Календар + Розпорядок (PJi7l 08.05) -->
+            <div style="width:120px;border-radius:16px;cursor:default;background:rgba(255,255,255,0.5);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1.5px solid rgba(30,16,64,0.12);display:flex;align-items:stretch;flex-shrink:0;-webkit-tap-highlight-color:transparent;overflow:hidden">
+              <!-- Ліва половина — Календар -->
+              <div onclick="openCalendarModal()" style="flex:1;padding:8px 0;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background 0.15s">
+                <svg id="cal-icon-svg" width="36" height="36" viewBox="0 0 28 28" fill="none" style="filter:drop-shadow(0 4px 5px rgba(30,16,64,0.22))">
+                  <rect x="2" y="4" width="24" height="22" rx="4" stroke="#ea580c" stroke-width="2" fill="#ffffff"/>
+                  <line x1="2" y1="10" x2="26" y2="10" stroke="#ea580c" stroke-width="1.5"/>
+                  <line x1="8" y1="2" x2="8" y2="6" stroke="#ea580c" stroke-width="2" stroke-linecap="round"/>
+                  <line x1="20" y1="2" x2="20" y2="6" stroke="#ea580c" stroke-width="2" stroke-linecap="round"/>
+                  <text id="cal-icon-day" x="14" y="22" text-anchor="middle" font-size="11" font-weight="800" fill="#ea580c">9</text>
+                </svg>
+              </div>
+              <!-- Тонкий розділювач -->
+              <div style="width:1px;background:rgba(30,16,64,0.10);margin:8px 0"></div>
+              <!-- Права половина — Розпорядок -->
+              <div onclick="openRoutineModal()" style="flex:1;padding:8px 0;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background 0.15s">
+                <svg width="36" height="36" viewBox="0 0 28 28" fill="none" style="filter:drop-shadow(0 4px 5px rgba(30,16,64,0.22))">
+                  <rect x="4" y="2" width="18" height="24" rx="3" stroke="#ea580c" stroke-width="1.8" fill="#ffffff"/>
+                  <line x1="8" y1="9" x2="18" y2="9" stroke="#ea580c" stroke-width="1.3" stroke-linecap="round" opacity="0.5"/>
+                  <line x1="8" y1="13" x2="18" y2="13" stroke="#ea580c" stroke-width="1.3" stroke-linecap="round" opacity="0.5"/>
+                  <line x1="8" y1="17" x2="16" y2="17" stroke="#ea580c" stroke-width="1.3" stroke-linecap="round" opacity="0.5"/>
+                  <circle cx="21" cy="21" r="6.5" fill="rgba(255,255,255,0.9)" stroke="#ea580c" stroke-width="1.5"/>
+                  <line x1="21" y1="18" x2="21" y2="21" stroke="#ea580c" stroke-width="1.5" stroke-linecap="round"/>
+                  <line x1="21" y1="21" x2="23.5" y2="22" stroke="#ea580c" stroke-width="1.5" stroke-linecap="round"/>
+                </svg>
+              </div>
             </div>
           </div>
         </div>
