@@ -93,7 +93,8 @@ export function getAIContext() {
   }
 
   // === Активні задачі (з ID для зіставлення) ===
-  const tasks = getTasks().filter(t => t.status === 'active').slice(0, 8);
+  const allActiveTasks = getTasks().filter(t => t.status === 'active');
+  const tasks = allActiveTasks.slice(0, 8);
   if (tasks.length > 0) {
     const taskList = tasks.map(t => {
       const steps = (t.steps || []);
@@ -104,6 +105,10 @@ export function getAIContext() {
       return `- [ID:${t.id}] ${t.title}${stepInfo}${dueInfo}${prioInfo}`;
     }).join('\n');
     parts.push(`Активні задачі (використовуй ID для complete_task):\n${taskList}`);
+  } else {
+    // PJi7l 08.05: явний сигнал коли активних задач немає, щоб AI не критикував
+    // юзера за «жодна задача не закрита» (її просто не існувало щоб закривати).
+    parts.push(`Активних задач немає. НЕ кажи «жодна задача не закрита» або «задачі не виконані» — задач просто не існує. Не критикуй за невиконане якого нема.`);
   }
 
   // === Нещодавно закриті задачі (24 години) — щоб AI знав що вже зроблено ===
