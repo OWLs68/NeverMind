@@ -561,7 +561,7 @@ export function processFinanceAction(parsed, originalText) {
   const cats = getFinCats();
   const type = parsed.fin_type || 'expense';
   const amount = parseFloat(parsed.amount) || 0;
-  const category = parsed.category || (type === 'expense' ? 'Інше' : 'Інше');
+  let category = parsed.category || (type === 'expense' ? 'Інше' : 'Інше');
   const comment = parsed.comment || originalText;
 
   if (!amount || amount <= 0) {
@@ -570,7 +570,15 @@ export function processFinanceAction(parsed, originalText) {
   }
 
   const catList = type === 'expense' ? cats.expense : cats.income;
-  if (!catList.some(c => c.name === category)) {
+  // LfA6w 08.05: apostrophe-нормалізація як у B-47 (папки нотаток).
+  // AI може повернути «Здоров'я» (straight ') або «Здоровʼя» (curly ʼ),
+  // юзерська категорія може мати інший варіант → не матчилось → створювалась
+  // окрема категорія, кільце показувало 0. Тепер шукаємо нечутливо до апострофа.
+  const _normCat = s => String(s || '').replace(/[ʼ’`]/g, "'").toLowerCase().trim();
+  const matchedCat = catList.find(c => _normCat(c.name) === _normCat(category));
+  if (matchedCat) {
+    category = matchedCat.name; // використовуємо рівно ту назву що у юзера
+  } else {
     createFinCategory(type, { name: category });
   }
 

@@ -1371,13 +1371,18 @@ export function processUniversalAction(parsed, originalText, addMsg) {
     const type = action === 'save_income' ? 'income' : (parsed.fin_type || 'expense');
     const amount = parseFloat(parsed.amount) || 0;
     if (!amount || amount <= 0) { addMsg('agent', t('habits.err.amount_unparsed', 'Не вдалось розпізнати суму.')); return true; }
-    const category = parsed.category || 'Інше';
+    let category = parsed.category || 'Інше';
     const comment = parsed.comment || originalText;
     // B-70 fix: catList — масив об'єктів, не рядків. Раніше .includes('Їжа') завжди false
     // і .push('Їжа') додавав рядок у масив об'єктів → биті категорії без id → _finCatsGrid падав.
     const cats = getFinCats();
     const catList = type === 'expense' ? cats.expense : cats.income;
-    if (!catList.some(c => c.name === category)) {
+    // LfA6w 08.05: apostrophe-нормалізація (той самий fix що finance.js)
+    const _normCat = s => String(s || '').replace(/[ʼ’`]/g, "'").toLowerCase().trim();
+    const matchedCat = catList.find(c => _normCat(c.name) === _normCat(category));
+    if (matchedCat) {
+      category = matchedCat.name;
+    } else {
       createFinCategory(type, { name: category });
     }
     // LfA6w 07.05 v2: subcategory — валідація + code-side fallback за keywords
