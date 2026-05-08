@@ -7750,14 +7750,18 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     const cats = getFinCats();
     const type = parsed.fin_type || "expense";
     const amount = parseFloat(parsed.amount) || 0;
-    const category = parsed.category || (type === "expense" ? "\u0406\u043D\u0448\u0435" : "\u0406\u043D\u0448\u0435");
+    let category = parsed.category || (type === "expense" ? "\u0406\u043D\u0448\u0435" : "\u0406\u043D\u0448\u0435");
     const comment = parsed.comment || originalText;
     if (!amount || amount <= 0) {
       addInboxChatMsg("agent", t("finance.err.no_amount", '\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u0440\u043E\u0437\u043F\u0456\u0437\u043D\u0430\u0442\u0438 \u0441\u0443\u043C\u0443. \u0421\u043F\u0440\u043E\u0431\u0443\u0439 \u043D\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u0447\u0456\u0442\u043A\u0456\u0448\u0435: "\u0432\u0438\u0442\u0440\u0430\u0442\u0438\u0432 50 \u043D\u0430 \u0457\u0436\u0443"'));
       return;
     }
     const catList = type === "expense" ? cats.expense : cats.income;
-    if (!catList.some((c) => c.name === category)) {
+    const _normCat = (s) => String(s || "").replace(/[ʼ’`]/g, "'").toLowerCase().trim();
+    const matchedCat = catList.find((c) => _normCat(c.name) === _normCat(category));
+    if (matchedCat) {
+      category = matchedCat.name;
+    } else {
       createFinCategory(type, { name: category });
     }
     const cat = catList.find((c) => c.name === category);
@@ -14109,11 +14113,15 @@ ${CHIP_PROMPT_RULES}`;
         addMsg("agent", t("habits.err.amount_unparsed", "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u0440\u043E\u0437\u043F\u0456\u0437\u043D\u0430\u0442\u0438 \u0441\u0443\u043C\u0443."));
         return true;
       }
-      const category = parsed.category || "\u0406\u043D\u0448\u0435";
+      let category = parsed.category || "\u0406\u043D\u0448\u0435";
       const comment = parsed.comment || originalText;
       const cats = getFinCats();
       const catList = type === "expense" ? cats.expense : cats.income;
-      if (!catList.some((c) => c.name === category)) {
+      const _normCat = (s) => String(s || "").replace(/[ʼ’`]/g, "'").toLowerCase().trim();
+      const matchedCat = catList.find((c) => _normCat(c.name) === _normCat(category));
+      if (matchedCat) {
+        category = matchedCat.name;
+      } else {
         createFinCategory(type, { name: category });
       }
       const cat = catList.find((c) => c.name === category);
