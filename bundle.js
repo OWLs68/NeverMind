@@ -2147,7 +2147,7 @@ ${lines.join("\n")}`;
     if (!clean) return null;
     const allergies = getAllergies();
     if (allergies.some((a) => a.name.toLowerCase() === clean.toLowerCase())) return null;
-    const entry = { id: Date.now(), name: clean, notes: (notes || "").trim(), createdAt: Date.now() };
+    const entry = { id: Date.now() + Math.floor(Math.random() * 1e3), name: clean, notes: (notes || "").trim(), createdAt: Date.now() };
     allergies.push(entry);
     saveAllergies(allergies);
     return entry;
@@ -3352,7 +3352,7 @@ ${lines.join("\n")}`;
       }
     } else {
       const newCard = {
-        id: Date.now(),
+        id: Date.now() + Math.floor(Math.random() * 1e3),
         name,
         subtitle,
         status,
