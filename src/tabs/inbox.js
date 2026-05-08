@@ -559,10 +559,23 @@ ${aiContext}`;
     return;
   }
 
-  // Save assistant reply to history for context
-  // НЕ зберігаємо tool_calls в історію — OpenAI вимагає tool result messages після них,
-  // а ми їх не надсилаємо. Для контексту розмови достатньо msg.content.
-  inboxChatHistory.push({ role: 'assistant', content: msg.content || '' });
+  // Save assistant reply to history for context.
+  // PJi7l 08.05: якщо AI робив tool_calls — зберігаємо короткий summary дій у content.
+  // Без summary наступний turn бачить порожній assistant → не розуміє контекст
+  // (юзер «Купив хліб» → complete_task → юзер «3 євро» → AI не знає що було куплено).
+  let historyContent = msg.content || '';
+  if (msg.tool_calls && msg.tool_calls.length > 0) {
+    const summary = msg.tool_calls.map(tc => {
+      try {
+        const args = JSON.parse(tc.function?.arguments || '{}');
+        const name = tc.function?.name || 'unknown';
+        const key = args.title || args.fact || args.text || args.fin_comment || args.name || args.task_title || '';
+        return key ? `${name}(${key})` : name;
+      } catch { return tc.function?.name || 'unknown'; }
+    }).join('; ');
+    historyContent = msg.content ? `${msg.content} [${summary}]` : `[${summary}]`;
+  }
+  inboxChatHistory.push({ role: 'assistant', content: historyContent });
 
   try {
     if (msg.tool_calls && msg.tool_calls.length > 0) {
