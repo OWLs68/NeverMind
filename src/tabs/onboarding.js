@@ -968,7 +968,10 @@ function obNext(step) {
     document.getElementById('ob-step-2').style.display = 'block';
   } else if (step === 2) {
     const key = document.getElementById('ob-key').value.trim();
-    if (key) localStorage.setItem('nm_gemini_key', key);
+    if (key) {
+      localStorage.setItem('nm_gemini_key', key);
+      try { window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'api-key' })); } catch(_) {}
+    }
     document.getElementById('ob-step-2').style.display = 'none';
     document.getElementById('ob-step-owl').style.display = 'block';
     // Дефолтно вибрати "partner"

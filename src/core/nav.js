@@ -991,6 +991,9 @@ function saveSettings() {
 
   if (key) localStorage.setItem('nm_gemini_key', key);
   else localStorage.removeItem('nm_gemini_key');
+  // PJi7l 08.05: тригер регенерації OWL board після зміни ключа.
+  // Без цього після введення ключа табло мовчить аж до наступного data-change або 60-хв watchdog.
+  try { window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'api-key' })); } catch(_) {}
 
   const settings = JSON.parse(localStorage.getItem('nm_settings') || '{}');
   const wakeEl   = document.getElementById('input-wake-up');
