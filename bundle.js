@@ -972,9 +972,9 @@
       if (kind === "reminder") {
         try {
           const rid = reminderId || ev.reminderId || ev.id;
-          const reminders = JSON.parse(localStorage.getItem("nm_reminders") || "[]");
+          const reminders = getReminders();
           const filtered = reminders.filter((r) => r.id !== rid);
-          if (filtered.length !== reminders.length) localStorage.setItem("nm_reminders", JSON.stringify(filtered));
+          if (filtered.length !== reminders.length) saveReminders(filtered);
         } catch (e) {
           console.warn("[routine] reminder cleanup failed", e);
         }
@@ -2137,7 +2137,11 @@ ${lines.join("\n")}`;
     window.dispatchEvent(new CustomEvent("nm-data-changed", { detail: "health" }));
   }
   function getAllergies() {
-    return JSON.parse(localStorage.getItem("nm_allergies") || "[]");
+    try {
+      return JSON.parse(localStorage.getItem("nm_allergies") || "[]");
+    } catch {
+      return [];
+    }
   }
   function saveAllergies(arr) {
     localStorage.setItem("nm_allergies", JSON.stringify(arr));
@@ -4293,7 +4297,7 @@ ${lines.join("\n")}`;
     }
     let hasCritical = false;
     try {
-      const reminders = JSON.parse(localStorage.getItem("nm_reminders") || "[]");
+      const reminders = getReminders();
       const todayISO3 = now.toISOString().slice(0, 10);
       const nowTime = `${String(hour).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
       const due = reminders.filter((r) => !r.done && r.date === todayISO3 && r.time <= nowTime);
@@ -4660,7 +4664,7 @@ ${lines.join("\n")}`;
   }
   function _checkReminders() {
     try {
-      const reminders = JSON.parse(localStorage.getItem("nm_reminders") || "[]");
+      const reminders = getReminders();
       const now = /* @__PURE__ */ new Date();
       const todayISO2 = now.toISOString().slice(0, 10);
       const nowTime = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
@@ -4670,7 +4674,7 @@ ${lines.join("\n")}`;
           r.done = true;
           r.firedAt = Date.now();
         });
-        localStorage.setItem("nm_reminders", JSON.stringify(reminders));
+        saveReminders(reminders);
         Promise.resolve().then(() => (init_proactive(), proactive_exports)).then((m) => m.generateBoardMessage("inbox"));
       }
     } catch (e) {
@@ -4678,14 +4682,14 @@ ${lines.join("\n")}`;
   }
   function _cleanupOldReminders() {
     try {
-      const reminders = JSON.parse(localStorage.getItem("nm_reminders") || "[]");
+      const reminders = getReminders();
       if (reminders.length === 0) return;
       const cutoffDate = /* @__PURE__ */ new Date();
       cutoffDate.setDate(cutoffDate.getDate() - 7);
       const cutoffISO = cutoffDate.toISOString().slice(0, 10);
       const fresh = reminders.filter((r) => r.date >= cutoffISO);
       if (fresh.length < reminders.length) {
-        localStorage.setItem("nm_reminders", JSON.stringify(fresh));
+        saveReminders(fresh);
       }
     } catch (e) {
     }
@@ -4827,7 +4831,11 @@ ${lines.join("\n")}`;
 
   // src/tabs/projects.js
   function getProjects() {
-    return JSON.parse(localStorage.getItem("nm_projects") || "[]");
+    try {
+      return JSON.parse(localStorage.getItem("nm_projects") || "[]");
+    } catch {
+      return [];
+    }
   }
   function saveProjects(arr) {
     localStorage.setItem("nm_projects", JSON.stringify(arr));
@@ -5454,7 +5462,11 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
 
   // src/tabs/evening.js
   function getMoments() {
-    return JSON.parse(localStorage.getItem("nm_moments") || "[]");
+    try {
+      return JSON.parse(localStorage.getItem("nm_moments") || "[]");
+    } catch {
+      return [];
+    }
   }
   function saveMoments(arr) {
     localStorage.setItem("nm_moments", JSON.stringify(arr));
@@ -6057,7 +6069,7 @@ ${lines.join("\n\n")}`;
     const important = [];
     const normal = [];
     try {
-      const reminders = JSON.parse(localStorage.getItem("nm_reminders") || "[]");
+      const reminders = getReminders();
       const todayISO2 = now.toISOString().slice(0, 10);
       const nowMin = hour * 60 + min;
       const due = reminders.filter((r) => !r.done && r.date === todayISO2 && r.time <= `${String(hour).padStart(2, "0")}:${String(min).padStart(2, "0")}`);
@@ -6076,7 +6088,7 @@ ${lines.join("\n\n")}`;
       if (expired.length > 0) {
         const expIds = new Set(expired.map((d) => d.id));
         const updated = reminders.map((r) => expIds.has(r.id) ? { ...r, done: true } : r);
-        localStorage.setItem("nm_reminders", JSON.stringify(updated));
+        saveReminders(updated);
       }
       const upcoming = reminders.filter((r) => !r.done && r.date === todayISO2 && r.time > `${String(hour).padStart(2, "0")}:${String(min).padStart(2, "0")}`).sort((a, b) => a.time.localeCompare(b.time));
       if (upcoming.length > 0) {
@@ -7374,14 +7386,22 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
 
   // src/tabs/finance.js
   function getFinance() {
-    return JSON.parse(localStorage.getItem("nm_finance") || "[]");
+    try {
+      return JSON.parse(localStorage.getItem("nm_finance") || "[]");
+    } catch {
+      return [];
+    }
   }
   function saveFinance(arr) {
     localStorage.setItem("nm_finance", JSON.stringify(arr));
     window.dispatchEvent(new CustomEvent("nm-data-changed", { detail: "finance" }));
   }
   function getFinBudget() {
-    return JSON.parse(localStorage.getItem("nm_finance_budget") || '{"total":0,"categories":{}}');
+    try {
+      return JSON.parse(localStorage.getItem("nm_finance_budget") || '{"total":0,"categories":{}}');
+    } catch {
+      return { total: 0, categories: {} };
+    }
   }
   function saveFinBudget(obj) {
     localStorage.setItem("nm_finance_budget", JSON.stringify(obj));
@@ -9624,7 +9644,11 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
     }
   }
   function getNotes() {
-    return JSON.parse(localStorage.getItem("nm_notes") || "[]");
+    try {
+      return JSON.parse(localStorage.getItem("nm_notes") || "[]");
+    } catch {
+      return [];
+    }
   }
   function saveNotes(arr) {
     localStorage.setItem("nm_notes", JSON.stringify(arr));
@@ -12956,21 +12980,33 @@ ${CHIP_PROMPT_RULES}`;
 
   // src/tabs/habits.js
   function getHabits() {
-    return JSON.parse(localStorage.getItem("nm_habits2") || "[]");
+    try {
+      return JSON.parse(localStorage.getItem("nm_habits2") || "[]");
+    } catch {
+      return [];
+    }
   }
   function saveHabits(arr) {
     localStorage.setItem("nm_habits2", JSON.stringify(arr));
     window.dispatchEvent(new CustomEvent("nm-data-changed", { detail: "habits" }));
   }
   function getHabitLog() {
-    return JSON.parse(localStorage.getItem("nm_habit_log2") || "{}");
+    try {
+      return JSON.parse(localStorage.getItem("nm_habit_log2") || "{}");
+    } catch {
+      return {};
+    }
   }
   function saveHabitLog(obj) {
     localStorage.setItem("nm_habit_log2", JSON.stringify(obj));
     window.dispatchEvent(new CustomEvent("nm-data-changed", { detail: "habits" }));
   }
   function getQuitLog() {
-    return JSON.parse(localStorage.getItem("nm_quit_log") || "{}");
+    try {
+      return JSON.parse(localStorage.getItem("nm_quit_log") || "{}");
+    } catch {
+      return {};
+    }
   }
   function saveQuitLog(obj) {
     localStorage.setItem("nm_quit_log", JSON.stringify(obj));
@@ -13945,7 +13981,16 @@ ${CHIP_PROMPT_RULES}`;
         return true;
       }
       const q = (parsed.step_text || "").toLowerCase().trim();
-      const step = task.steps.find((s) => !s.done && (s.text.toLowerCase().includes(q.slice(0, 8)) || q.includes(s.text.toLowerCase().slice(0, 8))));
+      if (q.length < 2) {
+        addMsg("agent", t("habits.step.empty_text", "\u0423\u0442\u043E\u0447\u043D\u0438 \u044F\u043A\u0438\u0439 \u0441\u0430\u043C\u0435 \u043A\u0440\u043E\u043A \u0437\u0430\u043A\u0440\u0438\u0442\u0438."));
+        return true;
+      }
+      const qSlice = q.slice(0, 8);
+      const step = task.steps.find((s) => {
+        if (s.done) return false;
+        const sLow = s.text.toLowerCase();
+        return sLow.length >= 3 && sLow.includes(qSlice) && qSlice.length >= 3 || q.length >= 3 && q.includes(sLow.slice(0, Math.min(8, sLow.length))) && sLow.length >= 3;
+      });
       if (!step) {
         addMsg("agent", t("habits.step.not_found", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0439 \u043A\u0440\u043E\u043A \xAB{step}\xBB \u0443 \u0437\u0430\u0434\u0430\u0447\u0456 \xAB{title}\xBB.", { step: parsed.step_text, title: task.title }));
         return true;
@@ -14273,9 +14318,9 @@ ${CHIP_PROMPT_RULES}`;
         return true;
       }
       const reminderId = Date.now();
-      const reminders = JSON.parse(localStorage.getItem("nm_reminders") || "[]");
+      const reminders = getReminders();
       reminders.push({ id: reminderId, time, text, date, done: false });
-      localStorage.setItem("nm_reminders", JSON.stringify(reminders));
+      saveReminders(reminders);
       addEventDedup({
         id: reminderId + 1,
         title: text,
@@ -14312,7 +14357,7 @@ ${CHIP_PROMPT_RULES}`;
         addMsg("agent", t("habits.reminder.del.unclear", "\u041D\u0435 \u0437\u0440\u043E\u0437\u0443\u043C\u0456\u0432 \u044F\u043A\u0435 \u043D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F \u0432\u0438\u0434\u0430\u043B\u0438\u0442\u0438."));
         return true;
       }
-      const reminders = JSON.parse(localStorage.getItem("nm_reminders") || "[]");
+      const reminders = getReminders();
       const _textMatch = (rText) => {
         if (!qText) return true;
         if (rText.includes(qText) || qText.includes(rText)) return true;
@@ -14337,7 +14382,7 @@ ${CHIP_PROMPT_RULES}`;
       const removed = reminders[idx];
       const reminderId = removed.id;
       reminders.splice(idx, 1);
-      localStorage.setItem("nm_reminders", JSON.stringify(reminders));
+      saveReminders(reminders);
       try {
         const events = getEvents();
         const eventsRest = events.filter((e) => e.reminderId !== reminderId && e.id !== reminderId + 1);
@@ -15399,7 +15444,11 @@ ${JSON.stringify(contextData, null, 2)}` : "";
 
   // src/tabs/tasks.js
   function getTasks() {
-    return JSON.parse(localStorage.getItem("nm_tasks") || "[]");
+    try {
+      return JSON.parse(localStorage.getItem("nm_tasks") || "[]");
+    } catch {
+      return [];
+    }
   }
   function saveTasks(arr) {
     localStorage.setItem("nm_tasks", JSON.stringify(arr));
@@ -17266,16 +17315,16 @@ ${userText}
               const match = item.text.match(/^(\d{2}:\d{2})\s*[—-]\s*(.+)$/);
               if (match) {
                 const itemDay = new Date(item.ts).toISOString().slice(0, 10);
-                const reminders = JSON.parse(localStorage.getItem("nm_reminders") || "[]");
+                const reminders = getReminders();
                 const found = reminders.find((r) => r.time === match[1] && r.text === match[2].trim() && r.date === itemDay);
                 if (found) rid = found.id;
               }
             }
             if (rid) {
-              const reminders = JSON.parse(localStorage.getItem("nm_reminders") || "[]");
+              const reminders = getReminders();
               removedReminders = reminders.filter((r) => r.id === rid);
               const remRest = reminders.filter((r) => r.id !== rid);
-              if (remRest.length !== reminders.length) localStorage.setItem("nm_reminders", JSON.stringify(remRest));
+              if (remRest.length !== reminders.length) saveReminders(remRest);
               const events = getEvents();
               removedEvents = events.filter((e) => e.reminderId === rid || e.source === "reminder" && e.id === rid + 1);
               const evRest = events.filter((e) => !(e.reminderId === rid || e.source === "reminder" && e.id === rid + 1));
@@ -17293,8 +17342,8 @@ ${userText}
           saveInbox(items2);
           if (removedReminders && removedReminders.length > 0) {
             try {
-              const reminders = JSON.parse(localStorage.getItem("nm_reminders") || "[]");
-              localStorage.setItem("nm_reminders", JSON.stringify([...removedReminders, ...reminders]));
+              const reminders = getReminders();
+              saveReminders([...removedReminders, ...reminders]);
             } catch (e) {
             }
           }
@@ -17470,6 +17519,7 @@ ${aiContext}`;
       if (elapsedQ < 800) await new Promise((r) => setTimeout(r, 800 - elapsedQ));
       addInboxChatMsg("agent", reply || t("inbox.chat.misunderstood", "\u041D\u0435 \u0437\u0440\u043E\u0437\u0443\u043C\u0456\u0432, \u043F\u0435\u0440\u0435\u0444\u043E\u0440\u043C\u0443\u043B\u044E\u0439?"));
       inboxChatHistory.push({ role: "assistant", content: reply || "" });
+      if (inboxChatHistory.length > 24) inboxChatHistory = inboxChatHistory.slice(-24);
       aiLoading = false;
       btn.disabled = false;
       btn.innerHTML = SEND_SVG;
@@ -17501,6 +17551,7 @@ ${aiContext}`;
       historyContent = msg.content ? `${msg.content} [${summary}]` : `[${summary}]`;
     }
     inboxChatHistory.push({ role: "assistant", content: historyContent });
+    if (inboxChatHistory.length > 24) inboxChatHistory = inboxChatHistory.slice(-24);
     try {
       if (msg.tool_calls && msg.tool_calls.length > 0) {
         if (!fromChip) {
@@ -18570,6 +18621,17 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       prev[al] = curr;
     }
     return prev[al];
+  }
+  function getReminders() {
+    try {
+      return JSON.parse(localStorage.getItem("nm_reminders") || "[]");
+    } catch {
+      return [];
+    }
+  }
+  function saveReminders(arr) {
+    localStorage.setItem("nm_reminders", JSON.stringify(arr));
+    window.dispatchEvent(new CustomEvent("nm-data-changed", { detail: "reminder" }));
   }
   var NM_RECENT_ACTIONS_KEY, NM_RECENT_ACTIONS_MAX;
   var init_utils = __esm({
