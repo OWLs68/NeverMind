@@ -19,7 +19,7 @@ import { getEvents } from './calendar.js';
 // === EVENING TAB ===
 let currentMomentMood = 'positive';
 
-export function getMoments() { return JSON.parse(localStorage.getItem('nm_moments') || '[]'); }
+export function getMoments() { try { return JSON.parse(localStorage.getItem('nm_moments') || '[]'); } catch { return []; } }
 export function saveMoments(arr) { localStorage.setItem('nm_moments', JSON.stringify(arr)); window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'moments' })); }
 
 // Контекст моментів сьогодні для AI (принцип "один мозок")

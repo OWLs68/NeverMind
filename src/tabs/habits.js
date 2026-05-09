@@ -25,13 +25,13 @@ import { getEvents, saveEvents, addEventDedup, getRoutine, saveRoutine } from '.
 // === HABITS ===
 let editingHabitId = null;
 
-export function getHabits() { return JSON.parse(localStorage.getItem('nm_habits2') || '[]'); }
+export function getHabits() { try { return JSON.parse(localStorage.getItem('nm_habits2') || '[]'); } catch { return []; } }
 export function saveHabits(arr) { localStorage.setItem('nm_habits2', JSON.stringify(arr)); window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'habits' })); }
-export function getHabitLog() { return JSON.parse(localStorage.getItem('nm_habit_log2') || '{}'); }
+export function getHabitLog() { try { return JSON.parse(localStorage.getItem('nm_habit_log2') || '{}'); } catch { return {}; } }
 export function saveHabitLog(obj) { localStorage.setItem('nm_habit_log2', JSON.stringify(obj)); window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'habits' })); }
 
 // === QUIT HABITS — челендж "Кинути" ===
-function getQuitLog() { return JSON.parse(localStorage.getItem('nm_quit_log') || '{}'); }
+function getQuitLog() { try { return JSON.parse(localStorage.getItem('nm_quit_log') || '{}'); } catch { return {}; } }
 function saveQuitLog(obj) { localStorage.setItem('nm_quit_log', JSON.stringify(obj)); window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'habits' })); }
 
 // Повертає статус quit-звички: { streak, longestStreak, relapses, lastHeld, freedomDays }

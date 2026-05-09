@@ -18,7 +18,7 @@ import { closeNoteView } from './notes.js';
 let editingTaskId = null;
 let tempSteps = [];
 
-export function getTasks() { return JSON.parse(localStorage.getItem('nm_tasks') || '[]'); }
+export function getTasks() { try { return JSON.parse(localStorage.getItem('nm_tasks') || '[]'); } catch { return []; } }
 export function saveTasks(arr) { localStorage.setItem('nm_tasks', JSON.stringify(arr)); window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'tasks' })); }
 
 

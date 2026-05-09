@@ -54,7 +54,7 @@ function _migrateFoldersApostrophes() {
 }
 _migrateFoldersApostrophes();
 
-export function getNotes() { return JSON.parse(localStorage.getItem('nm_notes') || '[]'); }
+export function getNotes() { try { return JSON.parse(localStorage.getItem('nm_notes') || '[]'); } catch { return []; } }
 export function saveNotes(arr) { localStorage.setItem('nm_notes', JSON.stringify(arr)); window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'notes' })); }
 
 // Контекст нотаток для AI (принцип "один мозок")

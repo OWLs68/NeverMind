@@ -49,9 +49,9 @@ export {
 
 
 // Storage
-export function getFinance() { return JSON.parse(localStorage.getItem('nm_finance') || '[]'); }
+export function getFinance() { try { return JSON.parse(localStorage.getItem('nm_finance') || '[]'); } catch { return []; } }
 export function saveFinance(arr) { localStorage.setItem('nm_finance', JSON.stringify(arr)); window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'finance' })); }
-export function getFinBudget() { return JSON.parse(localStorage.getItem('nm_finance_budget') || '{"total":0,"categories":{}}'); }
+export function getFinBudget() { try { return JSON.parse(localStorage.getItem('nm_finance_budget') || '{"total":0,"categories":{}}'); } catch { return { total: 0, categories: {} }; } }
 export function saveFinBudget(obj) { localStorage.setItem('nm_finance_budget', JSON.stringify(obj)); window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'finance' })); }
 
 // Категорії — див. finance-cats.js. Всі exports re-exported зверху файлу.
