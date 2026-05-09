@@ -211,7 +211,13 @@ export function openNotesFolder(folderName) {
 }
 
 function closeNotesFolder() {
-  currentNotesFolder = null;
+  // 64CXo Фаза C: піднятись до parent. Якщо поточна — root, повертаємось до Level 1.
+  if (currentNotesFolder) {
+    const m = getFoldersMeta()[currentNotesFolder];
+    currentNotesFolder = (m && m.parent) ? m.parent : null;
+  } else {
+    currentNotesFolder = null;
+  }
   renderNotes();
 }
 
@@ -330,6 +336,27 @@ export function findOrCreateDailyFolder(parentName = t('notes.folder_diary', 'Щ
   return dailyName;
 }
 
+// 64CXo Фаза C: helpers для UI nested folders.
+// getDirectChildren — повертає назви дочірніх папок (parent === parentName)
+export function getDirectChildren(parentName) {
+  const meta = getFoldersMeta();
+  return Object.entries(meta).filter(([k, v]) => v.parent === parentName).map(([k]) => k);
+}
+// resolveRootFolder — для будь-якої папки знаходить root (рекурсивно через parent).
+// Якщо folder сам root (parent === null/undefined) — повертає folder.
+function resolveRootFolder(folderName) {
+  const meta = getFoldersMeta();
+  let cur = folderName;
+  let depth = 0;
+  while (depth < 5) {
+    const m = meta[cur];
+    if (!m || !m.parent) return cur;
+    cur = m.parent;
+    depth++;
+  }
+  return cur;
+}
+
 // Кольори/емодзі папок — спільний пісковий градієнт для всіх категорій,
 // emoji-крапка береться з канонічного довідника (src/data/notes-categories.js).
 // Якщо категорія не знайдена або без `dot` — дефолтний 📝.
@@ -376,10 +403,17 @@ export function renderNotes(searchQuery = '') {
     return;
   }
 
-  // Рівень 2 — записи в конкретній папці
+  // Рівень 2/3 — записи в конкретній папці (з можливими дочірніми підпапками)
   if (currentNotesFolder !== null) {
+    // 64CXo Фаза C: рахуємо всі записи (direct + nested через resolveRootFolder)
+    const folderNotes = notes.filter(n => (n.folder || t('notes.default_folder', 'Загальне')) === currentNotesFolder);
+    const children = getDirectChildren(currentNotesFolder);
+    // Лічильник у хедері: direct + всі notes у дочірніх папках
+    let totalCount = folderNotes.length;
+    for (const c of children) {
+      totalCount += notes.filter(n => (n.folder || t('notes.default_folder', 'Загальне')) === c).length;
+    }
     if (header) {
-      const fc = getFolderColor(currentNotesFolder);
       header.style.display = 'flex';
       header.innerHTML = `
         <button onclick="closeNotesFolder()" style="background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:6px;padding:0;font-size:15px;font-weight:700;color:#1e1040">
@@ -387,28 +421,68 @@ export function renderNotes(searchQuery = '') {
           ${t('common.back', 'Назад')}
         </button>
         <span style="display:flex;align-items:center;gap:8px;font-size:16px;font-weight:800;color:#1e1040">${getFolderIcon(currentNotesFolder)} ${escapeHtml(currentNotesFolder)}</span>
-        <span style="font-size:13px;font-weight:600;color:rgba(30,16,64,0.4)">${notes.filter(n=>(n.folder||t('notes.default_folder', 'Загальне'))===currentNotesFolder).length}</span>
+        <span style="font-size:13px;font-weight:600;color:rgba(30,16,64,0.4)">${totalCount}</span>
       `;
     }
-    const folderNotes = notes.filter(n => (n.folder || t('notes.default_folder', 'Загальне')) === currentNotesFolder);
-    content.innerHTML = folderNotes.length
-      ? '<div style="padding:0 14px 120px">' + renderNotesList(folderNotes) + '</div>'
-      : `<div style="text-align:center;padding:40px 32px;color:rgba(30,16,64,0.35);font-size:15px">${t('notes.folder.empty', 'Папка порожня')}</div>`;
+    let html = '<div style="padding:0 14px 120px">';
+    // Дочірні підпапки — картки зверху
+    if (children.length > 0) {
+      const allMeta = getFoldersMeta();
+      const childCards = children.map(child => {
+        const childCount = notes.filter(n => (n.folder || t('notes.default_folder', 'Загальне')) === child).length;
+        const safeChild = escapeJsArg(child);
+        const meta = allMeta[child] || {};
+        const colorDef = meta.colorKey && FOLDER_COLOR_PALETTE[meta.colorKey] ? FOLDER_COLOR_PALETTE[meta.colorKey] : null;
+        const fc = colorDef ? { bg: colorDef.bg, border: 'rgba(255,255,255,0.5)' } : getFolderColor(child);
+        return `<div class="folder-item-wrap" data-folder="${safeChild}" data-nested="1" style="position:relative;overflow:hidden;border-radius:18px;margin-bottom:var(--card-gap)">
+          <div onclick="openNotesFolder('${safeChild}')" style="cursor:pointer;border-radius:18px;padding:var(--card-pad-y) var(--card-pad-x);background:${fc.bg};border:1.5px solid ${fc.border};box-shadow:0 2px 12px rgba(0,0,0,0.05);display:flex;align-items:center;gap:14px;position:relative;z-index:1">
+            <div style="width:42px;height:42px;border-radius:12px;background:rgba(255,255,255,0.4);display:flex;align-items:center;justify-content:center;flex-shrink:0">${getFolderIcon(child)}</div>
+            <div style="flex:1;min-width:0;font-size:15px;font-weight:700;color:#1e1040;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(child)}</div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex-shrink:0;min-width:36px">
+              <div style="font-size:18px;font-weight:900;color:#1e1040;line-height:1">${childCount}</div>
+              <div style="font-size:9px;font-weight:600;color:rgba(30,16,64,0.4)">${t('notes.folder.entries', 'записів')}</div>
+            </div>
+          </div>
+        </div>`;
+      }).join('');
+      html += childCards;
+    }
+    // Direct notes у поточній папці (якщо є)
+    if (folderNotes.length > 0) {
+      html += renderNotesList(folderNotes);
+    } else if (children.length === 0) {
+      html += `<div style="text-align:center;padding:40px 32px;color:rgba(30,16,64,0.35);font-size:15px">${t('notes.folder.empty', 'Папка порожня')}</div>`;
+    }
+    html += '</div>';
+    content.innerHTML = html;
     _attachNotesSwipeDelete();
     return;
   }
 
-  // Рівень 1 — список папок
+  // Рівень 1 — список папок (тільки root, дочірні згорнуті у root-counter)
   if (header) header.style.display = 'none';
+  // 64CXo Фаза C: групуємо нотатки під ROOT (resolveRootFolder йде по parent chain).
+  // Папки з parent НЕ показуються на Level 1 — їх counts додаються до батька.
+  const allMeta = getFoldersMeta();
   const byFolder = {};
+  const previewMap = {};
   notes.forEach(n => {
-    const f = n.folder || t('notes.default_folder', 'Загальне');
-    if (!byFolder[f]) byFolder[f] = [];
-    byFolder[f].push(n);
+    const noteFolder = n.folder || t('notes.default_folder', 'Загальне');
+    const root = resolveRootFolder(noteFolder);
+    if (!byFolder[root]) byFolder[root] = [];
+    byFolder[root].push(n);
+    if (!previewMap[root]) previewMap[root] = n.text;
+  });
+  // Додатково: root папки з meta що мають дочірніх АЛЕ без direct нотаток
+  // (наприклад «Щоденник» порожній але має дейлі-підпапки) — показуємо їх теж.
+  Object.entries(allMeta).forEach(([k, v]) => {
+    const isRoot = !v.parent;
+    if (!isRoot) return;
+    if (byFolder[k]) return; // вже є з нотатками
+    const hasChild = Object.values(allMeta).some(m => m.parent === k);
+    if (hasChild) byFolder[k] = []; // показати з 0 direct, але дочірні рахуватимуться у Level 2
   });
 
-  // Сортуємо: закріплені зверху, потім за кількістю
-  const allMeta = getFoldersMeta();
   const folders = Object.entries(byFolder).sort((a, b) => {
     const pinA = allMeta[a[0]]?.pinned ? 1 : 0;
     const pinB = allMeta[b[0]]?.pinned ? 1 : 0;
@@ -526,16 +600,33 @@ function _attachNotesSwipeDelete() {
     const folder = wrap.dataset.folder;
     attachSwipeDelete(wrap, card, () => {
       const notes = getNotes();
-      const folderNotes = notes.filter(n => (n.folder || t('notes.default_folder', 'Загальне')) === folder);
-      const remaining = notes.filter(n => (n.folder || t('notes.default_folder', 'Загальне')) !== folder);
+      // 64CXo Фаза C: recursive delete. Якщо folder root з дочірніми — видаляємо
+      // всі notes де resolveRootFolder === folder + meta дочірніх + meta самого folder.
+      const meta = getFoldersMeta();
+      const isRoot = !meta[folder] || !meta[folder].parent;
+      const childNames = isRoot ? Object.entries(meta).filter(([k, v]) => v.parent === folder).map(([k]) => k) : [];
+      const toDelete = new Set([folder, ...childNames]);
+      const folderNotes = notes.filter(n => toDelete.has(n.folder || t('notes.default_folder', 'Загальне')));
+      const remaining = notes.filter(n => !toDelete.has(n.folder || t('notes.default_folder', 'Загальне')));
+      // Backup meta для undo
+      const removedMeta = {};
+      toDelete.forEach(name => { if (meta[name]) removedMeta[name] = meta[name]; });
       _animateSwipeRemoval(wrap, () => {
-        if (folderNotes.length > 0) addToTrash('folder', { folder }, folderNotes);
+        if (folderNotes.length > 0) addToTrash('folder', { folder, removedMeta }, folderNotes);
         saveNotes(remaining);
+        // Видаляємо meta для root + всіх дочірніх
+        const newMeta = {};
+        Object.entries(meta).forEach(([k, v]) => { if (!toDelete.has(k)) newMeta[k] = v; });
+        saveFoldersMeta(newMeta);
         renderNotes();
         if (folderNotes.length > 0) showUndoToast(t('notes.toast.folder_deleted', 'Папку "{folder}" видалено ({n})', { folder, n: folderNotes.length }), () => {
           const n = getNotes();
           folderNotes.forEach(note => n.push(note));
           saveNotes(n);
+          // Restore meta
+          const curMeta = getFoldersMeta();
+          Object.entries(removedMeta).forEach(([k, v]) => { curMeta[k] = v; });
+          saveFoldersMeta(curMeta);
           renderNotes();
         });
       });
