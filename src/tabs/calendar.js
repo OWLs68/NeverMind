@@ -2,7 +2,7 @@
 // calendar.js — Календар, події (nm_events), блок "Найближче"
 // ============================================================
 
-import { escapeHtml, t } from '../core/utils.js';
+import { escapeHtml, t, getReminders, saveReminders } from '../core/utils.js';
 import { getTasks, setupModalSwipeClose } from './tasks.js';
 import { addToTrash, showUndoToast } from '../core/trash.js';
 import { monthNominative, monthGenitive, monthShort } from '../data/months.js';

@@ -1219,7 +1219,18 @@ export function processUniversalAction(parsed, originalText, addMsg) {
       addMsg('agent', t('habits.step.no_steps', 'У задачі «{title}» немає кроків.', { title: task.title })); return true;
     }
     const q = (parsed.step_text || '').toLowerCase().trim();
-    const step = task.steps.find(s => !s.done && (s.text.toLowerCase().includes(q.slice(0, 8)) || q.includes(s.text.toLowerCase().slice(0, 8))));
+    // 64CXo regression-hunter: без guard порожній q → ''.includes('') = true → закривав
+    // перший-ліпший активний крок. Тепер вимагаємо мінімум 2 символи для match.
+    if (q.length < 2) { addMsg('agent', t('habits.step.empty_text', 'Уточни який саме крок закрити.')); return true; }
+    const qSlice = q.slice(0, 8);
+    const step = task.steps.find(s => {
+      if (s.done) return false;
+      const sLow = s.text.toLowerCase();
+      // Захист від false-match на занадто коротких словах: вимагаємо щоб slice
+      // мав мінімум 3 символи І щоб збіг був не у 1-1 нерелевантному слові.
+      return (sLow.length >= 3 && sLow.includes(qSlice) && qSlice.length >= 3) ||
+             (q.length >= 3 && q.includes(sLow.slice(0, Math.min(8, sLow.length))) && sLow.length >= 3);
+    });
     if (!step) { addMsg('agent', t('habits.step.not_found', 'Не знайшов активний крок «{step}» у задачі «{title}».', { step: parsed.step_text, title: task.title })); return true; }
     step.done = true;
     if (task.steps.every(s => s.done)) {

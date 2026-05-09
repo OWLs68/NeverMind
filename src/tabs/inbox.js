@@ -537,6 +537,7 @@ ${aiContext}`;
     if (elapsedQ < 800) await new Promise(r => setTimeout(r, 800 - elapsedQ));
     addInboxChatMsg('agent', reply || t('inbox.chat.misunderstood', 'Не зрозумів, переформулюй?'));
     inboxChatHistory.push({ role: 'assistant', content: reply || '' });
+    if (inboxChatHistory.length > 24) inboxChatHistory = inboxChatHistory.slice(-24);
     aiLoading = false;
     btn.disabled = false;
     btn.innerHTML = SEND_SVG;
@@ -576,6 +577,7 @@ ${aiContext}`;
     historyContent = msg.content ? `${msg.content} [${summary}]` : `[${summary}]`;
   }
   inboxChatHistory.push({ role: 'assistant', content: historyContent });
+  if (inboxChatHistory.length > 24) inboxChatHistory = inboxChatHistory.slice(-24);
 
   try {
     if (msg.tool_calls && msg.tool_calls.length > 0) {

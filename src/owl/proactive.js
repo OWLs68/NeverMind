@@ -1,6 +1,6 @@
 import { getAIContext, getOWLPersonality, restoreChatUI, loadChatMsgs, _isNetworkError, getRecentChatsAcrossTabs } from '../ai/core.js';
 import { formatFactsForBoard } from '../ai/memory.js';
-import { getRecentActions } from '../core/utils.js';
+import { getRecentActions, getReminders, saveReminders } from '../core/utils.js';
 import { currentTab } from '../core/nav.js';
 import { OWL_TAB_BOARD_MIN_INTERVAL, _owlTabApplyState, _owlTabStates, getOwlTabTsKey, getTabBoardMsgs, renderTabBoard, saveTabBoardMsg } from './board.js';
 import { getDayPhase, getSchedule, getOwlBoardMessages, saveOwlBoardMessages, setOwlCd, owlCdExpired, renderOwlBoard, shouldOwlSpeak, tryOwlBoardUpdate } from './inbox-board.js';
