@@ -160,7 +160,7 @@
 
 - **План**: 3 сесії (Фаза 0 рефакторинг + Фази 1-8 функціонал) → повний технічний план у [`docs/EVENING_2.0_PLAN.md`](docs/EVENING_2.0_PLAN.md)
 - **Файли**: `src/tabs/evening.js` (1055 рядків → розділяється на 4 модулі), `src/ui/unread-badge.js` (новий, винесено з inbox.js), `src/owl/followups.js` (новий тригер `evening-prompt`), `src/owl/chips.js` (розширений на чат Вечора)
-- **Пілот універсального чат-двигуна**: Вечір першим отримує tool calling + чіпи у діалозі + сова-першою. Після стабілізації — міграція 7 інших чатів (Tasks/Habits/Notes/Finance/Health/Projects/Я) у рамках 4.9 + 4.10 з ROADMAP.
+- **Пілот універсального чат-двигуна**: ✅ ЗАВЕРШЕНО PJi7l + 64CXo (08-09.05.2026). 7 з 8 чатів через `BASE_CHAT_RULES` + `INBOX_TOOLS` + `dispatchChatToolCalls`. Залишковий борг: Inbox і Evening мають свої mega-switch handlers (`_toolCallToAction` + `dispatchEveningTool`) замість єдиного dispatcher — окрема сесія рефакторингу.
 
 ---
 

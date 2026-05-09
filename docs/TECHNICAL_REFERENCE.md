@@ -73,7 +73,7 @@
 
 **INBOX_TOOLS** — 31 function definitions у `src/ai/prompts.js` (було у `core.js` до рефакторингу 17.04 14zLe). Описують всі можливі дії з параметрами. AI ОБОВ'ЯЗКОВО вибирає одну чи кілька функцій замість тексту JSON. Промпт скорочений з ~200 до ~30 рядків — він тільки класифікує (task vs event vs project), самі формати у tool definitions.
 
-**Backward compat:** `callAI()`, `callAIWithHistory()`, `callOwlChat()` працюють БЕЗ tools для tab chat bars і proactive.js (вони ще на текстовому форматі).
+**Backward compat:** `callAI()`, `callAIWithHistory()`, `callOwlChat()` працюють БЕЗ tools для legacy шляхів (proactive.js, brain-pulse, board generators). 7 з 8 tab-чатів **переведено на tool calling** у LfA6w + PJi7l 08.05.2026 — використовують `callAIWithTools` з повним `INBOX_TOOLS` через `BASE_CHAT_RULES`. Notes-чат частково на text-JSON dialect (search_notes / open_folder / open_note) — окремий рефакторинг у плані.
 
 ### AI контекст (getAIContext повертає)
 1. Дата/час/день тижня (укр)
