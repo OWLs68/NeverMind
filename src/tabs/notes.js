@@ -1059,6 +1059,8 @@ export function addNotesChatMsg(role, text, _noSave = false, chips = null) {
   requestAnimationFrame(() => { el.scrollTop = el.scrollHeight; });
   if (role !== 'agent') notesBarHistory.push({ role: 'user', content: text });
   else notesBarHistory.push({ role: 'assistant', content: text });
+  // 64CXo: cap 20 — memory leak fix.
+  if (notesBarHistory.length > 20) notesBarHistory = notesBarHistory.slice(-20);
   if (!_noSave) saveChatMsg('notes', role, text, chips);
 }
 

@@ -644,6 +644,8 @@ export function addTaskBarMsg(role, text, _noSave = false, chips = null) {
   requestAnimationFrame(() => { el.scrollTop = el.scrollHeight; });
   if (role !== 'agent') taskBarHistory.push({ role: 'user', content: text });
   else taskBarHistory.push({ role: 'assistant', content: text });
+  // 64CXo: cap 20 — memory leak fix.
+  if (taskBarHistory.length > 20) taskBarHistory.splice(0, taskBarHistory.length - 20);
   if (!_noSave) saveChatMsg('tasks', role, text, chips);
 }
 

@@ -59,6 +59,8 @@ export function addFinanceChatMsg(role, text, _noSave = false, chips = null) {
   requestAnimationFrame(() => { el.scrollTop = el.scrollHeight; });
   if (role !== 'agent') financeBarHistory.push({ role: 'user', content: text });
   else financeBarHistory.push({ role: 'assistant', content: text });
+  // 64CXo: cap 20 — memory leak fix.
+  if (financeBarHistory.length > 20) financeBarHistory = financeBarHistory.slice(-20);
   if (!_noSave) saveChatMsg('finance', role, text, chips);
 }
 

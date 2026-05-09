@@ -1755,6 +1755,8 @@ export function addHealthChatMsg(role, text, _noSave = false, chips = null) {
   requestAnimationFrame(() => { el.scrollTop = el.scrollHeight; });
   if (role !== 'agent') healthBarHistory.push({ role: 'user', content: text });
   else healthBarHistory.push({ role: 'assistant', content: text });
+  // 64CXo: cap 20 — memory leak fix.
+  if (healthBarHistory.length > 20) healthBarHistory = healthBarHistory.slice(-20);
   if (!_noSave) saveChatMsg('health', role, text, chips);
 }
 

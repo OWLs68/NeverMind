@@ -152,6 +152,8 @@ export function addEveningBarMsg(role, text, _noSave = false, chips = null) {
   requestAnimationFrame(() => { el.scrollTop = el.scrollHeight; });
   if (role !== 'agent') eveningBarHistory.push({ role: 'user', content: text });
   else eveningBarHistory.push({ role: 'assistant', content: text });
+  // 64CXo: cap 20 — без цього масив ріс безкінечно між сесіями (memory leak).
+  if (eveningBarHistory.length > 20) eveningBarHistory = eveningBarHistory.slice(-20);
   if (!_noSave) saveChatMsg('evening', role, text, chips);
 
   // Червона крапка на кнопці Надіслати — якщо агент написав а чат закритий

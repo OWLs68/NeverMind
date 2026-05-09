@@ -602,6 +602,8 @@ export function addProjectsChatMsg(role, text, _noSave = false, chips = null) {
   requestAnimationFrame(() => { el.scrollTop = el.scrollHeight; });
   if (role !== 'agent') projectsBarHistory.push({ role: 'user', content: text });
   else projectsBarHistory.push({ role: 'assistant', content: text });
+  // 64CXo: cap 20 — memory leak fix.
+  if (projectsBarHistory.length > 20) projectsBarHistory = projectsBarHistory.slice(-20);
   if (!_noSave) saveChatMsg('projects', role, text, chips);
 }
 
