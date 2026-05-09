@@ -379,6 +379,7 @@ export const INBOX_SYSTEM_PROMPT = `Ти — персональний асист
 
 ${REMINDER_RULES}
 ${ROUTINE_RULES}
+${VERIFY_LOOP_RULE}
 
 АЛГОРИТМ ВИБОРУ ДІЇ (Обирай ОДНУ гілку зверху вниз. Опиши свій вибір у _reasoning_log перед викликом tool):
 

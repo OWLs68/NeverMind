@@ -40,19 +40,31 @@
 
 ---
 
-## 2. AI tools (INBOX_TOOLS / UI_TOOLS / BRAIN_TOOLS)
+## 2. AI tools (CHAT_TOOLS / UI_TOOLS / BRAIN_TOOLS)
 
-**Кількість:** 60 tools (станом на EhxzJ 30.04: 50 INBOX_TOOLS у `src/ai/prompts.js` + 9 UI_TOOLS у `src/ai/ui-tools.js` + 1 BRAIN_TOOLS `post_chat_message`). Усі мають обовʼязкове перше поле `_reasoning_log:string` (V3 Фаза 1).
+**Кількість:** 60+ tools (50+ у `INBOX_TOOLS` у `src/ai/prompts.js` + 9 UI_TOOLS у `src/ai/ui-tools.js` + 1 BRAIN_TOOLS `post_chat_message`). Усі мають обовʼязкове перше поле `_reasoning_log:string` (V3 Фаза 1).
+
+> **Назва `INBOX_TOOLS` історична** — список tools є **спільним для всіх 8 чатів** (Inbox / Tasks / Notes / Me / Evening / Health / Finance / Projects). Перейменувати на `CHAT_TOOLS` — окрема задача (зачіпає 8+ файлів).
+
+### 🚨 ПРИНЦИП «8 чатів = ОДИН МОЗОК» (PJi7l + 64CXo)
+
+**Зміна tool/handler автоматично поширюється на ВСI 8 чатів.** Якщо «у Tasks-чаті працює, у Notes — ні» — це баг архітектури, не feature.
+
+**Як це гарантовано на коді:**
+- `src/ai/prompts.js` `BASE_CHAT_RULES` — спільний фундамент, інжектиться у 7 з 8 tab-чатів (Inbox + Evening + Projects + Finance + Health + Tasks + Notes + Me)
+- `src/ai/tool-dispatcher.js` `dispatchChatToolCalls` — єдиний роутер tool_calls для всіх чатів. Жоден `tabs/X.js` НЕ повинен мати локального switch'а на tool name'и (виняток: Inbox-специфіка `clarify`/`restore_deleted`/`create_project` interview).
+- `src/tabs/habits.js` `processUniversalAction` — універсальний handler CRUD-actions, викликається з dispatcher.
 
 ### При додаванні / зміні AI tool
 
-1. **Реалізація** у `src/ai/prompts.js` (INBOX_TOOLS) або `src/ai/ui-tools.js` (UI_TOOLS)
-2. **Handler** у відповідному місці:
-   - `inbox.js _toolCallToAction` — для INBOX_TOOLS
-   - `habits.js processUniversalAction` — для універсальних
-   - `handleUITool` — для UI-actions
-3. **Оновити таблицю** у `docs/AI_TOOLS.md` (категорію + Історію змін у кінці)
-4. **Smoke test через AI чат** — реальна репліка юзера, перевірити що AI створив точно те що очікувалось (особливо для bulk-операцій — див. RULES_WORKFLOW §3)
+1. **Tool definition** у `src/ai/prompts.js` (`INBOX_TOOLS`) або `src/ai/ui-tools.js` (`UI_TOOLS`).
+2. **Routing** у `src/ai/tool-dispatcher.js`:
+   - `_toolCallToUniversalAction` — мапа `tool name → action object` (для CRUD).
+   - АБО `_handleHealthTool` / `_handleMemoryOrFinCatTool` / `_handleProjectTool` — direct handlers для специфічних доменів.
+3. **Handler** дії у `src/tabs/habits.js processUniversalAction` (для CRUD) або у direct dispatcher (для Health/Finance-cat/Project specific).
+4. **❌ НЕ додавай локальні handlers у `tabs/X.js`** — це порушує принцип «один мозок». Якщо абсолютно треба специфіку — додай у dispatcher з `tab` параметром.
+5. **Оновити таблицю** у `docs/AI_TOOLS.md` (категорію + Історію змін у кінці).
+6. **Smoke test у 2 чатах мінімум** — наприклад Inbox + Tasks-чат. Те саме повідомлення → той самий результат? Якщо ні — diagnose асиметрію.
 
 **Хук `ai-tools-sync.sh`** автоматично нагадує оновити `docs/AI_TOOLS.md` коли я редагую `prompts.js`/`ui-tools.js`.
 

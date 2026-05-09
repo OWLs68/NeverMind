@@ -29,6 +29,22 @@ if (!process.env.SKIP_IMPORTS_CHECK) {
   }
 }
 
+// === Pre-check: chat uniformity (64CXo 09.05.2026) ===
+// Гарантує що 8 чатів NeverMind поводяться однаково (CLAUDE.md «8 чатів = ОДИН мозок»).
+// Ламає білд якщо з'являється нова локальна асиметрія (новий case 'X' у tabs/X.js
+// поза dispatcher; новий sendXBarMessage без shouldClarify guard).
+// Skip-варіант: SKIP_CHAT_CHECK=1 node build.js
+if (!process.env.SKIP_CHAT_CHECK) {
+  const { execSync } = require('child_process');
+  try {
+    execSync('node scripts/check-chat-uniformity.js', { stdio: 'inherit' });
+  } catch (e) {
+    console.error('\n✗ build перерваний: 8 чатів не однакові.');
+    console.error('  Виправ помилки вище АБО запусти SKIP_CHAT_CHECK=1 node build.js (тільки для екстрених випадків).');
+    process.exit(1);
+  }
+}
+
 require('esbuild').buildSync({
   entryPoints: ['src/app.js'],
   bundle: true,
