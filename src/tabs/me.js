@@ -759,7 +759,7 @@ export function addMeChatMsg(role, text, _noSave = false, id = '', chips = null)
   const isAgent = role === 'agent';
   const div = document.createElement('div');
   div.style.cssText = `display:flex;${isAgent ? '' : 'justify-content:flex-end'}`;
-  div.innerHTML = `<div ${id ? `id="${id}"` : ''} class="msg-bubble ${isAgent ? 'msg-bubble--agent' : 'msg-bubble--user'}">${escapeHtml(text)}</div>`;
+  div.innerHTML = `<div ${id ? `id="${id}"` : ''} class="msg-bubble ${isAgent ? 'msg-bubble--agent' : 'msg-bubble--user'}">${escapeHtml(text).replace(/\n/g,'<br>')}</div>`;
   el.appendChild(div);
   if (isAgent && Array.isArray(chips) && chips.length > 0) {
     const chipsRow = document.createElement('div');

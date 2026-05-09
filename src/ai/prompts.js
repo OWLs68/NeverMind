@@ -46,7 +46,7 @@ function _detectOwlState() {
     // === 2. concern — 3+ дні пропусків звичок поспіль ===
     try {
       const habits = JSON.parse(localStorage.getItem('nm_habits2') || '[]');
-      const log = JSON.parse(localStorage.getItem('nm_habit_log') || '{}');
+      const log = JSON.parse(localStorage.getItem('nm_habit_log2') || '{}');
       const buildHabits = habits.filter(h => h.type !== 'quit');
       if (buildHabits.length > 0) {
         let missedDays = 0;
@@ -68,7 +68,7 @@ function _detectOwlState() {
     // === 3. streak — стрик ≥7 днів поспіль для будь-якої звички ===
     try {
       const habits = JSON.parse(localStorage.getItem('nm_habits2') || '[]');
-      const log = JSON.parse(localStorage.getItem('nm_habit_log') || '{}');
+      const log = JSON.parse(localStorage.getItem('nm_habit_log2') || '{}');
       for (const h of habits.filter(x => x.type !== 'quit')) {
         let streak = 0;
         for (let i = 0; i < 30; i++) {
@@ -377,9 +377,7 @@ export const INBOX_SYSTEM_PROMPT = `Ти — персональний асист
 
 ГРАМАТИКА: Якщо бачиш помилку або опечатку — виправляй в тексті без питань.
 
-${REMINDER_RULES}
-${ROUTINE_RULES}
-${VERIFY_LOOP_RULE}
+${BASE_CHAT_RULES}
 
 АЛГОРИТМ ВИБОРУ ДІЇ (Обирай ОДНУ гілку зверху вниз. Опиши свій вибір у _reasoning_log перед викликом tool):
 

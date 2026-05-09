@@ -1099,7 +1099,13 @@ export function processUniversalAction(parsed, originalText, addMsg) {
     saveTasks(remaining);
     if (currentTab === 'tasks') renderTasks();
     addMsg('agent', t('habits.task.deleted', '🗑️ Задачу "{title}" видалено', { title: target.title }));
-    showUndoToast();
+    // 64CXo: showUndoToast() без msg/restoreFn → toast «undefined», кнопка «Відновити» нічого не робила.
+    showUndoToast(t('habits.toast.task_deleted', 'Задачу "{title}" видалено', { title: target.title }), () => {
+      const cur = getTasks();
+      cur.push(target);
+      saveTasks(cur);
+      if (currentTab === 'tasks') renderTasks();
+    });
     return true;
   }
 
@@ -1114,7 +1120,13 @@ export function processUniversalAction(parsed, originalText, addMsg) {
     saveHabits(remaining);
     renderProdHabits(); renderHabits();
     addMsg('agent', t('habits.habit.deleted', '🗑️ Звичку "{name}" видалено', { name: target.name }));
-    showUndoToast();
+    // 64CXo: showUndoToast() без аргументів → toast «undefined».
+    showUndoToast(t('habits.toast.habit_deleted', 'Звичку "{name}" видалено', { name: target.name }), () => {
+      const cur = getHabits();
+      cur.push(target);
+      saveHabits(cur);
+      renderProdHabits(); renderHabits();
+    });
     return true;
   }
 
@@ -1370,11 +1382,18 @@ export function processUniversalAction(parsed, originalText, addMsg) {
     const idx = events.findIndex(e => e.id === parsed.event_id);
     if (idx === -1) { addMsg('agent', t('habits.err.event_not_found', 'Не знайшов подію.')); return true; }
     const title = events[idx].title;
-    addToTrash('event', events[idx]);
+    const removed = events[idx];
+    addToTrash('event', removed);
     events.splice(idx, 1);
     saveEvents(events);
     addMsg('agent', t('habits.event.deleted', '🗑 Подію "{title}" видалено', { title }));
-    showUndoToast('event', title);
+    // 64CXo: showUndoToast('event', title) — другий arg був рядок назви, не функція restore.
+    // При кліку «Відновити» — TypeError. Виправлено на правильну сигнатуру.
+    showUndoToast(t('habits.toast.event_deleted', 'Подію "{title}" видалено', { title }), () => {
+      const cur = getEvents();
+      cur.push(removed);
+      saveEvents(cur);
+    });
     return true;
   }
 

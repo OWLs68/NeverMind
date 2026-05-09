@@ -355,6 +355,11 @@ export function renderChips(containerEl, chips, tab, options = {}) {
   containerEl._chipClickHandler = (e) => {
     const chipEl = e.target.closest('.owl-chip');
     if (!chipEl) return;
+    // 64CXo: lock проти double-tap. Між opacity:0 і remove() — 200мс під час
+    // яких швидкий другий тап спрацював би → duplicate completion / save.
+    if (chipEl._fired) return;
+    chipEl._fired = true;
+    chipEl.style.pointerEvents = 'none';
 
     // Кнопка "Поговорити"
     if (chipEl.classList.contains('owl-chip-speak')) {

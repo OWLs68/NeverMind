@@ -135,7 +135,7 @@ export function addEveningBarMsg(role, text, _noSave = false, chips = null) {
 
   const div = document.createElement('div');
   div.style.cssText = `display:flex;${isAgent ? '' : 'justify-content:flex-end'}`;
-  div.innerHTML = `<div class="msg-bubble ${isAgent ? 'msg-bubble--agent' : 'msg-bubble--user'}">${escapeHtml(text)}</div>`;
+  div.innerHTML = `<div class="msg-bubble ${isAgent ? 'msg-bubble--agent' : 'msg-bubble--user'}">${escapeHtml(text).replace(/\n/g,'<br>')}</div>`;
   el.appendChild(div);
 
   // Чіпи під бульбою сови (Фаза 4 Вечора 2.0) — рендер через спільний chips.js.

@@ -49,7 +49,7 @@ function _buildProfileSource() {
 
   try {
     const habits = JSON.parse(localStorage.getItem('nm_habits2') || '[]');
-    const log = JSON.parse(localStorage.getItem('nm_habit_log') || '{}');
+    const log = JSON.parse(localStorage.getItem('nm_habit_log2') || '{}');
     const habitStats = habits.filter(h => h.type !== 'quit').map(h => {
       let done = 0, scheduled = 0;
       for (let i = 0; i < 30; i++) {
