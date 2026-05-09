@@ -8904,7 +8904,7 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
     const isAgent = role === "agent";
     const div = document.createElement("div");
     div.style.cssText = `display:flex;${isAgent ? "" : "justify-content:flex-end"}`;
-    div.innerHTML = `<div ${id ? `id="${id}"` : ""} class="msg-bubble ${isAgent ? "msg-bubble--agent" : "msg-bubble--user"}">${escapeHtml(text)}</div>`;
+    div.innerHTML = `<div ${id ? `id="${id}"` : ""} class="msg-bubble ${isAgent ? "msg-bubble--agent" : "msg-bubble--user"}">${escapeHtml(text).replace(/\n/g, "<br>")}</div>`;
     el.appendChild(div);
     if (isAgent && Array.isArray(chips) && chips.length > 0) {
       const chipsRow = document.createElement("div");
@@ -10157,7 +10157,7 @@ ${recent}`;
     if (isAgent) el.querySelectorAll(".chat-chips-row").forEach((n) => n.remove());
     const div = document.createElement("div");
     div.style.cssText = `display:flex;${isAgent ? "" : "justify-content:flex-end"}`;
-    div.innerHTML = `<div style="max-width:82%;background:${isAgent ? "rgba(255,255,255,0.9)" : "#4f46e5"};color:${isAgent ? "#1e1040" : "white"};border-radius:${isAgent ? "4px 14px 14px 14px" : "14px 4px 14px 14px"};padding:12px 16px;font-size:18px;line-height:1.7;font-weight:${isAgent ? "400" : "500"}">${escapeHtml(text)}</div>`;
+    div.innerHTML = `<div style="max-width:82%;background:${isAgent ? "rgba(255,255,255,0.9)" : "#4f46e5"};color:${isAgent ? "#1e1040" : "white"};border-radius:${isAgent ? "4px 14px 14px 14px" : "14px 4px 14px 14px"};padding:12px 16px;font-size:18px;line-height:1.7;font-weight:${isAgent ? "400" : "500"}">${escapeHtml(text).replace(/\n/g, "<br>")}</div>`;
     el.appendChild(div);
     if (isAgent && Array.isArray(chips) && chips.length > 0) {
       const chipsRow = document.createElement("div");
@@ -10412,7 +10412,7 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
     const isAgent = role === "agent";
     const div = document.createElement("div");
     div.style.cssText = `display:flex;${isAgent ? "" : "justify-content:flex-end"}`;
-    div.innerHTML = `<div class="msg-bubble ${isAgent ? "msg-bubble--agent" : "msg-bubble--user"}">${escapeHtml(text)}</div>`;
+    div.innerHTML = `<div class="msg-bubble ${isAgent ? "msg-bubble--agent" : "msg-bubble--user"}">${escapeHtml(text).replace(/\n/g, "<br>")}</div>`;
     el.appendChild(div);
     if (isAgent && Array.isArray(chips) && chips.length > 0) {
       const chipsRow = document.createElement("div");
@@ -11446,7 +11446,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
     if (isAgent) el.querySelectorAll(".chat-chips-row").forEach((n) => n.remove());
     const div = document.createElement("div");
     div.style.cssText = `display:flex;${isAgent ? "" : "justify-content:flex-end"}`;
-    div.innerHTML = `<div class="msg-bubble ${isAgent ? "msg-bubble--agent" : "msg-bubble--user"}">${escapeHtml(text)}</div>`;
+    div.innerHTML = `<div class="msg-bubble ${isAgent ? "msg-bubble--agent" : "msg-bubble--user"}">${escapeHtml(text).replace(/\n/g, "<br>")}</div>`;
     el.appendChild(div);
     if (isAgent && Array.isArray(chips) && chips.length > 0) {
       const chipsRow = document.createElement("div");
@@ -11756,6 +11756,9 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
     containerEl._chipClickHandler = (e) => {
       const chipEl = e.target.closest(".owl-chip");
       if (!chipEl) return;
+      if (chipEl._fired) return;
+      chipEl._fired = true;
+      chipEl.style.pointerEvents = "none";
       if (chipEl.classList.contains("owl-chip-speak")) {
         openChatBar(tab === "me" ? "me" : tab);
         return;
@@ -12075,7 +12078,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
       }
       try {
         const habits = JSON.parse(localStorage.getItem("nm_habits2") || "[]");
-        const log = JSON.parse(localStorage.getItem("nm_habit_log") || "{}");
+        const log = JSON.parse(localStorage.getItem("nm_habit_log2") || "{}");
         const buildHabits = habits.filter((h) => h.type !== "quit");
         if (buildHabits.length > 0) {
           let missedDays = 0;
@@ -12095,7 +12098,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
       }
       try {
         const habits = JSON.parse(localStorage.getItem("nm_habits2") || "[]");
-        const log = JSON.parse(localStorage.getItem("nm_habit_log") || "{}");
+        const log = JSON.parse(localStorage.getItem("nm_habit_log2") || "{}");
         for (const h of habits.filter((x) => x.type !== "quit")) {
           let streak = 0;
           for (let i = 0; i < 30; i++) {
@@ -12733,9 +12736,7 @@ UI TOOLS (\u043D\u0430\u0432\u0456\u0433\u0430\u0446\u0456\u044F/\u0444\u0456\u0
 
 \u0413\u0420\u0410\u041C\u0410\u0422\u0418\u041A\u0410: \u042F\u043A\u0449\u043E \u0431\u0430\u0447\u0438\u0448 \u043F\u043E\u043C\u0438\u043B\u043A\u0443 \u0430\u0431\u043E \u043E\u043F\u0435\u0447\u0430\u0442\u043A\u0443 \u2014 \u0432\u0438\u043F\u0440\u0430\u0432\u043B\u044F\u0439 \u0432 \u0442\u0435\u043A\u0441\u0442\u0456 \u0431\u0435\u0437 \u043F\u0438\u0442\u0430\u043D\u044C.
 
-${REMINDER_RULES}
-${ROUTINE_RULES}
-${VERIFY_LOOP_RULE}
+${BASE_CHAT_RULES}
 
 \u0410\u041B\u0413\u041E\u0420\u0418\u0422\u041C \u0412\u0418\u0411\u041E\u0420\u0423 \u0414\u0406\u0407 (\u041E\u0431\u0438\u0440\u0430\u0439 \u041E\u0414\u041D\u0423 \u0433\u0456\u043B\u043A\u0443 \u0437\u0432\u0435\u0440\u0445\u0443 \u0432\u043D\u0438\u0437. \u041E\u043F\u0438\u0448\u0438 \u0441\u0432\u0456\u0439 \u0432\u0438\u0431\u0456\u0440 \u0443 _reasoning_log \u043F\u0435\u0440\u0435\u0434 \u0432\u0438\u043A\u043B\u0438\u043A\u043E\u043C tool):
 
@@ -13812,7 +13813,12 @@ ${CHIP_PROMPT_RULES}`;
       saveTasks(remaining);
       if (currentTab === "tasks") renderTasks();
       addMsg("agent", t("habits.task.deleted", '\u{1F5D1}\uFE0F \u0417\u0430\u0434\u0430\u0447\u0443 "{title}" \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E', { title: target.title }));
-      showUndoToast();
+      showUndoToast(t("habits.toast.task_deleted", '\u0417\u0430\u0434\u0430\u0447\u0443 "{title}" \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E', { title: target.title }), () => {
+        const cur = getTasks();
+        cur.push(target);
+        saveTasks(cur);
+        if (currentTab === "tasks") renderTasks();
+      });
       return true;
     }
     if (action === "delete_habit") {
@@ -13830,7 +13836,13 @@ ${CHIP_PROMPT_RULES}`;
       renderProdHabits();
       renderHabits();
       addMsg("agent", t("habits.habit.deleted", '\u{1F5D1}\uFE0F \u0417\u0432\u0438\u0447\u043A\u0443 "{name}" \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E', { name: target.name }));
-      showUndoToast();
+      showUndoToast(t("habits.toast.habit_deleted", '\u0417\u0432\u0438\u0447\u043A\u0443 "{name}" \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E', { name: target.name }), () => {
+        const cur = getHabits();
+        cur.push(target);
+        saveHabits(cur);
+        renderProdHabits();
+        renderHabits();
+      });
       return true;
     }
     if (action === "reopen_task") {
@@ -14092,11 +14104,16 @@ ${CHIP_PROMPT_RULES}`;
         return true;
       }
       const title = events[idx].title;
-      addToTrash("event", events[idx]);
+      const removed = events[idx];
+      addToTrash("event", removed);
       events.splice(idx, 1);
       saveEvents(events);
       addMsg("agent", t("habits.event.deleted", '\u{1F5D1} \u041F\u043E\u0434\u0456\u044E "{title}" \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E', { title }));
-      showUndoToast("event", title);
+      showUndoToast(t("habits.toast.event_deleted", '\u041F\u043E\u0434\u0456\u044E "{title}" \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E', { title }), () => {
+        const cur = getEvents();
+        cur.push(removed);
+        saveEvents(cur);
+      });
       return true;
     }
     if (action === "edit_note") {
@@ -15690,7 +15707,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
     if (isAgent) el.querySelectorAll(".chat-chips-row").forEach((n) => n.remove());
     const div = document.createElement("div");
     div.style.cssText = `display:flex;${isAgent ? "" : "justify-content:flex-end"}`;
-    div.innerHTML = `<div ${id ? `id="${id}"` : ""} style="max-width:82%;background:${isAgent ? "rgba(255,255,255,0.9)" : "#ea580c"};color:${isAgent ? "#1e1040" : "white"};border-radius:${isAgent ? "4px 14px 14px 14px" : "14px 4px 14px 14px"};padding:12px 16px;font-size:18px;line-height:1.7;font-weight:${isAgent ? "400" : "500"}">${escapeHtml(text)}</div>`;
+    div.innerHTML = `<div ${id ? `id="${id}"` : ""} style="max-width:82%;background:${isAgent ? "rgba(255,255,255,0.9)" : "#ea580c"};color:${isAgent ? "#1e1040" : "white"};border-radius:${isAgent ? "4px 14px 14px 14px" : "14px 4px 14px 14px"};padding:12px 16px;font-size:18px;line-height:1.7;font-weight:${isAgent ? "400" : "500"}">${escapeHtml(text).replace(/\n/g, "<br>")}</div>`;
     el.appendChild(div);
     if (isAgent && Array.isArray(chips) && chips.length > 0) {
       const chipsRow = document.createElement("div");
@@ -15880,7 +15897,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
     const isAgent = role === "agent";
     const div = document.createElement("div");
     div.style.cssText = `display:flex;${isAgent ? "" : "justify-content:flex-end"}`;
-    div.innerHTML = `<div class="msg-bubble ${isAgent ? "msg-bubble--agent" : "msg-bubble--user"}">${escapeHtml(text)}</div>`;
+    div.innerHTML = `<div class="msg-bubble ${isAgent ? "msg-bubble--agent" : "msg-bubble--user"}">${escapeHtml(text).replace(/\n/g, "<br>")}</div>`;
     el.appendChild(div);
     if (isAgent && Array.isArray(chips) && chips.length > 0) {
       const chipsRow = document.createElement("div");
@@ -17071,7 +17088,7 @@ ${userText}
     if (isAgent) {
       div.innerHTML = `<div style="background:rgba(255,255,255,0.12);color:white;border-radius:4px 14px 14px 14px;padding:8px 12px;font-size:15px;font-weight:500;line-height:1.5;max-width:85%">${escapeHtml(text).replace(/\n/g, "<br>")}</div>`;
     } else {
-      div.innerHTML = `<div style="background:rgba(255,255,255,0.88);color:#1e1040;border-radius:14px 4px 14px 14px;padding:8px 12px;font-size:15px;font-weight:500;line-height:1.5;max-width:85%">${escapeHtml(text)}</div>`;
+      div.innerHTML = `<div style="background:rgba(255,255,255,0.88);color:#1e1040;border-radius:14px 4px 14px 14px;padding:8px 12px;font-size:15px;font-weight:500;line-height:1.5;max-width:85%">${escapeHtml(text).replace(/\n/g, "<br>")}</div>`;
     }
     el.appendChild(div);
     if (isAgent && Array.isArray(chips) && chips.length > 0) {
@@ -22333,7 +22350,7 @@ ${legacy}`;
     }
     try {
       const habits = JSON.parse(localStorage.getItem("nm_habits2") || "[]");
-      const log = JSON.parse(localStorage.getItem("nm_habit_log") || "{}");
+      const log = JSON.parse(localStorage.getItem("nm_habit_log2") || "{}");
       const habitStats = habits.filter((h) => h.type !== "quit").map((h) => {
         let done = 0, scheduled = 0;
         for (let i = 0; i < 30; i++) {
