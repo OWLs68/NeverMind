@@ -20,7 +20,7 @@ import { addToTrash, showUndoToast } from '../core/trash.js';
 import { attachSwipeDelete } from '../ui/swipe-delete.js';
 
 // === STORAGE ===
-export function getProjects() { return JSON.parse(localStorage.getItem('nm_projects') || '[]'); }
+export function getProjects() { try { return JSON.parse(localStorage.getItem('nm_projects') || '[]'); } catch { return []; } }
 export function saveProjects(arr) { localStorage.setItem('nm_projects', JSON.stringify(arr)); window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'projects' })); }
 
 // Створити проект програмно. Використовується у inbox.js (create_project tool flow)

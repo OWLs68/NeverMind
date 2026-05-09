@@ -1,6 +1,6 @@
 import { getAIContext, getOWLPersonality, restoreChatUI, loadChatMsgs, _isNetworkError, getRecentChatsAcrossTabs } from '../ai/core.js';
 import { formatFactsForBoard } from '../ai/memory.js';
-import { getRecentActions } from '../core/utils.js';
+import { getRecentActions, getReminders, saveReminders } from '../core/utils.js';
 import { currentTab } from '../core/nav.js';
 import { OWL_TAB_BOARD_MIN_INTERVAL, _owlTabApplyState, _owlTabStates, getOwlTabTsKey, getTabBoardMsgs, renderTabBoard, saveTabBoardMsg } from './board.js';
 import { getDayPhase, getSchedule, getOwlBoardMessages, saveOwlBoardMessages, setOwlCd, owlCdExpired, renderOwlBoard, shouldOwlSpeak, tryOwlBoardUpdate } from './inbox-board.js';
@@ -176,7 +176,7 @@ function _getInboxBoardContext() {
   // Раніше будь-яке прострочене нагадування завжди було CRITICAL — навіть якщо
   // 8 годин минуло, AI кричав «помити посуд!» при відкритті ранку.
   try {
-    const reminders = JSON.parse(localStorage.getItem('nm_reminders') || '[]');
+    const reminders = getReminders();
     const todayISO = now.toISOString().slice(0, 10);
     const nowMin = hour * 60 + min;
     const due = reminders.filter(r => !r.done && r.date === todayISO && r.time <= `${String(hour).padStart(2,'0')}:${String(min).padStart(2,'0')}`);
@@ -201,7 +201,7 @@ function _getInboxBoardContext() {
     if (expired.length > 0) {
       const expIds = new Set(expired.map(d => d.id));
       const updated = reminders.map(r => expIds.has(r.id) ? { ...r, done: true } : r);
-      localStorage.setItem('nm_reminders', JSON.stringify(updated));
+      saveReminders(updated);
     }
     // Майбутні нагадування у наступні 30 хв
     const upcoming = reminders.filter(r => !r.done && r.date === todayISO && r.time > `${String(hour).padStart(2,'0')}:${String(min).padStart(2,'0')}`).sort((a, b) => a.time.localeCompare(b.time));

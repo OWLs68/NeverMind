@@ -4,7 +4,7 @@
 // ============================================================
 
 import { currentTab, showToast } from '../core/nav.js';
-import { escapeHtml, logRecentAction, extractJsonBlocks, parseContentChips, levenshtein, t } from '../core/utils.js';
+import { escapeHtml, logRecentAction, extractJsonBlocks, parseContentChips, levenshtein, t, getReminders, saveReminders } from '../core/utils.js';
 import { logUsage } from '../core/usage-meter.js';
 import { generateUUID } from '../core/uuid.js';
 import { addToTrash, showUndoToast } from '../core/trash.js';
@@ -25,13 +25,13 @@ import { getEvents, saveEvents, addEventDedup, getRoutine, saveRoutine } from '.
 // === HABITS ===
 let editingHabitId = null;
 
-export function getHabits() { return JSON.parse(localStorage.getItem('nm_habits2') || '[]'); }
+export function getHabits() { try { return JSON.parse(localStorage.getItem('nm_habits2') || '[]'); } catch { return []; } }
 export function saveHabits(arr) { localStorage.setItem('nm_habits2', JSON.stringify(arr)); window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'habits' })); }
-export function getHabitLog() { return JSON.parse(localStorage.getItem('nm_habit_log2') || '{}'); }
+export function getHabitLog() { try { return JSON.parse(localStorage.getItem('nm_habit_log2') || '{}'); } catch { return {}; } }
 export function saveHabitLog(obj) { localStorage.setItem('nm_habit_log2', JSON.stringify(obj)); window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'habits' })); }
 
 // === QUIT HABITS — челендж "Кинути" ===
-function getQuitLog() { return JSON.parse(localStorage.getItem('nm_quit_log') || '{}'); }
+function getQuitLog() { try { return JSON.parse(localStorage.getItem('nm_quit_log') || '{}'); } catch { return {}; } }
 function saveQuitLog(obj) { localStorage.setItem('nm_quit_log', JSON.stringify(obj)); window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'habits' })); }
 
 // Повертає статус quit-звички: { streak, longestStreak, relapses, lastHeld, freedomDays }
@@ -1219,7 +1219,18 @@ export function processUniversalAction(parsed, originalText, addMsg) {
       addMsg('agent', t('habits.step.no_steps', 'У задачі «{title}» немає кроків.', { title: task.title })); return true;
     }
     const q = (parsed.step_text || '').toLowerCase().trim();
-    const step = task.steps.find(s => !s.done && (s.text.toLowerCase().includes(q.slice(0, 8)) || q.includes(s.text.toLowerCase().slice(0, 8))));
+    // 64CXo regression-hunter: без guard порожній q → ''.includes('') = true → закривав
+    // перший-ліпший активний крок. Тепер вимагаємо мінімум 2 символи для match.
+    if (q.length < 2) { addMsg('agent', t('habits.step.empty_text', 'Уточни який саме крок закрити.')); return true; }
+    const qSlice = q.slice(0, 8);
+    const step = task.steps.find(s => {
+      if (s.done) return false;
+      const sLow = s.text.toLowerCase();
+      // Захист від false-match на занадто коротких словах: вимагаємо щоб slice
+      // мав мінімум 3 символи І щоб збіг був не у 1-1 нерелевантному слові.
+      return (sLow.length >= 3 && sLow.includes(qSlice) && qSlice.length >= 3) ||
+             (q.length >= 3 && q.includes(sLow.slice(0, Math.min(8, sLow.length))) && sLow.length >= 3);
+    });
     if (!step) { addMsg('agent', t('habits.step.not_found', 'Не знайшов активний крок «{step}» у задачі «{title}».', { step: parsed.step_text, title: task.title })); return true; }
     step.done = true;
     if (task.steps.every(s => s.done)) {
@@ -1546,9 +1557,9 @@ export function processUniversalAction(parsed, originalText, addMsg) {
     if (!time) { addMsg('agent', t('habits.err.reminder_time', 'Вкажи час нагадування.')); return true; }
     const reminderId = Date.now();
     // 1. nm_reminders — для тригера спливаючого попередження
-    const reminders = JSON.parse(localStorage.getItem('nm_reminders') || '[]');
+    const reminders = getReminders();
     reminders.push({ id: reminderId, time, text, date, done: false });
-    localStorage.setItem('nm_reminders', JSON.stringify(reminders));
+    saveReminders(reminders);
     // 2. nm_events — щоб було видно у календарі і модалці "Розпорядок дня"
     addEventDedup({
       id: reminderId + 1,
@@ -1588,7 +1599,7 @@ export function processUniversalAction(parsed, originalText, addMsg) {
     const qDate = parsed.date || null;
     if (!qText && !qTime && !qDate) { addMsg('agent', t('habits.reminder.del.unclear', 'Не зрозумів яке нагадування видалити.')); return true; }
 
-    const reminders = JSON.parse(localStorage.getItem('nm_reminders') || '[]');
+    const reminders = getReminders();
     // MPVly 05.05 follow-up: 3-рівневий fuzzy match для опечаток.
     // 1) substring (швидко) → 2) Levenshtein ≤2 для слів ≥5 літер (опечатки) →
     // 3) ні те, ні те — пропускаємо.
@@ -1618,7 +1629,7 @@ export function processUniversalAction(parsed, originalText, addMsg) {
     const removed = reminders[idx];
     const reminderId = removed.id;
     reminders.splice(idx, 1);
-    localStorage.setItem('nm_reminders', JSON.stringify(reminders));
+    saveReminders(reminders);
 
     // nm_events — видаляємо event пов'язаний з reminder (id+1 або поле reminderId)
     try {

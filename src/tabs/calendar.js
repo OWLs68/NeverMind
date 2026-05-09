@@ -2,7 +2,7 @@
 // calendar.js — Календар, події (nm_events), блок "Найближче"
 // ============================================================
 
-import { escapeHtml, t } from '../core/utils.js';
+import { escapeHtml, t, getReminders, saveReminders } from '../core/utils.js';
 import { getTasks, setupModalSwipeClose } from './tasks.js';
 import { addToTrash, showUndoToast } from '../core/trash.js';
 import { monthNominative, monthGenitive, monthShort } from '../data/months.js';
@@ -781,9 +781,9 @@ function routineDeleteFromTimeline(kind, sourceId, reminderId) {
     if (kind === 'reminder') {
       try {
         const rid = reminderId || ev.reminderId || ev.id;
-        const reminders = JSON.parse(localStorage.getItem('nm_reminders') || '[]');
+        const reminders = getReminders();
         const filtered = reminders.filter(r => r.id !== rid);
-        if (filtered.length !== reminders.length) localStorage.setItem('nm_reminders', JSON.stringify(filtered));
+        if (filtered.length !== reminders.length) saveReminders(filtered);
       } catch(e) { console.warn('[routine] reminder cleanup failed', e); }
     }
   }

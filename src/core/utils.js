@@ -221,5 +221,18 @@ export function levenshtein(a, b) {
   return prev[al];
 }
 
+// 64CXo: canonical reminders accessors. Раніше 8 точок setItem('nm_reminders')
+// напряму без диспатчу — OWL не дізнавався про нові/видалені reminder'и
+// одразу. Тепер saveReminders() диспатчить detail:'reminder' (мапа є у
+// boot.js DETAIL_TO_KEY → handleSyncKey('nm_reminders') → cross-tab sync).
+export function getReminders() {
+  try { return JSON.parse(localStorage.getItem('nm_reminders') || '[]'); }
+  catch { return []; }
+}
+export function saveReminders(arr) {
+  localStorage.setItem('nm_reminders', JSON.stringify(arr));
+  window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'reminder' }));
+}
+
 // Functions called from HTML event handlers
 window.autoResizeTextarea = autoResizeTextarea;

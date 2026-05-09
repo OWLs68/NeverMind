@@ -4,7 +4,7 @@
 // ============================================================
 
 import { currentTab, switchTab, showToast } from '../core/nav.js';
-import { escapeHtml, parseContentChips } from '../core/utils.js';
+import { escapeHtml, parseContentChips, getReminders, saveReminders } from '../core/utils.js';
 import { generateUUID } from '../core/uuid.js';
 import { activeChatBar, callOwlChat, closeChatBar, lastChatClosedTs, openChatBar, restoreChatUI, setActiveChatBar } from '../ai/core.js';
 import { _owlTabApplyState, _owlTabStates, renderTabBoard } from './board.js';
@@ -630,7 +630,7 @@ function _judgeBoard(trigger, targetTab) {
   // Нагадування що настали — КРИТИЧНЕ
   let hasCritical = false;
   try {
-    const reminders = JSON.parse(localStorage.getItem('nm_reminders') || '[]');
+    const reminders = getReminders();
     const todayISO = now.toISOString().slice(0, 10);
     const nowTime = `${String(hour).padStart(2,'0')}:${String(min).padStart(2,'0')}`;
     const due = reminders.filter(r => !r.done && r.date === todayISO && r.time <= nowTime);
@@ -1121,7 +1121,7 @@ function dismissOwlBoard() {
 // Перевірка нагадувань кожну хвилину
 function _checkReminders() {
   try {
-    const reminders = JSON.parse(localStorage.getItem('nm_reminders') || '[]');
+    const reminders = getReminders();
     const now = new Date();
     const todayISO = now.toISOString().slice(0, 10);
     const nowTime = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
@@ -1131,7 +1131,7 @@ function _checkReminders() {
       // щоб тригер не повторювався щохвилини поки вони активні.
       // `done: true` означає "вже показано", не "виконано користувачем".
       due.forEach(r => { r.done = true; r.firedAt = Date.now(); });
-      localStorage.setItem('nm_reminders', JSON.stringify(reminders));
+      saveReminders(reminders);
       // Одноразовий тригер оновлення табло
       import('./proactive.js').then(m => m.generateBoardMessage('inbox'));
     }
@@ -1142,14 +1142,14 @@ function _checkReminders() {
 // Запускається один раз при старті застосунку
 function _cleanupOldReminders() {
   try {
-    const reminders = JSON.parse(localStorage.getItem('nm_reminders') || '[]');
+    const reminders = getReminders();
     if (reminders.length === 0) return;
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - 7);
     const cutoffISO = cutoffDate.toISOString().slice(0, 10);
     const fresh = reminders.filter(r => r.date >= cutoffISO);
     if (fresh.length < reminders.length) {
-      localStorage.setItem('nm_reminders', JSON.stringify(fresh));
+      saveReminders(fresh);
     }
   } catch(e) {}
 }
