@@ -11,7 +11,7 @@ import { escapeHtml, logRecentAction, t } from '../core/utils.js';
 import { logUsage } from '../core/usage-meter.js';
 import { getTasks, saveTasks, setupModalSwipeClose } from './tasks.js';
 import { getHabits, getHabitLog, getQuitStatus } from './habits.js';
-import { getNotes } from './notes.js';
+import { getNotes, addNoteFromInbox, findOrCreateDailyFolder } from './notes.js';
 import { getCurrency, getFinance } from './finance.js';
 import { getProjects } from './projects.js';
 import { getEvents } from './calendar.js';
@@ -20,7 +20,27 @@ import { getEvents } from './calendar.js';
 let currentMomentMood = 'positive';
 
 export function getMoments() { try { return JSON.parse(localStorage.getItem('nm_moments') || '[]'); } catch { return []; } }
-export function saveMoments(arr) { localStorage.setItem('nm_moments', JSON.stringify(arr)); window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'moments' })); }
+
+// 64CXo Фаза B: hook для дублювання моментів у Нотатки/Щоденник/дейлі-папка.
+// Принцип «один мозок» — будь-яка точка яка додає moment (UI/AI/edit) автоматично
+// створює нотатку у відповідну дейлі-папку. Lazy: папки не створюються якщо
+// жодного моменту за день. Захист від loop: detail:'moments' vs detail:'notes' —
+// listenerи на nm-data-changed не перетинаються.
+export function saveMoments(arr) {
+  let oldIds = new Set();
+  try { oldIds = new Set((JSON.parse(localStorage.getItem('nm_moments') || '[]')).map(m => m.id)); } catch {}
+  localStorage.setItem('nm_moments', JSON.stringify(arr));
+  window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'moments' }));
+  // Дублюємо тільки НОВI моменти (не перезапис існуючих, не видалення).
+  for (const m of arr) {
+    if (!m.id || oldIds.has(m.id)) continue; // skip без id (інакше дублюватиме на кожному save)
+    if (!m.text || !m.text.trim()) continue;
+    try {
+      const folder = findOrCreateDailyFolder(undefined, new Date(m.ts || Date.now()));
+      addNoteFromInbox(m.text, 'note', folder, 'moment');
+    } catch(e) { console.warn('[evening] daily folder dup failed', e); }
+  }
+}
 
 // Контекст моментів сьогодні для AI (принцип "один мозок")
 // OWL бачить що юзер зафіксував протягом дня — ключове для вечірнього підсумку
