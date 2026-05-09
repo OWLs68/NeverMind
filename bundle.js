@@ -1884,7 +1884,8 @@ ${lines.join("\n")}`;
         "add_health_history_entry",
         "create_health_card",
         "save_finance",
-        "set_reminder"
+        "set_reminder",
+        "complete_task"
       ]);
     }
   });
@@ -15203,7 +15204,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
       ]);
       _TOOL_CATEGORIES = {
         finance: {
-          rx: /\b(гр(н|івн)|€|\$|usd|usdt|eur|витрат|дохо|купив|оплат|плат[іиї]|ціна|сума|бюджет|категор[іи]|підкатегор|зарплат|грош|каса|платіж)/i,
+          rx: /\b(гр(н|івн)|€|\$|usd|usdt|eur|витрат|дохо|оплат|плат[іиї]|ціна|сума|бюджет|категор[іи]|підкатегор|зарплат|грош|каса|платіж)/i,
           tools: ["save_finance", "update_transaction", "delete_transaction", "set_finance_budget", "add_finance_category", "rename_finance_category", "delete_finance_category", "add_finance_subcategory", "rename_finance_subcategory", "delete_finance_subcategory", "set_finance_period", "open_finance_analytics"]
         },
         habit: {
@@ -15211,7 +15212,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
           tools: ["save_habit", "edit_habit", "delete_habit", "complete_habit"]
         },
         task: {
-          rx: /\b(задач|треба зробити|нагада[йт]|напомни|зроби|купи|відправ|зателефонуй|написати|подати|оплатити|закрив|зробив|поприбирай|поміняй)/i,
+          rx: /\b(задач|треба зробити|нагада[йт]|напомни|зроби|куп(и|ити)\b|відправ|зателефонуй|написати|подати|оплатити|поприбирай|поміняй)/i,
           tools: ["save_task", "edit_task", "delete_task", "complete_task", "reopen_task", "add_step", "set_reminder"]
         },
         event: {
@@ -17395,6 +17396,11 @@ ${aiContext}`;
         const hasTask = msg.tool_calls.some((tc) => tc.function?.name === "save_task");
         if (hasFinance && hasTask) {
           console.warn("[inbox] dedupe: save_finance+save_task batch \u2014 \u043F\u0440\u043E\u043F\u0443\u0441\u043A\u0430\u044E save_task");
+          msg.tool_calls = msg.tool_calls.filter((tc) => tc.function?.name !== "save_task");
+        }
+        const hasComplete = msg.tool_calls.some((tc) => tc.function?.name === "complete_task");
+        if (hasComplete && hasTask) {
+          console.warn("[inbox] dedupe: complete_task+save_task batch \u2014 \u043F\u0440\u043E\u043F\u0443\u0441\u043A\u0430\u044E save_task");
           msg.tool_calls = msg.tool_calls.filter((tc) => tc.function?.name !== "save_task");
         }
         for (const tc of msg.tool_calls) {
