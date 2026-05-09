@@ -81,6 +81,13 @@
 - **Новий `.md` файл** → додати у `_ai-tools/INDEX.md` і "Карту документації" у `CLAUDE.md`. Хук нагадує.
 - **Новий JS-файл у `src/`** → імпорт у `src/app.js` + оновлення `docs/FILE_STRUCTURE.md`. Скіл `/new-file`.
 
+### Edit fail з «File has not been read» — повторити ВСI пов'язані Edit'и (64CXo 09.05)
+- **Симптом:** `Edit` повертає помилку `File has not been read yet. Read it first before writing to it.` Я роблю `Read`, повторюю Edit — але **тільки той що падав**, забуваю інші зі spawnу.
+- **Кейс 64CXo `ad0b10f`:** одночасно запустив 5 Edit'ів — додати `getReminders, saveReminders` до import у 5 файлах. 2 пройшли (inbox.js, habits.js), 3 впали (calendar.js, owl/inbox-board.js, owl/proactive.js). Прочитав 3 проблемні файли. Потім зробив окремі Edit'и на JSON.parse заміни — але **імпорти забув повторити**. Пройшов syntax check (бо `node --check` не валідує імпорт-роздільність). Push. Bundle build брокен — `getReminders is not defined` у 3 файлах. Regression-hunter Sonnet знайшов через `node build.js`.
+- **Корінь:** після Edit fail я зосередився на «нову фіксі чого падало», не на «ВСIХ Edit'ах того логічного кроку». Один логічний крок (додати import у N файлів) розпався на 2 паралельні фрагменти у моїй увазі.
+- **Урок:** коли Edit падає з «File has not been read» → (1) прочитати файл, (2) **переробити ВСЕ що було у тому самому spawnу для цього файлу**, не тільки той Edit. Якщо це частина multi-file логічного кроку (наприклад «додати import у 5 файлів») — після прочитання трекати які файли отримали import, які не отримали. Простіше — `grep -rn "function_name" src/` після всіх Edit'ів верифікує що імпорти збігаються з викликами.
+- **Тригер виявлення:** після push зміни що додає новий експорт + його використання у 5 файлах — обов'язково `for f in <files>; do grep "import.*newFunc" $f; done` перевірити кожен. Або `node build.js` локально (якщо esbuild доступний).
+
 ### Створення / зміна хука у `.claude/hooks/`
 
 - **Тригер:** новий скрипт хука або правка існуючого (`pre-push-check.js`, `check-response-violations.js` тощо), або зміна `.claude/settings.json` з реєстрацією хука.
