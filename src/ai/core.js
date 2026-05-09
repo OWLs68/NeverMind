@@ -540,7 +540,7 @@ const _BASE_TOOL_NAMES = new Set([
 
 const _TOOL_CATEGORIES = {
   finance: {
-    rx: /\b(гр(н|івн)|€|\$|usd|usdt|eur|витрат|дохо|купив|оплат|плат[іиї]|ціна|сума|бюджет|категор[іи]|підкатегор|зарплат|грош|каса|платіж)/i,
+    rx: /\b(гр(н|івн)|€|\$|usd|usdt|eur|витрат|дохо|оплат|плат[іиї]|ціна|сума|бюджет|категор[іи]|підкатегор|зарплат|грош|каса|платіж)/i,
     tools: ['save_finance', 'update_transaction', 'delete_transaction', 'set_finance_budget', 'add_finance_category', 'rename_finance_category', 'delete_finance_category', 'add_finance_subcategory', 'rename_finance_subcategory', 'delete_finance_subcategory', 'set_finance_period', 'open_finance_analytics']
   },
   habit: {
@@ -548,7 +548,7 @@ const _TOOL_CATEGORIES = {
     tools: ['save_habit', 'edit_habit', 'delete_habit', 'complete_habit']
   },
   task: {
-    rx: /\b(задач|треба зробити|нагада[йт]|напомни|зроби|купи|відправ|зателефонуй|написати|подати|оплатити|закрив|зробив|поприбирай|поміняй)/i,
+    rx: /\b(задач|треба зробити|нагада[йт]|напомни|зроби|куп(и|ити)\b|відправ|зателефонуй|написати|подати|оплатити|поприбирай|поміняй)/i,
     tools: ['save_task', 'edit_task', 'delete_task', 'complete_task', 'reopen_task', 'add_step', 'set_reminder']
   },
   event: {
