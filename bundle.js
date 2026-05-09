@@ -9677,13 +9677,34 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
       const f = n.folder || t("notes.default_folder", "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435");
       folderCount[f] = (folderCount[f] || 0) + 1;
     });
-    const foldersStr = Object.entries(folderCount).sort((a, b) => b[1] - a[1]).map(([name, count]) => `${name} (${count})`).join(", ");
+    const meta = getFoldersMeta();
+    const rootCounts = {};
+    const childrenByRoot = {};
+    Object.keys(folderCount).forEach((f) => {
+      const m = meta[f];
+      if (m && m.parent) {
+        const root = m.parent;
+        rootCounts[root] = (rootCounts[root] || 0) + folderCount[f];
+        if (!childrenByRoot[root]) childrenByRoot[root] = [];
+        childrenByRoot[root].push({ name: f, count: folderCount[f] });
+      } else {
+        rootCounts[f] = (rootCounts[f] || 0) + folderCount[f];
+      }
+    });
+    const foldersStr = Object.entries(rootCounts).sort((a, b) => b[1] - a[1]).map(([root, total]) => {
+      const children = childrenByRoot[root] || [];
+      if (children.length === 0) return `${root} (${total})`;
+      const childList = children.map((c) => `  \u2514\u2500 ${c.name} (${c.count})`).join("\n");
+      return `${root} (${total}, ${children.length} ${t("notes.context.subfolders", "\u043F\u0456\u0434\u043F\u0430\u043F\u043E\u043A")}):
+${childList}`;
+    }).join("\n");
     const recent = notes.slice(0, 5).map((n) => {
       const txt = (n.text || "").slice(0, 60).replace(/\n/g, " ");
       const more = (n.text || "").length > 60 ? "\u2026" : "";
       return `- [ID:${n.id}] [${n.folder || t("notes.default_folder", "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435")}] "${txt}${more}"`;
     }).join("\n");
-    return `\u041D\u043E\u0442\u0430\u0442\u043A\u0438 (${notes.length} \u0437\u0430\u0433\u0430\u043B\u043E\u043C, \u043F\u0430\u043F\u043A\u0438: ${foldersStr}):
+    return `\u041D\u043E\u0442\u0430\u0442\u043A\u0438 (${notes.length} \u0437\u0430\u0433\u0430\u043B\u043E\u043C, \u043F\u0430\u043F\u043A\u0438:
+${foldersStr}):
 ${recent}`;
   }
   function getFolders() {
@@ -14341,15 +14362,18 @@ ${CHIP_PROMPT_RULES}`;
         addMsg("agent", t("habits.folder.not_found", '\u041F\u0430\u043F\u043A\u0443 "{folder}" \u043D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432. \u0414\u043E\u0441\u0442\u0443\u043F\u043D\u0456: {list}', { folder: targetName, list: folders.join(", ") }));
         return true;
       }
-      const toDelete = notes.filter((n) => (n.folder || "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435") === matched);
+      const childNames = getDirectChildren(matched);
+      const toDeleteSet = /* @__PURE__ */ new Set([matched, ...childNames]);
+      const toDelete = notes.filter((n) => toDeleteSet.has(n.folder || "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435"));
       toDelete.forEach((n) => addToTrash("folder", n, null));
-      const remaining = notes.filter((n) => (n.folder || "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435") !== matched);
+      const remaining = notes.filter((n) => !toDeleteSet.has(n.folder || "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435"));
       saveNotes(remaining);
       if (currentTab === "notes") {
         setCurrentNotesFolder(null);
         renderNotes();
       }
-      addMsg("agent", t("habits.folder.deleted", '\u2713 \u041F\u0430\u043F\u043A\u0443 "{folder}" \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E ({n} \u043D\u043E\u0442\u0430\u0442\u043E\u043A)', { folder: matched, n: toDelete.length }));
+      const childInfo = childNames.length > 0 ? t("habits.folder.deleted_children", " + {n} \u043F\u0456\u0434\u043F\u0430\u043F\u043E\u043A", { n: childNames.length }) : "";
+      addMsg("agent", t("habits.folder.deleted", '\u2713 \u041F\u0430\u043F\u043A\u0443 "{folder}" \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E ({n} \u043D\u043E\u0442\u0430\u0442\u043E\u043A)', { folder: matched, n: toDelete.length }) + childInfo);
       return true;
     }
     if (action === "move_note") {
