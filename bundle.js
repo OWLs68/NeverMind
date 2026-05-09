@@ -5469,8 +5469,23 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
     }
   }
   function saveMoments(arr) {
+    let oldIds = /* @__PURE__ */ new Set();
+    try {
+      oldIds = new Set(JSON.parse(localStorage.getItem("nm_moments") || "[]").map((m) => m.id));
+    } catch {
+    }
     localStorage.setItem("nm_moments", JSON.stringify(arr));
     window.dispatchEvent(new CustomEvent("nm-data-changed", { detail: "moments" }));
+    for (const m of arr) {
+      if (!m.id || oldIds.has(m.id)) continue;
+      if (!m.text || !m.text.trim()) continue;
+      try {
+        const folder = findOrCreateDailyFolder(void 0, new Date(m.ts || Date.now()));
+        addNoteFromInbox(m.text, "note", folder, "moment");
+      } catch (e) {
+        console.warn("[evening] daily folder dup failed", e);
+      }
+    }
   }
   function getMomentsContext() {
     const today = (/* @__PURE__ */ new Date()).toDateString();
@@ -9814,6 +9829,35 @@ ${recent}`;
     const all = getFoldersMeta();
     all[folder] = { ...all[folder] || {}, ...data };
     saveFoldersMeta(all);
+  }
+  function formatDailyFolderName(date) {
+    const raw = date.toLocaleDateString("uk-UA", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric"
+    });
+    const cleaned = raw.replace(/\s*р\.\s*$/, "").trim();
+    const cap = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+    return normalizeFolderName(cap);
+  }
+  function findOrCreateDailyFolder(parentName = t("notes.folder_diary", "\u0429\u043E\u0434\u0435\u043D\u043D\u0438\u043A"), date = /* @__PURE__ */ new Date()) {
+    const dailyName = formatDailyFolderName(date);
+    const meta = getFoldersMeta();
+    let changed = false;
+    if (!meta[parentName]) {
+      meta[parentName] = { parent: null, pinned: false };
+      changed = true;
+    }
+    if (!meta[dailyName]) {
+      meta[dailyName] = { parent: parentName, pinned: false };
+      changed = true;
+    } else if (meta[dailyName].parent === void 0) {
+      meta[dailyName] = { ...meta[dailyName], parent: parentName };
+      changed = true;
+    }
+    if (changed) saveFoldersMeta(meta);
+    return dailyName;
   }
   function renderNotes(searchQuery = "") {
     let notes = getNotes();
