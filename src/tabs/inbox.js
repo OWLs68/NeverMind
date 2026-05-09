@@ -1451,7 +1451,12 @@ function processCompleteTask(parsed, originalText) {
     const idx = tasks.findIndex(t => t.id === taskId);
     if (idx !== -1) {
       completed.push(tasks[idx].title);
-      tasks[idx] = { ...tasks[idx], status: 'done', completedAt: Date.now() };
+      // 64CXo B-164: уніфікація з habits.js — закриваємо також кроки задачі.
+      // Раніше Inbox-handler через spread лишав task.steps з done:false → стан-розрив.
+      const closedSteps = Array.isArray(tasks[idx].steps)
+        ? tasks[idx].steps.map(s => ({ ...s, done: true }))
+        : tasks[idx].steps;
+      tasks[idx] = { ...tasks[idx], status: 'done', completedAt: Date.now(), updatedAt: Date.now(), steps: closedSteps };
     }
   });
   if (completed.length === 0) {

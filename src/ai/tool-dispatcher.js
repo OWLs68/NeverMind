@@ -110,6 +110,10 @@ export function _toolCallToUniversalAction(name, args) {
       const steps = Array.isArray(args.steps) ? args.steps : [];
       return steps.map(s => ({ action: 'add_step', task_id: args.task_id, step: s }));
     }
+    case 'complete_step':
+      return [{ action: 'complete_step', task_id: args.task_id, step_text: args.step_text }];
+    case 'merge_tasks':
+      return [{ action: 'merge_tasks', from_task_id: args.from_task_id, to_task_id: args.to_task_id }];
     case 'move_note':
       return [{ action: 'move_note', query: args.query, folder: args.folder }];
     case 'set_reminder':

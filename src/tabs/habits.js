@@ -1141,6 +1141,26 @@ export function processUniversalAction(parsed, originalText, addMsg) {
     const task = tasks.find(x => String(x.id) === String(parsed.task_id));
     if (!task) { addMsg('agent', t('habits.err.task_not_found_by_id', 'Не знайшов задачу з таким ID.')); return true; }
     if (task.status === 'done') { addMsg('agent', t('habits.task.already_done', 'Задача "{title}" вже закрита.', { title: task.title })); return true; }
+    // 64CXo B-160 guard: AI міг зматчити task через назву коли юзер закрив КРОК.
+    // Перевіряємо чи user-message містить текст активного кроку — якщо так, закриваємо
+    // тільки цей крок, не цілу задачу. Юзер каже «Купив перець» при «Купити перець,
+    // цибулю, ківі» з 7 кроками → закрити крок «перець», не всю задачу.
+    if (Array.isArray(task.steps) && task.steps.length > 0 && originalText) {
+      const userMsg = originalText.toLowerCase();
+      const matchStep = task.steps.find(s => !s.done && s.text && userMsg.includes(s.text.toLowerCase().replace(/^купити\s+/, '').slice(0, 6)));
+      if (matchStep && task.steps.some(s => !s.done && s !== matchStep)) {
+        matchStep.done = true;
+        if (task.steps.every(s => s.done)) {
+          task.status = 'done';
+          task.completedAt = Date.now();
+        }
+        task.updatedAt = Date.now();
+        saveTasks(tasks);
+        if (currentTab === 'tasks') renderTasks();
+        addMsg('agent', t('habits.step.closed', '✓ Крок «{step}» закрито', { step: matchStep.text }));
+        return true;
+      }
+    }
     addMsg('agent', t('habits.task.done', '✅ Задачу "{title}" виконано!', { title: task.title }));
     // Викликаємо ту саму 3-фазну анімацію що й при ручному тапі ✓:
     // галочка → 250мс пауза → сповзання картки → save+render через 620мс.
@@ -1176,6 +1196,64 @@ export function processUniversalAction(parsed, originalText, addMsg) {
     return true;
   }
 
+  // 64CXo B-161: complete_step як універсальна action (через tool у prompts.js
+  // + case у tool-dispatcher.js). Раніше працювало тільки як text-JSON у Tasks-чаті
+  // → у Inbox AI писав «[complete_task]» plain text бо tool недосяжний.
+  if (action === 'complete_step') {
+    const tasks = getTasks();
+    const task = tasks.find(x => String(x.id) === String(parsed.task_id));
+    if (!task) { addMsg('agent', t('habits.err.task_not_found_short', 'Не знайшов задачу.')); return true; }
+    if (!Array.isArray(task.steps) || task.steps.length === 0) {
+      addMsg('agent', t('habits.step.no_steps', 'У задачі «{title}» немає кроків.', { title: task.title })); return true;
+    }
+    const q = (parsed.step_text || '').toLowerCase().trim();
+    const step = task.steps.find(s => !s.done && (s.text.toLowerCase().includes(q.slice(0, 8)) || q.includes(s.text.toLowerCase().slice(0, 8))));
+    if (!step) { addMsg('agent', t('habits.step.not_found', 'Не знайшов активний крок «{step}» у задачі «{title}».', { step: parsed.step_text, title: task.title })); return true; }
+    step.done = true;
+    if (task.steps.every(s => s.done)) {
+      task.status = 'done';
+      task.completedAt = Date.now();
+    }
+    task.updatedAt = Date.now();
+    saveTasks(tasks);
+    if (currentTab === 'tasks') renderTasks();
+    const allDone = task.steps.every(s => s.done);
+    addMsg('agent', allDone
+      ? t('habits.step.last_done', '✅ Останній крок «{step}» закрито — задачу «{title}» виконано!', { step: step.text, title: task.title })
+      : t('habits.step.closed', '✓ Крок «{step}» закрито', { step: step.text }));
+    return true;
+  }
+
+  // 64CXo B-163: merge_tasks — об'єднання двох задач у одну. Кроки з 'from' переходять
+  // у 'to' (з дедупом), назва 'from' стає кроком, 'from' видаляється.
+  if (action === 'merge_tasks') {
+    const tasks = getTasks();
+    const from = tasks.find(x => String(x.id) === String(parsed.from_task_id));
+    const to = tasks.find(x => String(x.id) === String(parsed.to_task_id));
+    if (!from || !to) { addMsg('agent', t('habits.merge.not_found', 'Не знайшов одну з задач для об\'єднання.')); return true; }
+    if (from.id === to.id) { addMsg('agent', t('habits.merge.same', 'Не можу об\'єднати задачу з самою собою.')); return true; }
+    if (!Array.isArray(to.steps)) to.steps = [];
+    if (!Array.isArray(from.steps)) from.steps = [];
+    let added = 0;
+    from.steps.filter(s => !s.done).forEach(s => {
+      if (!to.steps.some(ts => ts.text.toLowerCase() === s.text.toLowerCase())) {
+        to.steps.push({ id: Date.now() + Math.floor(Math.random()*1000), text: s.text, done: false });
+        added++;
+      }
+    });
+    if (!to.steps.some(ts => ts.text.toLowerCase() === from.title.toLowerCase())) {
+      to.steps.push({ id: Date.now() + Math.floor(Math.random()*1000), text: from.title, done: false });
+      added++;
+    }
+    const idx = tasks.findIndex(x => String(x.id) === String(from.id));
+    if (idx !== -1) tasks.splice(idx, 1);
+    to.updatedAt = Date.now();
+    saveTasks(tasks);
+    if (currentTab === 'tasks') renderTasks();
+    addMsg('agent', t('habits.merge.done', '✅ Об\'єднав «{from}» з «{to}» (+{n} кроків)', { from: from.title, to: to.title, n: added }));
+    return true;
+  }
+
   if (action === 'add_step') {
     const tasks = getTasks();
     const task = tasks.find(x => String(x.id) === String(parsed.task_id));
@@ -1183,6 +1261,12 @@ export function processUniversalAction(parsed, originalText, addMsg) {
     const stepText = (parsed.step || '').trim();
     if (!stepText) { addMsg('agent', t('habits.err.step_empty', 'Не вказано текст кроку.')); return true; }
     if (!Array.isArray(task.steps)) task.steps = [];
+    // 64CXo B-162: дедуп — пропускаємо якщо такий крок (нечутливо до регістру) вже є.
+    // На «Об'єднай дві останні» AI робив add_step з 4 рядками, з них 3 вже були → дублі.
+    if (task.steps.some(s => s.text.toLowerCase() === stepText.toLowerCase())) {
+      addMsg('agent', t('habits.step.dup', 'Крок «{step}» вже є — пропускаю', { step: stepText }));
+      return true;
+    }
     task.steps.push({ id: Date.now(), text: stepText, done: false });
     task.updatedAt = Date.now();
     saveTasks(tasks);
