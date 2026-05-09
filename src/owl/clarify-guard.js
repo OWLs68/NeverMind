@@ -58,6 +58,7 @@ const SUSPICIOUS_TOOLS = new Set([
   'create_health_card',
   'save_finance',
   'set_reminder',
+  'complete_task',
 ]);
 
 // Перевіряє чи треба показати clarify-чіпи замість виконання tool_calls.

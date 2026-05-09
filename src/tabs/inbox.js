@@ -606,6 +606,16 @@ ${aiContext}`;
         console.warn('[inbox] dedupe: save_finance+save_task batch — пропускаю save_task');
         msg.tool_calls = msg.tool_calls.filter(tc => tc.function?.name !== 'save_task');
       }
+      // 64CXo 09.05: dedupe complete_task + save_task. AI на «Купив хліб» при
+      // активній задачі «Купити м'ясо» одночасно (а) закривав чужу задачу через
+      // fuzzy match за дієсловом, (б) створював нову з минулого часу попри
+      // КРОК 6 промпта. complete_task пріоритетніший — якщо юзер сказав «купив»,
+      // то це виконання, не задача. Той самий патерн dedupe як вище.
+      const hasComplete = msg.tool_calls.some(tc => tc.function?.name === 'complete_task');
+      if (hasComplete && hasTask) {
+        console.warn('[inbox] dedupe: complete_task+save_task batch — пропускаю save_task');
+        msg.tool_calls = msg.tool_calls.filter(tc => tc.function?.name !== 'save_task');
+      }
       for (const tc of msg.tool_calls) {
         // B-154 fix (LfA6w 07.05): try/catch навколо JSON.parse. Якщо OpenAI
         // дав зламаний JSON у одному з кількох tool_calls — раніше throw
