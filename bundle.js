@@ -9018,6 +9018,10 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
         const steps = Array.isArray(args.steps) ? args.steps : [];
         return steps.map((s) => ({ action: "add_step", task_id: args.task_id, step: s }));
       }
+      case "complete_step":
+        return [{ action: "complete_step", task_id: args.task_id, step_text: args.step_text }];
+      case "merge_tasks":
+        return [{ action: "merge_tasks", from_task_id: args.from_task_id, to_task_id: args.to_task_id }];
       case "move_note":
         return [{ action: "move_note", query: args.query, folder: args.folder }];
       case "set_reminder":
@@ -11156,7 +11160,8 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
           ids.forEach((id) => {
             const idx = tasks.findIndex((t2) => t2.id === id);
             if (idx !== -1) {
-              tasks[idx] = { ...tasks[idx], status: "done", completedAt: Date.now(), updatedAt: Date.now() };
+              const closedSteps = Array.isArray(tasks[idx].steps) ? tasks[idx].steps.map((s) => ({ ...s, done: true })) : tasks[idx].steps;
+              tasks[idx] = { ...tasks[idx], status: "done", completedAt: Date.now(), updatedAt: Date.now(), steps: closedSteps };
             }
           });
           saveTasks(tasks);
@@ -12858,6 +12863,8 @@ ${CHIP_PROMPT_RULES}`;
         // --- ІНШЕ ---
         { type: "function", function: { name: "reopen_task", description: "\u041F\u043E\u0432\u0435\u0440\u043D\u0443\u0442\u0438 \u0437\u0430\u043A\u0440\u0438\u0442\u0443 \u0437\u0430\u0434\u0430\u0447\u0443 \u0432 \u0430\u043A\u0442\u0438\u0432\u043D\u0456.", parameters: { type: "object", properties: { _reasoning_log: { type: "string", description: "CoT \u2014 1-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u041E\u0411\u041E\u0412\u02BC\u042F\u0417\u041A\u041E\u0412\u041E (\u0434\u0438\u0432. REASONING_LOG_RULE)." }, task_id: { type: "string", description: "ID \u0437\u0430\u0434\u0430\u0447\u0456 (\u0440\u044F\u0434\u043E\u043A)" }, comment: { type: "string" } }, required: ["_reasoning_log", "task_id"], additionalProperties: false } } },
         { type: "function", function: { name: "add_step", description: "\u0414\u043E\u0434\u0430\u0442\u0438 \u043A\u0440\u043E\u043A\u0438 \u0434\u043E \u0456\u0441\u043D\u0443\u044E\u0447\u043E\u0457 \u0437\u0430\u0434\u0430\u0447\u0456.", parameters: { type: "object", properties: { _reasoning_log: { type: "string", description: "CoT \u2014 1-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u041E\u0411\u041E\u0412\u02BC\u042F\u0417\u041A\u041E\u0412\u041E (\u0434\u0438\u0432. REASONING_LOG_RULE)." }, task_id: { type: "string", description: "ID \u0437\u0430\u0434\u0430\u0447\u0456 (\u0440\u044F\u0434\u043E\u043A)" }, steps: { type: "array", items: { type: "string" } } }, required: ["_reasoning_log", "task_id", "steps"], additionalProperties: false } } },
+        { type: "function", function: { name: "complete_step", description: "\u0417\u0430\u043A\u0440\u0438\u0442\u0438 \u041A\u041E\u041D\u041A\u0420\u0415\u0422\u041D\u0418\u0419 \u043A\u0440\u043E\u043A \u0437\u0430\u0434\u0430\u0447\u0456 (\u0430 \u043D\u0435 \u0446\u0456\u043B\u0443 \u0437\u0430\u0434\u0430\u0447\u0443). \u0412\u0418\u041A\u041E\u0420\u0418\u0421\u0422\u041E\u0412\u0423\u0419 \u043A\u043E\u043B\u0438 \u044E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 \u0449\u043E \u0437\u0440\u043E\u0431\u0438\u0432 \u0434\u0456\u044E \u044F\u043A\u0430 \u0454 \u0443 \u0441\u043F\u0438\u0441\u043A\u0443 \u0410\u041A\u0422\u0418\u0412\u041D\u0418\u0425 \u041A\u0420\u041E\u041A\u0406\u0412 \u0437\u0430\u0434\u0430\u0447\u0456 (\u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442 \u043F\u043E\u043A\u0430\u0437\u0443\u0454 '\u0430\u043A\u0442\u0438\u0432\u043D\u0456: \u043F\u0435\u0440\u0435\u0446\u044C, \u0446\u0438\u0431\u0443\u043B\u044E, \u043A\u0456\u0432\u0456'). \u041F\u0440\u0438\u043A\u043B\u0430\u0434: '\u041A\u0443\u043F\u0438\u0432 \u043F\u0435\u0440\u0435\u0446\u044C' \u043F\u0440\u0438 \u0437\u0430\u0434\u0430\u0447\u0456 \xAB\u041A\u0443\u043F\u0438\u0442\u0438 \u043F\u0435\u0440\u0435\u0446\u044C, \u0446\u0438\u0431\u0443\u043B\u044E, \u043A\u0456\u0432\u0456\xBB \u2192 complete_step \u0437 step_text='\u043F\u0435\u0440\u0435\u0446\u044C'. \u041D\u0415 complete_task \u2014 \u0446\u0435 \u0437\u0430\u043A\u0440\u0438\u0454 \u0412\u0421\u042E \u0437\u0430\u0434\u0430\u0447\u0443 \u0440\u0430\u0437\u043E\u043C \u0437 \u043D\u0435\u0432\u0438\u043A\u043E\u043D\u0430\u043D\u0438\u043C\u0438 \u043A\u0440\u043E\u043A\u0430\u043C\u0438. \u042F\u043A\u0449\u043E \u0432\u0441\u0456 \u043A\u0440\u043E\u043A\u0438 \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u0456 \u2014 \u0437\u0430\u0434\u0430\u0447\u0430 \u0437\u0430\u043A\u0440\u0438\u0454\u0442\u044C\u0441\u044F \u0430\u0432\u0442\u043E\u043C\u0430\u0442\u0438\u0447\u043D\u043E.", parameters: { type: "object", properties: { _reasoning_log: { type: "string", description: "CoT \u2014 1-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u041E\u0411\u041E\u0412\u02BC\u042F\u0417\u041A\u041E\u0412\u041E (\u0434\u0438\u0432. REASONING_LOG_RULE)." }, task_id: { type: "string", description: "ID \u0437\u0430\u0434\u0430\u0447\u0456 (\u0440\u044F\u0434\u043E\u043A) \u0443 \u044F\u043A\u0456\u0439 \u0454 \u0446\u0435\u0439 \u043A\u0440\u043E\u043A" }, step_text: { type: "string", description: "\u0422\u0435\u043A\u0441\u0442 \u043A\u0440\u043E\u043A\u0443 \u0442\u043E\u0447\u043D\u043E \u044F\u043A \u0443 \u0441\u043F\u0438\u0441\u043A\u0443 \u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0445 \u0430\u0431\u043E \u0447\u0430\u0441\u0442\u0438\u043D\u0430 (\u043C\u0456\u043D. 6 \u0441\u0438\u043C\u0432\u043E\u043B\u0456\u0432 \u0434\u043B\u044F fuzzy match)" }, comment: { type: "string" } }, required: ["_reasoning_log", "task_id", "step_text"], additionalProperties: false } } },
+        { type: "function", function: { name: "merge_tasks", description: "\u041E\u0431'\u0454\u0434\u043D\u0430\u0442\u0438 \u0434\u0432\u0456 \u0437\u0430\u0434\u0430\u0447\u0456: \u0430\u043A\u0442\u0438\u0432\u043D\u0456 \u043A\u0440\u043E\u043A\u0438 \u0437 'from' \u043F\u0435\u0440\u0435\u0445\u043E\u0434\u044F\u0442\u044C \u0443 'to' (\u0437 \u0434\u0435\u0434\u0443\u043F\u043E\u043C), \u043D\u0430\u0437\u0432\u0430 'from' \u0441\u0442\u0430\u0454 \u043A\u0440\u043E\u043A\u043E\u043C 'to', 'from' \u0432\u0438\u0434\u0430\u043B\u044F\u0454\u0442\u044C\u0441\u044F. \u0412\u0418\u041A\u041E\u0420\u0418\u0421\u0422\u041E\u0412\u0423\u0419 \u043A\u043E\u043B\u0438 \u044E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u043E\u0431'\u0454\u0434\u043D\u0430\u0439 \u0437\u0430\u0434\u0430\u0447\u0456 X \u0456 Y', '\u0437\u043B\u0438\u0439 X \u0443 Y', '\u043E\u0431\u02BC\u0454\u0434\u043D\u0430\u0439 \u0434\u0432\u0456 \u043E\u0441\u0442\u0430\u043D\u043D\u0456'. \u041D\u0415 \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0434\u043B\u044F \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0439 \u0424\u0456\u043D\u0430\u043D\u0441\u0456\u0432 \u2014 \u0442\u0430\u043C merge_finance_categories.", parameters: { type: "object", properties: { _reasoning_log: { type: "string", description: "CoT \u2014 1-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u041E\u0411\u041E\u0412\u02BC\u042F\u0417\u041A\u041E\u0412\u041E (\u0434\u0438\u0432. REASONING_LOG_RULE)." }, from_task_id: { type: "string", description: "ID \u0437\u0430\u0434\u0430\u0447\u0456 \u0449\u043E \u0437\u043D\u0438\u043A\u043D\u0435 (\u0434\u0436\u0435\u0440\u0435\u043B\u043E \u043A\u0440\u043E\u043A\u0456\u0432)" }, to_task_id: { type: "string", description: "ID \u0437\u0430\u0434\u0430\u0447\u0456-\u043E\u0434\u0435\u0440\u0436\u0443\u0432\u0430\u0447\u0430" }, comment: { type: "string" } }, required: ["_reasoning_log", "from_task_id", "to_task_id"], additionalProperties: false } } },
         { type: "function", function: { name: "move_note", description: "\u041F\u0435\u0440\u0435\u043C\u0456\u0441\u0442\u0438\u0442\u0438 \u043D\u043E\u0442\u0430\u0442\u043A\u0443 \u0432 \u0456\u043D\u0448\u0443 \u043F\u0430\u043F\u043A\u0443.", parameters: { type: "object", properties: { _reasoning_log: { type: "string", description: "CoT \u2014 1-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u041E\u0411\u041E\u0412\u02BC\u042F\u0417\u041A\u041E\u0412\u041E (\u0434\u0438\u0432. REASONING_LOG_RULE)." }, query: { type: "string", description: "\u0427\u0430\u0441\u0442\u0438\u043D\u0430 \u0442\u0435\u043A\u0441\u0442\u0443 \u043D\u043E\u0442\u0430\u0442\u043A\u0438 \u0434\u043B\u044F \u043F\u043E\u0448\u0443\u043A\u0443" }, folder: { type: "string", description: "\u041D\u043E\u0432\u0430 \u043F\u0430\u043F\u043A\u0430" } }, required: ["_reasoning_log", "query", "folder"], additionalProperties: false } } },
         { type: "function", function: { name: "update_transaction", description: "\u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u0456\u0441\u043D\u0443\u044E\u0447\u0443 \u0444\u0456\u043D\u0430\u043D\u0441\u043E\u0432\u0443 \u043E\u043F\u0435\u0440\u0430\u0446\u0456\u044E. \u042E\u0437\u0435\u0440 \u042F\u0412\u041D\u041E \u043A\u0430\u0436\u0435 \u0437\u043C\u0456\u043D\u0438\u0442\u0438/\u0432\u0438\u043F\u0440\u0430\u0432\u0438\u0442\u0438 \u0441\u0443\u043C\u0443 \u0430\u0431\u043E \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E.", parameters: { type: "object", properties: { _reasoning_log: { type: "string", description: "CoT \u2014 1-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u041E\u0411\u041E\u0412\u02BC\u042F\u0417\u041A\u041E\u0412\u041E (\u0434\u0438\u0432. REASONING_LOG_RULE)." }, id: { type: "integer" }, category: { type: "string" }, amount: { type: "number" }, comment: { type: "string" } }, required: ["_reasoning_log", "id"], additionalProperties: false } } },
         { type: "function", function: { name: "delete_transaction", description: "\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0444\u0456\u043D\u0430\u043D\u0441\u043E\u0432\u0443 \u043E\u043F\u0435\u0440\u0430\u0446\u0456\u044E (\u0443 \u043A\u043E\u0448\u0438\u043A \u043D\u0430 7 \u0434\u043D\u0456\u0432). \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u0432\u0438\u0434\u0430\u043B\u0438 \u043E\u043F\u0435\u0440\u0430\u0446\u0456\u044E', '\u043F\u0440\u0438\u0431\u0435\u0440\u0438 \u0446\u044E \u0432\u0438\u0442\u0440\u0430\u0442\u0443'.", parameters: { type: "object", properties: { _reasoning_log: { type: "string", description: "CoT \u2014 1-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u041E\u0411\u041E\u0412\u02BC\u042F\u0417\u041A\u041E\u0412\u041E (\u0434\u0438\u0432. REASONING_LOG_RULE)." }, id: { type: "integer", description: "ID \u0442\u0440\u0430\u043D\u0437\u0430\u043A\u0446\u0456\u0457 \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443" }, comment: { type: "string" } }, required: ["_reasoning_log", "id"], additionalProperties: false } } },
@@ -13852,6 +13859,22 @@ ${CHIP_PROMPT_RULES}`;
         addMsg("agent", t("habits.task.already_done", '\u0417\u0430\u0434\u0430\u0447\u0430 "{title}" \u0432\u0436\u0435 \u0437\u0430\u043A\u0440\u0438\u0442\u0430.', { title: task.title }));
         return true;
       }
+      if (Array.isArray(task.steps) && task.steps.length > 0 && originalText) {
+        const userMsg = originalText.toLowerCase();
+        const matchStep = task.steps.find((s) => !s.done && s.text && userMsg.includes(s.text.toLowerCase().replace(/^купити\s+/, "").slice(0, 6)));
+        if (matchStep && task.steps.some((s) => !s.done && s !== matchStep)) {
+          matchStep.done = true;
+          if (task.steps.every((s) => s.done)) {
+            task.status = "done";
+            task.completedAt = Date.now();
+          }
+          task.updatedAt = Date.now();
+          saveTasks(tasks);
+          if (currentTab === "tasks") renderTasks();
+          addMsg("agent", t("habits.step.closed", "\u2713 \u041A\u0440\u043E\u043A \xAB{step}\xBB \u0437\u0430\u043A\u0440\u0438\u0442\u043E", { step: matchStep.text }));
+          return true;
+        }
+      }
       addMsg("agent", t("habits.task.done", '\u2705 \u0417\u0430\u0434\u0430\u0447\u0443 "{title}" \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E!', { title: task.title }));
       if (currentTab === "tasks") {
         toggleTaskStatus(task.id);
@@ -13885,6 +13908,68 @@ ${CHIP_PROMPT_RULES}`;
       addMsg("agent", t("habits.habit.marked_today", '\u2705 \u0412\u0456\u0434\u043C\u0456\u0442\u0438\u0432 \u0437\u0432\u0438\u0447\u043A\u0443 "{name}" \u044F\u043A \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u0443 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456', { name: h.name }));
       return true;
     }
+    if (action === "complete_step") {
+      const tasks = getTasks();
+      const task = tasks.find((x) => String(x.id) === String(parsed.task_id));
+      if (!task) {
+        addMsg("agent", t("habits.err.task_not_found_short", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u0437\u0430\u0434\u0430\u0447\u0443."));
+        return true;
+      }
+      if (!Array.isArray(task.steps) || task.steps.length === 0) {
+        addMsg("agent", t("habits.step.no_steps", "\u0423 \u0437\u0430\u0434\u0430\u0447\u0456 \xAB{title}\xBB \u043D\u0435\u043C\u0430\u0454 \u043A\u0440\u043E\u043A\u0456\u0432.", { title: task.title }));
+        return true;
+      }
+      const q = (parsed.step_text || "").toLowerCase().trim();
+      const step = task.steps.find((s) => !s.done && (s.text.toLowerCase().includes(q.slice(0, 8)) || q.includes(s.text.toLowerCase().slice(0, 8))));
+      if (!step) {
+        addMsg("agent", t("habits.step.not_found", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0439 \u043A\u0440\u043E\u043A \xAB{step}\xBB \u0443 \u0437\u0430\u0434\u0430\u0447\u0456 \xAB{title}\xBB.", { step: parsed.step_text, title: task.title }));
+        return true;
+      }
+      step.done = true;
+      if (task.steps.every((s) => s.done)) {
+        task.status = "done";
+        task.completedAt = Date.now();
+      }
+      task.updatedAt = Date.now();
+      saveTasks(tasks);
+      if (currentTab === "tasks") renderTasks();
+      const allDone = task.steps.every((s) => s.done);
+      addMsg("agent", allDone ? t("habits.step.last_done", "\u2705 \u041E\u0441\u0442\u0430\u043D\u043D\u0456\u0439 \u043A\u0440\u043E\u043A \xAB{step}\xBB \u0437\u0430\u043A\u0440\u0438\u0442\u043E \u2014 \u0437\u0430\u0434\u0430\u0447\u0443 \xAB{title}\xBB \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E!", { step: step.text, title: task.title }) : t("habits.step.closed", "\u2713 \u041A\u0440\u043E\u043A \xAB{step}\xBB \u0437\u0430\u043A\u0440\u0438\u0442\u043E", { step: step.text }));
+      return true;
+    }
+    if (action === "merge_tasks") {
+      const tasks = getTasks();
+      const from = tasks.find((x) => String(x.id) === String(parsed.from_task_id));
+      const to = tasks.find((x) => String(x.id) === String(parsed.to_task_id));
+      if (!from || !to) {
+        addMsg("agent", t("habits.merge.not_found", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u043E\u0434\u043D\u0443 \u0437 \u0437\u0430\u0434\u0430\u0447 \u0434\u043B\u044F \u043E\u0431'\u0454\u0434\u043D\u0430\u043D\u043D\u044F."));
+        return true;
+      }
+      if (from.id === to.id) {
+        addMsg("agent", t("habits.merge.same", "\u041D\u0435 \u043C\u043E\u0436\u0443 \u043E\u0431'\u0454\u0434\u043D\u0430\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443 \u0437 \u0441\u0430\u043C\u043E\u044E \u0441\u043E\u0431\u043E\u044E."));
+        return true;
+      }
+      if (!Array.isArray(to.steps)) to.steps = [];
+      if (!Array.isArray(from.steps)) from.steps = [];
+      let added = 0;
+      from.steps.filter((s) => !s.done).forEach((s) => {
+        if (!to.steps.some((ts) => ts.text.toLowerCase() === s.text.toLowerCase())) {
+          to.steps.push({ id: Date.now() + Math.floor(Math.random() * 1e3), text: s.text, done: false });
+          added++;
+        }
+      });
+      if (!to.steps.some((ts) => ts.text.toLowerCase() === from.title.toLowerCase())) {
+        to.steps.push({ id: Date.now() + Math.floor(Math.random() * 1e3), text: from.title, done: false });
+        added++;
+      }
+      const idx = tasks.findIndex((x) => String(x.id) === String(from.id));
+      if (idx !== -1) tasks.splice(idx, 1);
+      to.updatedAt = Date.now();
+      saveTasks(tasks);
+      if (currentTab === "tasks") renderTasks();
+      addMsg("agent", t("habits.merge.done", "\u2705 \u041E\u0431'\u0454\u0434\u043D\u0430\u0432 \xAB{from}\xBB \u0437 \xAB{to}\xBB (+{n} \u043A\u0440\u043E\u043A\u0456\u0432)", { from: from.title, to: to.title, n: added }));
+      return true;
+    }
     if (action === "add_step") {
       const tasks = getTasks();
       const task = tasks.find((x) => String(x.id) === String(parsed.task_id));
@@ -13898,6 +13983,10 @@ ${CHIP_PROMPT_RULES}`;
         return true;
       }
       if (!Array.isArray(task.steps)) task.steps = [];
+      if (task.steps.some((s) => s.text.toLowerCase() === stepText.toLowerCase())) {
+        addMsg("agent", t("habits.step.dup", "\u041A\u0440\u043E\u043A \xAB{step}\xBB \u0432\u0436\u0435 \u0454 \u2014 \u043F\u0440\u043E\u043F\u0443\u0441\u043A\u0430\u044E", { step: stepText }));
+        return true;
+      }
       task.steps.push({ id: Date.now(), text: stepText, done: false });
       task.updatedAt = Date.now();
       saveTasks(tasks);
@@ -14521,7 +14610,8 @@ ${legacyMemory}`);
       const taskList = tasks.map((t2) => {
         const steps = t2.steps || [];
         const doneSteps = steps.filter((s) => s.done).length;
-        const stepInfo = steps.length > 0 ? ` (${doneSteps}/${steps.length} \u043A\u0440\u043E\u043A\u0456\u0432)` : "";
+        const activeStepNames = steps.filter((s) => !s.done).map((s) => s.text).join(", ");
+        const stepInfo = steps.length > 0 ? ` (${doneSteps}/${steps.length} \u043A\u0440\u043E\u043A\u0456\u0432${activeStepNames ? "; \u0430\u043A\u0442\u0438\u0432\u043D\u0456: " + activeStepNames : ""})` : "";
         const dueInfo = t2.dueDate ? ` \u{1F4C5}${t2.dueDate}` : "";
         const prioInfo = t2.priority === "critical" ? " \u{1F534}" : t2.priority === "important" ? " \u{1F7E0}" : "";
         return `- [ID:${t2.id}] ${t2.title}${stepInfo}${dueInfo}${prioInfo}`;
@@ -18167,7 +18257,8 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       const idx = tasks.findIndex((t2) => t2.id === taskId);
       if (idx !== -1) {
         completed.push(tasks[idx].title);
-        tasks[idx] = { ...tasks[idx], status: "done", completedAt: Date.now() };
+        const closedSteps = Array.isArray(tasks[idx].steps) ? tasks[idx].steps.map((s) => ({ ...s, done: true })) : tasks[idx].steps;
+        tasks[idx] = { ...tasks[idx], status: "done", completedAt: Date.now(), updatedAt: Date.now(), steps: closedSteps };
       }
     });
     if (completed.length === 0) {
