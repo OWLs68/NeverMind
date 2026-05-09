@@ -781,9 +781,9 @@ function routineDeleteFromTimeline(kind, sourceId, reminderId) {
     if (kind === 'reminder') {
       try {
         const rid = reminderId || ev.reminderId || ev.id;
-        const reminders = JSON.parse(localStorage.getItem('nm_reminders') || '[]');
+        const reminders = getReminders();
         const filtered = reminders.filter(r => r.id !== rid);
-        if (filtered.length !== reminders.length) localStorage.setItem('nm_reminders', JSON.stringify(filtered));
+        if (filtered.length !== reminders.length) saveReminders(filtered);
       } catch(e) { console.warn('[routine] reminder cleanup failed', e); }
     }
   }

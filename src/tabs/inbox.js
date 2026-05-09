@@ -5,7 +5,7 @@
 // ============================================================
 
 import { currentTab, switchTab, showToast } from '../core/nav.js';
-import { escapeHtml, saveOffline, extractJsonBlocks, parseContentChips, t } from '../core/utils.js';
+import { escapeHtml, saveOffline, extractJsonBlocks, parseContentChips, t, getReminders, saveReminders } from '../core/utils.js';
 import { generateUUID } from '../core/uuid.js';
 import { addToTrash, getTrash, restoreFromTrash, showUndoToast } from '../core/trash.js';
 import { INBOX_SYSTEM_PROMPT, INBOX_TOOLS, callAI, callAIWithTools, callAIWithHistory, getAIContext, getOWLPersonality, saveChatMsg, activeChatBar } from '../ai/core.js';
@@ -352,16 +352,16 @@ export function renderInbox() {
             const match = item.text.match(/^(\d{2}:\d{2})\s*[—-]\s*(.+)$/);
             if (match) {
               const itemDay = new Date(item.ts).toISOString().slice(0, 10);
-              const reminders = JSON.parse(localStorage.getItem('nm_reminders') || '[]');
+              const reminders = getReminders();
               const found = reminders.find(r => r.time === match[1] && r.text === match[2].trim() && r.date === itemDay);
               if (found) rid = found.id;
             }
           }
           if (rid) {
-            const reminders = JSON.parse(localStorage.getItem('nm_reminders') || '[]');
+            const reminders = getReminders();
             removedReminders = reminders.filter(r => r.id === rid);
             const remRest = reminders.filter(r => r.id !== rid);
-            if (remRest.length !== reminders.length) localStorage.setItem('nm_reminders', JSON.stringify(remRest));
+            if (remRest.length !== reminders.length) saveReminders(remRest);
             const events = getEvents();
             removedEvents = events.filter(e => e.reminderId === rid || (e.source === 'reminder' && e.id === rid + 1));
             const evRest = events.filter(e => !(e.reminderId === rid || (e.source === 'reminder' && e.id === rid + 1)));
@@ -379,8 +379,8 @@ export function renderInbox() {
         // Відновлюємо nm_reminders + nm_events якщо видалили
         if (removedReminders && removedReminders.length > 0) {
           try {
-            const reminders = JSON.parse(localStorage.getItem('nm_reminders') || '[]');
-            localStorage.setItem('nm_reminders', JSON.stringify([...removedReminders, ...reminders]));
+            const reminders = getReminders();
+            saveReminders([...removedReminders, ...reminders]);
           } catch(e) {}
         }
         if (removedEvents && removedEvents.length > 0) {

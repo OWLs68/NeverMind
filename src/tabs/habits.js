@@ -4,7 +4,7 @@
 // ============================================================
 
 import { currentTab, showToast } from '../core/nav.js';
-import { escapeHtml, logRecentAction, extractJsonBlocks, parseContentChips, levenshtein, t } from '../core/utils.js';
+import { escapeHtml, logRecentAction, extractJsonBlocks, parseContentChips, levenshtein, t, getReminders, saveReminders } from '../core/utils.js';
 import { logUsage } from '../core/usage-meter.js';
 import { generateUUID } from '../core/uuid.js';
 import { addToTrash, showUndoToast } from '../core/trash.js';
@@ -1546,9 +1546,9 @@ export function processUniversalAction(parsed, originalText, addMsg) {
     if (!time) { addMsg('agent', t('habits.err.reminder_time', 'Вкажи час нагадування.')); return true; }
     const reminderId = Date.now();
     // 1. nm_reminders — для тригера спливаючого попередження
-    const reminders = JSON.parse(localStorage.getItem('nm_reminders') || '[]');
+    const reminders = getReminders();
     reminders.push({ id: reminderId, time, text, date, done: false });
-    localStorage.setItem('nm_reminders', JSON.stringify(reminders));
+    saveReminders(reminders);
     // 2. nm_events — щоб було видно у календарі і модалці "Розпорядок дня"
     addEventDedup({
       id: reminderId + 1,
@@ -1588,7 +1588,7 @@ export function processUniversalAction(parsed, originalText, addMsg) {
     const qDate = parsed.date || null;
     if (!qText && !qTime && !qDate) { addMsg('agent', t('habits.reminder.del.unclear', 'Не зрозумів яке нагадування видалити.')); return true; }
 
-    const reminders = JSON.parse(localStorage.getItem('nm_reminders') || '[]');
+    const reminders = getReminders();
     // MPVly 05.05 follow-up: 3-рівневий fuzzy match для опечаток.
     // 1) substring (швидко) → 2) Levenshtein ≤2 для слів ≥5 літер (опечатки) →
     // 3) ні те, ні те — пропускаємо.
@@ -1618,7 +1618,7 @@ export function processUniversalAction(parsed, originalText, addMsg) {
     const removed = reminders[idx];
     const reminderId = removed.id;
     reminders.splice(idx, 1);
-    localStorage.setItem('nm_reminders', JSON.stringify(reminders));
+    saveReminders(reminders);
 
     // nm_events — видаляємо event пов'язаний з reminder (id+1 або поле reminderId)
     try {
