@@ -9,7 +9,7 @@ import { logUsage } from '../core/usage-meter.js';
 import { generateUUID } from '../core/uuid.js';
 import { addToTrash, showUndoToast } from '../core/trash.js';
 import { callAIWithTools, getAIContext, getOWLPersonality, safeAgentReply, INBOX_TOOLS, handleChatError } from '../ai/core.js';
-import { UI_TOOLS_RULES, REMINDER_RULES, GLOBAL_TOOLS_RULE, CLARIFY_INLINE_RULES } from '../ai/prompts.js';
+import { UI_TOOLS_RULES, BASE_CHAT_RULES } from '../ai/prompts.js';
 import { dispatchChatToolCalls } from '../ai/tool-dispatcher.js';
 import { shouldClarify } from '../owl/clarify-guard.js';
 import { attachSwipeDelete } from '../ui/swipe-delete.js';
@@ -1580,10 +1580,8 @@ export async function sendTasksBarMessage() {
     + 'МИНУЛИЙ ЧАС (B-105 fix Aps79): "поміняв", "подав", "зробив", "написав", "сходив", "купив" — це факт що ВЖЕ стався. ОБРОБКА: (а) якщо у списку АКТИВНИХ задач є явно відповідна задача з тією ж дією — complete_task на ту задачу; (б) якщо явної відповідності немає — ТЕКСТ-ВІДПОВІДЬ "✓ Записав. Якщо це закриває задачу — скажи яку." або save_moment, але НІКОЛИ delete_task. Не вигадуй фузі-зв\'язок ("поміняв номер" ≠ "Зареєструватися на Upwirk"). НІКОЛИ не видаляй задачу без явного слова "видали/забудь/прибери" від юзера.\n'
     + 'Для редагування існуючої звички (зміна днів/назви) — edit_habit, НЕ save_habit нову.\n'
     + 'Інакше — текст 1-3 речення українською. НЕ вигадуй даних яких немає.\n\n'
-    + GLOBAL_TOOLS_RULE + '\n\n'
-    + REMINDER_RULES + '\n\n'
-    + UI_TOOLS_RULES + '\n\n'
-    + CLARIFY_INLINE_RULES
+    + BASE_CHAT_RULES + '\n\n'
+    + UI_TOOLS_RULES
     + (aiContext ? '\n\n' + aiContext : '');
 
   try {
