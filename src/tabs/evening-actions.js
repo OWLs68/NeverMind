@@ -173,7 +173,11 @@ export function dispatchEveningTool(name, args) {
         ids.forEach(id => {
           const idx = tasks.findIndex(t => t.id === id);
           if (idx !== -1) {
-            tasks[idx] = { ...tasks[idx], status: 'done', completedAt: Date.now(), updatedAt: Date.now() };
+            // 64CXo B-164: уніфікація з habits.js — закриваємо також кроки задачі.
+            const closedSteps = Array.isArray(tasks[idx].steps)
+              ? tasks[idx].steps.map(s => ({ ...s, done: true }))
+              : tasks[idx].steps;
+            tasks[idx] = { ...tasks[idx], status: 'done', completedAt: Date.now(), updatedAt: Date.now(), steps: closedSteps };
           }
         });
         saveTasks(tasks);

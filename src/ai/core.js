@@ -99,7 +99,10 @@ export function getAIContext() {
     const taskList = tasks.map(t => {
       const steps = (t.steps || []);
       const doneSteps = steps.filter(s => s.done).length;
-      const stepInfo = steps.length > 0 ? ` (${doneSteps}/${steps.length} кроків)` : '';
+      const activeStepNames = steps.filter(s => !s.done).map(s => s.text).join(', ');
+      const stepInfo = steps.length > 0
+        ? ` (${doneSteps}/${steps.length} кроків${activeStepNames ? '; активні: ' + activeStepNames : ''})`
+        : '';
       const dueInfo = t.dueDate ? ` 📅${t.dueDate}` : '';
       const prioInfo = t.priority === 'critical' ? ' 🔴' : t.priority === 'important' ? ' 🟠' : '';
       return `- [ID:${t.id}] ${t.title}${stepInfo}${dueInfo}${prioInfo}`;
