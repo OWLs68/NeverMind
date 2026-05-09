@@ -1622,9 +1622,11 @@ export function processUniversalAction(parsed, originalText, addMsg) {
 
     // nm_events — видаляємо event пов'язаний з reminder (id+1 або поле reminderId)
     try {
-      const events = JSON.parse(localStorage.getItem('nm_events') || '[]');
+      const events = getEvents();
       const eventsRest = events.filter(e => e.reminderId !== reminderId && e.id !== reminderId + 1);
-      if (eventsRest.length !== events.length) localStorage.setItem('nm_events', JSON.stringify(eventsRest));
+      // 64CXo: saveEvents() замість прямого setItem — диспатч nm-data-changed
+      // потрібний для board re-render, інакше OWL не дізнається що подія зникла.
+      if (eventsRest.length !== events.length) saveEvents(eventsRest);
     } catch(e) {}
 
     // nm_inbox — видаляємо картку (id+2 або поле reminderId)

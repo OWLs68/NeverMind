@@ -245,7 +245,7 @@ export function getFinCats() {
   const saved = JSON.parse(localStorage.getItem('nm_finance_cats') || 'null');
   return _migrateFinCats(saved);
 }
-export function saveFinCats(obj) { localStorage.setItem('nm_finance_cats', JSON.stringify(obj)); }
+export function saveFinCats(obj) { localStorage.setItem('nm_finance_cats', JSON.stringify(obj)); window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'finance' })); }
 
 export function findFinCatById(id) {
   const cats = getFinCats();

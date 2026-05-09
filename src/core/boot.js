@@ -305,7 +305,10 @@ export const NM_KEYS = {
               'nm_evening_summary'],
   // Чат-историки (→ Supabase chat_messages)
   chat: ['nm_chat_inbox','nm_chat_tasks','nm_chat_notes','nm_chat_me',
-         'nm_chat_evening','nm_chat_finance','nm_chat_health','nm_chat_projects'],
+         'nm_chat_evening','nm_chat_finance','nm_chat_health','nm_chat_projects',
+         // 64CXo: nm_owl_chat — OWL mini-chat у inbox-board, поза 8 tab-чатами.
+         // Раніше не входив у clearAllData → стара розмова після wipe.
+         'nm_owl_chat'],
   // Кеш/тимчасове (не потребує Supabase)
   cache: ['nm_owl_board','nm_owl_board_ts','nm_owl_cooldowns','nm_owl_schedule_asked',
           'nm_owl_schedule_pending','nm_error_log',
