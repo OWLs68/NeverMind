@@ -16,7 +16,7 @@ import { attachSwipeDelete } from '../ui/swipe-delete.js';
 import { addInboxChatMsg, getInbox, saveInbox, renderInbox, _detectEventFromTask } from './inbox.js';
 import { monthGenitive } from '../data/months.js';
 import { getTasks, saveTasks, renderTasks, openAddTask, addTaskBarMsg, taskBarHistory, taskBarLoading, setTaskBarLoading, setupModalSwipeClose, toggleTaskStatus } from './tasks.js';
-import { getNotes, saveNotes, renderNotes, addNoteFromInbox, currentNotesFolder, setCurrentNotesFolder } from './notes.js';
+import { getNotes, saveNotes, renderNotes, addNoteFromInbox, currentNotesFolder, setCurrentNotesFolder, getDirectChildren } from './notes.js';
 import { getFinance, saveFinance, renderFinance, formatMoney, getFinCats, saveFinCats, _resolveFinanceDate, createFinCategory } from './finance.js';
 import { matchSubcategoryFromComment } from '../data/finance-subcat-keywords.js';
 import { getMoments, saveMoments } from './evening.js';
@@ -1449,12 +1449,17 @@ export function processUniversalAction(parsed, originalText, addMsg) {
       addMsg('agent', t('habits.folder.not_found', 'Папку "{folder}" не знайшов. Доступні: {list}', { folder: targetName, list: folders.join(', ') }));
       return true;
     }
-    const toDelete = notes.filter(n => (n.folder || 'Загальне') === matched);
+    // 64CXo Фаза D: recursive — якщо папка має дочірніх, видаляємо їх теж.
+    // Узгоджено з swipe-delete у notes.js (Фаза C).
+    const childNames = getDirectChildren(matched);
+    const toDeleteSet = new Set([matched, ...childNames]);
+    const toDelete = notes.filter(n => toDeleteSet.has(n.folder || 'Загальне'));
     toDelete.forEach(n => addToTrash('folder', n, null));
-    const remaining = notes.filter(n => (n.folder || 'Загальне') !== matched);
+    const remaining = notes.filter(n => !toDeleteSet.has(n.folder || 'Загальне'));
     saveNotes(remaining);
     if (currentTab === 'notes') { setCurrentNotesFolder(null); renderNotes(); }
-    addMsg('agent', t('habits.folder.deleted', '✓ Папку "{folder}" видалено ({n} нотаток)', { folder: matched, n: toDelete.length }));
+    const childInfo = childNames.length > 0 ? t('habits.folder.deleted_children', ' + {n} підпапок', { n: childNames.length }) : '';
+    addMsg('agent', t('habits.folder.deleted', '✓ Папку "{folder}" видалено ({n} нотаток)', { folder: matched, n: toDelete.length }) + childInfo);
     return true;
   }
 

@@ -65,16 +65,37 @@ export function getNotesContext() {
   if (notes.length === 0) return '';
   const folderCount = {};
   notes.forEach(n => { const f = n.folder || t('notes.default_folder', 'Загальне'); folderCount[f] = (folderCount[f] || 0) + 1; });
-  const foldersStr = Object.entries(folderCount)
+  // 64CXo Фаза D: nested-aware листинг папок. Root показується першим, дочірні
+  // дейлі-папки — з відступом «  └─» під батьком. AI не плутає structure.
+  const meta = getFoldersMeta();
+  const rootCounts = {}; // root → total (direct + nested)
+  const childrenByRoot = {}; // root → [{name, count}]
+  Object.keys(folderCount).forEach(f => {
+    const m = meta[f];
+    if (m && m.parent) {
+      const root = m.parent;
+      rootCounts[root] = (rootCounts[root] || 0) + folderCount[f];
+      if (!childrenByRoot[root]) childrenByRoot[root] = [];
+      childrenByRoot[root].push({ name: f, count: folderCount[f] });
+    } else {
+      rootCounts[f] = (rootCounts[f] || 0) + folderCount[f];
+    }
+  });
+  const foldersStr = Object.entries(rootCounts)
     .sort((a, b) => b[1] - a[1])
-    .map(([name, count]) => `${name} (${count})`)
-    .join(', ');
+    .map(([root, total]) => {
+      const children = childrenByRoot[root] || [];
+      if (children.length === 0) return `${root} (${total})`;
+      const childList = children.map(c => `  └─ ${c.name} (${c.count})`).join('\n');
+      return `${root} (${total}, ${children.length} ${t('notes.context.subfolders', 'підпапок')}):\n${childList}`;
+    })
+    .join('\n');
   const recent = notes.slice(0, 5).map(n => {
     const txt = (n.text || '').slice(0, 60).replace(/\n/g, ' ');
     const more = (n.text || '').length > 60 ? '…' : '';
     return `- [ID:${n.id}] [${n.folder || t('notes.default_folder', 'Загальне')}] "${txt}${more}"`;
   }).join('\n');
-  return `Нотатки (${notes.length} загалом, папки: ${foldersStr}):\n${recent}`;
+  return `Нотатки (${notes.length} загалом, папки:\n${foldersStr}):\n${recent}`;
 }
 
 function getFolders() {
