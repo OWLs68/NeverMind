@@ -9796,7 +9796,12 @@ ${recent}`;
     renderNotes();
   }
   function closeNotesFolder() {
-    currentNotesFolder = null;
+    if (currentNotesFolder) {
+      const m = getFoldersMeta()[currentNotesFolder];
+      currentNotesFolder = m && m.parent ? m.parent : null;
+    } else {
+      currentNotesFolder = null;
+    }
     renderNotes();
   }
   function _ico(path) {
@@ -9859,6 +9864,22 @@ ${recent}`;
     if (changed) saveFoldersMeta(meta);
     return dailyName;
   }
+  function getDirectChildren(parentName) {
+    const meta = getFoldersMeta();
+    return Object.entries(meta).filter(([k, v]) => v.parent === parentName).map(([k]) => k);
+  }
+  function resolveRootFolder(folderName) {
+    const meta = getFoldersMeta();
+    let cur = folderName;
+    let depth = 0;
+    while (depth < 5) {
+      const m = meta[cur];
+      if (!m || !m.parent) return cur;
+      cur = m.parent;
+      depth++;
+    }
+    return cur;
+  }
   function renderNotes(searchQuery = "") {
     let notes = getNotes();
     const content = document.getElementById("notes-content");
@@ -9890,8 +9911,13 @@ ${recent}`;
       return;
     }
     if (currentNotesFolder !== null) {
+      const folderNotes = notes.filter((n) => (n.folder || t("notes.default_folder", "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435")) === currentNotesFolder);
+      const children = getDirectChildren(currentNotesFolder);
+      let totalCount = folderNotes.length;
+      for (const c of children) {
+        totalCount += notes.filter((n) => (n.folder || t("notes.default_folder", "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435")) === c).length;
+      }
       if (header) {
-        const fc = getFolderColor(currentNotesFolder);
         header.style.display = "flex";
         header.innerHTML = `
         <button onclick="closeNotesFolder()" style="background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:6px;padding:0;font-size:15px;font-weight:700;color:#1e1040">
@@ -9899,22 +9925,59 @@ ${recent}`;
           ${t("common.back", "\u041D\u0430\u0437\u0430\u0434")}
         </button>
         <span style="display:flex;align-items:center;gap:8px;font-size:16px;font-weight:800;color:#1e1040">${getFolderIcon(currentNotesFolder)} ${escapeHtml(currentNotesFolder)}</span>
-        <span style="font-size:13px;font-weight:600;color:rgba(30,16,64,0.4)">${notes.filter((n) => (n.folder || t("notes.default_folder", "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435")) === currentNotesFolder).length}</span>
+        <span style="font-size:13px;font-weight:600;color:rgba(30,16,64,0.4)">${totalCount}</span>
       `;
       }
-      const folderNotes = notes.filter((n) => (n.folder || t("notes.default_folder", "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435")) === currentNotesFolder);
-      content.innerHTML = folderNotes.length ? '<div style="padding:0 14px 120px">' + renderNotesList(folderNotes) + "</div>" : `<div style="text-align:center;padding:40px 32px;color:rgba(30,16,64,0.35);font-size:15px">${t("notes.folder.empty", "\u041F\u0430\u043F\u043A\u0430 \u043F\u043E\u0440\u043E\u0436\u043D\u044F")}</div>`;
+      let html = '<div style="padding:0 14px 120px">';
+      if (children.length > 0) {
+        const allMeta2 = getFoldersMeta();
+        const childCards = children.map((child) => {
+          const childCount = notes.filter((n) => (n.folder || t("notes.default_folder", "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435")) === child).length;
+          const safeChild = escapeJsArg(child);
+          const meta = allMeta2[child] || {};
+          const colorDef = meta.colorKey && FOLDER_COLOR_PALETTE[meta.colorKey] ? FOLDER_COLOR_PALETTE[meta.colorKey] : null;
+          const fc = colorDef ? { bg: colorDef.bg, border: "rgba(255,255,255,0.5)" } : getFolderColor(child);
+          return `<div class="folder-item-wrap" data-folder="${safeChild}" data-nested="1" style="position:relative;overflow:hidden;border-radius:18px;margin-bottom:var(--card-gap)">
+          <div onclick="openNotesFolder('${safeChild}')" style="cursor:pointer;border-radius:18px;padding:var(--card-pad-y) var(--card-pad-x);background:${fc.bg};border:1.5px solid ${fc.border};box-shadow:0 2px 12px rgba(0,0,0,0.05);display:flex;align-items:center;gap:14px;position:relative;z-index:1">
+            <div style="width:42px;height:42px;border-radius:12px;background:rgba(255,255,255,0.4);display:flex;align-items:center;justify-content:center;flex-shrink:0">${getFolderIcon(child)}</div>
+            <div style="flex:1;min-width:0;font-size:15px;font-weight:700;color:#1e1040;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(child)}</div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex-shrink:0;min-width:36px">
+              <div style="font-size:18px;font-weight:900;color:#1e1040;line-height:1">${childCount}</div>
+              <div style="font-size:9px;font-weight:600;color:rgba(30,16,64,0.4)">${t("notes.folder.entries", "\u0437\u0430\u043F\u0438\u0441\u0456\u0432")}</div>
+            </div>
+          </div>
+        </div>`;
+        }).join("");
+        html += childCards;
+      }
+      if (folderNotes.length > 0) {
+        html += renderNotesList(folderNotes);
+      } else if (children.length === 0) {
+        html += `<div style="text-align:center;padding:40px 32px;color:rgba(30,16,64,0.35);font-size:15px">${t("notes.folder.empty", "\u041F\u0430\u043F\u043A\u0430 \u043F\u043E\u0440\u043E\u0436\u043D\u044F")}</div>`;
+      }
+      html += "</div>";
+      content.innerHTML = html;
       _attachNotesSwipeDelete();
       return;
     }
     if (header) header.style.display = "none";
-    const byFolder = {};
-    notes.forEach((n) => {
-      const f = n.folder || t("notes.default_folder", "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435");
-      if (!byFolder[f]) byFolder[f] = [];
-      byFolder[f].push(n);
-    });
     const allMeta = getFoldersMeta();
+    const byFolder = {};
+    const previewMap = {};
+    notes.forEach((n) => {
+      const noteFolder = n.folder || t("notes.default_folder", "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435");
+      const root = resolveRootFolder(noteFolder);
+      if (!byFolder[root]) byFolder[root] = [];
+      byFolder[root].push(n);
+      if (!previewMap[root]) previewMap[root] = n.text;
+    });
+    Object.entries(allMeta).forEach(([k, v]) => {
+      const isRoot = !v.parent;
+      if (!isRoot) return;
+      if (byFolder[k]) return;
+      const hasChild = Object.values(allMeta).some((m) => m.parent === k);
+      if (hasChild) byFolder[k] = [];
+    });
     const folders = Object.entries(byFolder).sort((a, b) => {
       const pinA = allMeta[a[0]]?.pinned ? 1 : 0;
       const pinB = allMeta[b[0]]?.pinned ? 1 : 0;
@@ -10015,16 +10078,34 @@ ${recent}`;
       const folder = wrap.dataset.folder;
       attachSwipeDelete(wrap, card, () => {
         const notes = getNotes();
-        const folderNotes = notes.filter((n) => (n.folder || t("notes.default_folder", "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435")) === folder);
-        const remaining = notes.filter((n) => (n.folder || t("notes.default_folder", "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435")) !== folder);
+        const meta = getFoldersMeta();
+        const isRoot = !meta[folder] || !meta[folder].parent;
+        const childNames = isRoot ? Object.entries(meta).filter(([k, v]) => v.parent === folder).map(([k]) => k) : [];
+        const toDelete = /* @__PURE__ */ new Set([folder, ...childNames]);
+        const folderNotes = notes.filter((n) => toDelete.has(n.folder || t("notes.default_folder", "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435")));
+        const remaining = notes.filter((n) => !toDelete.has(n.folder || t("notes.default_folder", "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435")));
+        const removedMeta = {};
+        toDelete.forEach((name) => {
+          if (meta[name]) removedMeta[name] = meta[name];
+        });
         _animateSwipeRemoval(wrap, () => {
-          if (folderNotes.length > 0) addToTrash("folder", { folder }, folderNotes);
+          if (folderNotes.length > 0) addToTrash("folder", { folder, removedMeta }, folderNotes);
           saveNotes(remaining);
+          const newMeta = {};
+          Object.entries(meta).forEach(([k, v]) => {
+            if (!toDelete.has(k)) newMeta[k] = v;
+          });
+          saveFoldersMeta(newMeta);
           renderNotes();
           if (folderNotes.length > 0) showUndoToast(t("notes.toast.folder_deleted", '\u041F\u0430\u043F\u043A\u0443 "{folder}" \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E ({n})', { folder, n: folderNotes.length }), () => {
             const n = getNotes();
             folderNotes.forEach((note) => n.push(note));
             saveNotes(n);
+            const curMeta = getFoldersMeta();
+            Object.entries(removedMeta).forEach(([k, v]) => {
+              curMeta[k] = v;
+            });
+            saveFoldersMeta(curMeta);
             renderNotes();
           });
         });
