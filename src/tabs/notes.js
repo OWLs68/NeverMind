@@ -281,6 +281,55 @@ function setFolderMeta(folder, data) {
   saveFoldersMeta(all);
 }
 
+// === DAILY FOLDER HELPERS (64CXo Фаза A) ===
+// Дублювання моментів у Нотатки → корінь «Щоденник» з дейлі-підпапками.
+// Lazy-створення: папки з'являються тільки коли є перший момент за день.
+//
+// Schema (parent field, не path-based):
+//   meta["Щоденник"] = { parent: null, ... }       — корінь
+//   meta["Пʼятниця, 9 травня 2026"] = { parent: "Щоденник", ... }   — дейлі
+//   note.folder = "Пʼятниця, 9 травня 2026"        — БЕЗ слеша, звичайна назва
+//
+// Старі плоскі папки без `parent` field = root (treated as parent === undefined).
+// renderNotes/swipe/move-handlers лишаються без змін у Фазі A — UI nesting у Фазі C.
+
+// Форматує назву дейлі-підпапки: «Пʼятниця, 9 травня 2026»
+// Локаль uk-UA через toLocaleDateString. iOS Safari додає « р.» суфікс — strip.
+// normalizeFolderName зводить апостроф U+02BC до U+0027 (узгодженість з B-47 fix).
+export function formatDailyFolderName(date) {
+  const raw = date.toLocaleDateString('uk-UA', {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+  });
+  const cleaned = raw.replace(/\s*р\.\s*$/, '').trim();
+  const cap = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+  return normalizeFolderName(cap);
+}
+
+// findOrCreateDailyFolder — забезпечує наявність папки-кореня (default: t('notes.folder_diary'))
+// + дейлі-підпапки на сьогодні (parent: корінь). Повертає назву дейлі-папки
+// готову для addNoteFromInbox(text, cat, folder).
+//
+// Колізія: якщо юзер вручну створив папку з тією ж дейлі-назвою (без parent) —
+// виставляємо parent. Нотатки залишаються (структура nm_notes не міняється).
+export function findOrCreateDailyFolder(parentName = t('notes.folder_diary', 'Щоденник'), date = new Date()) {
+  const dailyName = formatDailyFolderName(date);
+  const meta = getFoldersMeta();
+  let changed = false;
+  if (!meta[parentName]) {
+    meta[parentName] = { parent: null, pinned: false };
+    changed = true;
+  }
+  if (!meta[dailyName]) {
+    meta[dailyName] = { parent: parentName, pinned: false };
+    changed = true;
+  } else if (meta[dailyName].parent === undefined) {
+    meta[dailyName] = { ...meta[dailyName], parent: parentName };
+    changed = true;
+  }
+  if (changed) saveFoldersMeta(meta);
+  return dailyName;
+}
+
 // Кольори/емодзі папок — спільний пісковий градієнт для всіх категорій,
 // emoji-крапка береться з канонічного довідника (src/data/notes-categories.js).
 // Якщо категорія не знайдена або без `dot` — дефолтний 📝.
