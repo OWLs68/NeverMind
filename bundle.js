@@ -14050,7 +14050,7 @@ ${CHIP_PROMPT_RULES}`;
         const dateObj = new Date(eventDetected.date);
         const dayStr = `${dateObj.getDate()} ${monthGenitive(dateObj.getMonth())}`;
         const items2 = getInbox();
-        items2.unshift({ id: Date.now(), text: title, category: "event", ts: Date.now(), processed: true });
+        items2.unshift({ id: Date.now(), eventId: ev.id, text: title, category: "event", ts: Date.now(), processed: true });
         saveInbox(items2);
         addMsg("agent", t("habits.event.added", '\u{1F4C5} \u041F\u043E\u0434\u0456\u044E "{title}" \u0434\u043E\u0434\u0430\u043D\u043E \u043D\u0430 {date}', { title: ev.title, date: dayStr }));
         return true;
@@ -14417,7 +14417,7 @@ ${CHIP_PROMPT_RULES}`;
       const dateObj = new Date(resolvedDate);
       const dayStr = `${dateObj.getDate()} ${monthGenitive(dateObj.getMonth())}`;
       const items = getInbox();
-      items.unshift({ id: Date.now(), text: title, category: "event", ts: Date.now(), processed: true });
+      items.unshift({ id: Date.now(), eventId: ev.id, text: title, category: "event", ts: Date.now(), processed: true });
       saveInbox(items);
       const timeStr = parsed.time ? ` \u043E ${parsed.time}${endTime ? "\u2013" + endTime : ""}` : "";
       const warn = conflict ? "\n" + t("habits.event.conflict", '\u26A0\uFE0F \u041D\u0430 \u0446\u0435\u0439 \u0447\u0430\u0441 \u0443\u0436\u0435 \u0454 "{title}". \u041B\u0438\u0448\u0438\u0442\u0438 \u043E\u0431\u0438\u0434\u0432\u0456 \u0447\u0438 \u043F\u0435\u0440\u0435\u043D\u0435\u0441\u0442\u0438?', { title: conflict.title }) : "";
@@ -14451,7 +14451,7 @@ ${CHIP_PROMPT_RULES}`;
       addMsg("agent", editText);
       try {
         const inbox = getInbox();
-        inbox.unshift({ id: Date.now(), text: editText, type: "edit", category: "event", ts: Date.now() });
+        inbox.unshift({ id: Date.now(), eventId: events[idx].id, text: editText, type: "edit", category: "event", ts: Date.now() });
         saveInbox(inbox);
         if (typeof renderInbox === "function") renderInbox();
       } catch (e) {
@@ -14467,9 +14467,24 @@ ${CHIP_PROMPT_RULES}`;
       }
       const title = events[idx].title;
       const removed = events[idx];
+      const eventId = removed.id;
       addToTrash("event", removed);
       events.splice(idx, 1);
       saveEvents(events);
+      try {
+        const inbox = getInbox();
+        const inboxRest = inbox.filter((it) => {
+          const matchById = it.eventId === eventId;
+          const matchByText = !it.eventId && it.category === "event" && it.text === title;
+          return !(matchById || matchByText);
+        });
+        if (inboxRest.length !== inbox.length) saveInbox(inboxRest);
+      } catch (e) {
+      }
+      try {
+        renderInbox();
+      } catch (e) {
+      }
       addMsg("agent", t("habits.event.deleted", '\u{1F5D1} \u041F\u043E\u0434\u0456\u044E "{title}" \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E', { title }));
       showUndoToast(t("habits.toast.event_deleted", '\u041F\u043E\u0434\u0456\u044E "{title}" \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E', { title }), () => {
         const cur = getEvents();
@@ -18040,7 +18055,7 @@ ${aiContext}`;
               continue;
             }
             const items = getInbox();
-            items.unshift({ id: Date.now() + 1, text: ev.title, category: "event", ts: Date.now(), processed: true });
+            items.unshift({ id: Date.now() + 1, eventId: ev.id, text: ev.title, category: "event", ts: Date.now(), processed: true });
             saveInbox(items);
             renderInbox();
             const dateObj = new Date(action.date);
@@ -20561,7 +20576,11 @@ ${logLines}
       "health": "nm_health_cards",
       "projects": "nm_projects",
       "evening": "nm_evening_summary",
-      "reminder": "nm_reminders"
+      "reminder": "nm_reminders",
+      // B-165 dyhJu 10.05: saveEvents() disp 'events' (множ), мапа очікувала
+      // 'event' (одн) — cross-tab sync для подій silent failure до dyhJu.
+      // Той самий клас бага що B-130 (reminder mismatch).
+      "events": "nm_events"
     };
     window.addEventListener("nm-data-changed", (e) => {
       const detail = e.detail;
