@@ -536,22 +536,18 @@ function openAllTransactions() {
 // === processFinanceAction (з Inbox) і getFinanceContext (для AI) ===
 
 // Визначення дати транзакції: AI date → "вчора/позавчора" → Date.now()
+// 64CXo Phase 3: системний парсер замість мікро-regex (тільки вчора/позавчора).
+// Тепер ловить «3 дні тому», «тиждень тому», «15 травня», «у понеділок».
+import { resolveDateFromText } from '../data/ua-time-parser.js';
 export function _resolveFinanceDate(aiDate, text) {
   if (aiDate) {
     const d = new Date(aiDate + 'T12:00:00');
     if (!isNaN(d.getTime())) return d.getTime();
   }
-  const lower = (text || '').toLowerCase();
-  const now = new Date();
-  if (/\bвчора\b/.test(lower)) {
-    now.setDate(now.getDate() - 1);
-    now.setHours(20, 0, 0, 0);
-    return now.getTime();
-  }
-  if (/\bпозавчора\b/.test(lower)) {
-    now.setDate(now.getDate() - 2);
-    now.setHours(20, 0, 0, 0);
-    return now.getTime();
+  const resolved = resolveDateFromText(text || '', new Date(), 'past');
+  if (resolved) {
+    resolved.setHours(20, 0, 0, 0);
+    return resolved.getTime();
   }
   return Date.now();
 }
