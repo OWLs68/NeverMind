@@ -13131,6 +13131,93 @@ ${CHIP_PROMPT_RULES}`;
     }
   });
 
+  // src/data/ua-time-parser.js
+  function _parseNumber(token) {
+    if (!token) return NaN;
+    const lower = token.toLowerCase().trim();
+    if (NUM_MAP[lower]) return NUM_MAP[lower];
+    const n = parseInt(lower, 10);
+    return isNaN(n) ? NaN : n;
+  }
+  function parseUaTimeOffset(text) {
+    if (!text || typeof text !== "string") return null;
+    const t2 = text.toLowerCase();
+    if (/позавчора/.test(t2)) return -2;
+    if (/вчора/.test(t2)) return -1;
+    if (/післязавтра/.test(t2) || /позавтра/.test(t2)) return 2;
+    if (/завтра/.test(t2)) return 1;
+    if (/сьогодні/.test(t2)) return 0;
+    const past = t2.match(/(\d+|один|два|дві|три|чотири|пять|п['ʼ’’]ять|шість|сім|вісім|девять|дев['ʼ’’]ять|десять|тиждень|місяць)\s*(дн[іїя]в?|тижн[іеяь]в?|місяц[ьіяв]?\w*)?\s*(тому|назад)/);
+    if (past) {
+      const numToken = past[1];
+      const unitToken = past[2] || "";
+      let n;
+      if (numToken === "\u0442\u0438\u0436\u0434\u0435\u043D\u044C") {
+        n = 7;
+      } else if (numToken === "\u043C\u0456\u0441\u044F\u0446\u044C") {
+        n = 30;
+      } else {
+        n = _parseNumber(numToken);
+      }
+      if (!isNaN(n)) {
+        if (unitToken.startsWith("\u0442\u0438\u0436\u043D")) return -n * 7;
+        if (unitToken.startsWith("\u043C\u0456\u0441\u044F\u0446")) return -n * 30;
+        if (numToken === "\u0442\u0438\u0436\u0434\u0435\u043D\u044C") return -7;
+        if (numToken === "\u043C\u0456\u0441\u044F\u0446\u044C") return -30;
+        return -n;
+      }
+    }
+    const future = t2.match(/через\s+(\d+|один|два|дві|три|чотири|пять|п['ʼ’’]ять|шість|сім|вісім|девять|дев['ʼ’’]ять|десять|тиждень|місяць)\s*(дн[іїя]в?|тижн[іеяь]в?|місяц[ьіяв]?\w*)?/);
+    if (future) {
+      const numToken = future[1];
+      const unitToken = future[2] || "";
+      let n;
+      if (numToken === "\u0442\u0438\u0436\u0434\u0435\u043D\u044C") {
+        return 7;
+      }
+      if (numToken === "\u043C\u0456\u0441\u044F\u0446\u044C") {
+        return 30;
+      }
+      n = _parseNumber(numToken);
+      if (!isNaN(n)) {
+        if (unitToken.startsWith("\u0442\u0438\u0436\u043D")) return n * 7;
+        if (unitToken.startsWith("\u043C\u0456\u0441\u044F\u0446")) return n * 30;
+        return n;
+      }
+    }
+    return null;
+  }
+  function resolveDateFromText(text, baseDate = /* @__PURE__ */ new Date()) {
+    const offset = parseUaTimeOffset(text);
+    if (offset === null) return null;
+    const d = new Date(baseDate);
+    d.setHours(12, 0, 0, 0);
+    d.setDate(d.getDate() + offset);
+    return d;
+  }
+  var NUM_MAP;
+  var init_ua_time_parser = __esm({
+    "src/data/ua-time-parser.js"() {
+      NUM_MAP = {
+        "\u043E\u0434\u0438\u043D": 1,
+        "\u0434\u0432\u0430": 2,
+        "\u0434\u0432\u0456": 2,
+        "\u0442\u0440\u0438": 3,
+        "\u0447\u043E\u0442\u0438\u0440\u0438": 4,
+        "\u043F\u044F\u0442\u044C": 5,
+        "\u043F'\u044F\u0442\u044C": 5,
+        "\u043F\u02BC\u044F\u0442\u044C": 5,
+        "\u043F\u2019\u044F\u0442\u044C": 5,
+        "\u0448\u0456\u0441\u0442\u044C": 6,
+        "\u0441\u0456\u043C": 7,
+        "\u0432\u0456\u0441\u0456\u043C": 8,
+        "\u0434\u0435\u0432\u044F\u0442\u044C": 9,
+        "\u0434\u0435\u0432'\u044F\u0442\u044C": 9,
+        "\u0434\u0435\u0441\u044F\u0442\u044C": 10
+      };
+    }
+  });
+
   // src/tabs/habits.js
   function getHabits() {
     try {
@@ -14225,6 +14312,9 @@ ${CHIP_PROMPT_RULES}`;
       if (parsed.date && /^\d{4}-\d{2}-\d{2}$/.test(parsed.date)) {
         const parsedDate = /* @__PURE__ */ new Date(parsed.date + "T12:00:00");
         if (!isNaN(parsedDate.getTime())) momentTs = parsedDate.getTime();
+      } else {
+        const resolved = resolveDateFromText((originalText || "") + " " + text);
+        if (resolved) momentTs = resolved.getTime();
       }
       const moments = getMoments();
       moments.push({ id: Date.now(), text, mood, ts: momentTs });
@@ -14766,6 +14856,7 @@ ${CHIP_PROMPT_RULES}`;
       init_notes();
       init_finance();
       init_finance_subcat_keywords();
+      init_ua_time_parser();
       init_evening();
       init_calendar();
       editingHabitId = null;
@@ -17723,6 +17814,14 @@ ${aiContext}`;
             btn.disabled = false;
             btn.innerHTML = SEND_SVG;
             return;
+          }
+        }
+        const userMsgLower = (text || "").toLowerCase();
+        if (/\bмомент/.test(userMsgLower)) {
+          const hadEvent = msg.tool_calls.some((tc) => tc.function?.name === "create_event");
+          if (hadEvent) {
+            console.warn("[inbox] guard: word \xAB\u043C\u043E\u043C\u0435\u043D\u0442\xBB \u0443 \u0437\u0430\u043F\u0438\u0442\u0456 \u2014 \u0432\u0438\u043A\u0438\u0434\u0430\u044E create_event");
+            msg.tool_calls = msg.tool_calls.filter((tc) => tc.function?.name !== "create_event");
           }
         }
         const hasFinance = msg.tool_calls.some((tc) => tc.function?.name === "save_finance");
