@@ -382,6 +382,34 @@ export function getMeStatsContext() {
 
 // Захист від показу сирого JSON в чаті агента
 // Якщо відповідь схожа на JSON — показуємо нейтральну фразу
+/**
+ * dyhJu 10.05 B-167: будує { role:'assistant', content } для chat-history.
+ * Якщо AI зробив tool_calls без content text — додає summary `[name(key); ...]`
+ * щоб наступний turn AI БАЧИВ що попередній save_finance/save_task/etc уже
+ * виконано і НЕ повторював дію. Раніше PJi7l патерн жив inline тільки у
+ * inbox.js — інші чати (Я/Notes/Tasks) дублювали дії бо бачили `assistant: ''`.
+ *
+ * Використати у всіх tab-чатах де чат пушить assistant у history.
+ *
+ * @param {Object} msg — об'єкт відповіді AI {content, tool_calls?}
+ * @returns {{role:string, content:string}} запис для history.push
+ */
+export function buildAssistantHistoryEntry(msg) {
+  let content = (msg && msg.content) || '';
+  if (msg && Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
+    const summary = msg.tool_calls.map(tc => {
+      try {
+        const args = JSON.parse(tc.function?.arguments || '{}');
+        const name = tc.function?.name || 'unknown';
+        const key = args.title || args.fact || args.text || args.fin_comment || args.name || args.task_title || '';
+        return key ? `${name}(${key})` : name;
+      } catch { return tc.function?.name || 'unknown'; }
+    }).join('; ');
+    content = content ? `${content} [${summary}]` : `[${summary}]`;
+  }
+  return { role: 'assistant', content };
+}
+
 export function safeAgentReply(reply, addMsg) {
   if (!reply) return;
   const trimmed = reply.trim();

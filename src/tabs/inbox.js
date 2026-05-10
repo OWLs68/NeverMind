@@ -8,7 +8,7 @@ import { currentTab, switchTab, showToast } from '../core/nav.js';
 import { escapeHtml, saveOffline, extractJsonBlocks, parseContentChips, t, getReminders, saveReminders } from '../core/utils.js';
 import { generateUUID } from '../core/uuid.js';
 import { addToTrash, getTrash, restoreFromTrash, showUndoToast } from '../core/trash.js';
-import { INBOX_SYSTEM_PROMPT, INBOX_TOOLS, callAI, callAIWithTools, callAIWithHistory, getAIContext, getOWLPersonality, saveChatMsg, activeChatBar } from '../ai/core.js';
+import { INBOX_SYSTEM_PROMPT, INBOX_TOOLS, callAI, callAIWithTools, callAIWithHistory, getAIContext, getOWLPersonality, saveChatMsg, buildAssistantHistoryEntry, activeChatBar } from '../ai/core.js';
 import { UI_TOOL_NAMES, handleUITool } from '../ai/ui-tools.js';
 import { addFact } from '../ai/memory.js';
 import { handleScheduleAnswer } from '../owl/inbox-board.js';
@@ -562,22 +562,9 @@ ${aiContext}`;
   }
 
   // Save assistant reply to history for context.
-  // PJi7l 08.05: якщо AI робив tool_calls — зберігаємо короткий summary дій у content.
-  // Без summary наступний turn бачить порожній assistant → не розуміє контекст
-  // (юзер «Купив хліб» → complete_task → юзер «3 євро» → AI не знає що було куплено).
-  let historyContent = msg.content || '';
-  if (msg.tool_calls && msg.tool_calls.length > 0) {
-    const summary = msg.tool_calls.map(tc => {
-      try {
-        const args = JSON.parse(tc.function?.arguments || '{}');
-        const name = tc.function?.name || 'unknown';
-        const key = args.title || args.fact || args.text || args.fin_comment || args.name || args.task_title || '';
-        return key ? `${name}(${key})` : name;
-      } catch { return tc.function?.name || 'unknown'; }
-    }).join('; ');
-    historyContent = msg.content ? `${msg.content} [${summary}]` : `[${summary}]`;
-  }
-  inboxChatHistory.push({ role: 'assistant', content: historyContent });
+  // PJi7l 08.05 + dyhJu B-167: helper buildAssistantHistoryEntry будує
+  // summary для tool_calls. Один мозок — той самий код у me.js.
+  inboxChatHistory.push(buildAssistantHistoryEntry(msg));
   if (inboxChatHistory.length > 24) inboxChatHistory = inboxChatHistory.slice(-24);
 
   try {

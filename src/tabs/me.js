@@ -16,7 +16,7 @@
 
 import { showToast, switchTab, currentTab } from '../core/nav.js';
 import { escapeHtml, logRecentAction, extractJsonBlocks, parseContentChips, t } from '../core/utils.js';
-import { callAI, callAIWithHistory, callAIWithTools, getAIContext, getMeStatsContext, getOWLPersonality, openChatBar, saveChatMsg, INBOX_TOOLS } from '../ai/core.js';
+import { callAI, callAIWithHistory, callAIWithTools, getAIContext, getMeStatsContext, getOWLPersonality, openChatBar, saveChatMsg, buildAssistantHistoryEntry, INBOX_TOOLS } from '../ai/core.js';
 import { renderChips } from '../owl/chips.js';
 import { UI_TOOLS_RULES, BASE_CHAT_RULES } from '../ai/prompts.js';
 import { dispatchChatToolCalls } from '../ai/tool-dispatcher.js';
@@ -72,8 +72,10 @@ ${UI_TOOLS_RULES}${context ? '\n\n' + context : ''}${stats ? '\n\n' + stats : ''
     if (msg.content) {
       const { text: rt, chips } = parseContentChips(msg.content);
       if (rt) addMeChatMsg('agent', rt, false, '', chips);
-      meChatHistory.push({ role: 'assistant', content: msg.content });
     }
+    // B-167 dyhJu: history-entry з summary tool_calls. Без цього AI бачив
+    // assistant: '' коли був тільки tool_call → повторював дію наступний turn.
+    meChatHistory.push(buildAssistantHistoryEntry(msg));
     if (meChatHistory.length > 20) meChatHistory = meChatHistory.slice(-20);
     return;
   }
