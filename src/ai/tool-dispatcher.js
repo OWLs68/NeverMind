@@ -73,7 +73,7 @@ export function _toolCallToUniversalAction(name, args) {
     case 'save_habit':
       return [{ action: 'create_habit', name: args.name, details: args.details, days: args.days, target_count: args.target_count }];
     case 'save_moment':
-      return [{ action: 'add_moment', text: args.text, mood: args.mood }];
+      return [{ action: 'add_moment', text: args.text, mood: args.mood, date: args.date }];
     case 'create_event':
       return [{ action: 'create_event', title: args.title, date: args.date, time: args.time || null, priority: args.priority || 'normal' }];
     case 'save_finance':

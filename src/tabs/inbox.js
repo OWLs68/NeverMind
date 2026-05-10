@@ -618,6 +618,15 @@ ${aiContext}`;
         console.warn('[inbox] dedupe: complete_task+save_task batch — пропускаю save_task');
         msg.tool_calls = msg.tool_calls.filter(tc => tc.function?.name !== 'save_task');
       }
+      // 64CXo: dedupe save_moment + create_event. AI на «жарили мясо» (минулий
+      // час) одночасно зберігав момент І створював подію. save_moment пріоритет —
+      // минулий час = виконання, не майбутня подія.
+      const hasMoment = msg.tool_calls.some(tc => tc.function?.name === 'save_moment');
+      const hasEvent = msg.tool_calls.some(tc => tc.function?.name === 'create_event');
+      if (hasMoment && hasEvent) {
+        console.warn('[inbox] dedupe: save_moment+create_event batch — пропускаю create_event');
+        msg.tool_calls = msg.tool_calls.filter(tc => tc.function?.name !== 'create_event');
+      }
       for (const tc of msg.tool_calls) {
         // B-154 fix (LfA6w 07.05): try/catch навколо JSON.parse. Якщо OpenAI
         // дав зламаний JSON у одному з кількох tool_calls — раніше throw
