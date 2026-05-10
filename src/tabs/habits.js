@@ -19,6 +19,7 @@ import { getTasks, saveTasks, renderTasks, openAddTask, addTaskBarMsg, taskBarHi
 import { getNotes, saveNotes, renderNotes, addNoteFromInbox, currentNotesFolder, setCurrentNotesFolder, getDirectChildren } from './notes.js';
 import { getFinance, saveFinance, renderFinance, formatMoney, getFinCats, saveFinCats, _resolveFinanceDate, createFinCategory } from './finance.js';
 import { matchSubcategoryFromComment } from '../data/finance-subcat-keywords.js';
+import { resolveDateFromText } from '../data/ua-time-parser.js';
 import { getMoments, saveMoments } from './evening.js';
 import { getEvents, saveEvents, addEventDedup, getRoutine, saveRoutine } from './calendar.js';
 
@@ -1309,6 +1310,12 @@ export function processUniversalAction(parsed, originalText, addMsg) {
     if (parsed.date && /^\d{4}-\d{2}-\d{2}$/.test(parsed.date)) {
       const parsedDate = new Date(parsed.date + 'T12:00:00');
       if (!isNaN(parsedDate.getTime())) momentTs = parsedDate.getTime();
+    } else {
+      // 64CXo: code-side fallback через ua-time-parser. AI часто не передає
+      // date навіть з явним промптом → парсимо «вчора»/«тиждень тому»/etc
+      // з originalText юзера + text моменту.
+      const resolved = resolveDateFromText((originalText || '') + ' ' + text);
+      if (resolved) momentTs = resolved.getTime();
     }
     const moments = getMoments();
     moments.push({ id: Date.now(), text, mood, ts: momentTs });
