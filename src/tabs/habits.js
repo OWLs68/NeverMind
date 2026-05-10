@@ -1006,7 +1006,7 @@ export function processUniversalAction(parsed, originalText, addMsg) {
       if (!res.added) { addMsg('agent', t('habits.event.dup', 'Така подія "{title}" вже є в календарі.', { title: ev.title })); return true; }
       const dateObj = new Date(eventDetected.date);
       const dayStr = `${dateObj.getDate()} ${monthGenitive(dateObj.getMonth())}`;
-      const items = getInbox(); items.unshift({ id: Date.now(), text: title, category: 'event', ts: Date.now(), processed: true }); saveInbox(items);
+      const items = getInbox(); items.unshift({ id: Date.now(), eventId: ev.id, text: title, category: 'event', ts: Date.now(), processed: true }); saveInbox(items);
       addMsg('agent', t('habits.event.added', '📅 Подію "{title}" додано на {date}', { title: ev.title, date: dayStr }));
       return true;
     }
@@ -1371,7 +1371,7 @@ export function processUniversalAction(parsed, originalText, addMsg) {
     if (!res.added) { addMsg('agent', t('habits.event.dup', 'Така подія "{title}" вже є в календарі.', { title })); return true; }
     const dateObj = new Date(resolvedDate);
     const dayStr = `${dateObj.getDate()} ${monthGenitive(dateObj.getMonth())}`;
-    const items = getInbox(); items.unshift({ id: Date.now(), text: title, category: 'event', ts: Date.now(), processed: true }); saveInbox(items);
+    const items = getInbox(); items.unshift({ id: Date.now(), eventId: ev.id, text: title, category: 'event', ts: Date.now(), processed: true }); saveInbox(items);
     const timeStr = parsed.time ? ` о ${parsed.time}${endTime ? '–' + endTime : ''}` : '';
     const warn = conflict ? '\n' + t('habits.event.conflict', '⚠️ На цей час уже є "{title}". Лишити обидві чи перенести?', { title: conflict.title }) : '';
     addMsg('agent', t('habits.event.added_full', '📅 Подію "{title}" додано на {date}{time}{warn}', { title, date: dayStr, time: timeStr, warn }));
@@ -1405,7 +1405,7 @@ export function processUniversalAction(parsed, originalText, addMsg) {
     // Карточка в Inbox стрічку щоб юзер бачив що було змінено
     try {
       const inbox = getInbox();
-      inbox.unshift({ id: Date.now(), text: editText, type: 'edit', category: 'event', ts: Date.now() });
+      inbox.unshift({ id: Date.now(), eventId: events[idx].id, text: editText, type: 'edit', category: 'event', ts: Date.now() });
       saveInbox(inbox);
       if (typeof renderInbox === 'function') renderInbox();
     } catch(e) {}
@@ -1418,9 +1418,25 @@ export function processUniversalAction(parsed, originalText, addMsg) {
     if (idx === -1) { addMsg('agent', t('habits.err.event_not_found', 'Не знайшов подію.')); return true; }
     const title = events[idx].title;
     const removed = events[idx];
+    const eventId = removed.id;
     addToTrash('event', removed);
     events.splice(idx, 1);
     saveEvents(events);
+    // B-165 dyhJu 10.05: Cleanup nm_inbox — видаляємо event-картку, інакше
+    // вона лишається зомбі у Inbox після видалення з календаря (юзер бачить
+    // картку «Подія» якої вже немає). Дзеркальне до B-126 delete_reminder.
+    // Match за eventId (нові картки після dyhJu) АБО fallback за text+category
+    // (старі картки до dyhJu без eventId field).
+    try {
+      const inbox = getInbox();
+      const inboxRest = inbox.filter(it => {
+        const matchById = it.eventId === eventId;
+        const matchByText = !it.eventId && it.category === 'event' && it.text === title;
+        return !(matchById || matchByText);
+      });
+      if (inboxRest.length !== inbox.length) saveInbox(inboxRest);
+    } catch(e) {}
+    try { renderInbox(); } catch(e) {}
     addMsg('agent', t('habits.event.deleted', '🗑 Подію "{title}" видалено', { title }));
     // 64CXo: showUndoToast('event', title) — другий arg був рядок назви, не функція restore.
     // При кліку «Відновити» — TypeError. Виправлено на правильну сигнатуру.
