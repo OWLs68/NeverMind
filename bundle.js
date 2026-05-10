@@ -8623,8 +8623,8 @@ ${UI_TOOLS_RULES}${context ? "\n\n" + context : ""}${stats ? "\n\n" + stats : ""
       if (msg.content) {
         const { text: rt, chips } = parseContentChips(msg.content);
         if (rt) addMeChatMsg("agent", rt, false, "", chips);
-        meChatHistory.push({ role: "assistant", content: msg.content });
       }
+      meChatHistory.push(buildAssistantHistoryEntry(msg));
       if (meChatHistory.length > 20) meChatHistory = meChatHistory.slice(-20);
       return;
     }
@@ -15396,6 +15396,23 @@ ${routineParts.join("\n")}${nextHint}
     }
     return parts.length > 0 ? parts.join("\n") : "";
   }
+  function buildAssistantHistoryEntry(msg) {
+    let content = msg && msg.content || "";
+    if (msg && Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
+      const summary = msg.tool_calls.map((tc) => {
+        try {
+          const args = JSON.parse(tc.function?.arguments || "{}");
+          const name = tc.function?.name || "unknown";
+          const key = args.title || args.fact || args.text || args.fin_comment || args.name || args.task_title || "";
+          return key ? `${name}(${key})` : name;
+        } catch {
+          return tc.function?.name || "unknown";
+        }
+      }).join("; ");
+      content = content ? `${content} [${summary}]` : `[${summary}]`;
+    }
+    return { role: "assistant", content };
+  }
   function safeAgentReply(reply, addMsg) {
     if (!reply) return;
     const trimmed = reply.trim();
@@ -17995,21 +18012,7 @@ ${aiContext}`;
       btn.innerHTML = SEND_SVG;
       return;
     }
-    let historyContent = msg.content || "";
-    if (msg.tool_calls && msg.tool_calls.length > 0) {
-      const summary = msg.tool_calls.map((tc) => {
-        try {
-          const args = JSON.parse(tc.function?.arguments || "{}");
-          const name = tc.function?.name || "unknown";
-          const key2 = args.title || args.fact || args.text || args.fin_comment || args.name || args.task_title || "";
-          return key2 ? `${name}(${key2})` : name;
-        } catch {
-          return tc.function?.name || "unknown";
-        }
-      }).join("; ");
-      historyContent = msg.content ? `${msg.content} [${summary}]` : `[${summary}]`;
-    }
-    inboxChatHistory.push({ role: "assistant", content: historyContent });
+    inboxChatHistory.push(buildAssistantHistoryEntry(msg));
     if (inboxChatHistory.length > 24) inboxChatHistory = inboxChatHistory.slice(-24);
     try {
       if (msg.tool_calls && msg.tool_calls.length > 0) {
