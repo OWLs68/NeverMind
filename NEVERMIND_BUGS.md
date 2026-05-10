@@ -35,7 +35,10 @@ _B-158 закрито у PJi7l 08.05 — див. секцію "✅ Закрит�
 
 ## ✅ Закриті (активні сесії)
 
-_Зберігаються закриті у 2 останніх активних сесіях (64CXo + PJi7l). Старіші (LfA6w day2 + MPVly + QDIGl + rC4TO) перенесено у [`_archive/BUGS_HISTORY.md`](_archive/BUGS_HISTORY.md) (TODO: фактична ротація на наступному `/finish`)._
+_Зберігаються закриті у 2 останніх активних сесіях (dyhJu + 64CXo + PJi7l). Старіші (LfA6w day2 + MPVly + QDIGl + rC4TO) перенесено у [`_archive/BUGS_HISTORY.md`](_archive/BUGS_HISTORY.md) (TODO: фактична ротація на наступному `/finish`)._
+
+_Сесія **dyhJu** (10.05.2026) — pre-edit-read-check hook + B-165 фікс event sync + B-166 save_finance prompt:_
+- **B-165 закрито** — `delete_event` (`src/tabs/habits.js:1415-1450`) чистив тільки `nm_events`, **не чистив картку у `nm_inbox`** і `saveEvents()` диспатчила `nm-data-changed` з `detail:'events'` (множ) тоді як `DETAIL_TO_KEY` у `boot.js:177` мала тільки `'event'` (одн) → cross-tab sync silent failure (B-130 для events). Юзер видаляв подію з календаря, картка «Подія» лишалась зомбі у Inbox. Дзеркальний баг до B-126 (`delete_reminder`) + B-130 (`reminder` mismatch). **Фікс:** (1) додано `eventId` field у 4 точки створення event-картки (inbox.js:794 create_event, habits.js:1009 task→event fallback, habits.js:1374 create_event handler, habits.js:1408 edit_event log) — зв'язок для майбутнього cleanup. (2) `delete_event` handler — 3-сховищний cleanup `nm_inbox` filter за `eventId === parsed.event_id` (нові картки) + fallback за `text === title && category === 'event'` (старі без eventId) + `renderInbox()`. (3) `DETAIL_TO_KEY` додано `'events': 'nm_events'` — узгоджено з `saveEvents()` disp. Знайдено через iPhone smoke-test 64CXo Романа. ~30 хв.
 
 _Сесія **64CXo** (09-10.05.2026) — Bridge-архітектура + кластер «крок vs задача» + Council 5 агентів (~35 комітів):_
 - **B-160 закрито** (`2e6cdc3`) — `src/ai/core.js:99-106` getAIContext тепер показує назви активних кроків («активні: перець, цибуля»). AI більше не плутає крок з задачею.

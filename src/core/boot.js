@@ -184,6 +184,10 @@ function setupSync() {
     'projects': 'nm_projects',
     'evening': 'nm_evening_summary',
     'reminder': 'nm_reminders',
+    // B-165 dyhJu 10.05: saveEvents() disp 'events' (множ), мапа очікувала
+    // 'event' (одн) — cross-tab sync для подій silent failure до dyhJu.
+    // Той самий клас бага що B-130 (reminder mismatch).
+    'events': 'nm_events',
   };
   window.addEventListener('nm-data-changed', e => {
     const detail = e.detail;
