@@ -1348,18 +1348,28 @@ export function processUniversalAction(parsed, originalText, addMsg) {
 
   if (action === 'create_event') {
     const title = (parsed.title || '').trim();
-    if (!title || !parsed.date) return false;
+    if (!title) return false;
+    // 64CXo Phase 3: code-side date resolve via ua-time-parser. AI with strict
+    // mode may pass date=null for abstract expressions — parser handles them.
+    let resolvedDate = parsed.date;
+    if (!resolvedDate || !/^\d{4}-\d{2}-\d{2}$/.test(resolvedDate)) {
+      const d = resolveDateFromText(originalText || title, new Date(), 'future');
+      if (d) {
+        resolvedDate = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+      }
+    }
+    if (!resolvedDate) return false;
     let endTime = parsed.end_time || null;
     if (!parsed.time) endTime = null;
     if (endTime && parsed.time && endTime <= parsed.time) endTime = null;
     let conflict = null;
     if (parsed.time) {
-      conflict = getEvents().find(e => e.date === parsed.date && e.time === parsed.time && e.title !== title);
+      conflict = getEvents().find(e => e.date === resolvedDate && e.time === parsed.time && e.title !== title);
     }
-    const ev = { id: Date.now(), title, date: parsed.date, time: parsed.time || null, endTime, priority: parsed.priority || 'normal', createdAt: Date.now() };
+    const ev = { id: Date.now(), title, date: resolvedDate, time: parsed.time || null, endTime, priority: parsed.priority || 'normal', createdAt: Date.now() };
     const res = addEventDedup(ev);
     if (!res.added) { addMsg('agent', t('habits.event.dup', 'Така подія "{title}" вже є в календарі.', { title })); return true; }
-    const dateObj = new Date(parsed.date);
+    const dateObj = new Date(resolvedDate);
     const dayStr = `${dateObj.getDate()} ${monthGenitive(dateObj.getMonth())}`;
     const items = getInbox(); items.unshift({ id: Date.now(), text: title, category: 'event', ts: Date.now(), processed: true }); saveInbox(items);
     const timeStr = parsed.time ? ` о ${parsed.time}${endTime ? '–' + endTime : ''}` : '';
@@ -1570,9 +1580,19 @@ export function processUniversalAction(parsed, originalText, addMsg) {
   }
 
   if (action === 'set_reminder') {
-    const time = parsed.time;
     const text = parsed.text || 'Нагадування';
-    const date = parsed.date || new Date().toISOString().slice(0, 10);
+    // 64CXo Phase 3: code-side date resolve via ua-time-parser, mode='future'.
+    let date = parsed.date;
+    if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      const d = resolveDateFromText(originalText || text, new Date(), 'future');
+      if (d) {
+        date = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+      } else {
+        date = new Date().toISOString().slice(0, 10);
+      }
+    }
+    // TODO Phase G2: parseUaTimeOfDay for abstract times. For now: if null → clarify.
+    const time = parsed.time;
     if (!time) { addMsg('agent', t('habits.err.reminder_time', 'Вкажи час нагадування.')); return true; }
     const reminderId = Date.now();
     // 1. nm_reminders — для тригера спливаючого попередження
