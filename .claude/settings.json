@@ -61,6 +61,15 @@
             "command": "node .claude/hooks/pre-commit-i18n.js"
           }
         ]
+      },
+      {
+        "matcher": "Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/pre-edit-read-check.js"
+          }
+        ]
       }
     ],
     "PostToolUse": [

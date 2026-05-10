@@ -422,6 +422,12 @@
 
 ## 📋 Журнал рішень (чому одне а не інше)
 
+### 10.05.2026 dyhJu — Edit вимагає Read автоматизовано через PreToolUse hook
+
+**Рішення:** PreToolUse-хук `pre-edit-read-check.js` блокує Edit якщо файла немає у Read-/Write-/Bash-cat-логу поточної сесії (transcript JSONL).
+**Альтернатива:** залишити декларативне правило 3 у CLAUDE.md без автоматизації + сподіватись на дисципліну.
+**Чому:** 4 епізоди порушення у BqTWF + 3 у 64CXo (`old_string not found` build broken) — той самий патерн що i18n до m4Q1o, smoke-test до oknnM. Декларативне правило без хука розкладається. Підхід: читання transcript JSONL замість окремого state-файлу (як `check-estimate-without-read.js`) — session-scoped автоматично, без cleanup між сесіями. Bypass `read-bypass: ok` для рідких false positive (sub-агент Council прочитав → Голова Edit за знахідкою), але CLAUDE.md «🔍 ГІПОТЕЗА АГЕНТА ≠ ФАКТ» каже що краще все одно зробити свій Read. 6 smoke-test сценаріїв пройшло (Read→Edit pass, no-Read→Edit block, Write створив→Edit pass, Bash cat→Edit pass, Write tool→pass, bypass-фраза→pass з warning).
+
 ### 03.05.2026 iWyjU — Самотест видалено + statusline через assistant.usage
 
 **Рішення:** видалити `start-self-test.sh` повністю замість лагодити.
