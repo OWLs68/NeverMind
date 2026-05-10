@@ -8,7 +8,60 @@
 
 ---
 
-## 🔧 Поточна сесія PJi7l — Велика реформа промптів + UX (08.05.2026)
+## 🔧 Поточна сесія 64CXo — Bridge-архітектура: парсер + Strict + nested folders (09-10.05.2026)
+
+### Зроблено (величезна сесія, 30+ комітів v780→v806)
+
+**A. Кластер «крок vs задача» (B-160..B-164):**
+- B-160 `getAIContext` показує назви активних кроків («активні: перець, цибуля»)
+- B-161 `complete_step` як справжній tool (раніше тільки text-JSON у Tasks)
+- B-162 `add_step` дедуп
+- B-163 `merge_tasks` новий tool (замість add_step+delete_task на «обʼєднай»)
+- B-164 уніфікація 3 complete_task handlers (закриває кроки скрізь)
+
+**B. Council 5 агентів — повний аудит (28+ знахідок):**
+- localStorage: 1 критичний (profile-builder читав `nm_habit_log` замість `nm_habit_log2` → AI бачив порожні звички)
+- AI промпти: подвійний інжект REMINDER+ROUTINE, dead rules, ТИХА ВІДПОВIДЬ суперечність
+- Дублі коду: `\n→<br>` тільки у 3 з 8 add*ChatMsg, showUndoToast() без аргументів TypeError
+- Залежності: utils.js→tabs/inbox.js circular
+- DOM/UI: ID mismatch fin-budget-modal, MutationObserver leaks
+3 знахідки агентів **відкинуто** після верифікації (REMINDER+ROUTINE дубль через UI_TOOLS_RULES — НЕПРАВДА; t-shadowing — false alarm; ТИХА vs VERIFY — самовизначене).
+
+**C. Чекпоінти A-D — Notes nested folders «Щоденник/дейлі»:**
+- Phase A — `formatDailyFolderName` + `findOrCreateDailyFolder` helpers
+- Phase B — hook у `saveMoments` (новий момент → дубль у дейлі-папку «Субота, 9 травня 2026»)
+- Phase C — UI nested 2 рівні (drill-down, recursive swipe-delete)
+- Phase D — `getNotesContext` з ascii-tree + `delete_folder` recursive
+
+**D. Bridge-стратегія (3 раунди Gemini консультацій):**
+- Phase 1.1 — Strict OpenAI mode для 5 топ-tools (save_moment, create_event, set_reminder, save_task, complete_task) з `nullable + required`
+- Phase 1.2a — PAST_INDICATORS guard у inbox.js: конверсія create_event → save_moment коли минулий час
+- Phase 2 — `src/data/ua-time-parser.js` розширено: абсолютні дати «15 травня», дні тижня «у понеділок» (mode='past'/'future')
+- Phase 3 — інтеграція parser у `_resolveFinanceDate`, `create_event` handler, `set_reminder` handler
+
+**E. Правило 12 у CLAUDE.md:** «Перш ніж лоскотити промпт — питай: це детерміноване чи природна мова?» Підтверджений кейс: 3 раунди promptфіксів для «вчора → дейлі-папка» провалилися, поки не написали `ua-time-parser.js` (12/12 тестів пройшло одразу).
+
+### Ключові висновки Gemini Bridge-стратегії
+- **НЕ йти на Supabase зараз** — 3-4 тижні без видимого прогресу
+- **Strict JSON Schema** — ROI ⭐⭐⭐⭐⭐, 0% migration debt
+- **Embeddings classifier на клієнті** ~1.2 МБ JSON, потім swap на pgvector
+- **Pure functions для guards** у `src/data/` — переїде у Edge Functions без переписування
+- **Multi-Agent Router — overkill** для single-user PWA
+
+### Метрики
+- Гілка: `claude/start-session-64CXo`
+- Коміти: ~35 (88df792 → 62aa67a)
+- Версії: v780 → v806
+- Council: 12 запусків (5 архітектура nested + 4 аудит детермінованих + 3 regression-hunter)
+- Gemini раундів: 3
+- Закриті баги: B-160..B-164 (5 нових)
+- Нові файли: `src/data/ua-time-parser.js`
+
+### Відкладене (для наступної сесії — див. ⚠️ нижче)
+
+---
+
+## 🔧 Сесія PJi7l — Велика реформа промптів + UX (08.05.2026)
 
 ### Зроблено
 
@@ -119,102 +172,7 @@
 
 ---
 
-## 🔧 Сесія LfA6w day2 — Decision-tree промпти + subcategory + контекстні чіпи (07-08.05.2026)
-
-### Зроблено
-
-#### A. Документаційна синхронізація (3 коміти)
-1. **ROADMAP/BUGS sync** (`bcf5ec4`+`702cc73`) — Inbox редизайн → DONE, Розпорядок п.4 → DONE, B-125 дубль прибрано.
-2. **NEVERMIND_LOGIC.md** (`c7c9cb3`) — секція «🎯 Філософія чіпів» (2 функції: уточнення + мінімальне тертя через тап).
-3. **ROADMAP 4.51** (`12373e0`) — Feedback Channel у After Supabase (відгук+логи через чат+Налаштування).
-4. **CLAUDE.md 4 mental models** (`4ab3a1e`) — Pre-mortem / Inversion / Red Team / 10-10-10 з тригерами і кейсами LfA6w.
-
-#### B. Health card → нотатка-журнал (1 коміт)
-5. **`findOrCreateHealthCardNote`** (`5715f24`, notes.js+health.js) — кожна Health-картка має одну нотатку-журнал у папці «Здоров'я» з прив'язкою через `linkedHealthCardId`. Замінило окремі папки-копії карток.
-
-#### C. UX точкові (3 коміти)
-6. **Скрол «...»** (`a0950f4`) — прибрано `ontouchend` з картки папки нотаток (скрол не відкриває модалку редагування).
-7. **escapeJsArg helper** (раніше) — apostrophe/lapky safe у onclick для 5 файлів (фінанси, здоров'я, проекти, нотатки).
-8. **Стрілки категорій** (`94a8e2e`) — `left/right` -6 → -14 (палець не потрапляє на стрілку при цілянні в іконку).
-
-#### D. Subcategory у save_finance (5 комітів)
-9. **`save_finance.subcategory` параметр** (`0da182e`+`cf8ce77`+`7b6beba`+`48c24e7`) — AI отримує дерево «Транспорт: [Паливо, Парковка, Мийка, Сервіс]» через `getFinanceContext`. Code-side fallback `_matchSubcategoryFromComment` (`src/data/finance-subcat-keywords.js` ~50 keywords). Apostrophe-нормалізація (B-47 клас): curly `ʼ` ↔ straight `'` ↔ backtick `` ` ``. Працює у `processFinanceAction` (Inbox) + `processUniversalAction` (7 tab-чатів).
-
-#### E. Decision-tree рефакторинг промптів (Phase 0+1+2 — 8 комітів)
-10. **Backup snapshot** (`fa6cfa5`) — `_archive/prompts_backup_LfA6w/*.bak` (4 файли) **ПЕРЕД** переписуванням. Pre-mortem mental model.
-11. **CHIP_PROMPT_RULES повний переписаний** (`83b5fd0`+`be6f708`) — 18 правил-лоскутів → 7 кроків decision-tree (час/амбівалентні фінанси/бізнес-іменник/proactive статус/звіт/destructive/nav). 70% правил перетворено з «НЕ X» на «КОЛИ A → роби B». Build спочатку падав на бектіках всередині template literal — мій же фікс.
-12. **INBOX_SYSTEM_PROMPT ПРІОРИТЕТ ПЕРЕВІРКИ** (`83b5fd0`) — 5 правил-винятків → 7-крок алгоритм (контекст→корекція часу→фінанси+амбівалентність→нагадування→виконання→ЗАДАЧА інфінітив→fallback). Кожен крок зупиняє подальші перевірки. CLARIFY_INLINE_RULES видалено (інтегровано у КРОК 3).
-13. **REMINDER_RULES decision-tree** (`83b5fd0`) — 12 правил-винятків → 6 позитивних: ТРИГЕР→ЧАС Є→ЧАС НЕМА→КОРИГУВАННЯ→ОДИН ВИКЛИК→DELETE EXPLICIT.
-14. **subcategory description** (`83b5fd0`) — `«ОПЦІЙНО»` → `«ЯКЩО список є — ЗОБОВ'ЯЗАНИЙ передати точну назву»` (Conditional Requirement, mini-моделі краще).
-15. **proactive.js stale-tasks** (`83b5fd0`) — інструкція AI «НЕ викликай complete_task у цьому повідомленні. Дай статусні чіпи action='chat'».
-16. **6 регресій від свіжих фіксів виправлено через Council** (`dc76864`) — 3 паралельні агенти (silent-bug-scout + prompt-engineer-auditor + code-regression-finder) знайшли: tool-dispatcher.js забув subcategory, finance-chat.js без [ID:N] у txSummary дублював getAIContext, CHIP_PROMPT_RULES забруднював JSON-аналітику me.js, Brain Pulse/Followups debounce reset на chat-events. Виправлено + додано `getOWLChatPersonality()` як окрему функцію.
-
-#### F. КРОК 6 інфінітив (2 коміти)
-17. **Інфінітив-наказ → save_task ОДНОЗНАЧНО** (`7ddfb39`+`5262fd3`) — KROK 6 переписаний 2 рази: спершу «починається з інфінітива», потім «інфінітив будь-де у реченні». Список 16 інфінітивів (купити/замовити/зателефонувати/...) + 7 наказових. ВИНЯТКИ: минулий час → KROK 5, «нагадай» → KROK 4, сума → KROK 3.
-
-#### G. Контекстні чіпи Phase A+Б (2 коміти)
-18. **Контекстні label у proactive-табло** (`0d8a32f`) — AI генерує УНІКАЛЬНІ label під задачу замість шаблонних: «Зареєструватися на Upwork» → `[Вже зареєструвався ✔️][Збираю документи][Не на цьому тижні]`.
-19. **task_id у chip payload + handleCompletionChip пріоритет** (`0d8a32f`) — гарантований target замість fuzzy-match (захист від silent wrong-close при подібних титулах «Купити продукти/ліки»).
-20. **Перша особа правило** (`8d0973d`) — у CHIP_PROMPT_RULES додано 👤 ПЕРША ОСОБА: chip label з action='chat'/'complete' = юзерська репліка. Винятки прописано (nav, clarify_save, destructive).
-
-#### H. Тести (2 коміти)
-21. **18 smoke-test кейсів** (`0b24b2a`) — для decision-tree валідації (бензин→fast-path, ліки→clarify, нагадай→reminder, метаслова, природна розмова).
-22. **6 кейсів Phase A+Б** (у `0d8a32f`) — для контекстних чіпів proactive-табло.
-
-### Обговорено (без виконання)
-
-- **AI повільність** — Supabase сам не пришвидшить (додає хоп). Реальні шляхи: streaming response (UX-фікс ~50%), Edge Function ближче до OpenAI (-100-200мс), кешування Brain Pulse шаблонів. Dynamic Tool Loading (Phase 1.5 OWL V3) працює, але `hits>4 → fullTools` — багато юзерських запитів амбівалентні.
-- **Декілька переписувань промптів виглядали як борг** — Roman: «промпти 10 разів переписані, чітко не знаю». Тригер для decision-tree рефакторингу.
-- **«Гіт зламався»** — 4 коміти не доїхали до main, я скидав на GitHub concurrency. Реально — мій бектік-баг у CHIP_PROMPT_RULES ламав CI build. Roman: «завжди поломка на твоїй стороні і ніколи на гітхаб». Урок зафіксовано неявно.
-- **Tool consolidation 64→менше** — Gemini пропонував, але overinжиніринг. Відкладено до пізнішої сесії.
-
-### Ключові рішення
-
-- **Decision-tree через позитивні твердження** замість Tagged classifier (latency 2x) і Decision-tree-as-algorithm (для 31 tools монстр). Гібрид підхід Gemini раунд 2.
-- **Селективний інжект CHIP_PROMPT_RULES** — Inbox + OWL міні-чат + Finance + Evening. Tab-чати me/notes/tasks/health/projects лишилось без — вони не класифікатори.
-- **task_id у chip payload** — гарантовано закриває правильну задачу. Fuzzy-match лишається як fallback для legacy chips.
-- **parallel_tool_calls=true залишити** — батч complete_task потрібен. Замість false — code-guard у inbox.js dedupe save_finance+save_task.
-- **Backup snapshot обов'язково** перед великим промпт-рефакторингом. Pre-mortem mental model.
-
-### Інциденти
-
-- **Build break бектіки у CHIP_PROMPT_RULES** (`be6f708` фікс) — `\`subcategory\`` у template literal ламав esbuild. `node --check` не ловив, потрібен `node build.js`. CI auto-merge впав 4 коміти підряд (cf8ce77/dc76864/7b6beba/6b48eee). Урок у `lessons.md` (TODO для наступної).
-- **6 фіксів-наосліп B-138-B-143 у MPVly-day2** — повторний антипатерн. Roman: «А чо ти на осліп? Там є правило». Запустив Council 3 агенти → знайшли реальний корінь субcategory dispatcher.
-- **AI плутає action='complete' з action='chat'** для proactive — 9+ повторів у логах. Code-guard переписує на 'chat' успішно. Phase A+Б фікс остаточно через task_id.
-- Жодних `git reset` / `push --force` / skip hooks. ~33 коміти першою спробою (крім build-break).
-
-### Конфлікти/суперечності
-
-- **Шаблонні чіпи vs контекстні** — Roman передумав: спершу «чіпи на всі випадки» (раунд 1) → потім «не давай чіпи на очевидне» (раунд 2 fast-path) → потім «контекстні замість шаблонних» (Phase A+Б). Кінцевий стан гібрид: fast-path для однозначних, контекстні з task_id для proactive.
-- **CHIP_PROMPT_RULES скрізь vs селективно** — спершу інжектив у `getOWLPersonality()` (всі чати), потім агент знайшов що JSON-аналітика me.js ламається → виокремив `getOWLChatPersonality()` тільки для chat-кейсів.
-- **«Виконано ✔️» — closure чи репліка** — Roman: «Виконано і Зробив одне і те саме». Реальний корінь — символ ✔️ тригерить AI на complete. Phase A+Б видалила ✔️ з proactive label, повернула через task_id+✔️ у Phase Б з гарантованим target.
-
-### Метрики
-
-- Коміти: 33 (`bcf5ec4` → `8d0973d`)
-- Версії: v744 → v750+ (CI ще збирає 0d8a32f і 8d0973d)
-- CACHE_NAME: `nm-20260507-0726` → `nm-20260508-0827` (~22 bumps)
-- Гілка: `claude/start-session-LfA6w`
-- Backup snapshot: `_archive/prompts_backup_LfA6w/` (4 файли × ~2-170KB)
-- Закриті баги: B-151..B-159 (9 від silent-bug-scout) + 6 регресій LfA6w (тільки внутрішні, без B-номерів)
-- Sonnet агенти: 5 запусків (silent-bug-scout, code-regression-finder, prompt-engineer-auditor×3) + 3 ітерації Gemini
-
-### Спостереження Claude
-
-- Інтенсивна сесія 1.5+ доби (06.05 21:00 → 08.05 09:00). Roman не стомлювався, постійно у потоці.
-- **Постійні мікро-UX-уточнення:** «стрілки трохи ширше», «не міняй розмір», «5-15 рядків», «довго», «технічно». Чутливий до тонкощів.
-- **Запит на meta-методологію** — після Instagram-посту про 4 ментальні моделі попросив записати у CLAUDE.md «це про нашу роботу, не продукт». Бачить Claude як спарринг-партнера, не виконавця.
-- **Сильна реакція на повторювані паттерни:** «фіксиш на осліп → ВЖЕ є правило → Council» (правильний crit). «Завжди поломка на твоїй стороні» (правильний crit моєї тенденції скидати на GitHub/мережу).
-- **Поетапні рішення:** ніколи «робимо всі переписування одразу», завжди «1+2», «А+Б», «спершу одне, потім друге». Pre-mortem інстинктивно.
-- **Стиль argumention:** питає «правильно я мислю?» після формулювання ідеї. Хоче валідації від Claude як другого мозку, не одностороннього виконання.
-
-### Відкладене
-
-- **Tab-чати без CHIP_PROMPT_RULES** (me/notes/tasks/health/projects) — рішення не інжектити (вони не класифікатори). Якщо у майбутньому save_finance викликається з тих чатів — додати селективно.
-- **Tool consolidation 64→менше** — Gemini пропонував, відкладено як overinжиніринг.
-- **Streaming AI response** — найбільший UX-виграш для AI-швидкості. Окрема сесія 1-2.
-- **Урок «node --check недостатньо, треба node build.js перед push»** — TODO у `lessons.md` наступної сесії.
-- **5 регресій урок** — TODO у `lessons.md`: «після великого рефакторингу обов'язково Council 3 агенти на регресії, не покладайся на самотест».
+## 🔧 Сесія LfA6w day2 (07-08.05.2026) — архівовано 64CXo 10.05 → [archive](../_archive/SESSION_STATE_archive.md#-сесія-lfa6w-day2--decision-tree-промпти--subcategory--контекстні-чіпи-07-08052026)
 
 ---
 
@@ -258,7 +216,40 @@
 
 ## ⚠️ ДЛЯ НОВОГО ЧАТУ — найважливіше
 
-**🚀 ПРІОРИТЕТ #1 (QDIGl 05.05): Розпорядок дня — повний редизайн.** Я зробив тільки read-only merge (combined timeline events+reminders+routine на день). Лишилось у ROADMAP Блок 3 (рядки 326-334):
+**🚀 ПРІОРИТЕТ #1 (64CXo 10.05): Bridge-стратегія продовження — Phases #3, #4, #5 з Gemini-плану.**
+
+З 5 фаз Bridge-плану зроблено 2 (Strict mode 5 tools + ua-time-parser інтегрований). Лишилось:
+
+**G2 (NEXT): `parseUaTimeOfDay` для абстрактних часів.**
+- «зранку»→08:00, «опівдні»→12:00, «вдень»→13:00, «після обіду»→14:00, «ввечері»→18:00, «перед сном»→22:00, «через годину»→зараз+1, «через 30 хв»→зараз+30мн
+- Інтегрувати у `set_reminder` handler як fallback для `time` параметра
+- Видалити дубль МАПИ ЧАСУ з prompts.js (рядки 265+529 розходяться)
+- ~1 година роботи
+
+**G3 (NEXT): Збір `nm_agent_corrections` лог.**
+- Юзер видалив свіже AI-створення → log {text, predicted_intent, correct_intent, ts}
+- Юзер змінив категорію → log
+- Готує дані для Anti-Pattern Engine у Supabase (cron з o1-preview)
+- ~2 години
+
+**G4 (NEXT): Pure functions для guards у `src/data/dispatcher-guards.js`.**
+- Винести 4-5 dedupe з `inbox.js` у окремий файл (PAST_INDICATORS, момент guard, complete+save_task dedupe, save_moment+create_event dedupe)
+- Export як pure functions (не залежать від localStorage)
+- Mіграційно сумісно — переїде у Edge Function без переписування
+- ~2-3 години
+
+**G5 (BIG, окрема сесія): Embeddings intent classifier у клієнті.**
+- 150-200 типових фраз × text-embedding-3-small = ~1.2 МБ JSON у bundle
+- Cosine similarity на JS у клієнті (1-2 мс)
+- AI бачить 2-3 релевантні tools замість 10 (Strict + Embeddings = ~95% точності)
+- Після Supabase: swap fetchLocal() → supabase.rpc('match_intents'), pgvector
+- 3-5 днів — окрема велика фаза
+
+**G6 (REMAINDER 1.2b): Strict mode для решти 26 tools.** Лишилось 5 з 31 покрито (топ найчастіші). Решта — менш критичні (delete_*, edit_*, project_*). Можна робити поступово.
+
+**🚀 ПРІОРИТЕТ #2 (від 64CXo тестування): "Запиши момент" content text каже «Подію додано»** — навіть коли save_moment виконано (Phase B працює, нотатка створена). Юзер плутається. Корінь у промпті — handler add_moment повертає 1 повідомлення, AI content виводить інше. Треба узгодити content text у самому handler або заборонити AI у CHIP_PROMPT_RULES писати «Подію додано» коли tool=save_moment.
+
+**🚀 ПРІОРИТЕТ #3 (старий): Розпорядок дня — повний редизайн.** Я зробив тільки read-only merge (combined timeline events+reminders+routine на день). Лишилось у ROADMAP Блок 3 (рядки 326-334):
 - Storage redesign: `nm_routine` з `{mon: [...]}` → `{'2026-04-10': [...]}` per-date
 - Auto-fill блоків при створенні задачі/події з часом → `_detectTimeConflict(date, time)` + tool `clarify_schedule_conflict`
 - Day-tabs Пн-Нд → дати-вкладки «Пт 10.04» з навігацією між тижнями
