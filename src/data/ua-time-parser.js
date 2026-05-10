@@ -17,12 +17,27 @@
 //           N тижнів тому, місяць тому
 //   МАЙБУТНЄ: завтра (+1), післязавтра/позавтра (+2), через N днів,
 //             через тиждень (+7), через N тижнів, через місяць (+30)
+//   АБСОЛЮТНI: «15 травня», «3 червня 2026» (через MONTHS_GENITIVE)
+//   ДНІ ТИЖНЯ: «у понеділок/вівторок/...» — найближчий минулий або майбутній
 //
 // Що НЕ покрито (треба окремий handler):
-//   - «у понеділок/вівторок» — потребує знання поточного дня тижня
-//   - «3 червня», «12 травня» — потребує мапи місяців
-//   - «о 15:00», «через годину» — це time, не date
+//   - «о 15:00», «через годину» — це time, не date (для add_moment не критично,
+//     для set_reminder — окремий parseUaTimeOfDay)
 // ============================================================
+
+// Iдентичний MONTHS_GENITIVE як у src/data/months.js (синхронізований).
+// Дублюємо тут щоб уникнути circular import (ua-time-parser → months.js → utils.js).
+const MONTHS_GENITIVE = ['січня','лютого','березня','квітня','травня','червня','липня','серпня','вересня','жовтня','листопада','грудня'];
+// Дні тижня genitive для «у понеділок» / «в середу». 0=пн, 1=вт, ... 6=нд.
+const WEEKDAYS = [
+  ['понеділок','понеділка'],
+  ['вівторок','вівторка'],
+  ['середу','середа','середи'],
+  ['четвер','четверга'],
+  ["п'ятницю","п'ятниця","п'ятниці","пʼятницю","пʼятниця","пʼятниці"],
+  ['суботу','субота','суботи'],
+  ['неділю','неділя','неділі']
+];
 
 const NUM_MAP = {
   'один': 1, 'два': 2, 'дві': 2, 'три': 3, 'чотири': 4,
@@ -92,14 +107,72 @@ export function parseUaTimeOffset(text) {
   return null;
 }
 
+// Парсить абсолютну дату «15 травня», «3 червня 2026», «1 січня».
+// Повертає Date або null.
+export function parseAbsoluteDate(text, baseDate = new Date()) {
+  if (!text || typeof text !== 'string') return null;
+  const t = text.toLowerCase();
+  // Шукаємо число + місяць (genitive). Опційно рік 4-цифри.
+  const m = t.match(/(\d{1,2})\s+(січня|лютого|березня|квітня|травня|червня|липня|серпня|вересня|жовтня|листопада|грудня)(?:\s+(\d{4}))?/);
+  if (!m) return null;
+  const day = parseInt(m[1], 10);
+  const monthIdx = MONTHS_GENITIVE.indexOf(m[2]);
+  const year = m[3] ? parseInt(m[3], 10) : baseDate.getFullYear();
+  if (day < 1 || day > 31 || monthIdx === -1) return null;
+  const d = new Date(year, monthIdx, day, 12, 0, 0, 0);
+  if (isNaN(d.getTime())) return null;
+  return d;
+}
+
+// Парсить день тижня «у понеділок», «в середу». Повертає offset у днях від
+// baseDate. mode='past' або 'future' — куди шукати.
+// Якщо baseDate.getDay() === wantedDay → +7 (future) або -7 (past).
+export function parseUaWeekday(text, mode = 'future', baseDate = new Date()) {
+  if (!text || typeof text !== 'string') return null;
+  const t = text.toLowerCase();
+  // JS getDay(): 0=Sunday, 1=Mon...6=Sat. Конвертуємо у 0=Mon..6=Sun.
+  const todayJsDay = baseDate.getDay();
+  const todayMonFirst = (todayJsDay + 6) % 7; // 0=Mon, ..., 6=Sun
+  for (let i = 0; i < 7; i++) {
+    const forms = WEEKDAYS[i];
+    for (const form of forms) {
+      if (t.includes(form)) {
+        let diff = i - todayMonFirst;
+        if (mode === 'future') {
+          if (diff <= 0) diff += 7;
+        } else {
+          if (diff >= 0) diff -= 7;
+        }
+        return diff;
+      }
+    }
+  }
+  return null;
+}
+
 // Повертає точну дату (Date object) на основі тексту, або null.
 // baseDate за замовчуванням — сьогодні. Час виставляється на 12:00 щоб уникнути
-// timezone-shift на межі доби.
-export function resolveDateFromText(text, baseDate = new Date()) {
+// timezone-shift на межі доби. mode для weekday: 'past' для save_moment,
+// 'future' для create_event/set_reminder.
+export function resolveDateFromText(text, baseDate = new Date(), mode = 'past') {
+  // 1. Спершу абсолютна дата (найточніша)
+  const absolute = parseAbsoluteDate(text, baseDate);
+  if (absolute) return absolute;
+  // 2. Відносний offset (вчора/завтра/N днів тому)
   const offset = parseUaTimeOffset(text);
-  if (offset === null) return null;
-  const d = new Date(baseDate);
-  d.setHours(12, 0, 0, 0);
-  d.setDate(d.getDate() + offset);
-  return d;
+  if (offset !== null) {
+    const d = new Date(baseDate);
+    d.setHours(12, 0, 0, 0);
+    d.setDate(d.getDate() + offset);
+    return d;
+  }
+  // 3. День тижня (потребує context — past чи future)
+  const wdOffset = parseUaWeekday(text, mode, baseDate);
+  if (wdOffset !== null) {
+    const d = new Date(baseDate);
+    d.setHours(12, 0, 0, 0);
+    d.setDate(d.getDate() + wdOffset);
+    return d;
+  }
+  return null;
 }
