@@ -615,6 +615,30 @@ ${aiContext}`;
           msg.tool_calls = msg.tool_calls.filter(tc => tc.function?.name !== 'create_event');
         }
       }
+      // 64CXo: minулий час guard. Якщо юзер описав ПЕРЕЖИТЕ («вчора жарили»,
+      // «гуляли під дощем») і AI хибно повертає create_event замість save_moment
+      // — конвертуємо create_event у save_moment з тим самим title як text.
+      // PAST_INDICATORS — слова часу + plural дієслова -ли + singular -в/-ла.
+      const PAST_INDICATORS = /(вчора|позавчора|минулого|тому\s|назад)|\b(гуля|жари|їл|пил|зустрі|сходи|створи|купи|зроби|написа|закінчи|поми|поча|відкри|приготува|пройш|по[бг]ачи|зустрі)(в|ла|ло|ли|вся|лася|лися|лось)\b/i;
+      if (PAST_INDICATORS.test(userMsgLower)) {
+        const eventTc = msg.tool_calls.find(tc => tc.function?.name === 'create_event');
+        const hasMomentNow = msg.tool_calls.some(tc => tc.function?.name === 'save_moment');
+        if (eventTc && !hasMomentNow) {
+          try {
+            const evtArgs = JSON.parse(eventTc.function.arguments || '{}');
+            const momentArgs = {
+              _reasoning_log: 'Auto-convert create_event to save_moment (past tense indicators in user text)',
+              text: evtArgs.title || text,
+              mood: 'neutral',
+              date: null,
+              comment: evtArgs.comment || ''
+            };
+            eventTc.function.name = 'save_moment';
+            eventTc.function.arguments = JSON.stringify(momentArgs);
+            console.warn('[inbox] guard: minулий час у запиті — конвертую create_event у save_moment');
+          } catch(e) { console.warn('[inbox] guard convert failed', e); }
+        }
+      }
       const hasFinance = msg.tool_calls.some(tc => tc.function?.name === 'save_finance');
       const hasTask = msg.tool_calls.some(tc => tc.function?.name === 'save_task');
       if (hasFinance && hasTask) {
