@@ -13187,17 +13187,72 @@ ${CHIP_PROMPT_RULES}`;
     }
     return null;
   }
-  function resolveDateFromText(text, baseDate = /* @__PURE__ */ new Date()) {
-    const offset = parseUaTimeOffset(text);
-    if (offset === null) return null;
-    const d = new Date(baseDate);
-    d.setHours(12, 0, 0, 0);
-    d.setDate(d.getDate() + offset);
+  function parseAbsoluteDate(text, baseDate = /* @__PURE__ */ new Date()) {
+    if (!text || typeof text !== "string") return null;
+    const t2 = text.toLowerCase();
+    const m = t2.match(/(\d{1,2})\s+(січня|лютого|березня|квітня|травня|червня|липня|серпня|вересня|жовтня|листопада|грудня)(?:\s+(\d{4}))?/);
+    if (!m) return null;
+    const day = parseInt(m[1], 10);
+    const monthIdx = MONTHS_GENITIVE.indexOf(m[2]);
+    const year = m[3] ? parseInt(m[3], 10) : baseDate.getFullYear();
+    if (day < 1 || day > 31 || monthIdx === -1) return null;
+    const d = new Date(year, monthIdx, day, 12, 0, 0, 0);
+    if (isNaN(d.getTime())) return null;
     return d;
   }
-  var NUM_MAP;
+  function parseUaWeekday(text, mode = "future", baseDate = /* @__PURE__ */ new Date()) {
+    if (!text || typeof text !== "string") return null;
+    const t2 = text.toLowerCase();
+    const todayJsDay = baseDate.getDay();
+    const todayMonFirst = (todayJsDay + 6) % 7;
+    for (let i = 0; i < 7; i++) {
+      const forms = WEEKDAYS[i];
+      for (const form of forms) {
+        if (t2.includes(form)) {
+          let diff = i - todayMonFirst;
+          if (mode === "future") {
+            if (diff <= 0) diff += 7;
+          } else {
+            if (diff >= 0) diff -= 7;
+          }
+          return diff;
+        }
+      }
+    }
+    return null;
+  }
+  function resolveDateFromText(text, baseDate = /* @__PURE__ */ new Date(), mode = "past") {
+    const absolute = parseAbsoluteDate(text, baseDate);
+    if (absolute) return absolute;
+    const offset = parseUaTimeOffset(text);
+    if (offset !== null) {
+      const d = new Date(baseDate);
+      d.setHours(12, 0, 0, 0);
+      d.setDate(d.getDate() + offset);
+      return d;
+    }
+    const wdOffset = parseUaWeekday(text, mode, baseDate);
+    if (wdOffset !== null) {
+      const d = new Date(baseDate);
+      d.setHours(12, 0, 0, 0);
+      d.setDate(d.getDate() + wdOffset);
+      return d;
+    }
+    return null;
+  }
+  var MONTHS_GENITIVE, WEEKDAYS, NUM_MAP;
   var init_ua_time_parser = __esm({
     "src/data/ua-time-parser.js"() {
+      MONTHS_GENITIVE = ["\u0441\u0456\u0447\u043D\u044F", "\u043B\u044E\u0442\u043E\u0433\u043E", "\u0431\u0435\u0440\u0435\u0437\u043D\u044F", "\u043A\u0432\u0456\u0442\u043D\u044F", "\u0442\u0440\u0430\u0432\u043D\u044F", "\u0447\u0435\u0440\u0432\u043D\u044F", "\u043B\u0438\u043F\u043D\u044F", "\u0441\u0435\u0440\u043F\u043D\u044F", "\u0432\u0435\u0440\u0435\u0441\u043D\u044F", "\u0436\u043E\u0432\u0442\u043D\u044F", "\u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434\u0430", "\u0433\u0440\u0443\u0434\u043D\u044F"];
+      WEEKDAYS = [
+        ["\u043F\u043E\u043D\u0435\u0434\u0456\u043B\u043E\u043A", "\u043F\u043E\u043D\u0435\u0434\u0456\u043B\u043A\u0430"],
+        ["\u0432\u0456\u0432\u0442\u043E\u0440\u043E\u043A", "\u0432\u0456\u0432\u0442\u043E\u0440\u043A\u0430"],
+        ["\u0441\u0435\u0440\u0435\u0434\u0443", "\u0441\u0435\u0440\u0435\u0434\u0430", "\u0441\u0435\u0440\u0435\u0434\u0438"],
+        ["\u0447\u0435\u0442\u0432\u0435\u0440", "\u0447\u0435\u0442\u0432\u0435\u0440\u0433\u0430"],
+        ["\u043F'\u044F\u0442\u043D\u0438\u0446\u044E", "\u043F'\u044F\u0442\u043D\u0438\u0446\u044F", "\u043F'\u044F\u0442\u043D\u0438\u0446\u0456", "\u043F\u02BC\u044F\u0442\u043D\u0438\u0446\u044E", "\u043F\u02BC\u044F\u0442\u043D\u0438\u0446\u044F", "\u043F\u02BC\u044F\u0442\u043D\u0438\u0446\u0456"],
+        ["\u0441\u0443\u0431\u043E\u0442\u0443", "\u0441\u0443\u0431\u043E\u0442\u0430", "\u0441\u0443\u0431\u043E\u0442\u0438"],
+        ["\u043D\u0435\u0434\u0456\u043B\u044E", "\u043D\u0435\u0434\u0456\u043B\u044F", "\u043D\u0435\u0434\u0456\u043B\u0456"]
+      ];
       NUM_MAP = {
         "\u043E\u0434\u0438\u043D": 1,
         "\u0434\u0432\u0430": 2,
