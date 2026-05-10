@@ -1303,8 +1303,15 @@ export function processUniversalAction(parsed, originalText, addMsg) {
     if (!text) return false;
     const mood = /добре|чудово|супер|відмінно|весело|щасли|круто|кайф/i.test(text) ? 'positive' :
                  /погано|жахливо|сумно|нудно|важко|втомив|зле|дістало/i.test(text) ? 'negative' : 'neutral';
+    // 64CXo: парсимо date якщо AI передав («вчора» → YYYY-MM-DD). Phase B hook
+    // використовує ts для дейлі-папки — так момент про вчора йде у вчорашню папку.
+    let momentTs = Date.now();
+    if (parsed.date && /^\d{4}-\d{2}-\d{2}$/.test(parsed.date)) {
+      const parsedDate = new Date(parsed.date + 'T12:00:00');
+      if (!isNaN(parsedDate.getTime())) momentTs = parsedDate.getTime();
+    }
     const moments = getMoments();
-    moments.push({ id: Date.now(), text, mood, ts: Date.now() });
+    moments.push({ id: Date.now(), text, mood, ts: momentTs });
     saveMoments(moments);
     addMsg('agent', t('habits.moment.added', '✨ Момент записано'));
     return true;
