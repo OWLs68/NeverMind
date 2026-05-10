@@ -13,6 +13,7 @@ import { UI_TOOL_NAMES, handleUITool } from '../ai/ui-tools.js';
 import { addFact } from '../ai/memory.js';
 import { handleScheduleAnswer } from '../owl/inbox-board.js';
 import { shouldClarify } from '../owl/clarify-guard.js';
+import { applyAllGuards } from '../data/dispatcher-guards.js';
 import { attachSwipeDelete } from '../ui/swipe-delete.js';
 import { getTasks, saveTasks, renderTasks, autoGenerateTaskSteps } from './tasks.js';
 import { getEvents, saveEvents, addEventDedup } from './calendar.js';
@@ -597,73 +598,16 @@ ${aiContext}`;
       }
 
       // === TOOL CALLING DISPATCH ===
-      // LfA6w 08.05 v2: dedupe save_finance + save_task для одного запиту.
-      // AI у gpt-4o-mini іноді робить batch tool_calls для «50 мийка авто» —
-      // одночасно save_finance (як витрата) і save_task (як «купити мийку»).
-      // Юзер хотів тільки витрату. Промпт переписаний на decision-tree + цей
-      // code-guard як страховка від AI-batch порушень.
-      // 64CXo: жорсткий guard — якщо юзер написав слово «момент» у запиті,
-      // AI зобовʼязаний save_moment, не create_event. Ігнорує промпт-заборону
-      // → переписуємо tool_calls. Стосується як «запиши момент», так і
-      // «це момент», «який гарний момент» тощо. Не критично якщо false-positive
-      // (юзер каже «не момент») — тоді AI просто не робить event і clarify.
-      const userMsgLower = (text || '').toLowerCase();
-      if (/\bмомент/.test(userMsgLower)) {
-        const hadEvent = msg.tool_calls.some(tc => tc.function?.name === 'create_event');
-        if (hadEvent) {
-          console.warn('[inbox] guard: word «момент» у запиті — викидаю create_event');
-          msg.tool_calls = msg.tool_calls.filter(tc => tc.function?.name !== 'create_event');
-        }
-      }
-      // 64CXo: minулий час guard. Якщо юзер описав ПЕРЕЖИТЕ («вчора жарили»,
-      // «гуляли під дощем») і AI хибно повертає create_event замість save_moment
-      // — конвертуємо create_event у save_moment з тим самим title як text.
-      // PAST_INDICATORS — слова часу + plural дієслова -ли + singular -в/-ла.
-      const PAST_INDICATORS = /(вчора|позавчора|минулого|тому\s|назад)|\b(гуля|жари|їл|пил|зустрі|сходи|створи|купи|зроби|написа|закінчи|поми|поча|відкри|приготува|пройш|по[бг]ачи|зустрі)(в|ла|ло|ли|вся|лася|лися|лось)\b/i;
-      if (PAST_INDICATORS.test(userMsgLower)) {
-        const eventTc = msg.tool_calls.find(tc => tc.function?.name === 'create_event');
-        const hasMomentNow = msg.tool_calls.some(tc => tc.function?.name === 'save_moment');
-        if (eventTc && !hasMomentNow) {
-          try {
-            const evtArgs = JSON.parse(eventTc.function.arguments || '{}');
-            const momentArgs = {
-              _reasoning_log: 'Auto-convert create_event to save_moment (past tense indicators in user text)',
-              text: evtArgs.title || text,
-              mood: 'neutral',
-              date: null,
-              comment: evtArgs.comment || ''
-            };
-            eventTc.function.name = 'save_moment';
-            eventTc.function.arguments = JSON.stringify(momentArgs);
-            console.warn('[inbox] guard: minулий час у запиті — конвертую create_event у save_moment');
-          } catch(e) { console.warn('[inbox] guard convert failed', e); }
-        }
-      }
-      const hasFinance = msg.tool_calls.some(tc => tc.function?.name === 'save_finance');
-      const hasTask = msg.tool_calls.some(tc => tc.function?.name === 'save_task');
-      if (hasFinance && hasTask) {
-        console.warn('[inbox] dedupe: save_finance+save_task batch — пропускаю save_task');
-        msg.tool_calls = msg.tool_calls.filter(tc => tc.function?.name !== 'save_task');
-      }
-      // 64CXo 09.05: dedupe complete_task + save_task. AI на «Купив хліб» при
-      // активній задачі «Купити м'ясо» одночасно (а) закривав чужу задачу через
-      // fuzzy match за дієсловом, (б) створював нову з минулого часу попри
-      // КРОК 6 промпта. complete_task пріоритетніший — якщо юзер сказав «купив»,
-      // то це виконання, не задача. Той самий патерн dedupe як вище.
-      const hasComplete = msg.tool_calls.some(tc => tc.function?.name === 'complete_task');
-      if (hasComplete && hasTask) {
-        console.warn('[inbox] dedupe: complete_task+save_task batch — пропускаю save_task');
-        msg.tool_calls = msg.tool_calls.filter(tc => tc.function?.name !== 'save_task');
-      }
-      // 64CXo: dedupe save_moment + create_event. AI на «жарили мясо» (минулий
-      // час) одночасно зберігав момент І створював подію. save_moment пріоритет —
-      // минулий час = виконання, не майбутня подія.
-      const hasMoment = msg.tool_calls.some(tc => tc.function?.name === 'save_moment');
-      const hasEvent = msg.tool_calls.some(tc => tc.function?.name === 'create_event');
-      if (hasMoment && hasEvent) {
-        console.warn('[inbox] dedupe: save_moment+create_event batch — пропускаю create_event');
-        msg.tool_calls = msg.tool_calls.filter(tc => tc.function?.name !== 'create_event');
-      }
+      // dyhJu 10.05 G4: 6 pure-function guards у `src/data/dispatcher-guards.js`:
+      //   1) dropEventOnMomentKeyword — слово «момент» → drop create_event (64CXo)
+      //   2) convertPastEventToMoment — минулий час → конверсія event у moment (64CXo)
+      //   3) convertNoteToFinance — сума+валюта → конверсія note/moment у finance (B-166)
+      //   4) dropTaskOnFinance — finance+task batch → drop task (LfA6w v2)
+      //   5) dropTaskOnComplete — complete+task batch → drop task (64CXo)
+      //   6) dropEventOnMoment — moment+event batch → drop event (64CXo)
+      // Раніше жили тут inline; тепер dispatchChatToolCalls (7 чатів) +
+      // inbox.js (8-й чат) ділять ОДИН набір guards. Зник розрив архітектури.
+      msg.tool_calls = applyAllGuards(msg.tool_calls, text);
       for (const tc of msg.tool_calls) {
         // B-154 fix (LfA6w 07.05): try/catch навколо JSON.parse. Якщо OpenAI
         // дав зламаний JSON у одному з кількох tool_calls — раніше throw

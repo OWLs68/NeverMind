@@ -24,6 +24,7 @@
 
 import { UI_TOOL_NAMES, handleUITool } from './ui-tools.js';
 import { addFact } from './memory.js';
+import { applyAllGuards } from '../data/dispatcher-guards.js';
 import {
   createHealthCardProgrammatic,
   editHealthCardProgrammatic,
@@ -486,6 +487,13 @@ function _handleProjectTool(name, args, addMsg) {
 // ===== dispatchChatToolCalls — головний маршрутизатор =====
 export function dispatchChatToolCalls(toolCalls, addMsg, originalText) {
   if (!Array.isArray(toolCalls) || toolCalls.length === 0) return false;
+  // dyhJu 10.05 G4: pure-function guards (PAST_INDICATORS, момент-keyword,
+  // dedupe save_finance+save_task, dedupe complete+save_task, dedupe
+  // save_moment+create_event, B-166 convertNoteToFinance). Раніше ці guards
+  // жили inline у inbox.js — тут diff лікує розрив «один мозок» для 7
+  // tab-чатів (tasks/notes/me/health/finance-chat/projects/clarify).
+  toolCalls = applyAllGuards(toolCalls, originalText);
+  if (toolCalls.length === 0) return false;
   let any = false;
   for (const tc of toolCalls) {
     let args = {};
