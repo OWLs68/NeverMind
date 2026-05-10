@@ -17824,6 +17824,28 @@ ${aiContext}`;
             msg.tool_calls = msg.tool_calls.filter((tc) => tc.function?.name !== "create_event");
           }
         }
+        const PAST_INDICATORS = /(вчора|позавчора|минулого|тому\s|назад)|\b(гуля|жари|їл|пил|зустрі|сходи|створи|купи|зроби|написа|закінчи|поми|поча|відкри|приготува|пройш|по[бг]ачи|зустрі)(в|ла|ло|ли|вся|лася|лися|лось)\b/i;
+        if (PAST_INDICATORS.test(userMsgLower)) {
+          const eventTc = msg.tool_calls.find((tc) => tc.function?.name === "create_event");
+          const hasMomentNow = msg.tool_calls.some((tc) => tc.function?.name === "save_moment");
+          if (eventTc && !hasMomentNow) {
+            try {
+              const evtArgs = JSON.parse(eventTc.function.arguments || "{}");
+              const momentArgs = {
+                _reasoning_log: "Auto-convert create_event to save_moment (past tense indicators in user text)",
+                text: evtArgs.title || text,
+                mood: "neutral",
+                date: null,
+                comment: evtArgs.comment || ""
+              };
+              eventTc.function.name = "save_moment";
+              eventTc.function.arguments = JSON.stringify(momentArgs);
+              console.warn("[inbox] guard: min\u0443\u043B\u0438\u0439 \u0447\u0430\u0441 \u0443 \u0437\u0430\u043F\u0438\u0442\u0456 \u2014 \u043A\u043E\u043D\u0432\u0435\u0440\u0442\u0443\u044E create_event \u0443 save_moment");
+            } catch (e) {
+              console.warn("[inbox] guard convert failed", e);
+            }
+          }
+        }
         const hasFinance = msg.tool_calls.some((tc) => tc.function?.name === "save_finance");
         const hasTask = msg.tool_calls.some((tc) => tc.function?.name === "save_task");
         if (hasFinance && hasTask) {
