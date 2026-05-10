@@ -19,7 +19,7 @@ import { getTasks, saveTasks, renderTasks, openAddTask, addTaskBarMsg, taskBarHi
 import { getNotes, saveNotes, renderNotes, addNoteFromInbox, currentNotesFolder, setCurrentNotesFolder, getDirectChildren } from './notes.js';
 import { getFinance, saveFinance, renderFinance, formatMoney, getFinCats, saveFinCats, _resolveFinanceDate, createFinCategory } from './finance.js';
 import { matchSubcategoryFromComment } from '../data/finance-subcat-keywords.js';
-import { resolveDateFromText } from '../data/ua-time-parser.js';
+import { resolveDateFromText, parseUaTimeOfDay } from '../data/ua-time-parser.js';
 import { getMoments, saveMoments } from './evening.js';
 import { getEvents, saveEvents, addEventDedup, getRoutine, saveRoutine } from './calendar.js';
 
@@ -1607,8 +1607,14 @@ export function processUniversalAction(parsed, originalText, addMsg) {
         date = new Date().toISOString().slice(0, 10);
       }
     }
-    // TODO Phase G2: parseUaTimeOfDay for abstract times. For now: if null → clarify.
-    const time = parsed.time;
+    // dyhJu G2: parseUaTimeOfDay як fallback коли AI не передав явний `time`.
+    // Покриває «зранку»→08:00, «через годину»→now+60, «о 15:00»→15:00 тощо.
+    // Якщо парсер теж null — питаємо юзера.
+    let time = parsed.time;
+    if (!time) {
+      const parsedTime = parseUaTimeOfDay(originalText || text, new Date());
+      if (parsedTime) time = parsedTime;
+    }
     if (!time) { addMsg('agent', t('habits.err.reminder_time', 'Вкажи час нагадування.')); return true; }
     const reminderId = Date.now();
     // 1. nm_reminders — для тригера спливаючого попередження

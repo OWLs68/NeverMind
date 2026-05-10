@@ -176,3 +176,121 @@ export function resolveDateFromText(text, baseDate = new Date(), mode = 'past') 
   }
   return null;
 }
+
+// === parseUaTimeOfDay (G2 dyhJu 10.05) ===
+//
+// Парсить часи доби у формат 'HH:MM'. Покриває:
+//   АБСТРАКТНI: зранку/вранці (08:00), опівдні (12:00), вдень (13:00),
+//               після обіду (14:00), ввечері (18:00), пізно ввечері (21:00),
+//               перед сном (22:00), вночі (00:00), опівночі (00:00)
+//   КОНКРЕТНI: «о 15:00», «о 9-30», «15:00», «9.30», «о 9 ранку» (09:00),
+//              «о 7 вечора» (19:00)
+//   ВIДНОСНI: «через годину» (now+60хв), «через 30 хв» (now+30хв),
+//             «через пів години» (now+30хв), «через 2 години» (now+120хв)
+//
+// Повертає 'HH:MM' або null. baseDate потрібен лише для «через N» —
+// інакше можна не передавати.
+//
+// Призначення: G2 Bridge-плану з 64CXo SESSION_STATE — code-side fallback
+// у set_reminder handler коли AI не передав явний `time` параметр. Раніше
+// AI бачив лише декларативну МАПУ ЧАСУ у prompts.js (дублювалась у двох
+// місцях, ще й розходилась) — лоскутний підхід. Тепер детермінований
+// парсер у `src/data/`, переїде у Edge Function без переписування.
+//
+// Принцип Романа (правило 12 CLAUDE.md, 64CXo): «детерміноване → парсер,
+// не промпт».
+
+// Абстрактна мапа часів доби. Пріоритет — за специфічністю (довші ключі
+// перевіряємо перед коротшими щоб «після обіду» не матчилось як «обід»).
+const TIME_OF_DAY_MAP = [
+  // Найдовші тригери — перші
+  { re: /перед\s+сном/, time: '22:00' },
+  { re: /пізно\s+(в?в?ечері|ввечері)/, time: '21:00' },
+  { re: /після\s+обіду/, time: '14:00' },
+  // Конкретні слова
+  { re: /опівночі/, time: '00:00' },
+  { re: /опівдні/, time: '12:00' },
+  { re: /(?:^|\s)(зранку|вранці|ранком)(?:\s|$)/, time: '08:00' },
+  { re: /(?:^|\s)(в?в?ечері|ввечері|увечері|надвечір)(?:\s|$)/, time: '18:00' },
+  { re: /(?:^|\s)(вночі|нічю|ніччю)(?:\s|$)/, time: '00:00' },
+  { re: /(?:^|\s)(вдень|удень)(?:\s|$)/, time: '13:00' },
+  { re: /(?:^|\s)(в?обід|обідом)(?:\s|$)/, time: '13:00' },
+];
+
+// Конкретний формат часу: «15:00», «9-30», «9.30», «о 15:00», «о 9», «о 9 ранку».
+// Опційний «о» спереду + 1-2 цифри + опційно :- або «.» + 2 цифри.
+// + опційні модифікатори «ранку/вечора» для 12-год формату.
+const EXPLICIT_TIME_RE = /(?:^|\s|[оО]\s+)(\d{1,2})[:.\-](\d{2})(?:\s|$)/;
+const HOUR_ONLY_RE = /(?:^|\s)[оО]\s+(\d{1,2})(?:\s+(ранку|вечора|дня|ночі))?(?:\s|$)/;
+
+// Відносний час: «через годину», «через 30 хв», «через пів години».
+// Через 1.5 години не покриваємо — рідкісне.
+const RELATIVE_HOURS_RE = /через\s+(?:(\d+|пів)\s+)?годин[ауи]?/;
+const RELATIVE_MINUTES_RE = /через\s+(\d+)\s*(?:хвилин[ауи]?|хв)/;
+const RELATIVE_HALF_HOUR_RE = /через\s+пів\s+години|через\s+півгодини/;
+
+function _pad2(n) { return String(n).padStart(2, '0'); }
+
+function _formatTime(h, m) {
+  if (h < 0 || h > 23 || m < 0 || m > 59) return null;
+  return _pad2(h) + ':' + _pad2(m);
+}
+
+function _addMinutes(baseDate, minutes) {
+  const d = new Date(baseDate);
+  d.setMinutes(d.getMinutes() + minutes);
+  return _formatTime(d.getHours(), d.getMinutes());
+}
+
+export function parseUaTimeOfDay(text, baseDate = new Date()) {
+  if (!text || typeof text !== 'string') return null;
+  const t = text.toLowerCase();
+
+  // 1. ВIДНОСНI часи (пріоритет — точніші за абстрактні)
+  if (RELATIVE_HALF_HOUR_RE.test(t)) {
+    return _addMinutes(baseDate, 30);
+  }
+  const relMin = t.match(RELATIVE_MINUTES_RE);
+  if (relMin) {
+    const n = parseInt(relMin[1], 10);
+    if (!isNaN(n) && n > 0 && n < 24 * 60) return _addMinutes(baseDate, n);
+  }
+  const relHr = t.match(RELATIVE_HOURS_RE);
+  if (relHr) {
+    const numToken = relHr[1];
+    let n;
+    if (!numToken) n = 1;             // «через годину»
+    else if (numToken === 'пів') n = 0.5;
+    else { n = parseInt(numToken, 10); if (isNaN(n)) n = null; }
+    if (n !== null && n > 0 && n < 24) return _addMinutes(baseDate, Math.round(n * 60));
+  }
+
+  // 2. КОНКРЕТНI часи (HH:MM, HH-MM, HH.MM)
+  const explicit = t.match(EXPLICIT_TIME_RE);
+  if (explicit) {
+    const h = parseInt(explicit[1], 10);
+    const m = parseInt(explicit[2], 10);
+    return _formatTime(h, m);
+  }
+  const hourOnly = t.match(HOUR_ONLY_RE);
+  if (hourOnly) {
+    let h = parseInt(hourOnly[1], 10);
+    const period = hourOnly[2];
+    if (!isNaN(h)) {
+      // 12-год → 24-год конверсія: «о 9 вечора» = 21, «о 7 вечора» = 19.
+      // «дня» → лишаємо як є (9 = 09:00). «ночі» → 0-3 ночі лишаємо, 11 ночі = 23.
+      if (period === 'вечора' && h < 12) h += 12;
+      else if (period === 'дня' && h < 6) h += 12;  // «о 3 дня» = 15
+      // ранку/ночі лишаємо як є (зазвичай AM)
+      return _formatTime(h, 0);
+    }
+  }
+
+  // 3. АБСТРАКТНI часи доби (мапа)
+  for (const entry of TIME_OF_DAY_MAP) {
+    if (entry.re.test(t)) return entry.time;
+  }
+
+  return null;
+}
+
