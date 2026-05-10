@@ -602,6 +602,19 @@ ${aiContext}`;
       // одночасно save_finance (як витрата) і save_task (як «купити мийку»).
       // Юзер хотів тільки витрату. Промпт переписаний на decision-tree + цей
       // code-guard як страховка від AI-batch порушень.
+      // 64CXo: жорсткий guard — якщо юзер написав слово «момент» у запиті,
+      // AI зобовʼязаний save_moment, не create_event. Ігнорує промпт-заборону
+      // → переписуємо tool_calls. Стосується як «запиши момент», так і
+      // «це момент», «який гарний момент» тощо. Не критично якщо false-positive
+      // (юзер каже «не момент») — тоді AI просто не робить event і clarify.
+      const userMsgLower = (text || '').toLowerCase();
+      if (/\bмомент/.test(userMsgLower)) {
+        const hadEvent = msg.tool_calls.some(tc => tc.function?.name === 'create_event');
+        if (hadEvent) {
+          console.warn('[inbox] guard: word «момент» у запиті — викидаю create_event');
+          msg.tool_calls = msg.tool_calls.filter(tc => tc.function?.name !== 'create_event');
+        }
+      }
       const hasFinance = msg.tool_calls.some(tc => tc.function?.name === 'save_finance');
       const hasTask = msg.tool_calls.some(tc => tc.function?.name === 'save_task');
       if (hasFinance && hasTask) {
