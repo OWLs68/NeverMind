@@ -1758,6 +1758,129 @@ ${lines.join("\n")}`;
     }
   });
 
+  // src/data/dispatcher-guards.js
+  function _findIdx(toolCalls, name) {
+    for (let i = 0; i < toolCalls.length; i++) {
+      if (toolCalls[i]?.function?.name === name) return i;
+    }
+    return -1;
+  }
+  function _has(toolCalls, name) {
+    return _findIdx(toolCalls, name) !== -1;
+  }
+  function _drop(toolCalls, name) {
+    if (!_has(toolCalls, name)) return toolCalls;
+    return toolCalls.filter((tc) => tc?.function?.name !== name);
+  }
+  function dropEventOnMomentKeyword(toolCalls, text) {
+    if (!Array.isArray(toolCalls) || toolCalls.length === 0) return toolCalls;
+    if (!text || !MOMENT_KEYWORD_RE.test(text)) return toolCalls;
+    if (!_has(toolCalls, "create_event")) return toolCalls;
+    console.warn("[guard] dropEventOnMomentKeyword: \u0441\u043B\u043E\u0432\u043E \xAB\u043C\u043E\u043C\u0435\u043D\u0442\xBB \u0443 \u0437\u0430\u043F\u0438\u0442\u0456 \u2014 \u0432\u0438\u043A\u0438\u0434\u0430\u044E create_event");
+    return _drop(toolCalls, "create_event");
+  }
+  function convertPastEventToMoment(toolCalls, text) {
+    if (!Array.isArray(toolCalls) || toolCalls.length === 0) return toolCalls;
+    if (!text || !PAST_INDICATORS_RE.test(text)) return toolCalls;
+    const evtIdx = _findIdx(toolCalls, "create_event");
+    if (evtIdx === -1) return toolCalls;
+    if (_has(toolCalls, "save_moment")) return toolCalls;
+    const evtTc = toolCalls[evtIdx];
+    let evtArgs = {};
+    try {
+      evtArgs = JSON.parse(evtTc.function.arguments || "{}");
+    } catch (e) {
+      console.warn("[guard] convertPastEventToMoment: parse failed", e);
+      return toolCalls;
+    }
+    const momentArgs = {
+      _reasoning_log: "Auto-convert create_event to save_moment (past tense indicators in user text)",
+      text: evtArgs.title || text,
+      mood: "neutral",
+      date: null,
+      comment: evtArgs.comment || ""
+    };
+    const newTc = {
+      ...evtTc,
+      function: { ...evtTc.function, name: "save_moment", arguments: JSON.stringify(momentArgs) }
+    };
+    const out = toolCalls.slice();
+    out[evtIdx] = newTc;
+    console.warn("[guard] convertPastEventToMoment: min\u0443\u043B\u0438\u0439 \u0447\u0430\u0441 \u2192 save_moment");
+    return out;
+  }
+  function convertNoteToFinance(toolCalls, text) {
+    if (!Array.isArray(toolCalls) || toolCalls.length === 0) return toolCalls;
+    if (!text) return toolCalls;
+    const m = text.match(MONEY_RE);
+    if (!m) return toolCalls;
+    if (_has(toolCalls, "save_finance")) return toolCalls;
+    let convertIdx = _findIdx(toolCalls, "save_note");
+    if (convertIdx === -1) convertIdx = _findIdx(toolCalls, "save_moment");
+    if (convertIdx === -1) return toolCalls;
+    const numMatch = m[0].match(/\d+(?:[.,]\d+)?/);
+    if (!numMatch) return toolCalls;
+    const amount = parseFloat(numMatch[0].replace(",", "."));
+    if (!Number.isFinite(amount) || amount <= 0) return toolCalls;
+    const cleanText = text.replace(MONEY_RE, "").replace(/\s+/g, " ").trim() || "\u0432\u0438\u0442\u0440\u0430\u0442\u0430";
+    const finArgs = {
+      _reasoning_log: "Auto-convert save_note/save_moment to save_finance (money pattern detected in user text)",
+      fin_type: "expense",
+      amount,
+      category: "\u0406\u043D\u0448\u0435",
+      fin_comment: cleanText.length > 40 ? cleanText.slice(0, 40) : cleanText
+    };
+    const oldTc = toolCalls[convertIdx];
+    const newTc = {
+      ...oldTc,
+      function: { ...oldTc.function, name: "save_finance", arguments: JSON.stringify(finArgs) }
+    };
+    const out = toolCalls.slice();
+    out[convertIdx] = newTc;
+    console.warn("[guard] convertNoteToFinance: \xAB" + m[0] + "\xBB \u2192 save_finance amount=" + amount);
+    return out;
+  }
+  function dropTaskOnFinance(toolCalls) {
+    if (!Array.isArray(toolCalls) || toolCalls.length === 0) return toolCalls;
+    if (!_has(toolCalls, "save_finance")) return toolCalls;
+    if (!_has(toolCalls, "save_task")) return toolCalls;
+    console.warn("[guard] dropTaskOnFinance: save_finance+save_task batch \u2014 \u0432\u0438\u043A\u0438\u0434\u0430\u044E save_task");
+    return _drop(toolCalls, "save_task");
+  }
+  function dropTaskOnComplete(toolCalls) {
+    if (!Array.isArray(toolCalls) || toolCalls.length === 0) return toolCalls;
+    if (!_has(toolCalls, "complete_task")) return toolCalls;
+    if (!_has(toolCalls, "save_task")) return toolCalls;
+    console.warn("[guard] dropTaskOnComplete: complete_task+save_task batch \u2014 \u0432\u0438\u043A\u0438\u0434\u0430\u044E save_task");
+    return _drop(toolCalls, "save_task");
+  }
+  function dropEventOnMoment(toolCalls) {
+    if (!Array.isArray(toolCalls) || toolCalls.length === 0) return toolCalls;
+    if (!_has(toolCalls, "save_moment")) return toolCalls;
+    if (!_has(toolCalls, "create_event")) return toolCalls;
+    console.warn("[guard] dropEventOnMoment: save_moment+create_event batch \u2014 \u0432\u0438\u043A\u0438\u0434\u0430\u044E create_event");
+    return _drop(toolCalls, "create_event");
+  }
+  function applyAllGuards(toolCalls, text) {
+    if (!Array.isArray(toolCalls) || toolCalls.length === 0) return toolCalls;
+    let tc = toolCalls;
+    tc = dropEventOnMomentKeyword(tc, text);
+    tc = convertPastEventToMoment(tc, text);
+    tc = convertNoteToFinance(tc, text);
+    tc = dropTaskOnFinance(tc);
+    tc = dropTaskOnComplete(tc);
+    tc = dropEventOnMoment(tc);
+    return tc;
+  }
+  var PAST_INDICATORS_RE, MOMENT_KEYWORD_RE, MONEY_RE;
+  var init_dispatcher_guards = __esm({
+    "src/data/dispatcher-guards.js"() {
+      PAST_INDICATORS_RE = /(вчора|позавчора|минулого|тому\s|назад)|\b(гуля|жари|їл|пил|зустрі|сходи|створи|купи|зроби|написа|закінчи|поми|поча|відкри|приготува|пройш|по[бг]ачи|зустрі)(в|ла|ло|ли|вся|лася|лися|лось)\b/i;
+      MOMENT_KEYWORD_RE = /\bмомент/i;
+      MONEY_RE = /(?:[€$₴]\s*\d+(?:[.,]\d+)?)|(?:\d+(?:[.,]\d+)?\s*(?:€|\$|₴|грн|грив(?:ень|ні|ні)?|евр[оa]|євр[оа]|долар(?:ів|и|а)?|euro|usd|eur|uah))/i;
+    }
+  });
+
   // src/owl/clarify-guard.js
   function shouldClarify(text, toolCalls, tab) {
     if (!Array.isArray(toolCalls) || toolCalls.length === 0) return null;
@@ -9595,6 +9718,8 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
   }
   function dispatchChatToolCalls(toolCalls, addMsg, originalText) {
     if (!Array.isArray(toolCalls) || toolCalls.length === 0) return false;
+    toolCalls = applyAllGuards(toolCalls, originalText);
+    if (toolCalls.length === 0) return false;
     let any = false;
     for (const tc of toolCalls) {
       let args = {};
@@ -9691,6 +9816,7 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
     "src/ai/tool-dispatcher.js"() {
       init_ui_tools();
       init_memory();
+      init_dispatcher_guards();
       init_health();
       init_habits();
       init_nav();
@@ -13075,6 +13201,7 @@ ${BASE_CHAT_RULES}
 
 \u041A\u0420\u041E\u041A 5. \u0412\u0418\u041A\u041E\u041D\u0410\u041D\u041D\u042F (\u043C\u0438\u043D\u0443\u043B\u0438\u0439 \u0447\u0430\u0441 / \u2714\uFE0F):
 \u042F\u041A\u0429\u041E \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u043C\u0456\u0441\u0442\u0438\u0442\u044C \u2714\uFE0F \u0410\u0411\u041E \u043E\u043F\u0438\u0441\u0443\u0454 \u0434\u043E\u043A\u043E\u043D\u0430\u043D\u0443 \u0434\u0456\u044E (\xAB\u0441\u043F\u043B\u0430\u0442\u0438\u0432\xBB, \xAB\u043A\u0443\u043F\u0438\u0432\xBB, \xAB\u0437\u0440\u043E\u0431\u0438\u0432\xBB, \xAB\u043F\u0440\u0438\u0431\u0440\u0430\u0432\xBB, \u0431\u0435\u0437 \u0447\u0438\u0441\u043B\u0430-\u0441\u0443\u043C\u0438):
+  \u{1F6A8} \u041F\u0415\u0420\u0415\u041D\u0410\u041F\u0420\u0410\u0412\u041B\u0415\u041D\u041D\u042F: \u044F\u043A\u0449\u043E \u0443 \u0442\u0435\u043A\u0441\u0442\u0456 \u0454 \u0421\u0423\u041C\u0410 \u0417 \u0412\u0410\u041B\u042E\u0422\u041E\u042E (3 \u0454\u0432\u0440\u043E, 50 \u20B4, 100 \u0433\u0440\u043D, $20) \u2014 \u0446\u0435 \u041D\u0415 \u0446\u0435\u0439 \u043A\u0440\u043E\u043A. \u041F\u043E\u0432\u0435\u0440\u043D\u0438\u0441\u044C \u0434\u043E \u041A\u0420\u041E\u041A\u0443 3 \u2192 save_finance. \xAB\u041A\u0443\u043F\u0438\u0432 \u0445\u043B\u0456\u0431 3 \u0454\u0432\u0440\u043E\xBB = save_finance, \u043D\u0435 save_moment/save_note. Code-side guard \u043F\u0440\u043E\u0434\u0443\u0431\u043B\u044E\u0454 \u0446\u0435 \u0430\u0432\u0442\u043E\u043C\u0430\u0442\u0438\u0447\u043D\u043E, \u0430\u043B\u0435 \u043A\u0440\u0430\u0449\u0435 \u043E\u0434\u0440\u0430\u0437\u0443 \u043F\u0440\u0430\u0432\u0438\u043B\u044C\u043D\u043E.
   \u26A0\uFE0F \u041E\u0411\u041E\u0412\u02BC\u042F\u0417\u041A\u041E\u0412\u0410 \u0417\u0412\u0406\u0420\u041A\u0410: \u041F\u0415\u0420\u0428\u0415 \u0449\u043E \u0440\u043E\u0431\u0438\u0448 \u2014 \u0434\u0438\u0432\u0438\u0448\u0441\u044F \u0443 [\u0410\u043A\u0442\u0438\u0432\u043D\u0456 \u0437\u0430\u0434\u0430\u0447\u0456] \u0441\u0435\u043A\u0446\u0456\u044E \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443. \u0417\u0430\u043A\u0440\u0438\u0432\u0430\u0442\u0438 \u043C\u043E\u0436\u043D\u0430 \u0422I\u041B\u042C\u041A\u0418 \u0437\u0430\u0434\u0430\u0447\u0456/\u043A\u0440\u043E\u043A\u0438 \u044F\u043A\u0456 \u0420\u0415\u0410\u041B\u042C\u041D\u041E \u0454 \u0443 \u0441\u043F\u0438\u0441\u043A\u0443.
   \u2022 \u041A\u0420\u041E\u041A vs \u0417\u0410\u0414\u0410\u0427\u0410: \u044F\u043A\u0449\u043E \xAB\u043A\u0443\u043F\u0438\u0432 X\xBB \u0434\u0435 X = \u043E\u0434\u0438\u043D \u0437 \u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0445 \u043A\u0440\u043E\u043A\u0456\u0432 (\u0437 \u043F\u0456\u0434\u043A\u0430\u0437\u043A\u0438 \xAB\u0430\u043A\u0442\u0438\u0432\u043D\u0456: a, b, c\xBB) \u2014 \u0446\u0435 complete_step(task_id, step_text=X), \u041D\u0415 complete_task.
   \u2022 \u041F\u041E\u0412\u041D\u0418\u0419 \u0417\u0411\u0406\u0413: \u044F\u043A\u0449\u043E \u041E\u0411'\u0404\u041A\u0422 \u044E\u0437\u0435\u0440\u0430 \u0437\u0431\u0456\u0433\u0430\u0454\u0442\u044C\u0441\u044F \u0437 task.title \u2192 complete_task.
@@ -17896,53 +18023,7 @@ ${aiContext}`;
             return;
           }
         }
-        const userMsgLower = (text || "").toLowerCase();
-        if (/\bмомент/.test(userMsgLower)) {
-          const hadEvent = msg.tool_calls.some((tc) => tc.function?.name === "create_event");
-          if (hadEvent) {
-            console.warn("[inbox] guard: word \xAB\u043C\u043E\u043C\u0435\u043D\u0442\xBB \u0443 \u0437\u0430\u043F\u0438\u0442\u0456 \u2014 \u0432\u0438\u043A\u0438\u0434\u0430\u044E create_event");
-            msg.tool_calls = msg.tool_calls.filter((tc) => tc.function?.name !== "create_event");
-          }
-        }
-        const PAST_INDICATORS = /(вчора|позавчора|минулого|тому\s|назад)|\b(гуля|жари|їл|пил|зустрі|сходи|створи|купи|зроби|написа|закінчи|поми|поча|відкри|приготува|пройш|по[бг]ачи|зустрі)(в|ла|ло|ли|вся|лася|лися|лось)\b/i;
-        if (PAST_INDICATORS.test(userMsgLower)) {
-          const eventTc = msg.tool_calls.find((tc) => tc.function?.name === "create_event");
-          const hasMomentNow = msg.tool_calls.some((tc) => tc.function?.name === "save_moment");
-          if (eventTc && !hasMomentNow) {
-            try {
-              const evtArgs = JSON.parse(eventTc.function.arguments || "{}");
-              const momentArgs = {
-                _reasoning_log: "Auto-convert create_event to save_moment (past tense indicators in user text)",
-                text: evtArgs.title || text,
-                mood: "neutral",
-                date: null,
-                comment: evtArgs.comment || ""
-              };
-              eventTc.function.name = "save_moment";
-              eventTc.function.arguments = JSON.stringify(momentArgs);
-              console.warn("[inbox] guard: min\u0443\u043B\u0438\u0439 \u0447\u0430\u0441 \u0443 \u0437\u0430\u043F\u0438\u0442\u0456 \u2014 \u043A\u043E\u043D\u0432\u0435\u0440\u0442\u0443\u044E create_event \u0443 save_moment");
-            } catch (e) {
-              console.warn("[inbox] guard convert failed", e);
-            }
-          }
-        }
-        const hasFinance = msg.tool_calls.some((tc) => tc.function?.name === "save_finance");
-        const hasTask = msg.tool_calls.some((tc) => tc.function?.name === "save_task");
-        if (hasFinance && hasTask) {
-          console.warn("[inbox] dedupe: save_finance+save_task batch \u2014 \u043F\u0440\u043E\u043F\u0443\u0441\u043A\u0430\u044E save_task");
-          msg.tool_calls = msg.tool_calls.filter((tc) => tc.function?.name !== "save_task");
-        }
-        const hasComplete = msg.tool_calls.some((tc) => tc.function?.name === "complete_task");
-        if (hasComplete && hasTask) {
-          console.warn("[inbox] dedupe: complete_task+save_task batch \u2014 \u043F\u0440\u043E\u043F\u0443\u0441\u043A\u0430\u044E save_task");
-          msg.tool_calls = msg.tool_calls.filter((tc) => tc.function?.name !== "save_task");
-        }
-        const hasMoment = msg.tool_calls.some((tc) => tc.function?.name === "save_moment");
-        const hasEvent = msg.tool_calls.some((tc) => tc.function?.name === "create_event");
-        if (hasMoment && hasEvent) {
-          console.warn("[inbox] dedupe: save_moment+create_event batch \u2014 \u043F\u0440\u043E\u043F\u0443\u0441\u043A\u0430\u044E create_event");
-          msg.tool_calls = msg.tool_calls.filter((tc) => tc.function?.name !== "create_event");
-        }
+        msg.tool_calls = applyAllGuards(msg.tool_calls, text);
         for (const tc of msg.tool_calls) {
           let args;
           try {
@@ -18740,6 +18821,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       init_memory();
       init_inbox_board();
       init_clarify_guard();
+      init_dispatcher_guards();
       init_swipe_delete();
       init_tasks();
       init_calendar();
