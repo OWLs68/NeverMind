@@ -525,6 +525,72 @@ function runMigrations() {
     }
   }
 
+  // v10 Events UUID (myshu 11.05.2026 Architecture Refactor Сесія 3B-2):
+  // Event.id був Date.now(). Cross-reference: inbox.cards мають field
+  // 'eventId' що вказує на event.id. Міграція:
+  //   1) Backup nm_events + nm_inbox
+  //   2) events.id → UUID, legacy_id
+  //   3) Map old_id → new_id
+  //   4) inbox: оновити eventId field за map (inbox.id ЛИШАЄТЬСЯ — окрема міграція)
+  if (!localStorage.getItem('nm_events_uuid_migrated_v10')) {
+    try {
+      const eventsRaw = localStorage.getItem('nm_events');
+      const inboxRaw = localStorage.getItem('nm_inbox');
+      if (eventsRaw) {
+        const backupKey = createSelectiveBackup(['nm_events', 'nm_inbox'], 'pre-event-uuid-v10');
+        if (backupKey) console.log('[boot] v10 events backup:', backupKey);
+
+        const events = JSON.parse(eventsRaw);
+        if (Array.isArray(events)) {
+          const idMap = {}; // old_id → new_uuid
+          let migrated = 0;
+          events.forEach(ev => {
+            if (ev && typeof ev.id === 'number') {
+              const oldId = String(ev.id);
+              const newId = generateUUID();
+              ev.legacy_id = ev.id;
+              ev.id = newId;
+              idMap[oldId] = newId;
+              migrated++;
+            }
+          });
+
+          if (migrated > 0) {
+            // Cross-ref update: inbox.eventId за map
+            if (inboxRaw) {
+              try {
+                const inbox = JSON.parse(inboxRaw);
+                if (Array.isArray(inbox)) {
+                  let updated = 0;
+                  inbox.forEach(it => {
+                    if (it && it.eventId != null) {
+                      const k = String(it.eventId);
+                      if (idMap[k]) {
+                        it.eventId = idMap[k];
+                        updated++;
+                      }
+                    }
+                  });
+                  if (updated > 0) {
+                    localStorage.setItem('nm_inbox', JSON.stringify(inbox));
+                    console.log(`[boot] v10 inbox.eventId updated: ${updated} refs`);
+                  }
+                }
+              } catch (ibErr) {
+                console.error('[boot] v10 inbox eventId update failed:', ibErr);
+              }
+            }
+            localStorage.setItem('nm_events', JSON.stringify(events));
+            console.log(`[boot] v10 migration: ${migrated} events migrated to UUID`);
+          }
+        }
+      }
+      localStorage.setItem('nm_events_uuid_migrated_v10', '1');
+    } catch (e) {
+      console.error('[boot] v10 events migration failed:', e);
+    }
+  }
+
   // v9 (03.05.2026 MIeXK Health AI-інтерв'ю): шкала статусів 3 → 6 значень.
   // Старе: active/controlled/done. Нове: acute/treatment/improving/remission/chronic/done.
   // Мапінг: active → treatment (нейтральне «активне лікування»), controlled → remission,

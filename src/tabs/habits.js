@@ -1001,12 +1001,12 @@ export function processUniversalAction(parsed, originalText, addMsg) {
     // Fallback: якщо AI створив task але це схоже на подію — конвертуємо в event
     const eventDetected = _detectEventFromTask(title);
     if (eventDetected) {
-      const ev = { id: Date.now(), title: eventDetected.title || title, date: eventDetected.date, time: null, priority: parsed.priority || 'normal', createdAt: Date.now() };
+      const ev = { id: generateUUID(), title: eventDetected.title || title, date: eventDetected.date, time: null, priority: parsed.priority || 'normal', createdAt: Date.now() };
       const res = addEventDedup(ev);
       if (!res.added) { addMsg('agent', t('habits.event.dup', 'Така подія "{title}" вже є в календарі.', { title: ev.title })); return true; }
       const dateObj = new Date(eventDetected.date);
       const dayStr = `${dateObj.getDate()} ${monthGenitive(dateObj.getMonth())}`;
-      const items = getInbox(); items.unshift({ id: Date.now(), eventId: ev.id, text: title, category: 'event', ts: Date.now(), processed: true }); saveInbox(items);
+      const items = getInbox(); items.unshift({ id: generateUUID(), eventId: ev.id, text: title, category: 'event', ts: Date.now(), processed: true }); saveInbox(items);
       addMsg('agent', t('habits.event.added', '📅 Подію "{title}" додано на {date}', { title: ev.title, date: dayStr }));
       return true;
     }
@@ -1366,12 +1366,12 @@ export function processUniversalAction(parsed, originalText, addMsg) {
     if (parsed.time) {
       conflict = getEvents().find(e => e.date === resolvedDate && e.time === parsed.time && e.title !== title);
     }
-    const ev = { id: Date.now(), title, date: resolvedDate, time: parsed.time || null, endTime, priority: parsed.priority || 'normal', createdAt: Date.now() };
+    const ev = { id: generateUUID(), title, date: resolvedDate, time: parsed.time || null, endTime, priority: parsed.priority || 'normal', createdAt: Date.now() };
     const res = addEventDedup(ev);
     if (!res.added) { addMsg('agent', t('habits.event.dup', 'Така подія "{title}" вже є в календарі.', { title })); return true; }
     const dateObj = new Date(resolvedDate);
     const dayStr = `${dateObj.getDate()} ${monthGenitive(dateObj.getMonth())}`;
-    const items = getInbox(); items.unshift({ id: Date.now(), eventId: ev.id, text: title, category: 'event', ts: Date.now(), processed: true }); saveInbox(items);
+    const items = getInbox(); items.unshift({ id: generateUUID(), eventId: ev.id, text: title, category: 'event', ts: Date.now(), processed: true }); saveInbox(items);
     const timeStr = parsed.time ? ` о ${parsed.time}${endTime ? '–' + endTime : ''}` : '';
     const warn = conflict ? '\n' + t('habits.event.conflict', '⚠️ На цей час уже є "{title}". Лишити обидві чи перенести?', { title: conflict.title }) : '';
     addMsg('agent', t('habits.event.added_full', '📅 Подію "{title}" додано на {date}{time}{warn}', { title, date: dayStr, time: timeStr, warn }));
@@ -1405,7 +1405,7 @@ export function processUniversalAction(parsed, originalText, addMsg) {
     // Карточка в Inbox стрічку щоб юзер бачив що було змінено
     try {
       const inbox = getInbox();
-      inbox.unshift({ id: Date.now(), eventId: events[idx].id, text: editText, type: 'edit', category: 'event', ts: Date.now() });
+      inbox.unshift({ id: generateUUID(), eventId: events[idx].id, text: editText, type: 'edit', category: 'event', ts: Date.now() });
       saveInbox(inbox);
       if (typeof renderInbox === 'function') renderInbox();
     } catch(e) {}
