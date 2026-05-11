@@ -95,9 +95,9 @@ function relapseQuitHabit(habitId) {
 }
 
 function _dayWord(n) {
-  if (n % 10 === 1 && n % 100 !== 11) return 'день';
-  if ([2,3,4].includes(n % 10) && ![12,13,14].includes(n % 100)) return 'дні';
-  return 'днів';
+  if (n % 10 === 1 && n % 100 !== 11) return t('habits.day.one', 'день');
+  if ([2,3,4].includes(n % 10) && ![12,13,14].includes(n % 100)) return t('habits.day.few', 'дні');
+  return t('habits.day.many', 'днів');
 }
 
 function _owlQuitRelapse(habitId, prevStreak, freedomDays) {
@@ -1640,14 +1640,22 @@ export function processUniversalAction(parsed, originalText, addMsg) {
         }
       }
     }
-    const reminderId = Date.now();
+    // myshu Сесія 3: UUID замість Date.now()+1/+2 арифметики. Раніше:
+    //   reminderId = Date.now()
+    //   event.id = reminderId + 1   ← числова арифметика
+    //   inbox.id = reminderId + 2   ← числова арифметика
+    // Проблема: коли reminderId стане UUID-рядок, +1 = конкатенація («uuid1»),
+    // 3 сховища (nm_reminders/nm_events/nm_inbox) перестали б знаходити одне
+    // одного. Тепер: КОЖЕН запис має свій UUID, зв'язок через окреме поле
+    // `reminderId` (primary key для cross-storage cleanup).
+    const reminderId = generateUUID();
     // 1. nm_reminders — для тригера спливаючого попередження
     const reminders = getReminders();
     reminders.push({ id: reminderId, time, text, date, done: false });
     saveReminders(reminders);
     // 2. nm_events — щоб було видно у календарі і модалці "Розпорядок дня"
     addEventDedup({
-      id: reminderId + 1,
+      id: generateUUID(),
       title: text,
       date,
       time,
@@ -1661,7 +1669,7 @@ export function processUniversalAction(parsed, originalText, addMsg) {
     // свайп картки прибирає nm_reminders + nm_events за тим же ID.
     const items = getInbox();
     items.unshift({
-      id: reminderId + 2,
+      id: generateUUID(),
       reminderId: reminderId,
       text: `${time} — ${text}`,
       category: 'reminder',
