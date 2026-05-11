@@ -10244,13 +10244,8 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
         const q = (args.query || "").trim();
         const typeFilter = args.type || null;
         if (q === "last") {
-          const trash = getTrash().filter((t2) => Date.now() - t2.deletedAt < 7 * 24 * 60 * 60 * 1e3);
-          const filtered = typeFilter ? trash.filter((t2) => t2.type === typeFilter) : trash;
-          const lastTrash = filtered.sort((a, b) => b.deletedAt - a.deletedAt)[0];
           const lastAction = typeFilter ? null : readLastReversible();
-          const trashTs = lastTrash ? lastTrash.deletedAt : 0;
-          const actionTs = lastAction ? new Date(lastAction.ts).getTime() : 0;
-          if (lastAction && actionTs >= trashTs) {
+          if (lastAction) {
             const ok = executeReverse(lastAction.reverse);
             if (ok) {
               markReversed(lastAction.id);
@@ -10258,12 +10253,17 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
             } else {
               addMsg("agent", `\u26A0\uFE0F \u041D\u0435 \u0437\u043C\u0456\u0433 \u0432\u0456\u0434\u043C\u0456\u043D\u0438\u0442\u0438 "${lastAction.summary}" \u2014 \u0437\u0430\u043F\u0438\u0441, \u043C\u043E\u0436\u043B\u0438\u0432\u043E, \u0432\u0436\u0435 \u0437\u043C\u0456\u043D\u0435\u043D\u0438\u0439.`);
             }
-          } else if (lastTrash) {
-            const itemLabel = lastTrash.item.text || lastTrash.item.title || lastTrash.item.name || lastTrash.item.folder || "\u0437\u0430\u043F\u0438\u0441";
-            restoreFromTrash(lastTrash.deletedAt);
-            addMsg("agent", `\u2705 \u0412\u0456\u0434\u043D\u043E\u0432\u0438\u0432 "${itemLabel}"`);
           } else {
-            addMsg("agent", "\u041D\u0456\u0447\u043E\u0433\u043E \u0441\u043A\u0430\u0441\u043E\u0432\u0443\u0432\u0430\u0442\u0438 \u2014 \u043A\u0435\u0448 \u043F\u043E\u0440\u043E\u0436\u043D\u0456\u0439.");
+            const trash = getTrash().filter((t2) => Date.now() - t2.deletedAt < 7 * 24 * 60 * 60 * 1e3);
+            const filtered = typeFilter ? trash.filter((t2) => t2.type === typeFilter) : trash;
+            const lastTrash = filtered.sort((a, b) => b.deletedAt - a.deletedAt)[0];
+            if (lastTrash) {
+              const itemLabel = lastTrash.item.text || lastTrash.item.title || lastTrash.item.name || lastTrash.item.folder || "\u0437\u0430\u043F\u0438\u0441";
+              restoreFromTrash(lastTrash.deletedAt);
+              addMsg("agent", `\u2705 \u0412\u0456\u0434\u043D\u043E\u0432\u0438\u0432 "${itemLabel}"`);
+            } else {
+              addMsg("agent", "\u041D\u0456\u0447\u043E\u0433\u043E \u0441\u043A\u0430\u0441\u043E\u0432\u0443\u0432\u0430\u0442\u0438 \u2014 \u0436\u0443\u0440\u043D\u0430\u043B \u0456 \u043A\u043E\u0448\u0438\u043A \u043F\u043E\u0440\u043E\u0436\u043D\u0456.");
+            }
           }
         } else {
           addMsg("agent", "\u0414\u043B\u044F \u0432\u0456\u0434\u043D\u043E\u0432\u043B\u0435\u043D\u043D\u044F \u0437\u0430 \u043F\u043E\u0448\u0443\u043A\u043E\u043C \u2014 \u043D\u0430\u043F\u0438\u0448\u0438 \u0443 Inbox.");
@@ -15783,7 +15783,10 @@ ${CHIP_PROMPT_RULES}`;
         // HH з ранку/вечора/дня/ночі — period word ПЕРЕД бар-HH
         /(?:^|\s)(?:о|у|в|на)\s+(\d{1,2})\s+(ранку|вечора|дня|ночі)(?=\s|$|[.,])/iu,
         // Голий «о HH» / «в HH» / «на HH»
-        /(?:^|\s)(?:о|у|в|на)\s+(\d{1,2})(?=\s|$|[.,])/iu
+        /(?:^|\s)(?:о|у|в|на)\s+(\d{1,2})(?=\s|$|[.,])/iu,
+        // БЕЗ префіксу: голий «N ранку/вечора/дня/ночі» — period word робить це
+        // безпечним (не зачіпає «купив каву 50» бо там нема period word).
+        /(?:^|\s)(\d{1,2})\s+(ранку|вечора|дня|ночі)(?=\s|$|[.,])/iu
       ];
       ROUTINE_TRIGGER = new RegExp(
         BL + "(?:(?:\u0434\u043E\u0434\u0430\u0439|\u043F\u043E\u0441\u0442\u0430\u0432|\u0441\u0442\u0432\u043E\u0440\\p{L}+|\u0432\u043D\u0435\u0441\u0438|\u0437\u0430\u043F\u0438\u0448\u0438|\u0437\u0440\u043E\u0431\u0438)\\s+(?:(?:\u0432|\u0443)\\s+)?\u0440\u043E\u0437\u043F\u043E\u0440\u044F\u0434\\p{L}+|(?:\u0432|\u0443)\\s+\u0440\u043E\u0437\u043F\u043E\u0440\u044F\u0434\\p{L}+\\s*:?)",
@@ -18904,11 +18907,8 @@ ${aiContext}`;
                 addInboxChatMsg("agent", t("inbox.chat.restored_count", "\u2705 \u0412\u0456\u0434\u043D\u043E\u0432\u0438\u0432 {n} \u0437\u0430\u043F\u0438\u0441\u0456\u0432", { n: filtered.length }));
               }
             } else if (q === "last") {
-              const lastTrash = filtered.sort((a, b) => b.deletedAt - a.deletedAt)[0];
               const lastAction = typeFilter ? null : readLastReversible();
-              const trashTs = lastTrash ? lastTrash.deletedAt : 0;
-              const actionTs = lastAction ? new Date(lastAction.ts).getTime() : 0;
-              if (lastAction && actionTs >= trashTs) {
+              if (lastAction) {
                 const ok = executeReverse(lastAction.reverse);
                 if (ok) {
                   markReversed(lastAction.id);
@@ -18916,12 +18916,15 @@ ${aiContext}`;
                 } else {
                   addInboxChatMsg("agent", t("inbox.chat.undo_fail", '\u26A0\uFE0F \u041D\u0435 \u0437\u043C\u0456\u0433 \u0432\u0456\u0434\u043C\u0456\u043D\u0438\u0442\u0438 "{summary}" \u2014 \u0437\u0430\u043F\u0438\u0441, \u043C\u043E\u0436\u043B\u0438\u0432\u043E, \u0432\u0436\u0435 \u0437\u043C\u0456\u043D\u0435\u043D\u0438\u0439.', { summary: lastAction.summary }));
                 }
-              } else if (lastTrash) {
-                const itemLabel = lastTrash.item.text || lastTrash.item.title || lastTrash.item.name || lastTrash.item.folder || "\u0437\u0430\u043F\u0438\u0441";
-                restoreFromTrash(lastTrash.deletedAt);
-                addInboxChatMsg("agent", t("inbox.chat.restored_one", '\u2705 \u0412\u0456\u0434\u043D\u043E\u0432\u0438\u0432 {type} "{label}"', { type: typeLabel[lastTrash.type] || t("inbox.type.inbox", "\u0437\u0430\u043F\u0438\u0441"), label: itemLabel }));
               } else {
-                addInboxChatMsg("agent", t("inbox.chat.trash_no_match", "\u041D\u0456\u0447\u043E\u0433\u043E \u043D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u0432 \u043A\u0435\u0448\u0456 \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u0438\u0445."));
+                const lastTrash = filtered.sort((a, b) => b.deletedAt - a.deletedAt)[0];
+                if (lastTrash) {
+                  const itemLabel = lastTrash.item.text || lastTrash.item.title || lastTrash.item.name || lastTrash.item.folder || "\u0437\u0430\u043F\u0438\u0441";
+                  restoreFromTrash(lastTrash.deletedAt);
+                  addInboxChatMsg("agent", t("inbox.chat.restored_one", '\u2705 \u0412\u0456\u0434\u043D\u043E\u0432\u0438\u0432 {type} "{label}"', { type: typeLabel[lastTrash.type] || t("inbox.type.inbox", "\u0437\u0430\u043F\u0438\u0441"), label: itemLabel }));
+                } else {
+                  addInboxChatMsg("agent", t("inbox.chat.trash_no_match", "\u041D\u0456\u0447\u043E\u0433\u043E \u043D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u0432 \u043A\u0435\u0448\u0456 \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u0438\u0445."));
+                }
               }
             } else {
               const words = q.toLowerCase().split(/[\s,]+/).filter(Boolean);
