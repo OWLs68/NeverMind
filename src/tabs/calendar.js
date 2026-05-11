@@ -322,7 +322,44 @@ function renderCalendar() {
     const cls = hasEvent ? ' class="cal-day-event"' : '';
     cells += `<div${cls} onclick="calendarDayTap(${d})" data-day="${d}" style="aspect-ratio:1;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:13px;font-weight:700;background:${bg};color:${color};border:1.5px solid ${border};cursor:pointer;transition:all 0.15s;-webkit-tap-highlight-color:transparent" ontouchstart="this.style.transform='scale(0.88)'" ontouchend="this.style.transform=''">${d}${dot}</div>`;
   }
+  // dyhJu: trailing empty cells щоб сітка завжди мала 6 рядів (42 cells).
+  // Це гарантує однакову висоту календаря незалежно від місяця (травень — 5,
+  // лютий високосний — 4-5, серпень з пн-неділі — 6). Раніше висота
+  // змінювалась → юзеру здавалось що cells різного розміру.
+  const totalCells = firstDow + daysInMonth;
+  const trailingEmpty = 42 - totalCells;
+  for (let i = 0; i < trailingEmpty; i++) cells += '<div></div>';
   grid.innerHTML = cells;
+
+  // Swipe горизонтальний на сітці: палець вліво → next, вправо → prev.
+  _attachCalendarSwipe(grid);
+}
+
+// Swipe-handler attach на calendar-grid (один раз, idempotent через flag).
+function _attachCalendarSwipe(grid) {
+  if (grid._swipeMonthAttached) return;
+  let startX = 0, startY = 0, moved = false;
+  grid.addEventListener('touchstart', e => {
+    if (!e.touches[0]) return;
+    startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
+    moved = false;
+  }, { passive: true });
+  grid.addEventListener('touchmove', e => {
+    if (!e.touches[0]) return;
+    const dx = e.touches[0].clientX - startX;
+    const dy = e.touches[0].clientY - startY;
+    if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy)) moved = true;
+  }, { passive: true });
+  grid.addEventListener('touchend', e => {
+    if (!moved || !e.changedTouches[0]) return;
+    const dx = e.changedTouches[0].clientX - startX;
+    const dy = e.changedTouches[0].clientY - startY;
+    if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+    if (dx < 0) calendarNextMonth();
+    else calendarPrevMonth();
+  }, { passive: true });
+  grid._swipeMonthAttached = true;
 }
 
 // === HIGHLIGHT EVENT DAYS (rJYkw 21.04.2026) ===
