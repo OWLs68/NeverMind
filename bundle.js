@@ -12075,7 +12075,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
           return { ok: true };
         }
         case "create_event": {
-          const ev = { id: Date.now(), title: args.title || t("default.event_title", "\u041F\u043E\u0434\u0456\u044F"), date: args.date, time: args.time || null, priority: args.priority || "normal", createdAt: Date.now() };
+          const ev = { id: generateUUID(), title: args.title || t("default.event_title", "\u041F\u043E\u0434\u0456\u044F"), date: args.date, time: args.time || null, priority: args.priority || "normal", createdAt: Date.now() };
           const res = addEventDedup(ev);
           if (!res.added) return { ok: true, duplicate: true };
           logAction("create_event", args, ev.id, null, "evening");
@@ -12100,7 +12100,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
         }
         case "set_reminder": {
           const dateISO = args.date || (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
-          const ev = { id: Date.now(), title: "\u23F0 " + (args.text || t("default.reminder_title", "\u041D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F")), date: dateISO, time: args.time || null, priority: "important", createdAt: Date.now() };
+          const ev = { id: generateUUID(), title: "\u23F0 " + (args.text || t("default.reminder_title", "\u041D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F")), date: dateISO, time: args.time || null, priority: "important", createdAt: Date.now() };
           const res = addEventDedup(ev);
           if (!res.added) return { ok: true, duplicate: true };
           logAction("set_reminder", args, null, null, "evening");
@@ -12283,6 +12283,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
   var NM_EVENING_CLOSED_KEY;
   var init_evening_actions = __esm({
     "src/tabs/evening-actions.js"() {
+      init_uuid();
       init_tasks();
       init_habits();
       init_notes();
@@ -14702,7 +14703,7 @@ ${CHIP_PROMPT_RULES}`;
       if (!title) return false;
       const eventDetected = _detectEventFromTask(title);
       if (eventDetected) {
-        const ev = { id: Date.now(), title: eventDetected.title || title, date: eventDetected.date, time: null, priority: parsed.priority || "normal", createdAt: Date.now() };
+        const ev = { id: generateUUID(), title: eventDetected.title || title, date: eventDetected.date, time: null, priority: parsed.priority || "normal", createdAt: Date.now() };
         const res = addEventDedup(ev);
         if (!res.added) {
           addMsg("agent", t("habits.event.dup", '\u0422\u0430\u043A\u0430 \u043F\u043E\u0434\u0456\u044F "{title}" \u0432\u0436\u0435 \u0454 \u0432 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440\u0456.', { title: ev.title }));
@@ -14711,7 +14712,7 @@ ${CHIP_PROMPT_RULES}`;
         const dateObj = new Date(eventDetected.date);
         const dayStr = `${dateObj.getDate()} ${monthGenitive(dateObj.getMonth())}`;
         const items2 = getInbox();
-        items2.unshift({ id: Date.now(), eventId: ev.id, text: title, category: "event", ts: Date.now(), processed: true });
+        items2.unshift({ id: generateUUID(), eventId: ev.id, text: title, category: "event", ts: Date.now(), processed: true });
         saveInbox(items2);
         addMsg("agent", t("habits.event.added", '\u{1F4C5} \u041F\u043E\u0434\u0456\u044E "{title}" \u0434\u043E\u0434\u0430\u043D\u043E \u043D\u0430 {date}', { title: ev.title, date: dayStr }));
         return true;
@@ -15069,7 +15070,7 @@ ${CHIP_PROMPT_RULES}`;
       if (parsed.time) {
         conflict = getEvents().find((e) => e.date === resolvedDate && e.time === parsed.time && e.title !== title);
       }
-      const ev = { id: Date.now(), title, date: resolvedDate, time: parsed.time || null, endTime, priority: parsed.priority || "normal", createdAt: Date.now() };
+      const ev = { id: generateUUID(), title, date: resolvedDate, time: parsed.time || null, endTime, priority: parsed.priority || "normal", createdAt: Date.now() };
       const res = addEventDedup(ev);
       if (!res.added) {
         addMsg("agent", t("habits.event.dup", '\u0422\u0430\u043A\u0430 \u043F\u043E\u0434\u0456\u044F "{title}" \u0432\u0436\u0435 \u0454 \u0432 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440\u0456.', { title }));
@@ -15078,7 +15079,7 @@ ${CHIP_PROMPT_RULES}`;
       const dateObj = new Date(resolvedDate);
       const dayStr = `${dateObj.getDate()} ${monthGenitive(dateObj.getMonth())}`;
       const items = getInbox();
-      items.unshift({ id: Date.now(), eventId: ev.id, text: title, category: "event", ts: Date.now(), processed: true });
+      items.unshift({ id: generateUUID(), eventId: ev.id, text: title, category: "event", ts: Date.now(), processed: true });
       saveInbox(items);
       const timeStr = parsed.time ? ` \u043E ${parsed.time}${endTime ? "\u2013" + endTime : ""}` : "";
       const warn = conflict ? "\n" + t("habits.event.conflict", '\u26A0\uFE0F \u041D\u0430 \u0446\u0435\u0439 \u0447\u0430\u0441 \u0443\u0436\u0435 \u0454 "{title}". \u041B\u0438\u0448\u0438\u0442\u0438 \u043E\u0431\u0438\u0434\u0432\u0456 \u0447\u0438 \u043F\u0435\u0440\u0435\u043D\u0435\u0441\u0442\u0438?', { title: conflict.title }) : "";
@@ -15112,7 +15113,7 @@ ${CHIP_PROMPT_RULES}`;
       addMsg("agent", editText);
       try {
         const inbox = getInbox();
-        inbox.unshift({ id: Date.now(), eventId: events[idx].id, text: editText, type: "edit", category: "event", ts: Date.now() });
+        inbox.unshift({ id: generateUUID(), eventId: events[idx].id, text: editText, type: "edit", category: "event", ts: Date.now() });
         saveInbox(inbox);
         if (typeof renderInbox === "function") renderInbox();
       } catch (e) {
@@ -18869,7 +18870,7 @@ ${aiContext}`;
             if (action.time) {
               conflict = getEvents().find((e) => e.date === action.date && e.time === action.time && e.title !== action.title);
             }
-            const ev = { id: Date.now(), title: action.title || t("inbox.event.default_title", "\u041F\u043E\u0434\u0456\u044F"), date: action.date, time: action.time || null, endTime, priority: action.priority || "normal", createdAt: Date.now() };
+            const ev = { id: generateUUID(), title: action.title || t("inbox.event.default_title", "\u041F\u043E\u0434\u0456\u044F"), date: action.date, time: action.time || null, endTime, priority: action.priority || "normal", createdAt: Date.now() };
             const res = addEventDedup(ev);
             if (!res.added) {
               addInboxChatMsg("agent", t("inbox.chat.event_dupe", '\u0422\u0430\u043A\u0430 \u043F\u043E\u0434\u0456\u044F "{title}" \u0432\u0436\u0435 \u0454 \u0432 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440\u0456.', { title: ev.title }));
@@ -18877,7 +18878,7 @@ ${aiContext}`;
             }
             logAction("create_event", { title: ev.title, date: ev.date, time: ev.time, end_time: ev.endTime, priority: ev.priority }, ev.id, null, "inbox");
             const items = getInbox();
-            items.unshift({ id: Date.now() + 1, eventId: ev.id, text: ev.title, category: "event", ts: Date.now(), processed: true });
+            items.unshift({ id: generateUUID(), eventId: ev.id, text: ev.title, category: "event", ts: Date.now(), processed: true });
             saveInbox(items);
             renderInbox();
             const dateObj = new Date(action.date);
@@ -19389,7 +19390,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       const taskTitle = parsed.task_title || savedText;
       const eventDetected = _detectEventFromTask(taskTitle);
       if (eventDetected) {
-        const ev = { id: Date.now(), title: eventDetected.title || taskTitle, date: eventDetected.date, time: null, priority: parsed.priority || "normal", createdAt: Date.now() };
+        const ev = { id: generateUUID(), title: eventDetected.title || taskTitle, date: eventDetected.date, time: null, priority: parsed.priority || "normal", createdAt: Date.now() };
         const res = addEventDedup(ev);
         if (!res.added) {
           addInboxChatMsg("agent", t("inbox.chat.event_dupe", '\u0422\u0430\u043A\u0430 \u043F\u043E\u0434\u0456\u044F "{title}" \u0432\u0436\u0435 \u0454 \u0432 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440\u0456.', { title: ev.title }));
@@ -19465,7 +19466,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
     if (cat === "event") {
       const eventDetected = _detectEventDate(savedText);
       if (eventDetected) {
-        const ev = { id: Date.now(), title: eventDetected.title || savedText, date: eventDetected.date, time: null, priority: "normal", createdAt: Date.now() };
+        const ev = { id: generateUUID(), title: eventDetected.title || savedText, date: eventDetected.date, time: null, priority: "normal", createdAt: Date.now() };
         const res = addEventDedup(ev);
         if (!res.added) {
           addInboxChatMsg("agent", t("inbox.chat.event_dupe", '\u0422\u0430\u043A\u0430 \u043F\u043E\u0434\u0456\u044F "{title}" \u0432\u0436\u0435 \u0454 \u0432 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440\u0456.', { title: ev.title }));
@@ -21774,6 +21775,61 @@ ${logLines}
         localStorage.setItem("nm_habits_uuid_migrated_v9", "1");
       } catch (e) {
         console.error("[boot] v9 habits migration failed:", e);
+      }
+    }
+    if (!localStorage.getItem("nm_events_uuid_migrated_v10")) {
+      try {
+        const eventsRaw = localStorage.getItem("nm_events");
+        const inboxRaw = localStorage.getItem("nm_inbox");
+        if (eventsRaw) {
+          const backupKey = createSelectiveBackup(["nm_events", "nm_inbox"], "pre-event-uuid-v10");
+          if (backupKey) console.log("[boot] v10 events backup:", backupKey);
+          const events = JSON.parse(eventsRaw);
+          if (Array.isArray(events)) {
+            const idMap = {};
+            let migrated = 0;
+            events.forEach((ev) => {
+              if (ev && typeof ev.id === "number") {
+                const oldId = String(ev.id);
+                const newId = generateUUID();
+                ev.legacy_id = ev.id;
+                ev.id = newId;
+                idMap[oldId] = newId;
+                migrated++;
+              }
+            });
+            if (migrated > 0) {
+              if (inboxRaw) {
+                try {
+                  const inbox = JSON.parse(inboxRaw);
+                  if (Array.isArray(inbox)) {
+                    let updated = 0;
+                    inbox.forEach((it) => {
+                      if (it && it.eventId != null) {
+                        const k = String(it.eventId);
+                        if (idMap[k]) {
+                          it.eventId = idMap[k];
+                          updated++;
+                        }
+                      }
+                    });
+                    if (updated > 0) {
+                      localStorage.setItem("nm_inbox", JSON.stringify(inbox));
+                      console.log(`[boot] v10 inbox.eventId updated: ${updated} refs`);
+                    }
+                  }
+                } catch (ibErr) {
+                  console.error("[boot] v10 inbox eventId update failed:", ibErr);
+                }
+              }
+              localStorage.setItem("nm_events", JSON.stringify(events));
+              console.log(`[boot] v10 migration: ${migrated} events migrated to UUID`);
+            }
+          }
+        }
+        localStorage.setItem("nm_events_uuid_migrated_v10", "1");
+      } catch (e) {
+        console.error("[boot] v10 events migration failed:", e);
       }
     }
     if (!localStorage.getItem("nm_health_status_v2_done")) {
