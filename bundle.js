@@ -6012,7 +6012,7 @@ ${lines.join("\n\n")}`;
       return;
     }
     const moments = getMoments();
-    const newMoment = { id: Date.now(), text, mood: currentMomentMood, ts: Date.now() };
+    const newMoment = { id: generateUUID(), text, mood: currentMomentMood, ts: Date.now() };
     moments.push(newMoment);
     saveMoments(moments);
     logRecentAction("add_moment", text.substring(0, 40), "evening");
@@ -6144,6 +6144,7 @@ ${lines.join("\n\n")}`;
   var init_evening = __esm({
     "src/tabs/evening.js"() {
       init_nav();
+      init_uuid();
       init_utils();
       init_usage_meter();
       init_tasks();
@@ -8500,7 +8501,7 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     }
     const ts = _resolveFinanceDate(parsed.date, originalText);
     const txs = getFinance();
-    const tx = { id: Date.now(), type, amount, category, comment, ts };
+    const tx = { id: generateUUID(), type, amount, category, comment, ts };
     if (subcategory) tx.subcategory = subcategory;
     txs.unshift(tx);
     saveFinance(txs);
@@ -8513,7 +8514,7 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
       date: parsed.date
     }, tx.id, null, "inbox");
     const items = getInbox();
-    items.unshift({ id: Date.now(), text: originalText, category: "finance", ts, processed: true });
+    items.unshift({ id: generateUUID(), text: originalText, category: "finance", ts, processed: true });
     saveInbox(items);
     renderInbox();
     if (currentTab === "finance") renderFinance();
@@ -8584,6 +8585,7 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
   var init_finance = __esm({
     "src/tabs/finance.js"() {
       init_nav();
+      init_uuid();
       init_utils();
       init_trash();
       init_swipe_delete();
@@ -12061,7 +12063,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
         }
         case "save_moment": {
           const moments = getMoments();
-          moments.push({ id: Date.now(), text: args.text || "", mood: args.mood || "neutral", ts: Date.now() });
+          moments.push({ id: generateUUID(), text: args.text || "", mood: args.mood || "neutral", ts: Date.now() });
           saveMoments(moments);
           logRecentAction("save_moment", (args.text || "").slice(0, 40), "evening");
           return { ok: true };
@@ -15029,7 +15031,7 @@ ${CHIP_PROMPT_RULES}`;
         if (resolved) momentTs = resolved.getTime();
       }
       const moments = getMoments();
-      moments.push({ id: Date.now(), text, mood, ts: momentTs });
+      moments.push({ id: generateUUID(), text, mood, ts: momentTs });
       saveMoments(moments);
       addMsg("agent", t("habits.moment.added", "\u2728 \u041C\u043E\u043C\u0435\u043D\u0442 \u0437\u0430\u043F\u0438\u0441\u0430\u043D\u043E"));
       return true;
@@ -19479,7 +19481,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       } else {
         const mood = parsed.mood || (/добре|чудово|супер|відмінно|весело|щасли/i.test(savedText) ? "positive" : /погано|жахливо|сумно|нудно|важко|втомив/i.test(savedText) ? "negative" : "neutral");
         const moments = getMoments();
-        const newMoment = { id: Date.now(), text: savedText, mood, ts: Date.now() };
+        const newMoment = { id: generateUUID(), text: savedText, mood, ts: Date.now() };
         moments.push(newMoment);
         saveMoments(moments);
         generateMomentSummary(newMoment.id, savedText);
@@ -21858,6 +21860,60 @@ ${logLines}
         localStorage.setItem("nm_notes_uuid_migrated_v11", "1");
       } catch (e) {
         console.error("[boot] v11 notes migration failed:", e);
+      }
+    }
+    if (!localStorage.getItem("nm_moments_uuid_migrated_v12")) {
+      try {
+        const momentsRaw = localStorage.getItem("nm_moments");
+        if (momentsRaw) {
+          const backupKey = createSelectiveBackup(["nm_moments"], "pre-moment-uuid-v12");
+          if (backupKey) console.log("[boot] v12 moments backup:", backupKey);
+          const moments = JSON.parse(momentsRaw);
+          if (Array.isArray(moments)) {
+            let migrated = 0;
+            moments.forEach((m) => {
+              if (m && typeof m.id === "number") {
+                m.legacy_id = m.id;
+                m.id = generateUUID();
+                migrated++;
+              }
+            });
+            if (migrated > 0) {
+              localStorage.setItem("nm_moments", JSON.stringify(moments));
+              console.log(`[boot] v12 migration: ${migrated} moments \u2192 UUID`);
+            }
+          }
+        }
+        localStorage.setItem("nm_moments_uuid_migrated_v12", "1");
+      } catch (e) {
+        console.error("[boot] v12 moments migration failed:", e);
+      }
+    }
+    if (!localStorage.getItem("nm_finance_uuid_migrated_v13")) {
+      try {
+        const finRaw = localStorage.getItem("nm_finance");
+        if (finRaw) {
+          const backupKey = createSelectiveBackup(["nm_finance"], "pre-finance-uuid-v13");
+          if (backupKey) console.log("[boot] v13 finance backup:", backupKey);
+          const txs = JSON.parse(finRaw);
+          if (Array.isArray(txs)) {
+            let migrated = 0;
+            txs.forEach((t2) => {
+              if (t2 && typeof t2.id === "number") {
+                t2.legacy_id = t2.id;
+                t2.id = generateUUID();
+                migrated++;
+              }
+            });
+            if (migrated > 0) {
+              localStorage.setItem("nm_finance", JSON.stringify(txs));
+              console.log(`[boot] v13 migration: ${migrated} transactions \u2192 UUID`);
+            }
+          }
+        }
+        localStorage.setItem("nm_finance_uuid_migrated_v13", "1");
+      } catch (e) {
+        console.error("[boot] v13 finance migration failed:", e);
       }
     }
     if (!localStorage.getItem("nm_health_status_v2_done")) {
@@ -24439,6 +24495,7 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
 
   // src/tabs/finance-modals.js
   init_nav();
+  init_uuid();
   init_utils();
   init_trash();
   init_proactive();
@@ -24728,7 +24785,7 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
       const idx = txs.findIndex((x) => x.id === _finEditId);
       if (idx !== -1) txs[idx] = { ...txs[idx], ...baseFields };
     } else {
-      txs.unshift({ id: Date.now(), ...baseFields });
+      txs.unshift({ id: generateUUID(), ...baseFields });
     }
     saveFinance(txs);
     closeFinTxModal();
