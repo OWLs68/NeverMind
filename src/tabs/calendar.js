@@ -753,31 +753,41 @@ function _renderRoutineDayTabs() {
       <div style="font-size:11px;font-weight:600;opacity:${isActive ? '0.9' : '0.55'};margin-top:1px">${dayNum}</div>
     </div>`;
   }).join('');
-  el.innerHTML = `${prevBtn}<div id="routine-day-row" style="display:flex;gap:2px;flex:1;justify-content:center;touch-action:pan-y;min-width:0">${daysHtml}</div>${nextBtn}`;
+  el.innerHTML = `${prevBtn}<div id="routine-day-row" style="display:flex;gap:2px;flex:1;justify-content:center;min-width:0">${daysHtml}</div>${nextBtn}`;
 
-  // Swipe handler на day-row: палець вліво → наступний тиждень, вправо → минулий
-  // dx>50px поріг. touch-action:pan-y дозволяє вертикальний скрол модалки.
+  // Swipe handler на day-row: палець вліво → наступний тиждень, вправо → минулий.
+  // myshu 11.05: прибрано touch-action:pan-y бо у поєднанні з overflow-x:hidden
+  // на parent scroll-container iOS Safari відміняв горизонтальний жест → touchend
+  // не fired → routineShiftWeek не викликався. Тригеримо ВПРОДОВЖ touchmove
+  // (як тільки dx > 50px) + touchcancel як страховка, не чекаємо touchend.
   const dayRow = document.getElementById('routine-day-row');
   if (dayRow && !dayRow._swipeWeekAttached) {
-    let startX = 0, startY = 0, moved = false;
+    let startX = 0, startY = 0, fired = false;
+    const tryFire = (curX, curY) => {
+      if (fired) return;
+      const dx = curX - startX;
+      const dy = curY - startY;
+      if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+      fired = true;
+      routineShiftWeek(dx < 0 ? 1 : -1); // палець вліво → наступний тиждень
+    };
     dayRow.addEventListener('touchstart', e => {
       if (!e.touches[0]) return;
       startX = e.touches[0].clientX;
       startY = e.touches[0].clientY;
-      moved = false;
+      fired = false;
     }, { passive: true });
     dayRow.addEventListener('touchmove', e => {
-      if (!e.touches[0]) return;
-      const dx = e.touches[0].clientX - startX;
-      const dy = e.touches[0].clientY - startY;
-      if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy)) moved = true;
+      if (fired || !e.touches[0]) return;
+      tryFire(e.touches[0].clientX, e.touches[0].clientY);
     }, { passive: true });
     dayRow.addEventListener('touchend', e => {
-      if (!moved || !e.changedTouches[0]) return;
-      const dx = e.changedTouches[0].clientX - startX;
-      const dy = e.changedTouches[0].clientY - startY;
-      if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
-      routineShiftWeek(dx < 0 ? 1 : -1); // палець вліво → наступний тиждень
+      if (fired || !e.changedTouches[0]) return;
+      tryFire(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
+    }, { passive: true });
+    dayRow.addEventListener('touchcancel', e => {
+      if (fired || !e.changedTouches || !e.changedTouches[0]) return;
+      tryFire(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
     }, { passive: true });
     dayRow._swipeWeekAttached = true;
   }
