@@ -5,6 +5,7 @@
 // ============================================================
 
 import { currentTab, showToast } from '../core/nav.js';
+import { generateUUID } from '../core/uuid.js';
 import { escapeHtml, escapeJsArg, formatTime, parseContentChips, t } from '../core/utils.js';
 import { logUsage } from '../core/usage-meter.js';
 import { addToTrash, showUndoToast } from '../core/trash.js';
@@ -119,7 +120,7 @@ export function addNoteFromInbox(text, category, folder = null, source = 'inbox'
   const existingFolders = [...new Set(notes.map(n => n.folder).filter(Boolean))];
   const match = existingFolders.find(f => normalizeFolderName(f).toLowerCase() === normalized.toLowerCase());
   const resolvedFolder = match || normalized;
-  notes.unshift({ id: Date.now(), text: text.trim(), folder: resolvedFolder, source, ts: Date.now(), lastViewed: Date.now() });
+  notes.unshift({ id: generateUUID(), text: text.trim(), folder: resolvedFolder, source, ts: Date.now(), lastViewed: Date.now() });
   saveNotes(notes);
   return true;
 }
@@ -138,7 +139,7 @@ export function findOrCreateHealthCardNote(card) {
     return linked.id;
   }
   const newNote = {
-    id: Date.now(),
+    id: generateUUID(),
     text: (card.name || '') + '\n\n',
     folder: t('notes.folder_health', "Здоров'я"),
     linkedHealthCardId: card.id,
@@ -195,7 +196,7 @@ function saveNote() {
     const idx = notes.findIndex(x => x.id === editingNoteId);
     if (idx !== -1) notes[idx] = { ...notes[idx], text, folder, updatedAt: Date.now() };
   } else {
-    notes.unshift({ id: Date.now(), text, folder, source: 'manual', ts: Date.now(), lastViewed: Date.now() });
+    notes.unshift({ id: generateUUID(), text, folder, source: 'manual', ts: Date.now(), lastViewed: Date.now() });
   }
   saveNotes(notes);
   closeNoteModal();
@@ -1034,7 +1035,7 @@ function saveAgentResponseAsNote(text) {
   const notes = getNotes();
   const originalNote = notes.find(x => x.id === activeNoteViewId);
   const folder = originalNote?.folder || t('notes.default_folder', 'Загальне');
-  notes.unshift({ id: Date.now(), text: text, folder, source: 'ai', ts: Date.now(), lastViewed: Date.now() });
+  notes.unshift({ id: generateUUID(), text: text, folder, source: 'ai', ts: Date.now(), lastViewed: Date.now() });
   saveNotes(notes);
   renderNotes();
   document.getElementById('note-chat-save-btn')?.remove();
