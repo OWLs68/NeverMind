@@ -841,6 +841,7 @@
     closeDayScheduleModal();
     _routineReturnTo = "calendar";
     _routineDay = dayKey;
+    _routineWeekOffset = 0;
     _renderRoutineDayTabs();
     _renderRoutineTimeline();
     const modal = document.getElementById("routine-modal");
@@ -853,6 +854,7 @@
   function openRoutineModal() {
     _routineReturnTo = null;
     _routineDay = DAY_KEYS[(/* @__PURE__ */ new Date()).getDay()];
+    _routineWeekOffset = 0;
     _renderRoutineDayTabs();
     _renderRoutineTimeline();
     const modal = document.getElementById("routine-modal");
@@ -861,6 +863,11 @@
       _zoomIn("routine-panel");
       _ensureRoutineSwipeClose();
     }
+  }
+  function routineShiftWeek(delta) {
+    _routineWeekOffset = Math.max(-12, Math.min(12, _routineWeekOffset + delta));
+    _renderRoutineDayTabs();
+    _renderRoutineTimeline();
   }
   function closeRoutineModal() {
     const returnTo = _routineReturnTo;
@@ -874,34 +881,73 @@
     if (!el) return;
     const routine = getRoutine();
     const todayKey = DAY_KEYS[(/* @__PURE__ */ new Date()).getDay()];
-    el.style.justifyContent = "center";
-    el.style.gap = "6px";
-    el.innerHTML = ROUTINE_TAB_ORDER.map((key) => {
+    const todayISO2 = _todayISO();
+    el.style.justifyContent = "space-between";
+    el.style.gap = "4px";
+    el.style.alignItems = "center";
+    const arrowStyle = "width:32px;height:36px;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:600;color:rgba(30,16,64,0.45);cursor:pointer;border-radius:10px;-webkit-tap-highlight-color:transparent;flex-shrink:0;background:rgba(255,255,255,0.4)";
+    const prevBtn = `<div onclick="routineShiftWeek(-1)" style="${arrowStyle}" aria-label="${t("routine.aria.prev_week", "\u041C\u0438\u043D\u0443\u043B\u0438\u0439 \u0442\u0438\u0436\u0434\u0435\u043D\u044C")}">\u2039</div>`;
+    const nextBtn = `<div onclick="routineShiftWeek(1)" style="${arrowStyle}" aria-label="${t("routine.aria.next_week", "\u041D\u0430\u0441\u0442\u0443\u043F\u043D\u0438\u0439 \u0442\u0438\u0436\u0434\u0435\u043D\u044C")}">\u203A</div>`;
+    const daysHtml = ROUTINE_TAB_ORDER.map((key) => {
       const isActive = key === _routineDay;
-      const isToday = key === todayKey;
+      const dateISO = _lastDateForDayKey(key);
+      const isToday = dateISO === todayISO2;
       const hasOwn = !!routine[key];
-      return `<div onclick="routineSelectDay('${key}')" style="padding:10px 14px;border-radius:12px;font-size:14px;font-weight:${isActive ? "800" : "600"};cursor:pointer;white-space:nowrap;min-width:42px;text-align:center;
+      const dayNum = parseInt(dateISO.split("-")[2], 10);
+      return `<div onclick="routineSelectDay('${key}')" style="padding:6px 8px;border-radius:11px;font-size:13px;font-weight:${isActive ? "800" : "600"};cursor:pointer;white-space:nowrap;min-width:36px;text-align:center;line-height:1.15;
       background:${isActive ? "#ea580c" : "rgba(255,255,255,0.5)"};
       color:${isActive ? "white" : isToday ? "#ea580c" : "rgba(30,16,64,0.5)"};
       border:1.5px solid ${isActive ? "#ea580c" : isToday ? "rgba(234,88,12,0.3)" : "rgba(30,16,64,0.08)"};
       ${hasOwn && !isActive ? "box-shadow:inset 0 -2px 0 rgba(234,88,12,0.3);" : ""}
-      -webkit-tap-highlight-color:transparent
-      ">${ROUTINE_TAB_LABELS[key]}</div>`;
+      -webkit-tap-highlight-color:transparent">
+      <div>${ROUTINE_TAB_LABELS[key]}</div>
+      <div style="font-size:11px;font-weight:600;opacity:${isActive ? "0.9" : "0.55"};margin-top:1px">${dayNum}</div>
+    </div>`;
     }).join("");
+    el.innerHTML = `${prevBtn}<div id="routine-day-row" style="display:flex;gap:4px;flex:1;justify-content:center;touch-action:pan-y">${daysHtml}</div>${nextBtn}`;
+    const dayRow = document.getElementById("routine-day-row");
+    if (dayRow && !dayRow._swipeWeekAttached) {
+      let startX = 0, startY = 0, moved = false;
+      dayRow.addEventListener("touchstart", (e) => {
+        if (!e.touches[0]) return;
+        startX = e.touches[0].clientX;
+        startY = e.touches[0].clientY;
+        moved = false;
+      }, { passive: true });
+      dayRow.addEventListener("touchmove", (e) => {
+        if (!e.touches[0]) return;
+        const dx = e.touches[0].clientX - startX;
+        const dy = e.touches[0].clientY - startY;
+        if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy)) moved = true;
+      }, { passive: true });
+      dayRow.addEventListener("touchend", (e) => {
+        if (!moved || !e.changedTouches[0]) return;
+        const dx = e.changedTouches[0].clientX - startX;
+        const dy = e.changedTouches[0].clientY - startY;
+        if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+        routineShiftWeek(dx < 0 ? 1 : -1);
+      }, { passive: true });
+      dayRow._swipeWeekAttached = true;
+    }
     const label = document.getElementById("routine-day-label");
     if (label) {
-      if (_routineDay === todayKey) {
-        label.textContent = t("routine.day.today", "\u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456");
-      } else {
-        const dateISO = _lastDateForDayKey(_routineDay);
-        const [, m, d] = dateISO.split("-");
-        const diffDays = Math.round((new Date(_todayISO()) - new Date(dateISO)) / (24 * 60 * 60 * 1e3));
-        if (diffDays === 1) label.textContent = t("routine.day.yesterday", "\u0432\u0447\u043E\u0440\u0430");
-        else if (diffDays === 2) label.textContent = t("routine.day.day_before", "\u043F\u043E\u0437\u0430\u0432\u0447\u043E\u0440\u0430");
-        else if (diffDays === -1) label.textContent = t("routine.day.tomorrow", "\u0437\u0430\u0432\u0442\u0440\u0430");
-        else if (diffDays === -2) label.textContent = t("routine.day.day_after", "\u043F\u0456\u0441\u043B\u044F\u0437\u0430\u0432\u0442\u0440\u0430");
-        else label.textContent = `${parseInt(d)}.${m}`;
-      }
+      const dateISO = _lastDateForDayKey(_routineDay);
+      const [, m, d] = dateISO.split("-");
+      const dayDate = `${parseInt(d)} ${monthShort(parseInt(m, 10) - 1).toLowerCase()}`;
+      const diffDays = Math.round((new Date(_todayISO()) - new Date(dateISO)) / (24 * 60 * 60 * 1e3));
+      let dayPart;
+      if (diffDays === 0) dayPart = t("routine.day.today", "\u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456");
+      else if (diffDays === 1) dayPart = t("routine.day.yesterday", "\u0432\u0447\u043E\u0440\u0430");
+      else if (diffDays === 2) dayPart = t("routine.day.day_before", "\u043F\u043E\u0437\u0430\u0432\u0447\u043E\u0440\u0430");
+      else if (diffDays === -1) dayPart = t("routine.day.tomorrow", "\u0437\u0430\u0432\u0442\u0440\u0430");
+      else if (diffDays === -2) dayPart = t("routine.day.day_after", "\u043F\u0456\u0441\u043B\u044F\u0437\u0430\u0432\u0442\u0440\u0430");
+      else dayPart = dayDate;
+      let weekPart = "";
+      if (_routineWeekOffset === 1) weekPart = t("routine.week.next", " \xB7 \u043D\u0430\u0441\u0442\u0443\u043F\u043D\u0438\u0439 \u0442\u0438\u0436\u0434\u0435\u043D\u044C");
+      else if (_routineWeekOffset === -1) weekPart = t("routine.week.prev", " \xB7 \u043C\u0438\u043D\u0443\u043B\u0438\u0439 \u0442\u0438\u0436\u0434\u0435\u043D\u044C");
+      else if (_routineWeekOffset > 1) weekPart = t("routine.week.future_n", " \xB7 \u0447\u0435\u0440\u0435\u0437 {n} \u0442\u0438\u0436\u043D\u0456", { n: _routineWeekOffset });
+      else if (_routineWeekOffset < -1) weekPart = t("routine.week.past_n", " \xB7 {n} \u0442\u0438\u0436\u043D\u0456 \u0442\u043E\u043C\u0443", { n: -_routineWeekOffset });
+      label.textContent = dayPart + weekPart;
     }
   }
   function _lastDateForDayKey(dayKey) {
@@ -911,7 +957,7 @@
     const today = /* @__PURE__ */ new Date();
     const todayIdxMon = (today.getDay() + 6) % 7;
     const target = new Date(today);
-    target.setDate(today.getDate() + (targetIdxMon - todayIdxMon));
+    target.setDate(today.getDate() + (targetIdxMon - todayIdxMon) + _routineWeekOffset * 7);
     return `${target.getFullYear()}-${String(target.getMonth() + 1).padStart(2, "0")}-${String(target.getDate()).padStart(2, "0")}`;
   }
   function _renderRoutineTimeline() {
@@ -1199,7 +1245,7 @@
     const el = document.getElementById("cal-icon-day");
     if (el) el.textContent = (/* @__PURE__ */ new Date()).getDate();
   }
-  var _calYear, _calMonth, _selectedDay, DAYS_UA_FULL, NM_ROUTINE_KEY, DAY_KEYS, _routineDay, _routineReturnTo, ROUTINE_TAB_ORDER, ROUTINE_TAB_LABELS, _editEventId, _editEventPriority, _drumValues, DRUM_H;
+  var _calYear, _calMonth, _selectedDay, DAYS_UA_FULL, NM_ROUTINE_KEY, DAY_KEYS, _routineDay, _routineReturnTo, _routineWeekOffset, ROUTINE_TAB_ORDER, ROUTINE_TAB_LABELS, _editEventId, _editEventPriority, _drumValues, DRUM_H;
   var init_calendar = __esm({
     "src/tabs/calendar.js"() {
       init_utils();
@@ -1212,6 +1258,7 @@
       DAY_KEYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
       _routineDay = DAY_KEYS[(/* @__PURE__ */ new Date()).getDay()];
       _routineReturnTo = null;
+      _routineWeekOffset = 0;
       ROUTINE_TAB_ORDER = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
       ROUTINE_TAB_LABELS = { mon: "\u041F\u043D", tue: "\u0412\u0442", wed: "\u0421\u0440", thu: "\u0427\u0442", fri: "\u041F\u0442", sat: "\u0421\u0431", sun: "\u041D\u0434" };
       _editEventId = null;
@@ -1229,6 +1276,7 @@
         openRoutineModal,
         closeRoutineModal,
         routineSelectDay,
+        routineShiftWeek,
         routineAddBlock,
         routineDeleteBlock,
         routineDeleteFromTimeline,
@@ -7631,7 +7679,63 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     }
     return null;
   }
-  var MONTHS_GENITIVE, WEEKDAYS, NUM_MAP;
+  function _pad2(n) {
+    return String(n).padStart(2, "0");
+  }
+  function _formatTime(h, m) {
+    if (h < 0 || h > 23 || m < 0 || m > 59) return null;
+    return _pad2(h) + ":" + _pad2(m);
+  }
+  function _addMinutes(baseDate, minutes) {
+    const d = new Date(baseDate);
+    d.setMinutes(d.getMinutes() + minutes);
+    return _formatTime(d.getHours(), d.getMinutes());
+  }
+  function parseUaTimeOfDay(text, baseDate = /* @__PURE__ */ new Date()) {
+    if (!text || typeof text !== "string") return null;
+    const t2 = text.toLowerCase();
+    if (RELATIVE_HALF_HOUR_RE.test(t2)) {
+      return _addMinutes(baseDate, 30);
+    }
+    const relMin = t2.match(RELATIVE_MINUTES_RE);
+    if (relMin) {
+      const n = parseInt(relMin[1], 10);
+      if (!isNaN(n) && n > 0 && n < 24 * 60) return _addMinutes(baseDate, n);
+    }
+    const relHr = t2.match(RELATIVE_HOURS_RE);
+    if (relHr) {
+      const numToken = relHr[1];
+      let n;
+      if (!numToken) n = 1;
+      else if (numToken === "\u043F\u0456\u0432") n = 0.5;
+      else {
+        n = parseInt(numToken, 10);
+        if (isNaN(n)) n = null;
+      }
+      if (n !== null && n > 0 && n < 24) return _addMinutes(baseDate, Math.round(n * 60));
+    }
+    const explicit = t2.match(EXPLICIT_TIME_RE);
+    if (explicit) {
+      const h = parseInt(explicit[1], 10);
+      const m = parseInt(explicit[2], 10);
+      return _formatTime(h, m);
+    }
+    const hourOnly = t2.match(HOUR_ONLY_RE);
+    if (hourOnly) {
+      let h = parseInt(hourOnly[1], 10);
+      const period = hourOnly[2];
+      if (!isNaN(h)) {
+        if (period === "\u0432\u0435\u0447\u043E\u0440\u0430" && h < 12) h += 12;
+        else if (period === "\u0434\u043D\u044F" && h < 6) h += 12;
+        return _formatTime(h, 0);
+      }
+    }
+    for (const entry of TIME_OF_DAY_MAP) {
+      if (entry.re.test(t2)) return entry.time;
+    }
+    return null;
+  }
+  var MONTHS_GENITIVE, WEEKDAYS, NUM_MAP, TIME_OF_DAY_MAP, EXPLICIT_TIME_RE, HOUR_ONLY_RE, RELATIVE_HOURS_RE, RELATIVE_MINUTES_RE, RELATIVE_HALF_HOUR_RE;
   var init_ua_time_parser = __esm({
     "src/data/ua-time-parser.js"() {
       MONTHS_GENITIVE = ["\u0441\u0456\u0447\u043D\u044F", "\u043B\u044E\u0442\u043E\u0433\u043E", "\u0431\u0435\u0440\u0435\u0437\u043D\u044F", "\u043A\u0432\u0456\u0442\u043D\u044F", "\u0442\u0440\u0430\u0432\u043D\u044F", "\u0447\u0435\u0440\u0432\u043D\u044F", "\u043B\u0438\u043F\u043D\u044F", "\u0441\u0435\u0440\u043F\u043D\u044F", "\u0432\u0435\u0440\u0435\u0441\u043D\u044F", "\u0436\u043E\u0432\u0442\u043D\u044F", "\u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434\u0430", "\u0433\u0440\u0443\u0434\u043D\u044F"];
@@ -7661,6 +7765,25 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
         "\u0434\u0435\u0432'\u044F\u0442\u044C": 9,
         "\u0434\u0435\u0441\u044F\u0442\u044C": 10
       };
+      TIME_OF_DAY_MAP = [
+        // Найдовші тригери — перші
+        { re: /перед\s+сном/, time: "22:00" },
+        { re: /пізно\s+(в?в?ечері|ввечері)/, time: "21:00" },
+        { re: /після\s+обіду/, time: "14:00" },
+        // Конкретні слова
+        { re: /опівночі/, time: "00:00" },
+        { re: /опівдні/, time: "12:00" },
+        { re: /(?:^|\s)(зранку|вранці|ранком)(?:\s|$)/, time: "08:00" },
+        { re: /(?:^|\s)(в?в?ечері|ввечері|увечері|надвечір)(?:\s|$)/, time: "18:00" },
+        { re: /(?:^|\s)(вночі|нічю|ніччю)(?:\s|$)/, time: "00:00" },
+        { re: /(?:^|\s)(вдень|удень)(?:\s|$)/, time: "13:00" },
+        { re: /(?:^|\s)(в?обід|обідом)(?:\s|$)/, time: "13:00" }
+      ];
+      EXPLICIT_TIME_RE = /(?:^|\s|[оО]\s+)(\d{1,2})[:.\-](\d{2})(?:\s|$)/;
+      HOUR_ONLY_RE = /(?:^|\s)[оО]\s+(\d{1,2})(?:\s+(ранку|вечора|дня|ночі))?(?:\s|$)/;
+      RELATIVE_HOURS_RE = /через\s+(?:(\d+|пів)\s+)?годин[ауи]?/;
+      RELATIVE_MINUTES_RE = /через\s+(\d+)\s*(?:хвилин[ауи]?|хв)/;
+      RELATIVE_HALF_HOUR_RE = /через\s+пів\s+години|через\s+півгодини/;
     }
   });
 
@@ -13080,8 +13203,9 @@ save_routine \u0432\u0438\u043A\u043B\u0438\u043A\u0430\u0454\u0442\u044C\u0441\
 \u041F\u0420\u0410\u0412\u0418\u041B\u041E 1 \u2014 \u0422\u0420\u0418\u0413\u0415\u0420: set_reminder \u0412\u0418\u041A\u041B\u0418\u041A\u0410\u0404\u0422\u042C\u0421\u042F \u0422I\u041B\u042C\u041A\u0418 \u044F\u043A\u0449\u043E \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u043C\u0456\u0441\u0442\u0438\u0442\u044C \u0441\u043B\u043E\u0432\u043E-\u0442\u0440\u0438\u0433\u0435\u0440: "\u043D\u0430\u0433\u0430\u0434\u0430\u0439" / "\u043D\u0430\u043F\u043E\u043C\u043D\u0438" / "\u043D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F" / "remind".
   \u2022 \u0406\u043D\u0430\u043A\u0448\u0435: \xAB\u0437\u0430\u0432\u0442\u0440\u0430 \u0437\u0440\u043E\u0431\u043B\u044E X\xBB, \xAB\u043F\u043B\u0430\u043D\u0443\u044E Y\xBB, \xAB\u0445\u043E\u0447\u0443 \u0437\u0430\u043A\u0456\u043D\u0447\u0438\u0442\u0438 Z\xBB \u2192 \u0446\u0435 \u041D\u0410\u041C\u0406\u0420, \u043D\u0435 reminder. \u0406\u0434\u0438 \u0443 save_task (\u041A\u0420\u041E\u041A 6 \u0430\u043B\u0433\u043E\u0440\u0438\u0442\u043C\u0443).
 
-\u041F\u0420\u0410\u0412\u0418\u041B\u041E 2 \u2014 \u0427\u0410\u0421 \u0404: \u044F\u043A\u0449\u043E \u0442\u0440\u0438\u0433\u0435\u0440 \xAB\u043D\u0430\u0433\u0430\u0434\u0430\u0439\xBB + \u0447\u0430\u0441 (HH:MM, \xAB\u043E 19\xBB, \xAB\u0447\u0435\u0440\u0435\u0437 \u0433\u043E\u0434\u0438\u043D\u0443\xBB, \xAB\u0437\u0430\u0432\u0442\u0440\u0430\xBB, \xAB\u0437\u0440\u0430\u043D\u043A\u0443\xBB, \xAB\u043E\u043F\u0456\u0432\u0434\u043D\u0456\xBB, \xAB\u0432\u0432\u0435\u0447\u0435\u0440\u0456\xBB, \xAB\u043F\u0435\u0440\u0435\u0434 \u0441\u043D\u043E\u043C\xBB) \u2192 set_reminder \u043E\u0434\u0440\u0430\u0437\u0443.
-  \u2022 \u041C\u0410\u041F\u0410 \u0427\u0410\u0421\u0423: \u0437\u0440\u0430\u043D\u043A\u0443/\u0432\u0440\u0430\u043D\u0446\u0456=08:00, \u043E\u043F\u0456\u0432\u0434\u043D\u0456=12:00, \u0432\u0434\u0435\u043D\u044C=13:00, \u043F\u0456\u0441\u043B\u044F \u043E\u0431\u0456\u0434\u0443=14:00, \u0432\u0432\u0435\u0447\u0435\u0440\u0456=18:00, \u043F\u0435\u0440\u0435\u0434 \u0441\u043D\u043E\u043C=22:00, \u0432\u043D\u043E\u0447\u0456=02:00. \u041D\u0415 \u043E\u0431\u0438\u0440\u0430\u0439 05:00-06:00 \u0431\u0435\u0437 \u044F\u0432\u043D\u043E\u0433\u043E \xAB\u043E 5 \u0440\u0430\u043D\u043A\u0443\xBB.
+\u041F\u0420\u0410\u0412\u0418\u041B\u041E 2 \u2014 \u0427\u0410\u0421 \u0404: \u044F\u043A\u0449\u043E \u0442\u0440\u0438\u0433\u0435\u0440 \xAB\u043D\u0430\u0433\u0430\u0434\u0430\u0439\xBB + \u0447\u0430\u0441 \u2192 set_reminder \u043E\u0434\u0440\u0430\u0437\u0443.
+  \u2022 \u042F\u0412\u041D\u0410 \u0433\u043E\u0434\u0438\u043D\u0430 (HH:MM, \xAB\u043E 9\xBB, \xAB14:30\xBB) \u2192 \u043F\u0435\u0440\u0435\u0434\u0430\u0432\u0430\u0439 time="HH:MM".
+  \u2022 \u0410\u0411\u0421\u0422\u0420\u0410\u041A\u0422\u041D\u0418\u0419 \u0430\u0431\u043E \u0412I\u0414\u041D\u041E\u0421\u041D\u0418\u0419 \u0447\u0430\u0441 (\xAB\u0437\u0440\u0430\u043D\u043A\u0443\xBB, \xAB\u043F\u0456\u0441\u043B\u044F \u043E\u0431\u0456\u0434\u0443\xBB, \xAB\u0432\u0432\u0435\u0447\u0435\u0440\u0456\xBB, \xAB\u0447\u0435\u0440\u0435\u0437 \u0433\u043E\u0434\u0438\u043D\u0443\xBB, \xAB\u0447\u0435\u0440\u0435\u0437 30 \u0445\u0432\xBB, \xAB\u043F\u0435\u0440\u0435\u0434 \u0441\u043D\u043E\u043C\xBB) \u2192 \u043F\u0435\u0440\u0435\u0434\u0430\u0432\u0430\u0439 time=null. Code-side parseUaTimeOfDay \u0443 src/data/ua-time-parser.js \u0441\u043F\u0430\u0440\u0441\u0438\u0442\u044C \u0441\u0430\u043C (dyhJu G2). \u041D\u0435 \u0432\u0433\u0430\u0434\u0443\u0439 HH:MM \u0441\u0430\u043C \u2014 \u0446\u0435 \u043F\u0440\u0438\u0437\u0432\u043E\u0434\u0438\u0442\u044C \u0434\u043E \u0440\u043E\u0437\u0445\u043E\u0434\u0436\u0435\u043D\u044C.
   \u2022 \u0421\u043B\u043E\u0432\u043E \xAB\u0437\u0430\u0432\u0442\u0440\u0430\xBB \u2192 date=YYYY-MM-DD \u0437\u0430\u0432\u0442\u0440\u0430\u0448\u043D\u044F \u0434\u0430\u0442\u0430 (\u043F\u043E\u0442\u043E\u0447\u043D\u0430+1 \u0434\u0435\u043D\u044C), \u043D\u0435 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456. \u0411\u0435\u0437 \u044F\u0432\u043D\u043E\u0433\u043E date dispatcher \u0441\u0442\u0430\u0432\u0438\u0442\u044C \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u2192 reminder \u043D\u0430 \u043C\u0438\u043D\u0443\u043B\u0443 \u0433\u043E\u0434\u0438\u043D\u0443.
 
 \u041F\u0420\u0410\u0412\u0418\u041B\u041E 3 \u2014 \u0427\u0410\u0421 \u041D\u0415\u041C\u0410: \u044F\u043A\u0449\u043E \u0442\u0440\u0438\u0433\u0435\u0440 \xAB\u043D\u0430\u0433\u0430\u0434\u0430\u0439\xBB \u0411\u0415\u0417 \u0447\u0430\u0441\u0443 (\xAB\u043D\u0430\u0433\u0430\u0434\u0430\u0439 \u043F\u043E\u043C\u0438\u0442\u0438 \u043F\u043E\u0441\u0443\u0434\xBB) \u2192 \u041D\u0415 \u0432\u0438\u043A\u043B\u0438\u043A\u0430\u0439 set_reminder. content "\u041A\u043E\u043B\u0438 \u043D\u0430\u0433\u0430\u0434\u0430\u0442\u0438?" + 4 \u0447\u0430\u0441\u043E\u0432\u0456 \u0447\u0456\u043F\u0438: {"chips":[{"label":"\u0417\u0430\u0440\u0430\u0437","action":"chat"},{"label":"\u0427\u0435\u0440\u0435\u0437 \u0433\u043E\u0434\u0438\u043D\u0443","action":"chat"},{"label":"\u0417\u0430\u0432\u0442\u0440\u0430 08:00","action":"chat"},{"label":"\u0406\u043D\u0448\u0435","action":"chat"}]}.
@@ -14727,7 +14851,7 @@ ${CHIP_PROMPT_RULES}`;
       saveFinance(txs);
       try {
         const items = getInbox();
-        const inboxText = (type === "expense" ? "-" : "+") + formatMoney(amount) + " \xB7 " + category + (comment && comment !== originalText ? " \u2014 " + comment : "");
+        const inboxText = (type === "expense" ? "-" : "+") + formatMoney(amount) + " \xB7 " + category + (comment ? " \u2014 " + comment : "");
         items.unshift({ id: txId, text: inboxText, category: "finance", ts: finTs, processed: true });
         saveInbox(items);
         if (currentTab === "inbox") renderInbox();
@@ -14770,10 +14894,30 @@ ${CHIP_PROMPT_RULES}`;
           date = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
         }
       }
-      const time = parsed.time;
+      let time = parsed.time;
+      if (!time) {
+        const parsedTime = parseUaTimeOfDay(originalText || text, /* @__PURE__ */ new Date());
+        if (parsedTime) time = parsedTime;
+      }
       if (!time) {
         addMsg("agent", t("habits.err.reminder_time", "\u0412\u043A\u0430\u0436\u0438 \u0447\u0430\u0441 \u043D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F."));
         return true;
+      }
+      {
+        const now = /* @__PURE__ */ new Date();
+        const todayISO2 = now.toISOString().slice(0, 10);
+        if (date === todayISO2 && time) {
+          const [hh, mm] = time.split(":").map((n) => parseInt(n, 10));
+          if (Number.isFinite(hh) && Number.isFinite(mm)) {
+            const reminderTs = new Date(now);
+            reminderTs.setHours(hh, mm, 0, 0);
+            if (reminderTs.getTime() <= now.getTime()) {
+              const tomorrow = new Date(now);
+              tomorrow.setDate(tomorrow.getDate() + 1);
+              date = tomorrow.toISOString().slice(0, 10);
+            }
+          }
+        }
       }
       const reminderId = Date.now();
       const reminders = getReminders();

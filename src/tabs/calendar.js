@@ -618,6 +618,7 @@ function openRoutineFromCalendar(dayKey) {
   closeDayScheduleModal();
   _routineReturnTo = 'calendar';
   _routineDay = dayKey;
+  _routineWeekOffset = 0;
   _renderRoutineDayTabs();
   _renderRoutineTimeline();
   const modal = document.getElementById('routine-modal');
@@ -631,6 +632,7 @@ function openRoutineFromCalendar(dayKey) {
 function openRoutineModal() {
   _routineReturnTo = null;
   _routineDay = DAY_KEYS[new Date().getDay()];
+  _routineWeekOffset = 0;
   _renderRoutineDayTabs();
   _renderRoutineTimeline();
   const modal = document.getElementById('routine-modal');
@@ -643,6 +645,16 @@ function openRoutineModal() {
 
 // Навігаційний стек: звідки відкрили routine modal
 let _routineReturnTo = null;
+
+// dyhJu 10.05: offset тижнів від поточного. 0 = цей тиждень, +1 = наступний,
+// -1 = минулий. Скидається на 0 при відкритті модалки. Свайп вліво на day-row
+// → ++, вправо → --. Або тап на ‹ ›.
+let _routineWeekOffset = 0;
+function routineShiftWeek(delta) {
+  _routineWeekOffset = Math.max(-12, Math.min(12, _routineWeekOffset + delta));
+  _renderRoutineDayTabs();
+  _renderRoutineTimeline();
+}
 
 function closeRoutineModal() {
   const returnTo = _routineReturnTo;
@@ -663,36 +675,82 @@ function _renderRoutineDayTabs() {
   if (!el) return;
   const routine = getRoutine();
   const todayKey = DAY_KEYS[new Date().getDay()];
-  // Центрування + збільшено padding/font для тач-області (~44pt)
-  el.style.justifyContent = 'center';
-  el.style.gap = '6px';
-  el.innerHTML = ROUTINE_TAB_ORDER.map(key => {
+  const todayISO = _todayISO();
+  // dyhJu: компактна навігація — стрілки ‹ › по краях + 7 днів з датами.
+  // Свайп left на day-row → next тиждень, right → prev. Центрування зберігається.
+  el.style.justifyContent = 'space-between';
+  el.style.gap = '4px';
+  el.style.alignItems = 'center';
+  // Стрілки ‹ › — компактні, без border, з touch-feedback
+  const arrowStyle = 'width:32px;height:36px;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:600;color:rgba(30,16,64,0.45);cursor:pointer;border-radius:10px;-webkit-tap-highlight-color:transparent;flex-shrink:0;background:rgba(255,255,255,0.4)';
+  const prevBtn = `<div onclick="routineShiftWeek(-1)" style="${arrowStyle}" aria-label="${t('routine.aria.prev_week', 'Минулий тиждень')}">‹</div>`;
+  const nextBtn = `<div onclick="routineShiftWeek(1)" style="${arrowStyle}" aria-label="${t('routine.aria.next_week', 'Наступний тиждень')}">›</div>`;
+  // Дні зі своїми датами (з урахуванням _routineWeekOffset)
+  const daysHtml = ROUTINE_TAB_ORDER.map(key => {
     const isActive = key === _routineDay;
-    const isToday = key === todayKey;
+    const dateISO = _lastDateForDayKey(key);
+    const isToday = dateISO === todayISO;
     const hasOwn = !!routine[key];
-    return `<div onclick="routineSelectDay('${key}')" style="padding:10px 14px;border-radius:12px;font-size:14px;font-weight:${isActive ? '800' : '600'};cursor:pointer;white-space:nowrap;min-width:42px;text-align:center;
+    const dayNum = parseInt(dateISO.split('-')[2], 10);
+    return `<div onclick="routineSelectDay('${key}')" style="padding:6px 8px;border-radius:11px;font-size:13px;font-weight:${isActive ? '800' : '600'};cursor:pointer;white-space:nowrap;min-width:36px;text-align:center;line-height:1.15;
       background:${isActive ? '#ea580c' : 'rgba(255,255,255,0.5)'};
       color:${isActive ? 'white' : isToday ? '#ea580c' : 'rgba(30,16,64,0.5)'};
       border:1.5px solid ${isActive ? '#ea580c' : isToday ? 'rgba(234,88,12,0.3)' : 'rgba(30,16,64,0.08)'};
       ${hasOwn && !isActive ? 'box-shadow:inset 0 -2px 0 rgba(234,88,12,0.3);' : ''}
-      -webkit-tap-highlight-color:transparent
-      ">${ROUTINE_TAB_LABELS[key]}</div>`;
+      -webkit-tap-highlight-color:transparent">
+      <div>${ROUTINE_TAB_LABELS[key]}</div>
+      <div style="font-size:11px;font-weight:600;opacity:${isActive ? '0.9' : '0.55'};margin-top:1px">${dayNum}</div>
+    </div>`;
   }).join('');
-  // Лейбл «сьогодні» / «вчора» / дата
+  el.innerHTML = `${prevBtn}<div id="routine-day-row" style="display:flex;gap:4px;flex:1;justify-content:center;touch-action:pan-y">${daysHtml}</div>${nextBtn}`;
+
+  // Swipe handler на day-row: палець вліво → наступний тиждень, вправо → минулий
+  // dx>50px поріг. touch-action:pan-y дозволяє вертикальний скрол модалки.
+  const dayRow = document.getElementById('routine-day-row');
+  if (dayRow && !dayRow._swipeWeekAttached) {
+    let startX = 0, startY = 0, moved = false;
+    dayRow.addEventListener('touchstart', e => {
+      if (!e.touches[0]) return;
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+      moved = false;
+    }, { passive: true });
+    dayRow.addEventListener('touchmove', e => {
+      if (!e.touches[0]) return;
+      const dx = e.touches[0].clientX - startX;
+      const dy = e.touches[0].clientY - startY;
+      if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy)) moved = true;
+    }, { passive: true });
+    dayRow.addEventListener('touchend', e => {
+      if (!moved || !e.changedTouches[0]) return;
+      const dx = e.changedTouches[0].clientX - startX;
+      const dy = e.changedTouches[0].clientY - startY;
+      if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+      routineShiftWeek(dx < 0 ? 1 : -1); // палець вліво → наступний тиждень
+    }, { passive: true });
+    dayRow._swipeWeekAttached = true;
+  }
+
+  // Лейбл «сьогодні» / «завтра» / «10 трав · цей тиждень» / «11 трав · наступний тиждень»
   const label = document.getElementById('routine-day-label');
   if (label) {
-    if (_routineDay === todayKey) {
-      label.textContent = t('routine.day.today', 'сьогодні');
-    } else {
-      const dateISO = _lastDateForDayKey(_routineDay);
-      const [, m, d] = dateISO.split('-');
-      const diffDays = Math.round((new Date(_todayISO()) - new Date(dateISO)) / (24*60*60*1000));
-      if (diffDays === 1) label.textContent = t('routine.day.yesterday', 'вчора');
-      else if (diffDays === 2) label.textContent = t('routine.day.day_before', 'позавчора');
-      else if (diffDays === -1) label.textContent = t('routine.day.tomorrow', 'завтра');
-      else if (diffDays === -2) label.textContent = t('routine.day.day_after', 'післязавтра');
-      else label.textContent = `${parseInt(d)}.${m}`;
-    }
+    const dateISO = _lastDateForDayKey(_routineDay);
+    const [, m, d] = dateISO.split('-');
+    const dayDate = `${parseInt(d)} ${monthShort(parseInt(m, 10) - 1).toLowerCase()}`;
+    const diffDays = Math.round((new Date(_todayISO()) - new Date(dateISO)) / (24*60*60*1000));
+    let dayPart;
+    if (diffDays === 0) dayPart = t('routine.day.today', 'сьогодні');
+    else if (diffDays === 1) dayPart = t('routine.day.yesterday', 'вчора');
+    else if (diffDays === 2) dayPart = t('routine.day.day_before', 'позавчора');
+    else if (diffDays === -1) dayPart = t('routine.day.tomorrow', 'завтра');
+    else if (diffDays === -2) dayPart = t('routine.day.day_after', 'післязавтра');
+    else dayPart = dayDate;
+    let weekPart = '';
+    if (_routineWeekOffset === 1) weekPart = t('routine.week.next', ' · наступний тиждень');
+    else if (_routineWeekOffset === -1) weekPart = t('routine.week.prev', ' · минулий тиждень');
+    else if (_routineWeekOffset > 1) weekPart = t('routine.week.future_n', ' · через {n} тижні', { n: _routineWeekOffset });
+    else if (_routineWeekOffset < -1) weekPart = t('routine.week.past_n', ' · {n} тижні тому', { n: -_routineWeekOffset });
+    label.textContent = dayPart + weekPart;
   }
 }
 
@@ -709,7 +767,8 @@ function _lastDateForDayKey(dayKey) {
   const today = new Date();
   const todayIdxMon = (today.getDay() + 6) % 7; // 0=Пн, 6=Нд
   const target = new Date(today);
-  target.setDate(today.getDate() + (targetIdxMon - todayIdxMon));
+  // dyhJu: + (_routineWeekOffset * 7) — навігація між тижнями свайпом / стрілками
+  target.setDate(today.getDate() + (targetIdxMon - todayIdxMon) + (_routineWeekOffset * 7));
   return `${target.getFullYear()}-${String(target.getMonth() + 1).padStart(2, '0')}-${String(target.getDate()).padStart(2, '0')}`;
 }
 
@@ -1047,7 +1106,7 @@ setInterval(_updateCalIconDay, 60 * 1000);
 
 Object.assign(window, {
   openCalendarModal, closeCalendarModal, calendarPrevMonth, calendarNextMonth, calendarDayTap,
-  openRoutineModal, closeRoutineModal, routineSelectDay, routineAddBlock, routineDeleteBlock, routineDeleteFromTimeline, routineSaveNewBlock, routineCancelAdd,
+  openRoutineModal, closeRoutineModal, routineSelectDay, routineShiftWeek, routineAddBlock, routineDeleteBlock, routineDeleteFromTimeline, routineSaveNewBlock, routineCancelAdd,
   openEventEditModal, closeEventEditModal, saveEventFromModal, deleteEventFromModal, setEventPriority, clearEventEndTime,
   closeDayScheduleModal, openRoutineFromCalendar,
   highlightEventDays,

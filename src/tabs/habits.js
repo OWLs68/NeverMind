@@ -19,7 +19,7 @@ import { getTasks, saveTasks, renderTasks, openAddTask, addTaskBarMsg, taskBarHi
 import { getNotes, saveNotes, renderNotes, addNoteFromInbox, currentNotesFolder, setCurrentNotesFolder, getDirectChildren } from './notes.js';
 import { getFinance, saveFinance, renderFinance, formatMoney, getFinCats, saveFinCats, _resolveFinanceDate, createFinCategory } from './finance.js';
 import { matchSubcategoryFromComment } from '../data/finance-subcat-keywords.js';
-import { resolveDateFromText } from '../data/ua-time-parser.js';
+import { resolveDateFromText, parseUaTimeOfDay } from '../data/ua-time-parser.js';
 import { getMoments, saveMoments } from './evening.js';
 import { getEvents, saveEvents, addEventDedup, getRoutine, saveRoutine } from './calendar.js';
 
@@ -1564,9 +1564,12 @@ export function processUniversalAction(parsed, originalText, addMsg) {
     saveFinance(txs);
     // B-71 fix: створюємо картку у Inbox стрічці — будь-яка операція видима скрізь,
     // незалежно від точки введення (чат Фінансів, Task chat, Me chat тощо).
+    // B-168 dyhJu 10.05: завжди показуємо comment (раніше пропускали якщо
+    // comment === originalText — це призводило до карток «-₴5 · Їжа» без
+    // контексту коли AI ставить fin_comment = original text юзера).
     try {
       const items = getInbox();
-      const inboxText = (type === 'expense' ? '-' : '+') + formatMoney(amount) + ' · ' + category + (comment && comment !== originalText ? ' — ' + comment : '');
+      const inboxText = (type === 'expense' ? '-' : '+') + formatMoney(amount) + ' · ' + category + (comment ? ' — ' + comment : '');
       items.unshift({ id: txId, text: inboxText, category: 'finance', ts: finTs, processed: true });
       saveInbox(items);
       if (currentTab === 'inbox') renderInbox();
@@ -1607,9 +1610,36 @@ export function processUniversalAction(parsed, originalText, addMsg) {
         date = new Date().toISOString().slice(0, 10);
       }
     }
-    // TODO Phase G2: parseUaTimeOfDay for abstract times. For now: if null → clarify.
-    const time = parsed.time;
+    // dyhJu G2: parseUaTimeOfDay як fallback коли AI не передав явний `time`.
+    // Покриває «зранку»→08:00, «через годину»→now+60, «о 15:00»→15:00 тощо.
+    // Якщо парсер теж null — питаємо юзера.
+    let time = parsed.time;
+    if (!time) {
+      const parsedTime = parseUaTimeOfDay(originalText || text, new Date());
+      if (parsedTime) time = parsedTime;
+    }
     if (!time) { addMsg('agent', t('habits.err.reminder_time', 'Вкажи час нагадування.')); return true; }
+    // B-169 dyhJu 10.05: guard «date=today + time у минулому → +1 день».
+    // Юзер каже «нагадай зранку» о 20:00 → parser ставить time=08:00, date=today
+    // (нема явного слова «завтра» у тексті). Reminder на 08:00 СЬОГОДНI = у
+    // минулому → spawn'иться одразу або не спрацює зовсім. Логіка: «зранку»
+    // вже не сьогодні якщо ранок минув — переносимо на завтра.
+    {
+      const now = new Date();
+      const todayISO = now.toISOString().slice(0, 10);
+      if (date === todayISO && time) {
+        const [hh, mm] = time.split(':').map(n => parseInt(n, 10));
+        if (Number.isFinite(hh) && Number.isFinite(mm)) {
+          const reminderTs = new Date(now);
+          reminderTs.setHours(hh, mm, 0, 0);
+          if (reminderTs.getTime() <= now.getTime()) {
+            const tomorrow = new Date(now);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            date = tomorrow.toISOString().slice(0, 10);
+          }
+        }
+      }
+    }
     const reminderId = Date.now();
     // 1. nm_reminders — для тригера спливаючого попередження
     const reminders = getReminders();
