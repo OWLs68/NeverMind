@@ -9,7 +9,7 @@ import { escapeHtml, saveOffline, extractJsonBlocks, parseContentChips, t, getRe
 import { generateUUID } from '../core/uuid.js';
 import { addToTrash, getTrash, restoreFromTrash, showUndoToast } from '../core/trash.js';
 // G3 myshu 11.05 — Universal Undo читач
-import { readLastReversible, markReversed, captureSnapshotBefore, logAction } from '../data/action-log.js';
+import { readLastReversible, markReversed, captureSnapshotBefore, logAction, withActionLog } from '../data/action-log.js';
 import { executeReverse } from '../data/action-undo.js';
 import { INBOX_SYSTEM_PROMPT, INBOX_TOOLS, callAI, callAIWithTools, callAIWithHistory, getAIContext, getOWLPersonality, saveChatMsg, buildAssistantHistoryEntry, activeChatBar } from '../ai/core.js';
 import { UI_TOOL_NAMES, handleUITool } from '../ai/ui-tools.js';
@@ -725,6 +725,9 @@ ${aiContext}`;
           const ev = { id: Date.now(), title: action.title || t('inbox.event.default_title', 'Подія'), date: action.date, time: action.time || null, endTime, priority: action.priority || 'normal', createdAt: Date.now() };
           const res = addEventDedup(ev);
           if (!res.added) { addInboxChatMsg('agent', t('inbox.chat.event_dupe', 'Така подія "{title}" вже є в календарі.', { title: ev.title })); continue; }
+          // G3: action-log ТIЛЬКИ якщо подія справді нова (dedup ok). Conditional —
+          // тому manual logAction замість withActionLog.
+          logAction('create_event', { title: ev.title, date: ev.date, time: ev.time, end_time: ev.endTime, priority: ev.priority }, ev.id, null, 'inbox');
           const items = getInbox(); items.unshift({ id: Date.now() + 1, eventId: ev.id, text: ev.title, category: 'event', ts: Date.now(), processed: true }); saveInbox(items); renderInbox();
           const dateObj = new Date(action.date);
           const dayStr = `${dateObj.getDate()} ${monthGenitive(dateObj.getMonth())}`;
@@ -797,12 +800,6 @@ ${aiContext}`;
             }
           }
         } else if (action.action === 'save_routine') {
-          // G3 myshu 11.05: action-log snapshot ДО мутації (Verifier P0-1 fix —
-          // Inbox має власний dispatch, не через dispatchChatToolCalls).
-          const _snapshotBefore = captureSnapshotBefore('save_routine', {
-            day: Array.isArray(action.day) ? action.day : [action.day || 'default']
-          });
-          const routine = getRoutine();
           const blocks = (action.blocks || []).map(b => ({ time: b.time, activity: b.activity }));
           const days = Array.isArray(action.day) ? action.day : [action.day || 'default'];
           // Знахідний відмінок: «на середу/п'ятницю/суботу/неділю» — для речення "Розпорядок збережено на X".
@@ -816,10 +813,13 @@ ${aiContext}`;
             sat:     t('inbox.day.sat_acc', 'суботу'),
             sun:     t('inbox.day.sun_acc', 'неділю'),
           };
-          days.forEach(d => { routine[d] = [...blocks]; });
-          saveRoutine(routine);
-          // G3: пишемо action-log ПIСЛЯ saveRoutine — undo поверне snapshot
-          logAction('save_routine', { day: days, blocks }, null, _snapshotBefore, 'inbox');
+          // G3 myshu 11.05: один мозок — withActionLog навколо мутації.
+          // Verifier P0-1: Inbox має ВЛАСНИЙ dispatch (не через dispatchChatToolCalls).
+          withActionLog('save_routine', { day: days, blocks }, () => {
+            const routine = getRoutine();
+            days.forEach(d => { routine[d] = [...blocks]; });
+            saveRoutine(routine);
+          }, 'inbox');
           const label = days.length === 1 ? dayLabels[days[0]] || days[0] : days.map(d => dayLabels[d] || d).join(', ');
           addInboxChatMsg('agent', t('inbox.chat.routine_saved', '🕐 Розпорядок збережено на {label} ({n} блоків)', { label, n: blocks.length }));
         } else if (action.action === 'save_memory_fact') {

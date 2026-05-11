@@ -180,3 +180,27 @@ export function logAction(name, args, resultId, snapshotBefore, source) {
     summary: summarize(name, args),
   });
 }
+
+// Wrapper «один мозок» — capture snapshot ДО мутації, виконує fn(), пише
+// action-log ПIСЛЯ. Один рядок інтеграції у кожному save-handler 3 dispatchers
+// (tool-dispatcher.js, inbox.js, evening-actions.js).
+//
+// Використання:
+//   withActionLog('save_finance', { fin_type, amount, ... }, () => {
+//     txs.unshift(newTx); saveFinance(txs);
+//   }, 'inbox');
+//
+// Безпечно для не-reversible tools: просто викличе fn() без логування.
+// Якщо fn() throws — лог НЕ пишеться (catch on caller side).
+export function withActionLog(name, args, mutateFn, source) {
+  if (!reversible(name)) return mutateFn();
+  const snap = captureSnapshotBefore(name, args);
+  const result = mutateFn();
+  if (snap != null) {
+    logAction(name, args, null, snap, source);
+  } else {
+    const resultId = capturePostResultId(name);
+    logAction(name, args, resultId, null, source);
+  }
+  return result;
+}
