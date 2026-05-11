@@ -77,6 +77,43 @@
 
 ---
 
+**🏗️ Architecture Refactor — 8 сесій (додано myshu 11.05.2026 після 3 раундів GPT + Council 5 агентів)**
+
+**Повний план → [`docs/ARCHITECTURE_REFACTOR.md`](docs/ARCHITECTURE_REFACTOR.md)**
+
+**Чому Active:** перенесення `intelligence` з prompt-rules у architecture. AI стає fuzzy interpreter, Code = truth. Закриває корінь 3 місячних патчів промпту що не масштабувалось далі.
+
+**Core принципи:**
+- AI ніколи не пише «✓ зроблено» — це робить ТIЛЬКИ executor
+- Один canonical action format `{intent, entities, confidence, source_tier}` для всіх 4 dispatch-точок
+- Sync через дії (append-only action-log), не state
+- 12 інтентів замість 66 tools (domain-level, не tool-specific)
+- Strangler pattern — поступовий перехід через wrapper-shims
+
+**Перетин з існуючими треками (закриваємо одночасно):**
+- ✅ Pre-Migration Hardening Підсесія 1 (UUID решти 9 типів) → Сесія 3
+- ✅ Pre-Migration Hardening Підсесія 3 (nm-data-changed уніфікація 28 точок) → Сесія 7
+- ✅ OWL Reasoning V3 Фаза 3 (`nm_agent_corrections` лог) → Сесія 6 (action-log expansion)
+- ⚠️ Частково: Один мозок V2 Шар 3 + Dynamic AI-driven chips Шар 5
+
+**Порядок (час орієнтовний — 4-5 годин активної роботи на сесію):**
+1. AI без success-дублів (30 хв, видимий ефект)
+2. Парсер expansion для set_reminder/save_finance/complete_task (2-3 год)
+3. UUID міграція 9 entity types + reminderId arithmetic fix (3-4 год) ⚠️ блокер
+4. `src/core/execute-action.js` — один executor для 4 dispatch-точок
+5. Canonical action format (12 інтентів замість 66 tools)
+6. Action-log coverage скрізь (canonical helpers + 4 dispatchers)
+7. Структурований `nm-data-changed` payload через strangler-shim
+8. `nm_habit_log2` ISO + `user_id` placeholder на всіх entities
+
+**Метрики поточної реальності (з Council audit):** 66 AI tools (не 30), 4 dispatch-точки (не 3), 1 з 10 entity types на UUID, 128 не-канонічних `localStorage.setItem`, 28 `nm-data-changed` dispatch + 8 listeners.
+
+**Топ-5 ризиків:** циклічні залежності execute-action ↔ habits ↔ ai/core (iOS cold-start hang), `reminderId+1`/`+2` арифметика ламається при UUID, `check-chat-uniformity.js` блокує build при dispatcher collapse, event bus подвоїть тригери followups+brain-pulse, audit-gap для UI-modal edits. Mitigations у `docs/ARCHITECTURE_REFACTOR.md`.
+
+**Відкладено після цього блоку:** Storage adapter (cleanup 128 setItem), Dispatcher collapse 3→1 (2-3 окремі сесії), Embedding router (semantic similarity — після 2-3 місяців telemetry), Local LLM (WebLLM — після 50+ юзерів).
+
+---
+
 **🚨 Test sprint / iPhone smoke-test v554+ — БОРГ 14+ сесій (частково розпочато BqTWF 02.05 — пункт 1 виявив B-115 → закрито)**
 
 **Прогрес BqTWF 02.05:** шпаргалка з 61 пункту згенерована, тестування зупинено на пункті 1 через знайдений 🔴 B-115 (доконаний факт «Відкрив автомийку» → дубль проекту з неправильною назвою + create_event). Закрито промпт-фіксом `e25cad2` (часова форма + контекст інтерв'ю + clarify chips). **У наступній сесії:** повторити пункт 1 щоб перевірити що фікс працює, тоді продовжити з пункту 2. Окремо знайдено баг **«чіпи у Inbox чаті не показуються»** — потребує окремого фіксу `parseContentChips`.
