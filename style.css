@@ -223,6 +223,8 @@ body {
 .page::-webkit-scrollbar { display: none; }
 .health-modal-scroll { scrollbar-width: none; -ms-overflow-style: none; }
 .health-modal-scroll::-webkit-scrollbar { display: none; }
+.nm-modal-scroll { scrollbar-width: none; -ms-overflow-style: none; }
+.nm-modal-scroll::-webkit-scrollbar { display: none; width: 0; height: 0; }
 .page.active {
   opacity: 1;
   pointer-events: all;
