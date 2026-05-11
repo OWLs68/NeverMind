@@ -10494,7 +10494,7 @@ ${recent}`;
     const existingFolders = [...new Set(notes.map((n) => n.folder).filter(Boolean))];
     const match = existingFolders.find((f) => normalizeFolderName(f).toLowerCase() === normalized.toLowerCase());
     const resolvedFolder = match || normalized;
-    notes.unshift({ id: Date.now(), text: text.trim(), folder: resolvedFolder, source, ts: Date.now(), lastViewed: Date.now() });
+    notes.unshift({ id: generateUUID(), text: text.trim(), folder: resolvedFolder, source, ts: Date.now(), lastViewed: Date.now() });
     saveNotes(notes);
     return true;
   }
@@ -10508,7 +10508,7 @@ ${recent}`;
       return linked.id;
     }
     const newNote = {
-      id: Date.now(),
+      id: generateUUID(),
       text: (card.name || "") + "\n\n",
       folder: t("notes.folder_health", "\u0417\u0434\u043E\u0440\u043E\u0432'\u044F"),
       linkedHealthCardId: card.id,
@@ -10552,7 +10552,7 @@ ${recent}`;
       const idx = notes.findIndex((x) => x.id === editingNoteId);
       if (idx !== -1) notes[idx] = { ...notes[idx], text, folder, updatedAt: Date.now() };
     } else {
-      notes.unshift({ id: Date.now(), text, folder, source: "manual", ts: Date.now(), lastViewed: Date.now() });
+      notes.unshift({ id: generateUUID(), text, folder, source: "manual", ts: Date.now(), lastViewed: Date.now() });
     }
     saveNotes(notes);
     closeNoteModal();
@@ -11227,7 +11227,7 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
     const notes = getNotes();
     const originalNote = notes.find((x) => x.id === activeNoteViewId);
     const folder = originalNote?.folder || t("notes.default_folder", "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435");
-    notes.unshift({ id: Date.now(), text, folder, source: "ai", ts: Date.now(), lastViewed: Date.now() });
+    notes.unshift({ id: generateUUID(), text, folder, source: "ai", ts: Date.now(), lastViewed: Date.now() });
     saveNotes(notes);
     renderNotes();
     document.getElementById("note-chat-save-btn")?.remove();
@@ -11539,6 +11539,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
   var init_notes = __esm({
     "src/tabs/notes.js"() {
       init_nav();
+      init_uuid();
       init_utils();
       init_usage_meter();
       init_trash();
@@ -21830,6 +21831,33 @@ ${logLines}
         localStorage.setItem("nm_events_uuid_migrated_v10", "1");
       } catch (e) {
         console.error("[boot] v10 events migration failed:", e);
+      }
+    }
+    if (!localStorage.getItem("nm_notes_uuid_migrated_v11")) {
+      try {
+        const notesRaw = localStorage.getItem("nm_notes");
+        if (notesRaw) {
+          const backupKey = createSelectiveBackup(["nm_notes"], "pre-note-uuid-v11");
+          if (backupKey) console.log("[boot] v11 notes backup:", backupKey);
+          const notes = JSON.parse(notesRaw);
+          if (Array.isArray(notes)) {
+            let migrated = 0;
+            notes.forEach((n) => {
+              if (n && typeof n.id === "number") {
+                n.legacy_id = n.id;
+                n.id = generateUUID();
+                migrated++;
+              }
+            });
+            if (migrated > 0) {
+              localStorage.setItem("nm_notes", JSON.stringify(notes));
+              console.log(`[boot] v11 migration: ${migrated} notes migrated to UUID`);
+            }
+          }
+        }
+        localStorage.setItem("nm_notes_uuid_migrated_v11", "1");
+      } catch (e) {
+        console.error("[boot] v11 notes migration failed:", e);
       }
     }
     if (!localStorage.getItem("nm_health_status_v2_done")) {
