@@ -21,6 +21,7 @@
 // Після Supabase обидва переїдуть у єдину табл `agent_actions`.
 
 import { generateUUID } from '../core/uuid.js';
+import { reversible, needsSnapshot, getSnapshotStorage, buildReverse, summarize } from './action-reversers.js';
 
 const KEY = 'nm_action_log';
 const MAX = 50;
@@ -120,4 +121,86 @@ export function getRecent(n = 30) {
 // Очистка — для clearAllData() у settings.
 export function clearActionLog() {
   localStorage.removeItem(KEY);
+}
+
+// ============================================================
+// === HELPERS для dispatcher / inbox / evening-actions integration ===
+// ============================================================
+// Pure functions — викликаються з 3 dispatch-точок (Verifier P0-1):
+// tool-dispatcher.js, inbox.js, evening-actions.js. Тут бо action-log.js —
+// pure data модуль без AI/UI залежностей.
+
+// Pre-call snapshot capture для destructive tools (save_routine, edit_*).
+// Знімає тільки зачеплені поля (для save_routine — лише args.day, не весь nm_routine).
+export function captureSnapshotBefore(name, args) {
+  if (!needsSnapshot(name)) return null;
+  const key = getSnapshotStorage(name);
+  if (!key) return null;
+  try {
+    const full = JSON.parse(localStorage.getItem(key) || '{}');
+    if (name === 'save_routine' && Array.isArray(args.day)) {
+      const subset = {};
+      args.day.forEach(d => { subset[d] = Array.isArray(full[d]) ? [...full[d]] : []; });
+      return subset;
+    }
+    return full;
+  } catch { return null; }
+}
+
+// Post-hoc capture ID нової сутності з localStorage (для tools що unshift/push).
+const POST_ID_POSITIONS = {
+  save_task:    { key: 'nm_tasks',    pos: 'first' },
+  save_finance: { key: 'nm_finance',  pos: 'first' },
+  save_habit:   { key: 'nm_habits2',  pos: 'last' },
+  create_event: { key: 'nm_events',   pos: 'last' },
+};
+export function capturePostResultId(name) {
+  const spec = POST_ID_POSITIONS[name];
+  if (!spec) return null;
+  try {
+    const arr = JSON.parse(localStorage.getItem(spec.key) || '[]');
+    if (!Array.isArray(arr) || arr.length === 0) return null;
+    const item = spec.pos === 'first' ? arr[0] : arr[arr.length - 1];
+    return item?.id != null ? item.id : null;
+  } catch { return null; }
+}
+
+// Post-call: пише запис у action-log якщо reverse можна побудувати.
+// resultId опційний (None для snapshot-based reverses типу save_routine).
+export function logAction(name, args, resultId, snapshotBefore, source) {
+  if (!reversible(name)) return;
+  const reverse = buildReverse(name, args, resultId != null ? { id: resultId } : null, snapshotBefore);
+  if (!reverse) return;
+  appendActionLog({
+    source: source || 'dispatcher',
+    tool: name,
+    args,
+    result: resultId != null ? { id: resultId } : null,
+    reverse,
+    summary: summarize(name, args),
+  });
+}
+
+// Wrapper «один мозок» — capture snapshot ДО мутації, виконує fn(), пише
+// action-log ПIСЛЯ. Один рядок інтеграції у кожному save-handler 3 dispatchers
+// (tool-dispatcher.js, inbox.js, evening-actions.js).
+//
+// Використання:
+//   withActionLog('save_finance', { fin_type, amount, ... }, () => {
+//     txs.unshift(newTx); saveFinance(txs);
+//   }, 'inbox');
+//
+// Безпечно для не-reversible tools: просто викличе fn() без логування.
+// Якщо fn() throws — лог НЕ пишеться (catch on caller side).
+export function withActionLog(name, args, mutateFn, source) {
+  if (!reversible(name)) return mutateFn();
+  const snap = captureSnapshotBefore(name, args);
+  const result = mutateFn();
+  if (snap != null) {
+    logAction(name, args, null, snap, source);
+  } else {
+    const resultId = capturePostResultId(name);
+    logAction(name, args, resultId, null, source);
+  }
+  return result;
 }

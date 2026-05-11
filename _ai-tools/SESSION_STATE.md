@@ -4,11 +4,125 @@
 >
 > Старіші сесії (до 6GoDe 19.04) — в [`_archive/SESSION_STATE_archive.md`](../_archive/SESSION_STATE_archive.md).
 
-**Оновлено:** 2026-05-08 (сесія **PJi7l** — велика робота: Сесія 1 decision-tree промптів (8 фаз) + Сесія 2 BASE_CHAT_RULES + 14 fix-комітів + UX перемикач Задачі/Звички + об'єднаний блок календар/розпорядок + контекстна пам'ять діалогу + видалено клас «амбівалентні фінанси»). Раніше: 2026-05-08 (сесія **LfA6w day2** — decision-tree рефакторинг промптів).
+**Оновлено:** 2026-05-11 (сесія **myshu** — G3 Universal Undo + parser intent-router save_routine + 3 раунди GPT + Council 5 агентів + Architecture Refactor план на 8 сесій). Раніше: 2026-05-08 (сесія **PJi7l** — Сесія 1 decision-tree промптів + Сесія 2 BASE_CHAT_RULES).
 
 ---
 
-## 🔧 Поточна сесія dyhJu — Bridge G2+G4 + 5 багів + Calendar/Routine UI (11.05.2026)
+## 🔧 Поточна сесія myshu — G3 Undo + parser + Architecture Refactor plan (11.05.2026)
+
+### Зроблено
+
+#### A. Інфраструктурні автоматизації (2 коміти)
+
+1. **`pre-push-check.js` backticks detector** (`13b4e7b`) — регекс-сканер `src/ai/prompts.js` + `src/owl/chips.js` ловить raw backticks всередині `export const X = \`...\`` блоків. Той самий клас бага що LfA6w `be6f708` + dyhJu `8d4aef3` — 18h CI fail. Smoke 3/3: broken commit caught, clean prompts.js + chips.js no false positives.
+
+2. **`skill-triggers.sh` iOS симптом-тригер** (`3b2bea3`) — UserPromptSubmit хук ловить «не фіксується / клипається / мерехтить / стрибає / стискається» БЕЗ явного «iOS». Інжектить у контекст 3-точковий чек RULES_UI §5 + кейси false leads (Settings scale, Chips clipping, Calendar dyhJu). Закриває «декларативне правило без хука розкладається».
+
+#### B. UI фікси Calendar/Routine (5 комітів)
+
+3. **Прибрано scroll-індикатор справа** (`6e290bb`) — додано `.nm-modal-scroll` класу `style.css`. Застосовано до calendar + routine inner scroll div. CACHE bump.
+
+4. **Routine компресія + overflow-x:hidden** (`56d3009`) — day-cells 32 замість 36, gap 2 замість 4, arrows 24 замість 28. Inner scroll `overflow-x:hidden`. Видавлено swipe-вбік-всього-вмісту regression.
+
+5. **Restore week swipe** (`952c489`) — мій попередній фікс зламав свайп тижнів. Прибрано `touch-action:pan-y` з day-row + fire-during-touchmove замість touchend + touchcancel handler. iOS Safari при overflow-x:hidden зʼїдав touchend.
+
+6. **Розширення зони свайпу + кнопка Додати** (`870b84c` + `222f7ce` + `f64aff5`) — swipe на весь `.nm-modal-scroll` (не тільки day-row). Стрілки/тапи на дні залишилися. Кнопка «+ Додати блок» — білий фон як day-cells + темніша pumpkin штрих-рамка. Hardcoded copy у `index.html:1113` синхронізовано з `routineCancelAdd()` JS.
+
+#### C. G3 Universal Undo — Phase 1A-1F (7 комітів)
+
+7. **action-log.js** (`23bfe7b`) — pure модуль `nm_action_log`. API: appendActionLog, getActionLog (TTL 7д), readLastReversible, markReversed (для idempotency), getRecent (UI Кошик), clearActionLog. UUID id, ISO ts, user_id null (Supabase ready), device_id (lazy gen), schema_version. Quota-safe.
+
+8. **action-reversers.js** (`0edcb47`) — pure builders forward tool → reverse instruction. 2 типи reverse: `tool_call` (save_task→delete_task by id) і `restore_snapshot` (save_routine → restore prev state з знімка). Coverage: save_task, save_finance, save_habit, create_event, set_reminder, save_routine. Smoke 5/5.
+
+9. **Phase 1C dispatcher save_routine snapshot** (`b5d662d`) — у `tool-dispatcher.js dispatchChatToolCalls` додано `_captureSnapshotBefore` (тільки day-subset для save_routine) + `_logAction` після успіху.
+
+10. **Phase 1D ID-based tools** (`258ce59`) — `_capturePostResultId` для save_task (nm_tasks[0]), save_finance (nm_finance[0]), save_habit (nm_habits2[len-1]), create_event (nm_events[len-1]). set_reminder reverse через text fuzzy без ID. save_routine через snapshot.
+
+11. **Phase 1E action-undo.js + restore_deleted query=last** (`cc472dc`) — модуль `executeReverse(reverse)`: `tool_call` через processUniversalAction, `restore_snapshot` через Object.assign(storage, value) + dispatch nm-data-changed. У `inbox.js:752` extended `restore_deleted` query=last: порівнює top of action-log і top of nm_trash, бере новіше. i18n keys: inbox.chat.undo_ok, undo_fail.
+
+12. **Phase 1F UNDO_RULES у BASE_CHAT_RULES** (`02c572c`) — нове правило промпту: «відміни/скасуй/верни БЕЗ іменника» → restore_deleted(query='last'). «Відміни прийом» (з іменником) → delete_event як раніше. Описи tool restore_deleted оновлено — query='last' = universal undo.
+
+13. **fec80c3** — restore_deleted ПРАЦЮЄ у ВСIХ 7 чатах (Verifier P0-3 фікс). Раніше handler жив тільки у inbox.js — Tasks/Notes/Me/Health/Finance/Projects падали у silent fallback. Спеціальний case у `dispatchChatToolCalls` поряд з show_monthly_summary і create_project.
+
+#### D. Intent-router parser — Phase G2 (3 коміти)
+
+14. **intent-router.js + integration** (`15f43e5`) — pure парсер `parseExplicitIntent(text)` для save_routine. Інтегровано у `callAIWithTools` ПЕРЕД OpenAI fetch — 0ms latency, $0 cost. Day groups (будні/вихідні/щодня) + 7 окремих днів. Time patterns: HH:MM, «о HH ранку/вечора», «о HH». JS pitfall: `\b` НЕ працює з кирилицею навіть з `u` — використано `(?:^|[\s,.:;\-])X(?=[\s,.:;\-]|$)`. Smoke 27/27.
+
+15. **«завтра» → AI, не save_routine** (`df85f27`) — після Романа smoke-теста: парсер впіймав «В розпорядок на завтра 8 вечора» → save_routine на ВСI понеділки (бо AI хибно мапив «завтра»→day-of-week). Додано `ONE_OFF_DATE_INDICATORS` regex (завтра/післязавтра/сьогодні/15 травня/12.05) → парсер бейлить до AI щоб він обрав create_event. `RECURRING_OVERRIDE` («щотижня/постійно») скасовує бейл. Smoke 11/11. + Inbox save_routine handler пише action-log через captureSnapshotBefore + logAction (Verifier P0-1 fix).
+
+16. **withActionLog wrapper у Inbox + Evening + Finance** (`4d70a7e`) — один мозок: helpers переїхали з `tool-dispatcher.js` у `action-log.js` (pure data source). Wrapper `withActionLog(name, args, fn, source)` обгортає мутацію + log. Інтегровано у inbox.js (save_routine), evening-actions.js (save_task/habit/finance/event/reminder), finance.js processFinanceAction (save_finance). save_note + save_moment лишаються — нереверсиві.
+
+#### E. Architecture Refactor план (Session 0 — 4 коміти у цій сесії)
+
+17. **3 раунди консультацій з GPT** — діалог з Romanом про корінь проблем (AI плутається, промпт-патчі ceiling, 1300 рядків правил), переніс intelligence у архітектуру. GPT надав canonical action schema, 4-tier eskalation (regex → embeddings → local LLM → cloud), 8-сесійний план. Раунд 3 додав Supabase-specific деталі (sync через actions, undo як новий action, hybrid action-log + materialized state, NO pgvector now, per-user quotas count cloud escalations).
+
+18. **Council 5 паралельних агентів (Sonnet)** — verification плану проти реального коду:
+    - Agent A: 4 dispatch-точки (не 3), 66 tools (не 30), 72 рядки BASE_CHAT_RULES (не 1300 — то весь prompts.js файл), Inbox взагалі НЕ імпортує dispatchChatToolCalls
+    - Agent B: 5 ризиків — циклічні залежності, reminderId+1 арифметика, check-chat-uniformity build hooks, 65 Date.now() ID, event bus подвоїть тригери
+    - Agent C: UUID + storage adapter FIRST (бо блокує execute-action), Сесія 9 dispatcher collapse — насправді 2-3 сесії (8 файлів)
+    - Agent D: 10 сесій → 6 (об'єднати/відкласти), 3 на цей тиждень: AI без success + парсер + UUID
+    - Agent E: UUID coverage 10% (1 з 10), 128 не-канонічних setItem, 28 dispatch nm-data-changed + 8 listeners активно відкидають object detail, action-log майже Supabase-ready крім reversed_by/source CHECK/jsonb
+
+19. **`docs/ARCHITECTURE_REFACTOR.md`** (`205fc80`) — 170 рядків single source of truth. 6 core принципів + 8 сесій з file paths + 5 топ-ризиків + метрики реальності + перетин з 5 існуючими треками ROADMAP.
+
+20. **ROADMAP Active block** (`19998e9`) — компактний (40 рядків) блок між Pre-Migration Hardening і Test sprint. Посилання на ARCHITECTURE_REFACTOR.md. Позначено що закриває: Pre-Migration Підсесія 1 (UUID решти) + Підсесія 3 (nm-data-changed), OWL V3 Фаза 3 (`nm_agent_corrections`), частково Один мозок V2 Шар 3 + Dynamic chips Шар 5.
+
+### Обговорено (без виконання)
+
+- **Tier 2 (semantic router з embeddings)** — best ROI після парсера, але після 2-3 місяців telemetry. Phase G5 з Bridge plan.
+- **Tier 3 (Local LLM у WebLLM)** — GPT раунд 2 порадив викинути. iOS WebGPU нестабільний, ROI слабкий для 100 users. Залишити у бэклог «коли 50+ юзерів».
+- **Embedding personalization** — НЕ pgvector зараз. Гібрид: local hot learning + cloud corrections log. Тільки після Supabase.
+- **Multi-agent / Fine-tune** — НЕ зараз. Premature complexity для нашого розміру.
+
+### Ключові рішення
+
+- **AI ніколи не пише success-text** — це робить тільки executor. Архітектурно ліквідує баг «Крок Перець закрито» (smoke screen Романа).
+- **12 інтентів замість 66 tools** (Сесія 5) — domain-level, не tool-specific. Tools стають execution adapters.
+- **Undo = новий action, не реверс** (GPT раунд 3) — sync-safe, audit-safe, replay-safe. Сесія 7 переробка G3 у цей патерн.
+- **Sync ACTIONS, не STATE** — append-only action-log, materialized state перераховується. NO CRDT.
+- **Strangler pattern**, не big bang — всі 8 сесій через wrapper-shims з зворотною сумісністю.
+- **NO pgvector + NO local LLM зараз** — premature complexity для 100 users.
+
+### Інциденти
+
+- **Romanов сигнал болю «технічно»** двічі — переписав plan простіше з метафорами (помічник з шпаргалкою / друг що розуміє сенс / маленький AI у телефоні / дорогий експерт у хмарі).
+- **«Простирадло»** — 1 раз. Відразу скоротив відповідь.
+- **«Не на пам'яті»** — Roman нагадав читати код. Спіймав себе на тому що писав imports у inbox.js без перевірки existing — повернувся і прочитав.
+
+### Конфлікти/суперечності
+
+- **Agent C каже UUID першим, Agent D каже AI-без-success першим.** Обидві логіки розумні. Прийняв порядок: AI-без-success (30 хв quick win) → парсер expansion → UUID. Аргумент: UUID — фундамент але невидимий, parser ловить найбільше глюків юзера.
+- **«canonical schema FIRST» vs «execution engine FIRST»** — GPT раунд 2 сказав схема first, раунд 3 сказав engine first. Прийняв engine first (Сесія 4) бо схема без точки виконання — чиста декларація. Engine + schema разом у Сесії 4-5.
+
+### Метрики
+
+- Гілка: `claude/start-session-myshu`
+- Коміти: ~22 (`13b4e7b` → `19998e9`)
+- Версії: v823 → v833+
+- CACHE_NAME: ~6 bumps
+- Закриті ризики: backticks build-fail (тепер хук), iOS симптом auto-routing
+- Нові модулі: `src/data/action-log.js`, `src/data/action-reversers.js`, `src/data/action-undo.js`, `src/data/intent-router.js`, `docs/ARCHITECTURE_REFACTOR.md`
+- Council Sonnet агенти: 5 (architecture truth + risk pre-mortem + dependency mapping + migration safety + Supabase readiness)
+- Раунди з GPT: 3 (плюс окремий verification раунд)
+
+### Спостереження Claude
+
+- **Roman зрозумів архітектурну ідею за метафорами** — після переходу з технічного жаргону на «секретарка / друг / маленький AI у телефоні / дорогий експерт» одразу сказав «це просто і геніально». Лесон — складність системи розкривати через progressive disclosure (метафора → загальна структура → file paths).
+- **3 раунди консультацій з GPT дали більше ніж сам Claude** — особливо раунд 3 з Supabase (undo як новий action, sync через actions, NO CRDT, hybrid action-log). Claude знає теорію, але GPT-5 reasoning з конкретним product-контекстом дав глибший pre-mortem.
+- **Roman повторив GPT-відповідь дослівно** — двозначно. Або хотів щоб я дав інший кут, або хотів дії. Виявилось — друге. Швидкий quick-step «що далі?» дав ефект.
+- **«Дивимось ширше і копаємо глибше»** як trigger Council — спрацювало. Claude САМ запустив 5 агентів без запиту слашу.
+
+### Відкладене
+
+- **Storage adapter** (cleanup 128 не-канонічних setItem) — Сесія 6 покриє ~60%, решта після Supabase.
+- **Dispatcher collapse 3→1** — Agent C каже 2-3 окремі сесії. Після Сесії 5 коли canonical schema стабільна.
+- **Embedding router** — після 2-3 місяців telemetry.
+- **Local LLM (WebLLM)** — після 50+ юзерів.
+- **DATA_SCHEMA.md banner** (Session 0 part 4/4) — позначити що документ оновлюється через рефактор.
+
+---
+
+## 🔧 Сесія dyhJu — Bridge G2+G4 + 5 багів + Calendar/Routine UI (11.05.2026, AM)
 
 ### Зроблено
 
@@ -108,56 +222,9 @@
 
 ---
 
-## 🔧 Сесія 64CXo — Bridge-архітектура: парсер + Strict + nested folders (09-10.05.2026)
+## 🔧 Сесія 64CXo (09-10.05.2026) — архівовано myshu 11.05 → [archive](../_archive/SESSION_STATE_archive.md#-сесія-64cxo--bridge-архітектура-парсер--strict--nested-folders-09-10052026)
 
-### Зроблено (величезна сесія, 30+ комітів v780→v806)
-
-**A. Кластер «крок vs задача» (B-160..B-164):**
-- B-160 `getAIContext` показує назви активних кроків («активні: перець, цибуля»)
-- B-161 `complete_step` як справжній tool (раніше тільки text-JSON у Tasks)
-- B-162 `add_step` дедуп
-- B-163 `merge_tasks` новий tool (замість add_step+delete_task на «обʼєднай»)
-- B-164 уніфікація 3 complete_task handlers (закриває кроки скрізь)
-
-**B. Council 5 агентів — повний аудит (28+ знахідок):**
-- localStorage: 1 критичний (profile-builder читав `nm_habit_log` замість `nm_habit_log2` → AI бачив порожні звички)
-- AI промпти: подвійний інжект REMINDER+ROUTINE, dead rules, ТИХА ВІДПОВIДЬ суперечність
-- Дублі коду: `\n→<br>` тільки у 3 з 8 add*ChatMsg, showUndoToast() без аргументів TypeError
-- Залежності: utils.js→tabs/inbox.js circular
-- DOM/UI: ID mismatch fin-budget-modal, MutationObserver leaks
-3 знахідки агентів **відкинуто** після верифікації (REMINDER+ROUTINE дубль через UI_TOOLS_RULES — НЕПРАВДА; t-shadowing — false alarm; ТИХА vs VERIFY — самовизначене).
-
-**C. Чекпоінти A-D — Notes nested folders «Щоденник/дейлі»:**
-- Phase A — `formatDailyFolderName` + `findOrCreateDailyFolder` helpers
-- Phase B — hook у `saveMoments` (новий момент → дубль у дейлі-папку «Субота, 9 травня 2026»)
-- Phase C — UI nested 2 рівні (drill-down, recursive swipe-delete)
-- Phase D — `getNotesContext` з ascii-tree + `delete_folder` recursive
-
-**D. Bridge-стратегія (3 раунди Gemini консультацій):**
-- Phase 1.1 — Strict OpenAI mode для 5 топ-tools (save_moment, create_event, set_reminder, save_task, complete_task) з `nullable + required`
-- Phase 1.2a — PAST_INDICATORS guard у inbox.js: конверсія create_event → save_moment коли минулий час
-- Phase 2 — `src/data/ua-time-parser.js` розширено: абсолютні дати «15 травня», дні тижня «у понеділок» (mode='past'/'future')
-- Phase 3 — інтеграція parser у `_resolveFinanceDate`, `create_event` handler, `set_reminder` handler
-
-**E. Правило 12 у CLAUDE.md:** «Перш ніж лоскотити промпт — питай: це детерміноване чи природна мова?» Підтверджений кейс: 3 раунди promptфіксів для «вчора → дейлі-папка» провалилися, поки не написали `ua-time-parser.js` (12/12 тестів пройшло одразу).
-
-### Ключові висновки Gemini Bridge-стратегії
-- **НЕ йти на Supabase зараз** — 3-4 тижні без видимого прогресу
-- **Strict JSON Schema** — ROI ⭐⭐⭐⭐⭐, 0% migration debt
-- **Embeddings classifier на клієнті** ~1.2 МБ JSON, потім swap на pgvector
-- **Pure functions для guards** у `src/data/` — переїде у Edge Functions без переписування
-- **Multi-Agent Router — overkill** для single-user PWA
-
-### Метрики
-- Гілка: `claude/start-session-64CXo`
-- Коміти: ~35 (88df792 → 62aa67a)
-- Версії: v780 → v806
-- Council: 12 запусків (5 архітектура nested + 4 аудит детермінованих + 3 regression-hunter)
-- Gemini раундів: 3
-- Закриті баги: B-160..B-164 (5 нових)
-- Нові файли: `src/data/ua-time-parser.js`
-
-### Відкладене (для наступної сесії — див. ⚠️ нижче)
+(Bridge-архітектура: парсер ua-time-parser + Strict OpenAI mode + nested folders Щоденник. 35 комітів v780→v806. 5 агентів + 3 Gemini раунди. B-160..B-164 закриті. CLAUDE.md правило 12.)
 
 ---
 

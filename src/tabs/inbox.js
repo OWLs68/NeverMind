@@ -9,7 +9,7 @@ import { escapeHtml, saveOffline, extractJsonBlocks, parseContentChips, t, getRe
 import { generateUUID } from '../core/uuid.js';
 import { addToTrash, getTrash, restoreFromTrash, showUndoToast } from '../core/trash.js';
 // G3 myshu 11.05 — Universal Undo читач
-import { readLastReversible, markReversed } from '../data/action-log.js';
+import { readLastReversible, markReversed, captureSnapshotBefore, logAction, withActionLog } from '../data/action-log.js';
 import { executeReverse } from '../data/action-undo.js';
 import { INBOX_SYSTEM_PROMPT, INBOX_TOOLS, callAI, callAIWithTools, callAIWithHistory, getAIContext, getOWLPersonality, saveChatMsg, buildAssistantHistoryEntry, activeChatBar } from '../ai/core.js';
 import { UI_TOOL_NAMES, handleUITool } from '../ai/ui-tools.js';
@@ -556,8 +556,11 @@ ${aiContext}`;
   if (elapsed < 800) await new Promise(r => setTimeout(r, 800 - elapsed));
 
   if (!msg) {
-    saveOffline(text);
-    addInboxChatMsg('agent', t('inbox.chat.saved', '✓ Збережено'));
+    // myshu 11.05 Architecture Refactor Сесія 1: НЕ silent saveOffline.
+    // Раніше: text зберігався як необроблена нотатка у nm_inbox + юзер бачив
+    // «✓ Збережено» — silent брехня. Тепер чесне повідомлення про мережний фейл.
+    addInboxChatMsg('agent', t('inbox.chat.network_fail',
+      '📡 Не вдалось дзвонити агенту. Перевір зв\'язок або повтори.'));
     aiLoading = false;
     btn.disabled = false;
     btn.innerHTML = SEND_SVG;
@@ -725,6 +728,9 @@ ${aiContext}`;
           const ev = { id: Date.now(), title: action.title || t('inbox.event.default_title', 'Подія'), date: action.date, time: action.time || null, endTime, priority: action.priority || 'normal', createdAt: Date.now() };
           const res = addEventDedup(ev);
           if (!res.added) { addInboxChatMsg('agent', t('inbox.chat.event_dupe', 'Така подія "{title}" вже є в календарі.', { title: ev.title })); continue; }
+          // G3: action-log ТIЛЬКИ якщо подія справді нова (dedup ok). Conditional —
+          // тому manual logAction замість withActionLog.
+          logAction('create_event', { title: ev.title, date: ev.date, time: ev.time, end_time: ev.endTime, priority: ev.priority }, ev.id, null, 'inbox');
           const items = getInbox(); items.unshift({ id: Date.now() + 1, eventId: ev.id, text: ev.title, category: 'event', ts: Date.now(), processed: true }); saveInbox(items); renderInbox();
           const dateObj = new Date(action.date);
           const dayStr = `${dateObj.getDate()} ${monthGenitive(dateObj.getMonth())}`;
@@ -797,7 +803,6 @@ ${aiContext}`;
             }
           }
         } else if (action.action === 'save_routine') {
-          const routine = getRoutine();
           const blocks = (action.blocks || []).map(b => ({ time: b.time, activity: b.activity }));
           const days = Array.isArray(action.day) ? action.day : [action.day || 'default'];
           // Знахідний відмінок: «на середу/п'ятницю/суботу/неділю» — для речення "Розпорядок збережено на X".
@@ -811,8 +816,13 @@ ${aiContext}`;
             sat:     t('inbox.day.sat_acc', 'суботу'),
             sun:     t('inbox.day.sun_acc', 'неділю'),
           };
-          days.forEach(d => { routine[d] = [...blocks]; });
-          saveRoutine(routine);
+          // G3 myshu 11.05: один мозок — withActionLog навколо мутації.
+          // Verifier P0-1: Inbox має ВЛАСНИЙ dispatch (не через dispatchChatToolCalls).
+          withActionLog('save_routine', { day: days, blocks }, () => {
+            const routine = getRoutine();
+            days.forEach(d => { routine[d] = [...blocks]; });
+            saveRoutine(routine);
+          }, 'inbox');
           const label = days.length === 1 ? dayLabels[days[0]] || days[0] : days.map(d => dayLabels[d] || d).join(', ');
           addInboxChatMsg('agent', t('inbox.chat.routine_saved', '🕐 Розпорядок збережено на {label} ({n} блоків)', { label, n: blocks.length }));
         } else if (action.action === 'save_memory_fact') {
@@ -1036,13 +1046,24 @@ ${aiContext}`;
       const { text: replyText, chips } = _parseContentChips(msg.content);
       if (replyText) addInboxChatMsg('agent', replyText, chips);
     } else {
-      saveOffline(text);
-      addInboxChatMsg('agent', t('inbox.chat.saved', '✓ Збережено'));
+      // myshu 11.05 Architecture Refactor Сесія 1: AI повернув і без tool_calls,
+      // і без content — порожня відповідь. Раніше silent saveOffline + ✓ Збережено
+      // (тиха брехня — текст падав у Inbox як необроблена нотатка). Тепер чесне.
+      addInboxChatMsg('agent', t('inbox.chat.ai_empty',
+        'Не зрозумів запит. Спробуй переформулювати простіше — напр. «купив каву 50» або «нагадай завтра о 9».'));
     }
   } catch(e) {
     console.error('Tool call processing error:', e);
-    saveOffline(text);
-    addInboxChatMsg('agent', t('inbox.chat.saved', '✓ Збережено'));
+    // myshu 11.05 Сесія 1: помилка обробки tool_calls (зазвичай invalid JSON або
+    // невідомий tool name). Логуємо у nm_error_log для діагностики, юзеру —
+    // чесне повідомлення. БЕЗ silent saveOffline.
+    try {
+      const errLog = JSON.parse(localStorage.getItem('nm_error_log') || '[]');
+      errLog.unshift({ ts: Date.now(), where: 'inbox.sendToAI.tool_dispatch', msg: String(e?.message || e).slice(0, 200), text: text.slice(0, 100) });
+      localStorage.setItem('nm_error_log', JSON.stringify(errLog.slice(0, 50)));
+    } catch {}
+    addInboxChatMsg('agent', t('inbox.chat.error_processing',
+      '⚠️ Сталась помилка обробки. Перевір API ключ у Налаштуваннях або спробуй коротше.'));
   }
 
   // NpBmN 04.05: тригерим інтерв'ю-провідник (project interview / owl tips).

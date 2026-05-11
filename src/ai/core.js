@@ -23,6 +23,7 @@ import { formatFactsForContext, getFacts } from './memory.js';
 import { getOWLPersonality, INBOX_SYSTEM_PROMPT, INBOX_TOOLS, getOwlChatSystemPrompt } from './prompts.js';
 import { clearUnreadBadge, showUnreadBadge } from '../ui/unread-badge.js';
 import { logUsage } from '../core/usage-meter.js';
+import { parseExplicitIntent } from '../data/intent-router.js';
 
 // Backward-compat: re-export промптів з prompts.js — щоб 11 файлів
 // які імпортують ці константи з './ai/core.js' продовжували працювати без змін.
@@ -652,6 +653,38 @@ export async function callAIWithTools(systemPrompt, history, tools, module = 'ca
     // Витягуємо останній user message для класифікатора.
     const lastUser = [...history].reverse().find(m => m.role === 'user');
     const userText = lastUser ? (typeof lastUser.content === 'string' ? lastUser.content : '') : '';
+
+    // G3 myshu 11.05: Deterministic fast-path. Якщо текст матчить явну
+    // деретерміновану команду (наприклад «Додай в розпорядок ...») —
+    // парсер у `src/data/intent-router.js` будує готовий tool_call без
+    // виклику OpenAI. 0ms latency, $0 cost, без галюцинацій GPT-4o-mini.
+    // CLAUDE.md правило 12: «детерміноване → парсер, не AI».
+    try {
+      const parsed = parseExplicitIntent(userText);
+      if (parsed) {
+        // Log для діагностики bypass-rate (перші 2 тижні — моніторити)
+        try {
+          const log = JSON.parse(localStorage.getItem('nm_intent_router_log') || '[]');
+          log.unshift({ ts: Date.now(), module, tool: parsed.tool, text: userText.slice(0, 80) });
+          localStorage.setItem('nm_intent_router_log', JSON.stringify(log.slice(0, 50)));
+        } catch {}
+        clearTimeout(timeout);
+        // Повертаємо у форматі OpenAI response — tool_calls масив
+        return {
+          role: 'assistant',
+          content: null,
+          tool_calls: [{
+            id: 'router_' + Date.now(),
+            type: 'function',
+            function: { name: parsed.tool, arguments: JSON.stringify(parsed.args) },
+          }],
+        };
+      }
+    } catch (e) {
+      // Парсер впав — fallback на AI (не блокуємо потік)
+      console.warn('[intent-router] parse failed, fallback to AI', e);
+    }
+
     const filteredTools = selectRelevantTools(userText, tools);
     // Лог для діагностики ефективності класифікатора (перші 2 тижні моніторити).
     if (Array.isArray(tools) && filteredTools.length < tools.length) {

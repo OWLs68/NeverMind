@@ -31,6 +31,8 @@ import { addFact } from '../ai/memory.js';
 import { addToTrash, restoreFromTrash, getTrash } from '../core/trash.js';
 import { currentTab } from '../core/nav.js';
 import { logRecentAction, t } from '../core/utils.js';
+// G3 myshu 11.05 — Universal Undo. Evening має ВЛАСНИЙ dispatcher (Verifier P0-1).
+import { logAction, withActionLog, captureSnapshotBefore } from '../data/action-log.js';
 import { callAI, getAIContext } from '../ai/core.js';
 import { getEveningSummaryPromptV2 } from '../ai/prompts.js';
 
@@ -96,30 +98,35 @@ export function dispatchEveningTool(name, args) {
     switch (name) {
       // ========== СТВОРЕННЯ ==========
       case 'save_task': {
-        const tasks = getTasks();
-        const newTask = {
-          id: Date.now(),
-          title: args.title || args.text || t('default.task_title', 'Задача'),
-          desc: (args.text && args.text !== args.title) ? args.text : '',
-          steps: Array.isArray(args.steps) ? args.steps.map(s => ({ id: Date.now() + Math.random(), text: s, done: false })) : [],
-          status: 'active',
-          createdAt: Date.now(),
-        };
-        if (args.due_date) newTask.dueDate = args.due_date;
-        if (args.priority && ['normal','important','critical'].includes(args.priority)) newTask.priority = args.priority;
-        tasks.unshift(newTask);
-        saveTasks(tasks);
-        renderTasks();
-        logRecentAction('save_task', newTask.title, 'evening');
+        // G3 myshu: один мозок — withActionLog навколо мутації.
+        withActionLog('save_task', args, () => {
+          const tasks = getTasks();
+          const newTask = {
+            id: Date.now(),
+            title: args.title || args.text || t('default.task_title', 'Задача'),
+            desc: (args.text && args.text !== args.title) ? args.text : '',
+            steps: Array.isArray(args.steps) ? args.steps.map(s => ({ id: Date.now() + Math.random(), text: s, done: false })) : [],
+            status: 'active',
+            createdAt: Date.now(),
+          };
+          if (args.due_date) newTask.dueDate = args.due_date;
+          if (args.priority && ['normal','important','critical'].includes(args.priority)) newTask.priority = args.priority;
+          tasks.unshift(newTask);
+          saveTasks(tasks);
+          renderTasks();
+          logRecentAction('save_task', newTask.title, 'evening');
+        }, 'evening');
         return { ok: true };
       }
       case 'save_note': {
+        // save_note нереверсиво (delete_note tool відсутній) → withActionLog skip log.
         addNoteFromInbox(args.text || '', 'note', args.folder || 'Щоденник', 'evening');
         if (currentTab === 'notes') renderNotes();
         logRecentAction('save_note', (args.text || '').slice(0, 40), 'evening');
         return { ok: true };
       }
       case 'save_moment': {
+        // save_moment теж нереверсиво поки. Залишаємо як було.
         const moments = getMoments();
         moments.push({ id: Date.now(), text: args.text || '', mood: args.mood || 'neutral', ts: Date.now() });
         saveMoments(moments);
@@ -127,38 +134,47 @@ export function dispatchEveningTool(name, args) {
         return { ok: true };
       }
       case 'save_habit': {
-        const habits = getHabits();
-        habits.unshift({ id: Date.now(), name: args.name, details: args.details || '', days: Array.isArray(args.days) ? args.days : [0,1,2,3,4,5,6], targetCount: args.target_count || 1, type: 'build', createdAt: Date.now() });
-        saveHabits(habits);
-        renderHabits();
+        withActionLog('save_habit', args, () => {
+          const habits = getHabits();
+          habits.unshift({ id: Date.now(), name: args.name, details: args.details || '', days: Array.isArray(args.days) ? args.days : [0,1,2,3,4,5,6], targetCount: args.target_count || 1, type: 'build', createdAt: Date.now() });
+          saveHabits(habits);
+          renderHabits();
+        }, 'evening');
         return { ok: true };
       }
       case 'create_event': {
-        const res = addEventDedup({ id: Date.now(), title: args.title || t('default.event_title', 'Подія'), date: args.date, time: args.time || null, priority: args.priority || 'normal', createdAt: Date.now() });
+        const ev = { id: Date.now(), title: args.title || t('default.event_title', 'Подія'), date: args.date, time: args.time || null, priority: args.priority || 'normal', createdAt: Date.now() };
+        const res = addEventDedup(ev);
         if (!res.added) return { ok: true, duplicate: true };
+        // G3: ТIЛЬКИ якщо added — пишемо action-log (conditional dedup)
+        logAction('create_event', args, ev.id, null, 'evening');
         logRecentAction('create_event', args.title || '', 'evening');
         return { ok: true };
       }
       case 'save_finance': {
-        const txs = getFinance();
-        txs.unshift({
-          id: Date.now(),
-          type: args.fin_type === 'income' ? 'income' : 'expense',
-          amount: parseFloat(args.amount) || 0,
-          category: args.category || t('default.category_other', 'Інше'),
-          comment: args.fin_comment || '',
-          ts: args.date ? new Date(args.date + 'T12:00:00').getTime() : Date.now(),
-        });
-        saveFinance(txs);
-        if (currentTab === 'finance') renderFinance();
+        withActionLog('save_finance', args, () => {
+          const txs = getFinance();
+          txs.unshift({
+            id: Date.now(),
+            type: args.fin_type === 'income' ? 'income' : 'expense',
+            amount: parseFloat(args.amount) || 0,
+            category: args.category || t('default.category_other', 'Інше'),
+            comment: args.fin_comment || '',
+            ts: args.date ? new Date(args.date + 'T12:00:00').getTime() : Date.now(),
+          });
+          saveFinance(txs);
+          if (currentTab === 'finance') renderFinance();
+        }, 'evening');
         return { ok: true };
       }
       case 'set_reminder': {
-        // MVP: reminder як подія у календарі. Повна реалізація Динамічного
-        // розпорядку + push-нотифікацій — окрема фіча у ROADMAP.
+        // MVP: reminder як подія у календарі. Conditional dedup → manual logAction.
         const dateISO = args.date || new Date().toISOString().slice(0, 10);
-        const res = addEventDedup({ id: Date.now(), title: '⏰ ' + (args.text || t('default.reminder_title', 'Нагадування')), date: dateISO, time: args.time || null, priority: 'important', createdAt: Date.now() });
+        const ev = { id: Date.now(), title: '⏰ ' + (args.text || t('default.reminder_title', 'Нагадування')), date: dateISO, time: args.time || null, priority: 'important', createdAt: Date.now() };
+        const res = addEventDedup(ev);
         if (!res.added) return { ok: true, duplicate: true };
+        // set_reminder reverse через delete_reminder by text fuzzy (без ID)
+        logAction('set_reminder', args, null, null, 'evening');
         return { ok: true };
       }
       case 'save_memory_fact': {

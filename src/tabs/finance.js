@@ -18,6 +18,8 @@ import { tryBoardUpdate } from '../owl/proactive.js';
 import { getInbox, saveInbox, renderInbox, addInboxChatMsg } from './inbox.js';
 import { processUniversalAction } from './habits.js';
 import { setupModalSwipeClose } from './tasks.js';
+// G3 myshu 11.05 — Universal Undo
+import { logAction } from '../data/action-log.js';
 // Фаза 5 (15.04 6v2eR): синк медичних витрат → history картки Здоров'я
 import { syncHealthFinanceToHistory } from './health.js';
 import { monthNominative } from '../data/months.js';
@@ -604,6 +606,11 @@ export function processFinanceAction(parsed, originalText) {
   if (subcategory) tx.subcategory = subcategory;
   txs.unshift(tx);
   saveFinance(txs);
+
+  // G3 myshu 11.05: action-log save_finance — undo через delete_transaction by id
+  logAction('save_finance', {
+    fin_type: type, amount, category, subcategory, fin_comment: comment, date: parsed.date,
+  }, tx.id, null, 'inbox');
 
   const items = getInbox();
   items.unshift({ id: Date.now(), text: originalText, category: 'finance', ts, processed: true });
