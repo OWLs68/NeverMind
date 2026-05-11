@@ -5,6 +5,7 @@
 // ============================================================
 
 import { currentTab, showToast, switchTab } from '../core/nav.js';
+import { generateUUID } from '../core/uuid.js';
 import { escapeHtml, escapeJsArg, parseContentChips, t } from '../core/utils.js';
 import { logUsage } from '../core/usage-meter.js';
 import { callAIWithTools, getAIContext, getOWLPersonality, openChatBar, safeAgentReply, saveChatMsg, INBOX_TOOLS, handleChatError } from '../ai/core.js';
@@ -62,7 +63,7 @@ export function findProjectByName(query) {
 export function createProjectProgrammatic(name, subtitle = '') {
   const projects = getProjects();
   const newProject = {
-    id: Date.now(),
+    id: generateUUID(),
     name: name,
     subtitle: subtitle,
     progress: 0,
@@ -468,7 +469,7 @@ function saveNewProject() {
   const subtitle = (document.getElementById('project-input-subtitle').value || '').trim();
   const projects = getProjects();
   const newProject = {
-    id: Date.now(),
+    id: generateUUID(),
     name,
     subtitle,
     progress: 0,
