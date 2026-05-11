@@ -60,10 +60,12 @@ import {
   formatMoney,
 } from '../tabs/finance.js';
 import { addToTrash } from '../core/trash.js';
+import { getTrash, restoreFromTrash } from '../core/trash.js';
 import { getProjects, saveProjects, renderProjects, createProjectProgrammatic, startProjectInboxInterview } from '../tabs/projects.js';
 // G3 myshu 11.05 — Universal Undo
-import { appendActionLog } from '../data/action-log.js';
+import { appendActionLog, readLastReversible, markReversed } from '../data/action-log.js';
 import { reversible, needsSnapshot, getSnapshotStorage, buildReverse, summarize } from '../data/action-reversers.js';
+import { executeReverse } from '../data/action-undo.js';
 
 // Pre-call snapshot capture для destructive tools (save_routine, edit_*).
 // Знімає тільки зачеплені поля (для save_routine — лише args.day, не весь nm_routine).
@@ -609,6 +611,46 @@ export function dispatchChatToolCalls(toolCalls, addMsg, originalText) {
         setTimeout(() => { try { m.renderMe?.(); } catch(e) {} }, 200);
       }).catch(e => console.warn('[dispatcher] show_monthly_summary load failed', e));
       addMsg('agent', args.comment || '📆 Підсумок місяця у вкладці «Я» (зникне через годину).');
+      any = true;
+      continue;
+    }
+
+    // 4.4.5. restore_deleted (G3 myshu 11.05) — universal undo з БУДЬ-ЯКОГО чату.
+    // Раніше handler жив тільки у inbox.js → у Tasks/Notes/Me/etc. dispatcher
+    // викликав silent fallback "⚠️ Не зміг виконати". Тепер працює у всіх 7
+    // tab-чатах через dispatcher (один мозок). Inbox має свою копію бо
+    // використовує addInboxChatMsg з UI-чіпами для disambig (query!='last').
+    if (name === 'restore_deleted') {
+      const q = (args.query || '').trim();
+      const typeFilter = args.type || null;
+      if (q === 'last') {
+        // Universal undo: action-log vs trash, беремо новіше
+        const trash = getTrash().filter(t => Date.now() - t.deletedAt < 7 * 24 * 60 * 60 * 1000);
+        const filtered = typeFilter ? trash.filter(t => t.type === typeFilter) : trash;
+        const lastTrash = filtered.sort((a, b) => b.deletedAt - a.deletedAt)[0];
+        const lastAction = typeFilter ? null : readLastReversible();
+        const trashTs = lastTrash ? lastTrash.deletedAt : 0;
+        const actionTs = lastAction ? new Date(lastAction.ts).getTime() : 0;
+        if (lastAction && actionTs >= trashTs) {
+          const ok = executeReverse(lastAction.reverse);
+          if (ok) {
+            markReversed(lastAction.id);
+            addMsg('agent', `✅ Відмінив: ${lastAction.summary}`);
+          } else {
+            addMsg('agent', `⚠️ Не зміг відмінити "${lastAction.summary}" — запис, можливо, вже змінений.`);
+          }
+        } else if (lastTrash) {
+          const itemLabel = lastTrash.item.text || lastTrash.item.title || lastTrash.item.name || lastTrash.item.folder || 'запис';
+          restoreFromTrash(lastTrash.deletedAt);
+          addMsg('agent', `✅ Відновив "${itemLabel}"`);
+        } else {
+          addMsg('agent', 'Нічого скасовувати — кеш порожній.');
+        }
+      } else {
+        // 'all' або keyword-пошук — у не-Inbox чатах перенаправляємо у Inbox
+        // (бо там UI-чіпи для disambig). KISS: підтримуємо тільки 'last' тут.
+        addMsg('agent', 'Для відновлення за пошуком — напиши у Inbox.');
+      }
       any = true;
       continue;
     }
