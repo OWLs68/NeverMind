@@ -906,12 +906,12 @@ function routineSelectDay(dayKey) {
 function routineAddBlock() {
   const wrap = document.getElementById('routine-add-wrap');
   if (!wrap) return;
-  // Показуємо inline форму замість prompt()
+  // Inline форма. Time — стилізований drum-picker (dyhJu 11.05), не native iOS picker.
   wrap.innerHTML = `
     <div style="background:rgba(255,255,255,0.6);border-radius:16px;padding:14px;border:1.5px solid rgba(234,88,12,0.2)">
       <div style="display:flex;gap:10px;margin-bottom:10px">
-        <input type="time" id="routine-add-time" value="09:00"
-          style="flex:0 0 110px;padding:10px 8px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.15);font-size:16px;font-weight:600;color:#1e1040;background:white;-webkit-appearance:none">
+        <div id="routine-add-time-trigger" data-value="09:00" onclick="openRoutineTimePicker()"
+          style="flex:0 0 90px;padding:10px 8px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.15);font-size:16px;font-weight:700;color:#1e1040;background:white;cursor:pointer;text-align:center;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent">09:00</div>
         <input type="text" id="routine-add-activity" placeholder="${t('calendar.routine.activity_placeholder', 'Що робити...')}" maxlength="40"
           style="flex:1;min-width:0;padding:10px 12px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.15);font-size:15px;color:#1e1040;background:white">
       </div>
@@ -924,11 +924,46 @@ function routineAddBlock() {
   setTimeout(() => document.getElementById('routine-add-activity')?.focus(), 100);
 }
 
+// === ROUTINE TIME PICKER (drum-picker, dyhJu 11.05) ===
+// Окремий state від health drum-picker. Зберігає у data-value тригера.
+let _rtpHour = 9, _rtpMin = 0;
+
+function openRoutineTimePicker() {
+  const trigger = document.getElementById('routine-add-time-trigger');
+  const cur = trigger ? (trigger.dataset.value || '09:00') : '09:00';
+  const m = cur.match(/^(\d{1,2}):(\d{2})$/);
+  if (m) {
+    _rtpHour = parseInt(m[1], 10);
+    _rtpMin = Math.round(parseInt(m[2], 10) / 5); // index у крок-5 масиві
+  } else {
+    _rtpHour = 9; _rtpMin = 0;
+  }
+  const hours = Array.from({length: 24}, (_, i) => String(i).padStart(2, '0'));
+  const mins = Array.from({length: 12}, (_, i) => String(i * 5).padStart(2, '0'));
+  _initDrumCol('rtp-hour', hours, _rtpHour, i => { _rtpHour = i; });
+  _initDrumCol('rtp-min', mins, _rtpMin, i => { _rtpMin = i; });
+  document.getElementById('routine-time-picker-modal').style.display = 'flex';
+}
+
+function saveRoutineTimePicker() {
+  const hh = String(_rtpHour).padStart(2, '0');
+  const mm = String(_rtpMin * 5).padStart(2, '0');
+  const value = `${hh}:${mm}`;
+  const trigger = document.getElementById('routine-add-time-trigger');
+  if (trigger) { trigger.dataset.value = value; trigger.textContent = value; }
+  closeRoutineTimePicker();
+}
+
+function closeRoutineTimePicker() {
+  const m = document.getElementById('routine-time-picker-modal');
+  if (m) m.style.display = 'none';
+}
+
 function routineSaveNewBlock() {
-  const timeInput = document.getElementById('routine-add-time');
+  const timeTrigger = document.getElementById('routine-add-time-trigger');
   const actInput = document.getElementById('routine-add-activity');
-  if (!timeInput || !actInput) return;
-  const time = timeInput.value;
+  if (!timeTrigger || !actInput) return;
+  const time = timeTrigger.dataset.value || '09:00';
   const activity = actInput.value.trim();
   if (!time || !activity) return;
   const routine = getRoutine();
@@ -1155,6 +1190,7 @@ setInterval(_updateCalIconDay, 60 * 1000);
 Object.assign(window, {
   openCalendarModal, closeCalendarModal, calendarPrevMonth, calendarNextMonth, calendarDayTap,
   openRoutineModal, closeRoutineModal, routineSelectDay, routineShiftWeek, routineAddBlock, routineDeleteBlock, routineDeleteFromTimeline, routineSaveNewBlock, routineCancelAdd,
+  openRoutineTimePicker, saveRoutineTimePicker, closeRoutineTimePicker,
   openEventEditModal, closeEventEditModal, saveEventFromModal, deleteEventFromModal, setEventPriority, clearEventEndTime,
   closeDayScheduleModal, openRoutineFromCalendar,
   highlightEventDays,
