@@ -759,14 +759,12 @@ ${aiContext}`;
               addInboxChatMsg('agent', t('inbox.chat.restored_count', '✅ Відновив {n} записів', { n: filtered.length }));
             }
           } else if (q === 'last') {
-            // G3 myshu 11.05: universal undo. Порівнюємо top of nm_action_log
-            // (recent AI save_X) і top of nm_trash (recent delete). Беремо
-            // новіший за timestamp. Дає юзеру «Cmd+Z» для будь-якої дії AI.
-            const lastTrash = filtered.sort((a, b) => b.deletedAt - a.deletedAt)[0];
+            // myshu 11.05 v2: action-log ЗАВЖДИ має пріоритет для «Відміни».
+            // Раніше брали новіше за timestamp — trash перемагав свіжу AI-дію
+            // (юзер скаржився що бот відновив видалене замість скасувати save).
+            // Тепер: log — основне. Trash — fallback тільки коли log порожній.
             const lastAction = typeFilter ? null : readLastReversible();
-            const trashTs = lastTrash ? lastTrash.deletedAt : 0;
-            const actionTs = lastAction ? new Date(lastAction.ts).getTime() : 0;
-            if (lastAction && actionTs >= trashTs) {
+            if (lastAction) {
               const ok = executeReverse(lastAction.reverse);
               if (ok) {
                 markReversed(lastAction.id);
@@ -774,12 +772,16 @@ ${aiContext}`;
               } else {
                 addInboxChatMsg('agent', t('inbox.chat.undo_fail', '⚠️ Не зміг відмінити "{summary}" — запис, можливо, вже змінений.', { summary: lastAction.summary }));
               }
-            } else if (lastTrash) {
-              const itemLabel = lastTrash.item.text || lastTrash.item.title || lastTrash.item.name || lastTrash.item.folder || 'запис';
-              restoreFromTrash(lastTrash.deletedAt);
-              addInboxChatMsg('agent', t('inbox.chat.restored_one', '✅ Відновив {type} "{label}"', { type: typeLabel[lastTrash.type] || t('inbox.type.inbox', 'запис'), label: itemLabel }));
             } else {
-              addInboxChatMsg('agent', t('inbox.chat.trash_no_match', 'Нічого не знайшов в кеші видалених.'));
+              // Fallback: log порожній → trash
+              const lastTrash = filtered.sort((a, b) => b.deletedAt - a.deletedAt)[0];
+              if (lastTrash) {
+                const itemLabel = lastTrash.item.text || lastTrash.item.title || lastTrash.item.name || lastTrash.item.folder || 'запис';
+                restoreFromTrash(lastTrash.deletedAt);
+                addInboxChatMsg('agent', t('inbox.chat.restored_one', '✅ Відновив {type} "{label}"', { type: typeLabel[lastTrash.type] || t('inbox.type.inbox', 'запис'), label: itemLabel }));
+              } else {
+                addInboxChatMsg('agent', t('inbox.chat.trash_no_match', 'Нічого не знайшов в кеші видалених.'));
+              }
             }
           } else {
             const words = q.toLowerCase().split(/[\s,]+/).filter(Boolean);

@@ -568,14 +568,13 @@ export function dispatchChatToolCalls(toolCalls, addMsg, originalText) {
       const q = (args.query || '').trim();
       const typeFilter = args.type || null;
       if (q === 'last') {
-        // Universal undo: action-log vs trash, беремо новіше
-        const trash = getTrash().filter(t => Date.now() - t.deletedAt < 7 * 24 * 60 * 60 * 1000);
-        const filtered = typeFilter ? trash.filter(t => t.type === typeFilter) : trash;
-        const lastTrash = filtered.sort((a, b) => b.deletedAt - a.deletedAt)[0];
+        // myshu 11.05 v2: action-log ЗАВЖДИ має пріоритет коли є reversible запис.
+        // Раніше: брали новіше з action-log або trash → trash з нещодавно видаленої
+        // події перемагав timestamp save_routine → юзер казав «Відміни», бот
+        // ВIДНОВЛЮВАВ видалене замість скасовувати останню дію. Тепер чітко:
+        // «Відміни» = скасуй останню AI-дію. Trash — fallback тільки коли log порожній.
         const lastAction = typeFilter ? null : readLastReversible();
-        const trashTs = lastTrash ? lastTrash.deletedAt : 0;
-        const actionTs = lastAction ? new Date(lastAction.ts).getTime() : 0;
-        if (lastAction && actionTs >= trashTs) {
+        if (lastAction) {
           const ok = executeReverse(lastAction.reverse);
           if (ok) {
             markReversed(lastAction.id);
@@ -583,12 +582,18 @@ export function dispatchChatToolCalls(toolCalls, addMsg, originalText) {
           } else {
             addMsg('agent', `⚠️ Не зміг відмінити "${lastAction.summary}" — запис, можливо, вже змінений.`);
           }
-        } else if (lastTrash) {
-          const itemLabel = lastTrash.item.text || lastTrash.item.title || lastTrash.item.name || lastTrash.item.folder || 'запис';
-          restoreFromTrash(lastTrash.deletedAt);
-          addMsg('agent', `✅ Відновив "${itemLabel}"`);
         } else {
-          addMsg('agent', 'Нічого скасовувати — кеш порожній.');
+          // Fallback: action-log порожній → беремо з trash (відновлення видаленого).
+          const trash = getTrash().filter(t => Date.now() - t.deletedAt < 7 * 24 * 60 * 60 * 1000);
+          const filtered = typeFilter ? trash.filter(t => t.type === typeFilter) : trash;
+          const lastTrash = filtered.sort((a, b) => b.deletedAt - a.deletedAt)[0];
+          if (lastTrash) {
+            const itemLabel = lastTrash.item.text || lastTrash.item.title || lastTrash.item.name || lastTrash.item.folder || 'запис';
+            restoreFromTrash(lastTrash.deletedAt);
+            addMsg('agent', `✅ Відновив "${itemLabel}"`);
+          } else {
+            addMsg('agent', 'Нічого скасовувати — журнал і кошик порожні.');
+          }
         }
       } else {
         // 'all' або keyword-пошук — у не-Inbox чатах перенаправляємо у Inbox
