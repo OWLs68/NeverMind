@@ -255,7 +255,7 @@ function saveHabit() {
     const idx = habits.findIndex(x => x.id === editingHabitId);
     if (idx !== -1) habits[idx] = { ...habits[idx], name, details, emoji, days, targetCount, type };
   } else {
-    habits.push({ id: Date.now(), name, details, emoji, days, targetCount, type, createdAt: Date.now() });
+    habits.push({ id: generateUUID(), name, details, emoji, days, targetCount, type, createdAt: Date.now() });
   }
   saveHabits(habits);
   closeHabitModal();
@@ -1328,7 +1328,7 @@ export function processUniversalAction(parsed, originalText, addMsg) {
     const name = (parsed.name || '').trim();
     if (!name) return false;
     const habits = getHabits();
-    habits.push({ id: Date.now(), name, details: parsed.details || '', emoji: '⭕', days: parsed.days || [0,1,2,3,4,5,6], createdAt: Date.now() });
+    habits.push({ id: generateUUID(), name, details: parsed.details || '', emoji: '⭕', days: parsed.days || [0,1,2,3,4,5,6], createdAt: Date.now() });
     saveHabits(habits);
     renderProdHabits(); renderHabits();
     addMsg('agent', t('habits.habit.created', '🌱 Звичку "{name}" створено', { name }));
@@ -1876,7 +1876,7 @@ export async function sendTasksBarMessage() {
         const name = (parsed.name || '').trim();
         if (name) {
           const days = parsed.days || [0,1,2,3,4,5,6];
-          habits.push({ id: Date.now(), name, details: parsed.details || '', emoji: '⭕', days, createdAt: Date.now() });
+          habits.push({ id: generateUUID(), name, details: parsed.details || '', emoji: '⭕', days, createdAt: Date.now() });
           saveHabits(habits);
           renderProdHabits(); renderHabits();
           addTaskBarMsg('agent', '🌱 Звичку "' + name + '" створено!');

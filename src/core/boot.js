@@ -1,5 +1,6 @@
 import { applyTheme, autoRefreshMemory, closeSettings, currentTab, setupDrumTabbar, updateKeyStatus } from './nav.js';
 import { generateUUID } from './uuid.js';
+import { createSelectiveBackup } from './backup.js';
 import { cleanupTrash } from './trash.js';
 import { restoreChatUI } from '../ai/core.js';
 import { renderTabBoard } from '../owl/board.js';
@@ -451,6 +452,79 @@ function runMigrations() {
       }
     }
   }
+
+  // v9 Habits UUID (myshu 11.05.2026 Architecture Refactor Сесія 3B-1):
+  // Habit.id був Date.now() (number). Cross-reference: nm_habit_log2 структура
+  // {date: {habit.id: true}} — habit.id nested ключ. Міграція потребує:
+  //   1) Backup nm_habits2 + nm_habit_log2 ДО зміни (через nm_backup_v* модуль)
+  //   2) habits.forEach: id Date.now() → UUID, зберегти legacy_id
+  //   3) Збудувати map old_id → new_id
+  //   4) habit_log2: переписати ВСI nested ключі (date level → habit.id level)
+  if (!localStorage.getItem('nm_habits_uuid_migrated_v9')) {
+    try {
+      const habitsRaw = localStorage.getItem('nm_habits2');
+      const logRaw = localStorage.getItem('nm_habit_log2');
+      if (habitsRaw) {
+        // 1. Backup ДО будь-якої мутації (через nm_backup_v* модуль)
+        const backupKey = createSelectiveBackup(['nm_habits2', 'nm_habit_log2'], 'pre-habit-uuid-v9');
+        if (backupKey) console.log('[boot] v9 habits backup:', backupKey);
+
+        const habits = JSON.parse(habitsRaw);
+        if (Array.isArray(habits)) {
+          // 2-3. Міграція + збір id-mapping
+          const idMap = {}; // old_id (string|number) → new_id (UUID)
+          let migrated = 0;
+          habits.forEach(h => {
+            if (h && typeof h.id === 'number') {
+              const oldId = String(h.id);
+              const newId = generateUUID();
+              h.legacy_id = h.id;
+              h.id = newId;
+              idMap[oldId] = newId;
+              migrated++;
+            }
+          });
+
+          if (migrated > 0) {
+            // 4. habit_log2 — переписуємо nested ключі
+            // Структура: {date: {habitId: count|true}, ...}
+            if (logRaw) {
+              try {
+                const log = JSON.parse(logRaw);
+                if (log && typeof log === 'object') {
+                  let logChanged = false;
+                  Object.keys(log).forEach(dateKey => {
+                    const dayMap = log[dateKey];
+                    if (!dayMap || typeof dayMap !== 'object') return;
+                    const newDayMap = {};
+                    Object.keys(dayMap).forEach(habitIdKey => {
+                      const newKey = idMap[habitIdKey] || habitIdKey;
+                      newDayMap[newKey] = dayMap[habitIdKey];
+                      if (newKey !== habitIdKey) logChanged = true;
+                    });
+                    log[dateKey] = newDayMap;
+                  });
+                  if (logChanged) {
+                    localStorage.setItem('nm_habit_log2', JSON.stringify(log));
+                  }
+                }
+              } catch (logErr) {
+                console.error('[boot] v9 habit_log2 migration failed:', logErr);
+              }
+            }
+            localStorage.setItem('nm_habits2', JSON.stringify(habits));
+            console.log(`[boot] v9 migration: ${migrated} habits migrated to UUID, log keys updated`);
+          }
+        }
+      }
+      localStorage.setItem('nm_habits_uuid_migrated_v9', '1');
+    } catch (e) {
+      console.error('[boot] v9 habits migration failed:', e);
+      // Не відновлюємо автоматично — користувач може запустити вручну з nm_backup_*
+      // через DevTools якщо щось пішло не так.
+    }
+  }
+
   // v9 (03.05.2026 MIeXK Health AI-інтерв'ю): шкала статусів 3 → 6 значень.
   // Старе: active/controlled/done. Нове: acute/treatment/improving/remission/chronic/done.
   // Мапінг: active → treatment (нейтральне «активне лікування»), controlled → remission,
