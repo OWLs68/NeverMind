@@ -8,6 +8,9 @@ import { currentTab, switchTab, showToast } from '../core/nav.js';
 import { escapeHtml, saveOffline, extractJsonBlocks, parseContentChips, t, getReminders, saveReminders } from '../core/utils.js';
 import { generateUUID } from '../core/uuid.js';
 import { addToTrash, getTrash, restoreFromTrash, showUndoToast } from '../core/trash.js';
+// G3 myshu 11.05 — Universal Undo читач
+import { readLastReversible, markReversed } from '../data/action-log.js';
+import { executeReverse } from '../data/action-undo.js';
 import { INBOX_SYSTEM_PROMPT, INBOX_TOOLS, callAI, callAIWithTools, callAIWithHistory, getAIContext, getOWLPersonality, saveChatMsg, buildAssistantHistoryEntry, activeChatBar } from '../ai/core.js';
 import { UI_TOOL_NAMES, handleUITool } from '../ai/ui-tools.js';
 import { addFact } from '../ai/memory.js';
@@ -750,13 +753,27 @@ ${aiContext}`;
               addInboxChatMsg('agent', t('inbox.chat.restored_count', '✅ Відновив {n} записів', { n: filtered.length }));
             }
           } else if (q === 'last') {
-            const last = filtered.sort((a, b) => b.deletedAt - a.deletedAt)[0];
-            if (!last) {
-              addInboxChatMsg('agent', t('inbox.chat.trash_no_match', 'Нічого не знайшов в кеші видалених.'));
+            // G3 myshu 11.05: universal undo. Порівнюємо top of nm_action_log
+            // (recent AI save_X) і top of nm_trash (recent delete). Беремо
+            // новіший за timestamp. Дає юзеру «Cmd+Z» для будь-якої дії AI.
+            const lastTrash = filtered.sort((a, b) => b.deletedAt - a.deletedAt)[0];
+            const lastAction = typeFilter ? null : readLastReversible();
+            const trashTs = lastTrash ? lastTrash.deletedAt : 0;
+            const actionTs = lastAction ? new Date(lastAction.ts).getTime() : 0;
+            if (lastAction && actionTs >= trashTs) {
+              const ok = executeReverse(lastAction.reverse);
+              if (ok) {
+                markReversed(lastAction.id);
+                addInboxChatMsg('agent', t('inbox.chat.undo_ok', '✅ Відмінив: {summary}', { summary: lastAction.summary }));
+              } else {
+                addInboxChatMsg('agent', t('inbox.chat.undo_fail', '⚠️ Не зміг відмінити "{summary}" — запис, можливо, вже змінений.', { summary: lastAction.summary }));
+              }
+            } else if (lastTrash) {
+              const itemLabel = lastTrash.item.text || lastTrash.item.title || lastTrash.item.name || lastTrash.item.folder || 'запис';
+              restoreFromTrash(lastTrash.deletedAt);
+              addInboxChatMsg('agent', t('inbox.chat.restored_one', '✅ Відновив {type} "{label}"', { type: typeLabel[lastTrash.type] || t('inbox.type.inbox', 'запис'), label: itemLabel }));
             } else {
-              const itemLabel = last.item.text || last.item.title || last.item.name || last.item.folder || 'запис';
-              restoreFromTrash(last.deletedAt);
-              addInboxChatMsg('agent', t('inbox.chat.restored_one', '✅ Відновив {type} "{label}"', { type: typeLabel[last.type] || t('inbox.type.inbox', 'запис'), label: itemLabel }));
+              addInboxChatMsg('agent', t('inbox.chat.trash_no_match', 'Нічого не знайшов в кеші видалених.'));
             }
           } else {
             const words = q.toLowerCase().split(/[\s,]+/).filter(Boolean);
