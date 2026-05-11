@@ -25,6 +25,18 @@ fi
 if echo "$prompt_lower" | grep -qE "ios|pwa|safari|bfcache|iphone.*не працю|не оновлю"; then
   messages+=("📱 ТРИГЕР СКІЛА /pwa-ios-fix — iOS/PWA баг. Читай чеклист скіла.")
 fi
+
+# iOS Safari ВІЗУАЛЬНІ симптоми — RULES_UI §5 30-сек чек ПЕРЕД CSS-патчем
+# (myshu 11.05 — dyhJu Calendar 3 ітерації position:absolute false leads).
+# Триггериться на симптомі БЕЗ явного «iOS» — щоб не пропустити коли Роман
+# просто описує що бачить на телефоні («модалка скаче», «верх ходить»).
+if echo "$prompt_lower" | grep -qE "не фіксується|не фіксуєтьcя|клипається|клипаєт|клипає|не реагує на тап|мерехтить|мерехтит|стрибає|стискається|обрізається|глючит|верх ходит|низ ходит"; then
+  messages+=("🚨 iOS SAFARI ВІЗУАЛЬНИЙ БАГ (RULES_UI §5) — ОБОВ'ЯЗКОВО 30-сек чек ПЕРЕД першим CSS-патчем:
+  1) grep ':active|:focus|:hover' style.css на universal selectors ([onclick], button, *)
+  2) grep 'backdrop-filter' style.css + перевір parent ланцюжок (nested blur clip)
+  3) Composite layers: чи parent має transform/backdrop-filter/filter (клипає absolute дітей)
+Кейси false leads: Settings scale (4 ітерації), Chips clipping (4 ітерації), dyhJu Calendar (3 ітерації position:absolute). Не повторюй.")
+fi
 if echo "$prompt_lower" | grep -qE "рефакторинг|розбити файл|розділити файл"; then
   messages+=("♻️ ТРИГЕР СКІЛА /refactor-large — рефакторинг великого файлу. Skeleton+Edit, checkpoint-коміти.")
 fi
