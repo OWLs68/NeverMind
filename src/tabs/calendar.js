@@ -324,11 +324,20 @@ function renderCalendar() {
   }
   // dyhJu: trailing empty cells щоб сітка завжди мала 6 рядів (42 cells).
   // Це гарантує однакову висоту календаря незалежно від місяця (травень — 5,
-  // лютий високосний — 4-5, серпень з пн-неділі — 6). Раніше висота
-  // змінювалась → юзеру здавалось що cells різного розміру.
+  // лютий високосний — 4-5, серпень з пн-неділі — 6).
+  // ВАЖЛИВО: aspect-ratio:1 обов'язковий на trailing — без нього порожній
+  // ряд `<div></div>` має висоту 0 (немає content) і grid колапсує. Той самий
+  // aspect як real cells = фіксована висота 6 рядів незалежно від місяця.
+  // Також duplicate для leading empty (firstDow) щоб перший неповний ряд
+  // теж тримав висоту коли deg починається пізно (Пт-Нд).
   const totalCells = firstDow + daysInMonth;
   const trailingEmpty = 42 - totalCells;
-  for (let i = 0; i < trailingEmpty; i++) cells += '<div></div>';
+  for (let i = 0; i < trailingEmpty; i++) cells += '<div style="aspect-ratio:1"></div>';
+  // Замінюємо leading empty теж — щоб ряд був повний висотою
+  cells = cells.replace(/^(<div><\/div>)+/, m => {
+    const n = m.match(/<div><\/div>/g).length;
+    return '<div style="aspect-ratio:1"></div>'.repeat(n);
+  });
   grid.innerHTML = cells;
 
   // Swipe горизонтальний на сітці: палець вліво → next, вправо → prev.
