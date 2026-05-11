@@ -991,7 +991,7 @@ function routineSaveNewBlock() {
 function routineCancelAdd() {
   const wrap = document.getElementById('routine-add-wrap');
   if (!wrap) return;
-  wrap.innerHTML = `<button onclick="routineAddBlock()" style="width:100%;padding:12px;border-radius:14px;border:2px dashed rgba(234,88,12,0.25);background:none;font-size:14px;font-weight:600;color:rgba(234,88,12,0.6);cursor:pointer">${t('calendar.routine.add_block', '+ Додати блок')}</button>`;
+  wrap.innerHTML = `<button onclick="routineAddBlock()" style="width:100%;padding:12px;border-radius:14px;border:2px dashed rgba(234,88,12,0.45);background:rgba(255,255,255,0.5);font-size:14px;font-weight:600;color:rgba(234,88,12,0.7);cursor:pointer;-webkit-tap-highlight-color:transparent">${t('calendar.routine.add_block', '+ Додати блок')}</button>`;
 }
 
 function routineDeleteBlock(idx) {
