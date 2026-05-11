@@ -8933,6 +8933,48 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     }
   });
 
+  // src/data/action-undo.js
+  function executeReverse(reverse) {
+    if (!reverse || typeof reverse !== "object") return false;
+    if (reverse.type === "tool_call") {
+      if (!reverse.tool) return false;
+      const action = { action: reverse.tool, ...reverse.args || {} };
+      try {
+        const noopAddMsg = () => {
+        };
+        return !!processUniversalAction(action, "", noopAddMsg);
+      } catch (e) {
+        console.warn("[action-undo] tool_call reverse failed", reverse, e);
+        return false;
+      }
+    }
+    if (reverse.type === "restore_snapshot") {
+      if (!reverse.storage || !reverse.value) return false;
+      try {
+        const current = JSON.parse(localStorage.getItem(reverse.storage) || "{}");
+        if (Array.isArray(current) || Array.isArray(reverse.value)) {
+          localStorage.setItem(reverse.storage, JSON.stringify(reverse.value));
+        } else {
+          Object.assign(current, reverse.value);
+          localStorage.setItem(reverse.storage, JSON.stringify(current));
+        }
+        window.dispatchEvent(new CustomEvent("nm-data-changed", {
+          detail: reverse.detail || reverse.storage
+        }));
+        return true;
+      } catch (e) {
+        console.warn("[action-undo] snapshot reverse failed", reverse, e);
+        return false;
+      }
+    }
+    return false;
+  }
+  var init_action_undo = __esm({
+    "src/data/action-undo.js"() {
+      init_habits();
+    }
+  });
+
   // src/tabs/me.js
   var me_exports = {};
   __export(me_exports, {
@@ -10170,6 +10212,37 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
         any = true;
         continue;
       }
+      if (name === "restore_deleted") {
+        const q = (args.query || "").trim();
+        const typeFilter = args.type || null;
+        if (q === "last") {
+          const trash = getTrash().filter((t2) => Date.now() - t2.deletedAt < 7 * 24 * 60 * 60 * 1e3);
+          const filtered = typeFilter ? trash.filter((t2) => t2.type === typeFilter) : trash;
+          const lastTrash = filtered.sort((a, b) => b.deletedAt - a.deletedAt)[0];
+          const lastAction = typeFilter ? null : readLastReversible();
+          const trashTs = lastTrash ? lastTrash.deletedAt : 0;
+          const actionTs = lastAction ? new Date(lastAction.ts).getTime() : 0;
+          if (lastAction && actionTs >= trashTs) {
+            const ok = executeReverse(lastAction.reverse);
+            if (ok) {
+              markReversed(lastAction.id);
+              addMsg("agent", `\u2705 \u0412\u0456\u0434\u043C\u0456\u043D\u0438\u0432: ${lastAction.summary}`);
+            } else {
+              addMsg("agent", `\u26A0\uFE0F \u041D\u0435 \u0437\u043C\u0456\u0433 \u0432\u0456\u0434\u043C\u0456\u043D\u0438\u0442\u0438 "${lastAction.summary}" \u2014 \u0437\u0430\u043F\u0438\u0441, \u043C\u043E\u0436\u043B\u0438\u0432\u043E, \u0432\u0436\u0435 \u0437\u043C\u0456\u043D\u0435\u043D\u0438\u0439.`);
+            }
+          } else if (lastTrash) {
+            const itemLabel = lastTrash.item.text || lastTrash.item.title || lastTrash.item.name || lastTrash.item.folder || "\u0437\u0430\u043F\u0438\u0441";
+            restoreFromTrash(lastTrash.deletedAt);
+            addMsg("agent", `\u2705 \u0412\u0456\u0434\u043D\u043E\u0432\u0438\u0432 "${itemLabel}"`);
+          } else {
+            addMsg("agent", "\u041D\u0456\u0447\u043E\u0433\u043E \u0441\u043A\u0430\u0441\u043E\u0432\u0443\u0432\u0430\u0442\u0438 \u2014 \u043A\u0435\u0448 \u043F\u043E\u0440\u043E\u0436\u043D\u0456\u0439.");
+          }
+        } else {
+          addMsg("agent", "\u0414\u043B\u044F \u0432\u0456\u0434\u043D\u043E\u0432\u043B\u0435\u043D\u043D\u044F \u0437\u0430 \u043F\u043E\u0448\u0443\u043A\u043E\u043C \u2014 \u043D\u0430\u043F\u0438\u0448\u0438 \u0443 Inbox.");
+        }
+        any = true;
+        continue;
+      }
       if (name === "create_project") {
         const projectName = args.name || originalText || "\u0411\u0435\u0437 \u043D\u0430\u0437\u0432\u0438";
         const newProject = createProjectProgrammatic(projectName, args.subtitle || "");
@@ -10228,9 +10301,11 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
       init_finance_cats();
       init_finance();
       init_trash();
+      init_trash();
       init_projects();
       init_action_log();
       init_action_reversers();
+      init_action_undo();
       POST_ID_POSITIONS = {
         save_task: { key: "nm_tasks", pos: "first" },
         save_finance: { key: "nm_finance", pos: "first" },
@@ -17047,48 +17122,6 @@ ${JSON.stringify(contextData, null, 2)}` : "";
       NM_TRASH_KEY = "nm_trash";
       TRASH_TTL = 7 * 24 * 60 * 60 * 1e3;
       window.undoDelete = undoDelete;
-    }
-  });
-
-  // src/data/action-undo.js
-  function executeReverse(reverse) {
-    if (!reverse || typeof reverse !== "object") return false;
-    if (reverse.type === "tool_call") {
-      if (!reverse.tool) return false;
-      const action = { action: reverse.tool, ...reverse.args || {} };
-      try {
-        const noopAddMsg = () => {
-        };
-        return !!processUniversalAction(action, "", noopAddMsg);
-      } catch (e) {
-        console.warn("[action-undo] tool_call reverse failed", reverse, e);
-        return false;
-      }
-    }
-    if (reverse.type === "restore_snapshot") {
-      if (!reverse.storage || !reverse.value) return false;
-      try {
-        const current = JSON.parse(localStorage.getItem(reverse.storage) || "{}");
-        if (Array.isArray(current) || Array.isArray(reverse.value)) {
-          localStorage.setItem(reverse.storage, JSON.stringify(reverse.value));
-        } else {
-          Object.assign(current, reverse.value);
-          localStorage.setItem(reverse.storage, JSON.stringify(current));
-        }
-        window.dispatchEvent(new CustomEvent("nm-data-changed", {
-          detail: reverse.detail || reverse.storage
-        }));
-        return true;
-      } catch (e) {
-        console.warn("[action-undo] snapshot reverse failed", reverse, e);
-        return false;
-      }
-    }
-    return false;
-  }
-  var init_action_undo = __esm({
-    "src/data/action-undo.js"() {
-      init_habits();
     }
   });
 
