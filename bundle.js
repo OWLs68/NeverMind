@@ -940,8 +940,8 @@
     </div>`;
     }).join("");
     el.innerHTML = `${prevBtn}<div id="routine-day-row" style="display:flex;gap:2px;flex:1;justify-content:center;min-width:0">${daysHtml}</div>${nextBtn}`;
-    const dayRow = document.getElementById("routine-day-row");
-    if (dayRow && !dayRow._swipeWeekAttached) {
+    const scrollEl = document.querySelector("#routine-panel .nm-modal-scroll");
+    if (scrollEl && !scrollEl._swipeWeekAttached) {
       let startX = 0, startY = 0, fired = false;
       const tryFire = (curX, curY) => {
         if (fired) return;
@@ -951,25 +951,25 @@
         fired = true;
         routineShiftWeek(dx < 0 ? 1 : -1);
       };
-      dayRow.addEventListener("touchstart", (e) => {
+      scrollEl.addEventListener("touchstart", (e) => {
         if (!e.touches[0]) return;
         startX = e.touches[0].clientX;
         startY = e.touches[0].clientY;
         fired = false;
       }, { passive: true });
-      dayRow.addEventListener("touchmove", (e) => {
+      scrollEl.addEventListener("touchmove", (e) => {
         if (fired || !e.touches[0]) return;
         tryFire(e.touches[0].clientX, e.touches[0].clientY);
       }, { passive: true });
-      dayRow.addEventListener("touchend", (e) => {
+      scrollEl.addEventListener("touchend", (e) => {
         if (fired || !e.changedTouches[0]) return;
         tryFire(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
       }, { passive: true });
-      dayRow.addEventListener("touchcancel", (e) => {
+      scrollEl.addEventListener("touchcancel", (e) => {
         if (fired || !e.changedTouches || !e.changedTouches[0]) return;
         tryFire(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
       }, { passive: true });
-      dayRow._swipeWeekAttached = true;
+      scrollEl._swipeWeekAttached = true;
     }
     const label = document.getElementById("routine-day-label");
     if (label) {
