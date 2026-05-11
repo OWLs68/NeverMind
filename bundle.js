@@ -8782,6 +8782,157 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     }
   });
 
+  // src/data/action-log.js
+  function _getDeviceId() {
+    let id = localStorage.getItem("nm_device_id");
+    if (!id) {
+      id = generateUUID();
+      localStorage.setItem("nm_device_id", id);
+    }
+    return id;
+  }
+  function getActionLog() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(KEY) || "[]");
+      const cutoff = Date.now() - TTL_MS;
+      const fresh = raw.filter((e) => {
+        const ts = typeof e.ts === "string" ? new Date(e.ts).getTime() : e.ts || 0;
+        return ts >= cutoff;
+      });
+      return fresh.slice(-MAX);
+    } catch {
+      return [];
+    }
+  }
+  function appendActionLog({ source, tool, args, result, reverse, summary }) {
+    const log = getActionLog();
+    log.push({
+      id: generateUUID(),
+      ts: (/* @__PURE__ */ new Date()).toISOString(),
+      schema_version: SCHEMA_VERSION,
+      user_id: null,
+      // Supabase-ready: auth.uid() після міграції
+      device_id: _getDeviceId(),
+      source: source || "unknown",
+      tool,
+      args: args || {},
+      result: result || null,
+      reverse: reverse || null,
+      // null = нереверсиво (інформаційний запис)
+      summary: summary || tool,
+      reversed: false
+    });
+    while (log.length > MAX) log.shift();
+    try {
+      localStorage.setItem(KEY, JSON.stringify(log));
+    } catch (e) {
+      console.warn("[action-log] quota exceeded, trimming aggressively", e);
+      const trimmed = log.slice(-Math.floor(MAX / 2));
+      try {
+        localStorage.setItem(KEY, JSON.stringify(trimmed));
+      } catch {
+      }
+    }
+  }
+  function readLastReversible() {
+    const log = getActionLog();
+    for (let i = log.length - 1; i >= 0; i--) {
+      if (!log[i].reversed && log[i].reverse) return log[i];
+    }
+    return null;
+  }
+  function markReversed(id) {
+    const log = getActionLog();
+    const idx = log.findIndex((e) => e.id === id);
+    if (idx < 0) return false;
+    log[idx].reversed = true;
+    log[idx].reversedAt = (/* @__PURE__ */ new Date()).toISOString();
+    try {
+      localStorage.setItem(KEY, JSON.stringify(log));
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  var KEY, MAX, TTL_MS, SCHEMA_VERSION;
+  var init_action_log = __esm({
+    "src/data/action-log.js"() {
+      init_uuid();
+      KEY = "nm_action_log";
+      MAX = 50;
+      TTL_MS = 7 * 24 * 60 * 60 * 1e3;
+      SCHEMA_VERSION = 1;
+    }
+  });
+
+  // src/data/action-reversers.js
+  function reversible(tool) {
+    return tool in REVERSERS;
+  }
+  function needsSnapshot(tool) {
+    return NEEDS_SNAPSHOT.has(tool);
+  }
+  function getSnapshotStorage(tool) {
+    return SNAPSHOT_STORAGE[tool] || null;
+  }
+  function buildReverse(tool, args, result, snapshotBefore) {
+    const builder = REVERSERS[tool];
+    if (!builder) return null;
+    try {
+      return builder(args, result, snapshotBefore);
+    } catch (e) {
+      console.warn("[action-reversers] builder error for", tool, e);
+      return null;
+    }
+  }
+  function summarize(tool, args) {
+    switch (tool) {
+      case "save_task":
+        return `\u0417\u0430\u0434\u0430\u0447\u0430: ${args?.title || args?.text || "?"}`;
+      case "save_finance":
+        return `${args?.fin_type === "income" ? "+" : "\u2212"}${args?.amount || "?"} ${args?.category || ""} ${args?.fin_comment || ""}`.trim();
+      case "save_habit":
+        return `\u0417\u0432\u0438\u0447\u043A\u0430: ${args?.name || "?"}`;
+      case "create_event":
+        return `\u041F\u043E\u0434\u0456\u044F: ${args?.title || "?"}${args?.date ? " \xB7 " + args.date : ""}`;
+      case "set_reminder":
+        return `\u041D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F: ${args?.text || "?"}${args?.time ? " \u043E " + args.time : ""}`;
+      case "save_routine": {
+        const days = Array.isArray(args?.day) ? args.day.join("/") : "?";
+        const firstBlock = args?.blocks?.[0];
+        const blockDesc = firstBlock ? `${firstBlock.time} ${firstBlock.activity}` : "?";
+        const total = args?.blocks?.length || 0;
+        return `\u0420\u043E\u0437\u043F\u043E\u0440\u044F\u0434\u043E\u043A: ${blockDesc}${total > 1 ? ` +${total - 1}` : ""} (${days})`;
+      }
+      default:
+        return tool;
+    }
+  }
+  var REVERSERS, NEEDS_SNAPSHOT, SNAPSHOT_STORAGE;
+  var init_action_reversers = __esm({
+    "src/data/action-reversers.js"() {
+      REVERSERS = {
+        // === Type A: tool_call reverse (additive tools) ===
+        save_task: (args, result) => result?.id ? { type: "tool_call", tool: "delete_task", args: { task_id: String(result.id) } } : null,
+        save_finance: (args, result) => result?.id != null ? { type: "tool_call", tool: "delete_transaction", args: { id: result.id } } : null,
+        save_habit: (args, result) => result?.id != null ? { type: "tool_call", tool: "delete_habit", args: { habit_id: result.id } } : null,
+        create_event: (args, result) => result?.id != null ? { type: "tool_call", tool: "delete_event", args: { event_id: result.id } } : null,
+        set_reminder: (args, result) => args?.text ? { type: "tool_call", tool: "delete_reminder", args: { text: args.text, time: args.time, date: args.date } } : null,
+        // === Type B: snapshot restore (destructive replace tools) ===
+        save_routine: (args, result, snapshot) => snapshot ? { type: "restore_snapshot", storage: "nm_routine", value: snapshot, detail: "routine" } : null
+        // edit_* — будуть додані у Phase 2 (потребують повного snapshot задачі/події)
+      };
+      NEEDS_SNAPSHOT = /* @__PURE__ */ new Set([
+        "save_routine"
+        // 'edit_task', 'edit_event', 'edit_habit' — Phase 2
+      ]);
+      SNAPSHOT_STORAGE = {
+        save_routine: "nm_routine"
+        // edit_task: 'nm_tasks', edit_event: 'nm_events', edit_habit: 'nm_habits2'
+      };
+    }
+  });
+
   // src/tabs/me.js
   var me_exports = {};
   __export(me_exports, {
@@ -9472,6 +9623,49 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
   });
 
   // src/ai/tool-dispatcher.js
+  function _captureSnapshotBefore(name, args) {
+    if (!needsSnapshot(name)) return null;
+    const key = getSnapshotStorage(name);
+    if (!key) return null;
+    try {
+      const full = JSON.parse(localStorage.getItem(key) || "{}");
+      if (name === "save_routine" && Array.isArray(args.day)) {
+        const subset = {};
+        args.day.forEach((d) => {
+          subset[d] = Array.isArray(full[d]) ? [...full[d]] : [];
+        });
+        return subset;
+      }
+      return full;
+    } catch {
+      return null;
+    }
+  }
+  function _capturePostResultId(name) {
+    const spec = POST_ID_POSITIONS[name];
+    if (!spec) return null;
+    try {
+      const arr = JSON.parse(localStorage.getItem(spec.key) || "[]");
+      if (!Array.isArray(arr) || arr.length === 0) return null;
+      const item = spec.pos === "first" ? arr[0] : arr[arr.length - 1];
+      return item?.id != null ? item.id : null;
+    } catch {
+      return null;
+    }
+  }
+  function _logAction(name, args, resultId, snapshotBefore, source) {
+    if (!reversible(name)) return;
+    const reverse = buildReverse(name, args, resultId != null ? { id: resultId } : null, snapshotBefore);
+    if (!reverse) return;
+    appendActionLog({
+      source: source || "dispatcher",
+      tool: name,
+      args,
+      result: resultId != null ? { id: resultId } : null,
+      reverse,
+      summary: summarize(name, args)
+    });
+  }
   function _toolCallToUniversalAction(name, args) {
     switch (name) {
       case "save_task":
@@ -9997,12 +10191,21 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
         any = true;
         continue;
       }
+      const snapshotBefore = _captureSnapshotBefore(name, args);
       const acts = _toolCallToUniversalAction(name, args);
       let universalHandled = false;
       for (const a of acts) {
         if (processUniversalAction(a, originalText, addMsg)) {
           any = true;
           universalHandled = true;
+        }
+      }
+      if (universalHandled) {
+        if (snapshotBefore != null) {
+          _logAction(name, args, null, snapshotBefore, "dispatcher");
+        } else if (reversible(name)) {
+          const resultId = _capturePostResultId(name);
+          _logAction(name, args, resultId, null, "dispatcher");
         }
       }
       if (acts.length === 0 || !universalHandled) {
@@ -10013,6 +10216,7 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
     }
     return any;
   }
+  var POST_ID_POSITIONS;
   var init_tool_dispatcher = __esm({
     "src/ai/tool-dispatcher.js"() {
       init_ui_tools();
@@ -10025,6 +10229,14 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
       init_finance();
       init_trash();
       init_projects();
+      init_action_log();
+      init_action_reversers();
+      POST_ID_POSITIONS = {
+        save_task: { key: "nm_tasks", pos: "first" },
+        save_finance: { key: "nm_finance", pos: "first" },
+        save_habit: { key: "nm_habits2", pos: "last" },
+        create_event: { key: "nm_events", pos: "last" }
+      };
     }
   });
 
@@ -13214,7 +13426,7 @@ ${signalLines}
 
 \u042F\u043A\u0449\u043E \u0441\u0443\u043C\u043D\u0456\u0432\u0430\u0454\u0448\u0441\u044F \u2014 skip.`;
   }
-  var _DEPRESSIVE_MARKERS, _STATE_STYLES, GLOBAL_TOOLS_RULE, ROUTINE_RULES, REMINDER_RULES, CLARIFY_INLINE_RULES, VERIFY_LOOP_RULE, REASONING_LOG_RULE, BASE_CHAT_RULES, UI_TOOLS_RULES, INBOX_SYSTEM_PROMPT, INBOX_TOOLS, BRAIN_TOOLS;
+  var _DEPRESSIVE_MARKERS, _STATE_STYLES, GLOBAL_TOOLS_RULE, ROUTINE_RULES, REMINDER_RULES, CLARIFY_INLINE_RULES, VERIFY_LOOP_RULE, UNDO_RULES, REASONING_LOG_RULE, BASE_CHAT_RULES, UI_TOOLS_RULES, INBOX_SYSTEM_PROMPT, INBOX_TOOLS, BRAIN_TOOLS;
   var init_prompts = __esm({
     "src/ai/prompts.js"() {
       init_chips();
@@ -13315,6 +13527,11 @@ save_routine \u0432\u0438\u043A\u043B\u0438\u043A\u0430\u0454\u0442\u044C\u0441\
 - \u0426\u0415 \u041D\u0415 \u041F\u0420\u041E clarify-tool \u2014 \u041D\u0415 \u0432\u0438\u043A\u043B\u0438\u043A\u0430\u0439 tool clarify (\u0432\u0456\u043D \u0447\u0435\u0440\u0435\u0437 \u043C\u043E\u0434\u0430\u043B\u043A\u0443). \u0406\u043D\u043B\u0430\u0439\u043D-\u0447\u0456\u043F\u0438 \u0443 content.
 - \u{1F6AB} \u0416\u041E\u0420\u0421\u0422\u041A\u0410 \u0417\u0410\u0411\u041E\u0420\u041E\u041D\u0410 (\u041E\u0434\u0438\u043D \u043C\u043E\u0437\u043E\u043A, RGisY 04.05): \u0434\u043B\u044F clarify-\u043A\u0435\u0439\u0441\u0443 \u041D\u0406\u041A\u041E\u041B\u0418 \u043D\u0435 \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 action='chat'. \u041B\u0418\u0428\u0415 action='clarify_save' \u0437 \u0432\u0430\u043B\u0456\u0434\u043D\u0438\u043C target \u0437 4 \u0437\u043D\u0430\u0447\u0435\u043D\u044C (save_note/save_moment/create_project/add_health_history_entry/none). \u0406\u043D\u0430\u043A\u0448\u0435 clarify-guard \u043D\u0435 \u0437\u043C\u043E\u0436\u0435 \u043F\u0435\u0440\u0435\u0445\u043E\u043F\u0438\u0442\u0438 \u043B\u043E\u043A\u0430\u043B\u044C\u043D\u043E \u2192 \u0434\u0443\u0431\u043B\u044C AI round-trip \u2192 \u0440\u0456\u0437\u043D\u0430 \u043F\u043E\u0432\u0435\u0434\u0456\u043D\u043A\u0430 \u0443 \u0440\u0456\u0437\u043D\u0438\u0445 \u0447\u0430\u0442\u0430\u0445. action='chat' \u2014 \u0442\u0456\u043B\u044C\u043A\u0438 \u0434\u043B\u044F \u0434\u0456\u0430\u043B\u043E\u0433\u043E\u0432\u0438\u0445 \u0447\u0456\u043F\u0456\u0432 (\xAB\u041F\u0456\u0437\u043D\u0456\u0448\u0435\xBB, \xAB\u0420\u043E\u0437\u043A\u0430\u0436\u0438 \u0431\u0456\u043B\u044C\u0448\u0435\xBB, \xAB\u0422\u0430\u043A/\u041D\u0456\xBB), \u041D\u0415 \u0434\u043B\u044F \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043D\u044F \u0437\u0430\u043F\u0438\u0441\u0456\u0432.`;
       VERIFY_LOOP_RULE = `VERIFY LOOP (\u043F\u0440\u0430\u0432\u0438\u043B\u043E 4.21): \u041F\u0406\u0421\u041B\u042F tool call \u0417\u0410\u0412\u0416\u0414\u0418 \u043F\u0438\u0448\u0438 \u0443 content \u043A\u043E\u0440\u043E\u0442\u043A\u0435 \u043F\u0456\u0434\u0442\u0432\u0435\u0440\u0434\u0436\u0435\u043D\u043D\u044F \u0441\u043B\u043E\u0432\u0430\u043C\u0438 (1 \u0440\u0435\u0447\u0435\u043D\u043D\u044F) \u2014 \u0449\u043E \u0441\u0430\u043C\u0435 \u0437\u0440\u043E\u0431\u0438\u0432. \u041F\u0440\u0438\u043A\u043B\u0430\u0434: save_finance \u2192 "\u0417\u0430\u043F\u0438\u0441\u0430\u0432 -120\u20B4 \u043D\u0430 \u0407\u0436\u0443". \u042F\u043A\u0449\u043E \u043A\u0456\u043B\u044C\u043A\u0430 \u0434\u0456\u0439 \u0437\u0430 \u0445\u0456\u0434 \u2014 \u043E\u0434\u043D\u0438\u043C \u0440\u044F\u0434\u043A\u043E\u043C \u043F\u0456\u0434\u0441\u0443\u043C\u0443\u0439 ("\u0413\u043E\u0442\u043E\u0432\u043E: \u0437\u0430\u0434\u0430\u0447\u0430 + \u043F\u043E\u0434\u0456\u044F").`;
+      UNDO_RULES = `UNDO (G3 myshu 11.05) \u2014 \u0443\u043D\u0456\u0432\u0435\u0440\u0441\u0430\u043B\u044C\u043D\u0435 \u0441\u043A\u0430\u0441\u0443\u0432\u0430\u043D\u043D\u044F \u043E\u0441\u0442\u0430\u043D\u043D\u044C\u043E\u0457 AI-\u0434\u0456\u0457:
+- \u0422\u0440\u0438\u0433\u0435\u0440-\u0444\u0440\u0430\u0437\u0438 \u0411\u0415\u0417 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E\u0433\u043E \u0456\u043C\u0435\u043D\u043D\u0438\u043A\u0430 (\u0442\u043E\u0431\u0442\u043E \u044E\u0437\u0435\u0440 \u041D\u0415 \u043D\u0430\u0437\u0438\u0432\u0430\u0454 \u0449\u043E \u0441\u0430\u043C\u0435): "\u0432\u0456\u0434\u043C\u0456\u043D\u0438", "\u0441\u043A\u0430\u0441\u0443\u0439", "\u0432\u0435\u0440\u043D\u0438 \u044F\u043A \u0431\u0443\u043B\u043E", "\u043D\u0435 \u0442\u0440\u0435\u0431\u0430 \u0431\u0443\u043B\u043E", "\u0432\u0456\u0434\u043C\u0456\u043D\u0438 \u043E\u0441\u0442\u0430\u043D\u043D\u044E \u0434\u0456\u044E", "\u0441\u043A\u0430\u0441\u0443\u0439 \u0446\u0435", "\u0437\u0430\u0431\u0443\u0434\u044C \u0449\u043E \u044F \u043A\u0430\u0437\u0430\u0432" \u2192 restore_deleted(query="last"). \u0411\u0415\u0417 \u043F\u0435\u0440\u0435\u043F\u0438\u0442\u0443\u0432\u0430\u043D\u044C. \u0411\u0415\u0417 \u0442\u0438\u043F\u0443.
+- \u0412\u0418\u041D\u042F\u0422\u041E\u041A (\u0432\u0430\u0436\u043B\u0438\u0432\u043E): \u044F\u043A\u0449\u043E \u0443 \u0444\u0440\u0430\u0437\u0456 \u0404 \u0456\u043C\u0435\u043D\u043D\u0438\u043A \u0430\u0431\u043E \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0430 \u043D\u0430\u0437\u0432\u0430 ("\u0432\u0456\u0434\u043C\u0456\u043D\u0438 \u043F\u0440\u0438\u0439\u043E\u043C", "\u0432\u0438\u0434\u0430\u043B\u0438 \u0437\u0430\u0434\u0430\u0447\u0443 X", "\u0437\u0430\u0431\u0443\u0434\u044C \u043F\u0440\u043E \u0434\u0437\u0432\u0456\u043D\u043E\u043A \u043C\u0430\u043C\u0456") \u2192 \u0446\u0435 \u0430\u0434\u0440\u0435\u0441\u043D\u0430 \u043A\u043E\u043C\u0430\u043D\u0434\u0430 \u2192 delete_event/delete_task/delete_reminder \u0437 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0438\u043C \u043E\u0431'\u0454\u043A\u0442\u043E\u043C, \u041D\u0415 undo.
+- \u0420\u043E\u0437\u0440\u0456\u0437\u043D\u0435\u043D\u043D\u044F: "\u0432\u0456\u0434\u043C\u0456\u043D\u0438 \u0440\u043E\u0437\u043F\u043E\u0440\u044F\u0434\u043E\u043A" \u0411\u0415\u0417 \u0443\u0442\u043E\u0447\u043D\u0435\u043D\u043D\u044F \u2192 restore_deleted(query="last") (\u0431\u043E routine \u043C\u0430\u0454 \u0431\u0430\u0433\u0430\u0442\u043E \u0431\u043B\u043E\u043A\u0456\u0432 \u2014 undo \u043F\u043E\u0432\u0435\u0440\u043D\u0435 \u0437\u043D\u0456\u043C\u043E\u043A). "\u0412\u0456\u0434\u043C\u0456\u043D\u0438 \u0440\u0430\u043D\u043A\u043E\u0432\u0443 \u043F\u0440\u043E\u0431\u0456\u0436\u043A\u0443" \u2192 delete_routine_block (\u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0438\u0439 \u0431\u043B\u043E\u043A \u2014 \u041D\u0415 implemented \u043F\u043E\u043A\u0438, \u043F\u043E\u0432\u0435\u0440\u0442\u0430\u0439 \u043F\u0438\u0442\u0430\u043D\u043D\u044F-\u0443\u0442\u043E\u0447\u043D\u0435\u043D\u043D\u044F \u0437 \u0447\u0456\u043F\u0430\u043C\u0438).
+- "\u0412\u0456\u0434\u043C\u0456\u043D\u0438 \u0412\u0421I" \u2192 restore_deleted(query="all", type=...): \u043F\u043E\u0442\u0440\u0435\u0431\u0443\u0454 \u0442\u0438\u043F. \u042F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u043D\u0435 \u0432\u043A\u0430\u0437\u0430\u0432 \u2014 \u043F\u0438\u0442\u0430\u0439 \u0447\u0438 task/note/finance/...`;
       REASONING_LOG_RULE = `\u26A0\uFE0F \u041F\u041E\u041B\u0415 "_reasoning_log" \u2014 \u041E\u0411\u041E\u0412\u02BC\u042F\u0417\u041A\u041E\u0412\u0415 \u0423 \u041A\u041E\u0416\u041D\u041E\u041C\u0423 TOOL CALL:
 \u041F\u0435\u0440\u0435\u0434 \u043F\u0430\u0440\u0430\u043C\u0435\u0442\u0440\u0430\u043C\u0438 tool \u2014 \u0437\u0430\u043F\u043E\u0432\u043D\u0438 _reasoning_log \u043E\u0434\u043D\u0438\u043C-\u0434\u0432\u043E\u043C\u0430 \u0440\u0435\u0447\u0435\u043D\u043D\u044F\u043C\u0438: \u0447\u043E\u043C\u0443 \u0441\u0430\u043C\u0435 \u0446\u0435\u0439 tool, \u044F\u043A\u0456 \u0441\u0443\u0442\u043D\u043E\u0441\u0442\u0456 \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443 \u0432\u0440\u0430\u0445\u0443\u0432\u0430\u0432 (id-\u043C\u0430\u0440\u043A\u0435\u0440\u0438 [task_X], [habit_Y], [event_Z]), \u044F\u043A\u0456 \u0440\u0438\u0437\u0438\u043A\u0438/\u0430\u043B\u044C\u0442\u0435\u0440\u043D\u0430\u0442\u0438\u0432\u0438 \u0440\u043E\u0437\u0433\u043B\u044F\u043D\u0443\u0432. \u0426\u0435 \u0442\u0432\u043E\u0454 \u0432\u043D\u0443\u0442\u0440\u0456\u0448\u043D\u0454 \u043C\u0438\u0441\u043B\u0435\u043D\u043D\u044F (zero-shot CoT), \u044E\u0437\u0435\u0440 \u0439\u043E\u0433\u043E \u043D\u0435 \u043F\u043E\u0431\u0430\u0447\u0438\u0442\u044C. \u0417\u0410\u0411\u041E\u0420\u041E\u041D\u0415\u041D\u041E \u0437\u0430\u043B\u0438\u0448\u0430\u0442\u0438 \u0446\u0435 \u043F\u043E\u043B\u0435 \u043F\u043E\u0440\u043E\u0436\u043D\u0456\u043C \u0430\u0431\u043E \u043F\u0438\u0441\u0430\u0442\u0438 "ok"/"done"/"-". \u041F\u0440\u0438\u043A\u043B\u0430\u0434: "_reasoning_log": "\u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u0437\u0430\u0431\u0443\u0434\u044C \u043F\u0440\u043E \u043F\u0440\u0438\u0439\u043E\u043C' \u2014 \u0443 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0456 \u0454 [event_42] '\u041F\u0440\u0438\u0439\u043E\u043C \u0443 \u043B\u0456\u043A\u0430\u0440\u044F \u0437\u0430\u0432\u0442\u0440\u0430'. \u0426\u0435 delete_event \u043F\u043E\u043F\u0440\u0438 \u0442\u0435 \u0449\u043E \u043C\u0438 \u0443 \u0447\u0430\u0442\u0456 \u0417\u0430\u0434\u0430\u0447 \u2014 \u0441\u0443\u0442\u043D\u0456\u0441\u0442\u044C \u0433\u043B\u043E\u0431\u0430\u043B\u044C\u043D\u0430. complete_task \u0432\u0456\u0434\u043A\u0438\u043D\u0443\u0442\u043E \u0431\u043E \u0446\u0435 \u043D\u0435 \u0437\u0430\u0434\u0430\u0447\u0430."
 `;
@@ -13325,6 +13542,8 @@ ${REMINDER_RULES}
 ${ROUTINE_RULES}
 
 ${CLARIFY_INLINE_RULES}
+
+${UNDO_RULES}
 
 ${VERIFY_LOOP_RULE}`;
       UI_TOOLS_RULES = `${REASONING_LOG_RULE}
@@ -16831,6 +17050,48 @@ ${JSON.stringify(contextData, null, 2)}` : "";
     }
   });
 
+  // src/data/action-undo.js
+  function executeReverse(reverse) {
+    if (!reverse || typeof reverse !== "object") return false;
+    if (reverse.type === "tool_call") {
+      if (!reverse.tool) return false;
+      const action = { action: reverse.tool, ...reverse.args || {} };
+      try {
+        const noopAddMsg = () => {
+        };
+        return !!processUniversalAction(action, "", noopAddMsg);
+      } catch (e) {
+        console.warn("[action-undo] tool_call reverse failed", reverse, e);
+        return false;
+      }
+    }
+    if (reverse.type === "restore_snapshot") {
+      if (!reverse.storage || !reverse.value) return false;
+      try {
+        const current = JSON.parse(localStorage.getItem(reverse.storage) || "{}");
+        if (Array.isArray(current) || Array.isArray(reverse.value)) {
+          localStorage.setItem(reverse.storage, JSON.stringify(reverse.value));
+        } else {
+          Object.assign(current, reverse.value);
+          localStorage.setItem(reverse.storage, JSON.stringify(current));
+        }
+        window.dispatchEvent(new CustomEvent("nm-data-changed", {
+          detail: reverse.detail || reverse.storage
+        }));
+        return true;
+      } catch (e) {
+        console.warn("[action-undo] snapshot reverse failed", reverse, e);
+        return false;
+      }
+    }
+    return false;
+  }
+  var init_action_undo = __esm({
+    "src/data/action-undo.js"() {
+      init_habits();
+    }
+  });
+
   // src/tabs/onboarding.js
   function openSlidesTour(fromOnboarding = false) {
     _slidesFromOnboarding = fromOnboarding;
@@ -18391,13 +18652,24 @@ ${aiContext}`;
                 addInboxChatMsg("agent", t("inbox.chat.restored_count", "\u2705 \u0412\u0456\u0434\u043D\u043E\u0432\u0438\u0432 {n} \u0437\u0430\u043F\u0438\u0441\u0456\u0432", { n: filtered.length }));
               }
             } else if (q === "last") {
-              const last = filtered.sort((a, b) => b.deletedAt - a.deletedAt)[0];
-              if (!last) {
-                addInboxChatMsg("agent", t("inbox.chat.trash_no_match", "\u041D\u0456\u0447\u043E\u0433\u043E \u043D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u0432 \u043A\u0435\u0448\u0456 \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u0438\u0445."));
+              const lastTrash = filtered.sort((a, b) => b.deletedAt - a.deletedAt)[0];
+              const lastAction = typeFilter ? null : readLastReversible();
+              const trashTs = lastTrash ? lastTrash.deletedAt : 0;
+              const actionTs = lastAction ? new Date(lastAction.ts).getTime() : 0;
+              if (lastAction && actionTs >= trashTs) {
+                const ok = executeReverse(lastAction.reverse);
+                if (ok) {
+                  markReversed(lastAction.id);
+                  addInboxChatMsg("agent", t("inbox.chat.undo_ok", "\u2705 \u0412\u0456\u0434\u043C\u0456\u043D\u0438\u0432: {summary}", { summary: lastAction.summary }));
+                } else {
+                  addInboxChatMsg("agent", t("inbox.chat.undo_fail", '\u26A0\uFE0F \u041D\u0435 \u0437\u043C\u0456\u0433 \u0432\u0456\u0434\u043C\u0456\u043D\u0438\u0442\u0438 "{summary}" \u2014 \u0437\u0430\u043F\u0438\u0441, \u043C\u043E\u0436\u043B\u0438\u0432\u043E, \u0432\u0436\u0435 \u0437\u043C\u0456\u043D\u0435\u043D\u0438\u0439.', { summary: lastAction.summary }));
+                }
+              } else if (lastTrash) {
+                const itemLabel = lastTrash.item.text || lastTrash.item.title || lastTrash.item.name || lastTrash.item.folder || "\u0437\u0430\u043F\u0438\u0441";
+                restoreFromTrash(lastTrash.deletedAt);
+                addInboxChatMsg("agent", t("inbox.chat.restored_one", '\u2705 \u0412\u0456\u0434\u043D\u043E\u0432\u0438\u0432 {type} "{label}"', { type: typeLabel[lastTrash.type] || t("inbox.type.inbox", "\u0437\u0430\u043F\u0438\u0441"), label: itemLabel }));
               } else {
-                const itemLabel = last.item.text || last.item.title || last.item.name || last.item.folder || "\u0437\u0430\u043F\u0438\u0441";
-                restoreFromTrash(last.deletedAt);
-                addInboxChatMsg("agent", t("inbox.chat.restored_one", '\u2705 \u0412\u0456\u0434\u043D\u043E\u0432\u0438\u0432 {type} "{label}"', { type: typeLabel[last.type] || t("inbox.type.inbox", "\u0437\u0430\u043F\u0438\u0441"), label: itemLabel }));
+                addInboxChatMsg("agent", t("inbox.chat.trash_no_match", "\u041D\u0456\u0447\u043E\u0433\u043E \u043D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u0432 \u043A\u0435\u0448\u0456 \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u0438\u0445."));
               }
             } else {
               const words = q.toLowerCase().split(/[\s,]+/).filter(Boolean);
@@ -19041,6 +19313,8 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       init_utils();
       init_uuid();
       init_trash();
+      init_action_log();
+      init_action_undo();
       init_core();
       init_ui_tools();
       init_memory();
