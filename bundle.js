@@ -14153,7 +14153,7 @@ ${CHIP_PROMPT_RULES}`;
       const idx = habits.findIndex((x) => x.id === editingHabitId);
       if (idx !== -1) habits[idx] = { ...habits[idx], name, details, emoji, days, targetCount, type };
     } else {
-      habits.push({ id: Date.now(), name, details, emoji, days, targetCount, type, createdAt: Date.now() });
+      habits.push({ id: generateUUID(), name, details, emoji, days, targetCount, type, createdAt: Date.now() });
     }
     saveHabits(habits);
     closeHabitModal();
@@ -15036,7 +15036,7 @@ ${CHIP_PROMPT_RULES}`;
       const name = (parsed.name || "").trim();
       if (!name) return false;
       const habits = getHabits();
-      habits.push({ id: Date.now(), name, details: parsed.details || "", emoji: "\u2B55", days: parsed.days || [0, 1, 2, 3, 4, 5, 6], createdAt: Date.now() });
+      habits.push({ id: generateUUID(), name, details: parsed.details || "", emoji: "\u2B55", days: parsed.days || [0, 1, 2, 3, 4, 5, 6], createdAt: Date.now() });
       saveHabits(habits);
       renderProdHabits();
       renderHabits();
@@ -15548,7 +15548,7 @@ ${CHIP_PROMPT_RULES}`;
           const name = (parsed.name || "").trim();
           if (name) {
             const days = parsed.days || [0, 1, 2, 3, 4, 5, 6];
-            habits2.push({ id: Date.now(), name, details: parsed.details || "", emoji: "\u2B55", days, createdAt: Date.now() });
+            habits2.push({ id: generateUUID(), name, details: parsed.details || "", emoji: "\u2B55", days, createdAt: Date.now() });
             saveHabits(habits2);
             renderProdHabits();
             renderHabits();
@@ -20655,6 +20655,73 @@ ${logLines}
     }
   });
 
+  // src/core/backup.js
+  function createSelectiveBackup(keys, label) {
+    if (!Array.isArray(keys) || keys.length === 0) return null;
+    if (!label || typeof label !== "string") return null;
+    const ts = (/* @__PURE__ */ new Date()).toISOString();
+    const safeLabel = label.replace(/[^a-z0-9-]/gi, "-").slice(0, 30);
+    const tsSlug = ts.slice(0, 16).replace(":", "-");
+    const backupKey = `${BACKUP_PREFIX}${safeLabel}_${tsSlug}`;
+    const snapshot = {};
+    let hasData = false;
+    for (const k of keys) {
+      if (typeof k !== "string" || !k.startsWith("nm_")) continue;
+      if (k.startsWith(BACKUP_PREFIX)) continue;
+      const v = localStorage.getItem(k);
+      if (v !== null) {
+        snapshot[k] = v;
+        hasData = true;
+      }
+    }
+    if (!hasData) return null;
+    const payload = JSON.stringify({ ts, label, data: snapshot });
+    try {
+      localStorage.setItem(backupKey, payload);
+      try {
+        cleanupOldBackups(MAX_BACKUPS);
+      } catch {
+      }
+      return backupKey;
+    } catch (e) {
+      try {
+        cleanupOldBackups(0);
+        localStorage.setItem(backupKey, payload);
+        return backupKey;
+      } catch {
+        console.warn("[backup] quota exceeded \u2014 backup skipped:", label);
+        return null;
+      }
+    }
+  }
+  function listBackups() {
+    const result = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith(BACKUP_PREFIX)) result.push(k);
+    }
+    return result.sort();
+  }
+  function cleanupOldBackups(keepLast = MAX_BACKUPS) {
+    const all = listBackups();
+    if (all.length <= keepLast) return 0;
+    const toRemove = all.slice(0, all.length - keepLast);
+    toRemove.forEach((k) => {
+      try {
+        localStorage.removeItem(k);
+      } catch {
+      }
+    });
+    return toRemove.length;
+  }
+  var BACKUP_PREFIX, MAX_BACKUPS;
+  var init_backup = __esm({
+    "src/core/backup.js"() {
+      BACKUP_PREFIX = "nm_backup_";
+      MAX_BACKUPS = 3;
+    }
+  });
+
   // src/owl/followups.js
   async function checkFollowups() {
     if (_checkInFlight) return;
@@ -21653,6 +21720,62 @@ ${logLines}
         }
       }
     }
+    if (!localStorage.getItem("nm_habits_uuid_migrated_v9")) {
+      try {
+        const habitsRaw = localStorage.getItem("nm_habits2");
+        const logRaw = localStorage.getItem("nm_habit_log2");
+        if (habitsRaw) {
+          const backupKey = createSelectiveBackup(["nm_habits2", "nm_habit_log2"], "pre-habit-uuid-v9");
+          if (backupKey) console.log("[boot] v9 habits backup:", backupKey);
+          const habits = JSON.parse(habitsRaw);
+          if (Array.isArray(habits)) {
+            const idMap = {};
+            let migrated = 0;
+            habits.forEach((h) => {
+              if (h && typeof h.id === "number") {
+                const oldId = String(h.id);
+                const newId = generateUUID();
+                h.legacy_id = h.id;
+                h.id = newId;
+                idMap[oldId] = newId;
+                migrated++;
+              }
+            });
+            if (migrated > 0) {
+              if (logRaw) {
+                try {
+                  const log = JSON.parse(logRaw);
+                  if (log && typeof log === "object") {
+                    let logChanged = false;
+                    Object.keys(log).forEach((dateKey) => {
+                      const dayMap = log[dateKey];
+                      if (!dayMap || typeof dayMap !== "object") return;
+                      const newDayMap = {};
+                      Object.keys(dayMap).forEach((habitIdKey) => {
+                        const newKey = idMap[habitIdKey] || habitIdKey;
+                        newDayMap[newKey] = dayMap[habitIdKey];
+                        if (newKey !== habitIdKey) logChanged = true;
+                      });
+                      log[dateKey] = newDayMap;
+                    });
+                    if (logChanged) {
+                      localStorage.setItem("nm_habit_log2", JSON.stringify(log));
+                    }
+                  }
+                } catch (logErr) {
+                  console.error("[boot] v9 habit_log2 migration failed:", logErr);
+                }
+              }
+              localStorage.setItem("nm_habits2", JSON.stringify(habits));
+              console.log(`[boot] v9 migration: ${migrated} habits migrated to UUID, log keys updated`);
+            }
+          }
+        }
+        localStorage.setItem("nm_habits_uuid_migrated_v9", "1");
+      } catch (e) {
+        console.error("[boot] v9 habits migration failed:", e);
+      }
+    }
     if (!localStorage.getItem("nm_health_status_v2_done")) {
       try {
         const raw = localStorage.getItem("nm_health_cards");
@@ -21973,6 +22096,7 @@ ${logLines}
     "src/core/boot.js"() {
       init_nav();
       init_uuid();
+      init_backup();
       init_trash();
       init_core();
       init_board();
