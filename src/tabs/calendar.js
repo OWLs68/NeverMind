@@ -755,13 +755,15 @@ function _renderRoutineDayTabs() {
   }).join('');
   el.innerHTML = `${prevBtn}<div id="routine-day-row" style="display:flex;gap:2px;flex:1;justify-content:center;min-width:0">${daysHtml}</div>${nextBtn}`;
 
-  // Swipe handler на day-row: палець вліво → наступний тиждень, вправо → минулий.
-  // myshu 11.05: прибрано touch-action:pan-y бо у поєднанні з overflow-x:hidden
-  // на parent scroll-container iOS Safari відміняв горизонтальний жест → touchend
-  // не fired → routineShiftWeek не викликався. Тригеримо ВПРОДОВЖ touchmove
-  // (як тільки dx > 50px) + touchcancel як страховка, не чекаємо touchend.
-  const dayRow = document.getElementById('routine-day-row');
-  if (dayRow && !dayRow._swipeWeekAttached) {
+  // Swipe handler на весь scroll-контейнер модалки (myshu 11.05 v2): зона свайпу =
+  // весь видимий вміст панелі (day-tabs + timeline + add-wrap). Раніше handler
+  // був тільки на day-row — Роман: «розшир зону свайпу на всю обведену частину».
+  // Тап на стрілках ‹ › і на day-cells працює як раніше (onclick спрацьовує при
+  // tap без руху — наш поріг dx>50px не зачіпає клики).
+  // Fire-during-touchmove + touchcancel: iOS Safari при overflow-x:hidden на
+  // parent зʼїдав touchend → handler не спрацьовував.
+  const scrollEl = document.querySelector('#routine-panel .nm-modal-scroll');
+  if (scrollEl && !scrollEl._swipeWeekAttached) {
     let startX = 0, startY = 0, fired = false;
     const tryFire = (curX, curY) => {
       if (fired) return;
@@ -771,25 +773,25 @@ function _renderRoutineDayTabs() {
       fired = true;
       routineShiftWeek(dx < 0 ? 1 : -1); // палець вліво → наступний тиждень
     };
-    dayRow.addEventListener('touchstart', e => {
+    scrollEl.addEventListener('touchstart', e => {
       if (!e.touches[0]) return;
       startX = e.touches[0].clientX;
       startY = e.touches[0].clientY;
       fired = false;
     }, { passive: true });
-    dayRow.addEventListener('touchmove', e => {
+    scrollEl.addEventListener('touchmove', e => {
       if (fired || !e.touches[0]) return;
       tryFire(e.touches[0].clientX, e.touches[0].clientY);
     }, { passive: true });
-    dayRow.addEventListener('touchend', e => {
+    scrollEl.addEventListener('touchend', e => {
       if (fired || !e.changedTouches[0]) return;
       tryFire(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
     }, { passive: true });
-    dayRow.addEventListener('touchcancel', e => {
+    scrollEl.addEventListener('touchcancel', e => {
       if (fired || !e.changedTouches || !e.changedTouches[0]) return;
       tryFire(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
     }, { passive: true });
-    dayRow._swipeWeekAttached = true;
+    scrollEl._swipeWeekAttached = true;
   }
 
   // Лейбл: «Цей тиждень» (offset=0) АБО «Тиждень N» (N = ISO week-of-year)
