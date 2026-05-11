@@ -677,12 +677,15 @@ function _renderRoutineDayTabs() {
   const todayKey = DAY_KEYS[new Date().getDay()];
   const todayISO = _todayISO();
   // dyhJu: компактна навігація — стрілки ‹ › по краях + 7 днів з датами.
-  // Свайп left на day-row → next тиждень, right → prev. Центрування зберігається.
+  // Свайп left на day-row → next тиждень, right → prev.
+  // Container не повинен overflow (panel padding:0 20px + container width 100%).
   el.style.justifyContent = 'space-between';
-  el.style.gap = '4px';
+  el.style.gap = '2px';
   el.style.alignItems = 'center';
-  // Стрілки ‹ › — компактні, без border, з touch-feedback
-  const arrowStyle = 'width:32px;height:36px;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:600;color:rgba(30,16,64,0.45);cursor:pointer;border-radius:10px;-webkit-tap-highlight-color:transparent;flex-shrink:0;background:rgba(255,255,255,0.4)';
+  el.style.overflow = 'visible'; // НЕ overflow-x:auto — стрілки мають бути видимі
+  el.style.flexWrap = 'nowrap';
+  // Стрілки ‹ › — компактні, з touch-feedback. flex-shrink:0 щоб не стискались.
+  const arrowStyle = 'width:28px;height:36px;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:600;color:rgba(30,16,64,0.45);cursor:pointer;border-radius:10px;-webkit-tap-highlight-color:transparent;flex-shrink:0;background:rgba(255,255,255,0.4)';
   const prevBtn = `<div onclick="routineShiftWeek(-1)" style="${arrowStyle}" aria-label="${t('routine.aria.prev_week', 'Минулий тиждень')}">‹</div>`;
   const nextBtn = `<div onclick="routineShiftWeek(1)" style="${arrowStyle}" aria-label="${t('routine.aria.next_week', 'Наступний тиждень')}">›</div>`;
   // Дні зі своїми датами (з урахуванням _routineWeekOffset)
@@ -731,27 +734,27 @@ function _renderRoutineDayTabs() {
     dayRow._swipeWeekAttached = true;
   }
 
-  // Лейбл «сьогодні» / «завтра» / «10 трав · цей тиждень» / «11 трав · наступний тиждень»
+  // Лейбл: «Цей тиждень» (offset=0) АБО «Тиждень N» (N = ISO week-of-year)
   const label = document.getElementById('routine-day-label');
   if (label) {
-    const dateISO = _lastDateForDayKey(_routineDay);
-    const [, m, d] = dateISO.split('-');
-    const dayDate = `${parseInt(d)} ${monthShort(parseInt(m, 10) - 1).toLowerCase()}`;
-    const diffDays = Math.round((new Date(_todayISO()) - new Date(dateISO)) / (24*60*60*1000));
-    let dayPart;
-    if (diffDays === 0) dayPart = t('routine.day.today', 'сьогодні');
-    else if (diffDays === 1) dayPart = t('routine.day.yesterday', 'вчора');
-    else if (diffDays === 2) dayPart = t('routine.day.day_before', 'позавчора');
-    else if (diffDays === -1) dayPart = t('routine.day.tomorrow', 'завтра');
-    else if (diffDays === -2) dayPart = t('routine.day.day_after', 'післязавтра');
-    else dayPart = dayDate;
-    let weekPart = '';
-    if (_routineWeekOffset === 1) weekPart = t('routine.week.next', ' · наступний тиждень');
-    else if (_routineWeekOffset === -1) weekPart = t('routine.week.prev', ' · минулий тиждень');
-    else if (_routineWeekOffset > 1) weekPart = t('routine.week.future_n', ' · через {n} тижні', { n: _routineWeekOffset });
-    else if (_routineWeekOffset < -1) weekPart = t('routine.week.past_n', ' · {n} тижні тому', { n: -_routineWeekOffset });
-    label.textContent = dayPart + weekPart;
+    if (_routineWeekOffset === 0) {
+      label.textContent = t('routine.week.this', 'Цей тиждень');
+    } else {
+      const dateISO = _lastDateForDayKey(_routineDay);
+      const wk = _isoWeekNumber(new Date(dateISO));
+      label.textContent = t('routine.week.num', 'Тиждень {n}', { n: wk });
+    }
   }
+}
+
+// ISO 8601 week number (стандарт UA/EU). Понеділок — перший день тижня.
+// Тиждень N містить четвер тижня. Алгоритм Mr.Date з MDN.
+function _isoWeekNumber(date) {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  // Thursday у поточному тижні — це визначення ISO week.
+  d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
 }
 
 // QDIGl 04.05: для day-tab → дата ПОТОЧНОГО ТИЖНЯ (Пн-Нд від цього понеділка).
@@ -785,8 +788,7 @@ function _renderRoutineTimeline() {
 
   if (blocks.length === 0) {
     el.innerHTML = `<div style="text-align:center;padding:32px 0;color:rgba(30,16,64,0.3);font-size:14px">
-      ${t('calendar.routine.empty_title', 'Розпорядок порожній.')}<br>${t('calendar.routine.empty_hint', 'Натисни «+ Додати блок» або напиши в чат:')}<br>
-      <span style="color:rgba(234,88,12,0.6);font-weight:600">${t('calendar.routine.empty_example', '"Мій розклад: 7 підйом, 9 робота, 18 зал"')}</span>
+      ${t('calendar.routine.empty_title', 'Розпорядок порожній.')}<br>${t('calendar.routine.empty_hint_short', 'Натисни «+ Додати блок».')}
     </div>`;
     return;
   }
