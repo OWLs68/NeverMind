@@ -855,7 +855,7 @@ ${aiContext}`;
           });
           if (created) {
             if (currentTab === 'health') renderHealth();
-            const items = getInbox(); items.unshift({ id: Date.now() + 1, text: t('inbox.health.state_inbox', '🏥 Стан: {name}', { name: created.name }), category: 'note', ts: Date.now(), processed: true }); saveInbox(items); renderInbox();
+            const items = getInbox(); items.unshift({ id: generateUUID(), text: t('inbox.health.state_inbox', '🏥 Стан: {name}', { name: created.name }), category: 'note', ts: Date.now(), processed: true }); saveInbox(items); renderInbox();
             addInboxChatMsg('agent', t('inbox.health.card_created_redirect', '🏥 Створив картку "{name}" у Здоровʼї. Пройди коротке опитування там — 3 чіпи виставлять точний статус.', { name: created.name }));
             // Phase C: запуск інтерв'ю (записує у Health-чат + червона крапка над Health-кнопкою)
             setTimeout(() => { try { startHealthInterview(created); } catch(e) {} }, 300);
@@ -1447,7 +1447,7 @@ function processCompleteHabit(parsed, originalText) {
   renderHabits();
   // Зберігаємо в Inbox для історії
   const items = getInbox();
-  items.unshift({ id: Date.now(), text: originalText, category: 'habit', ts: Date.now(), processed: true });
+  items.unshift({ id: generateUUID(), text: originalText, category: 'habit', ts: Date.now(), processed: true });
   saveInbox(items);
   renderInbox();
   const msg = parsed.comment || (completed.length === 1
@@ -1486,7 +1486,7 @@ function processCompleteTask(parsed, originalText) {
   renderTasks();
   // Зберігаємо в Inbox для історії
   const items = getInbox();
-  items.unshift({ id: Date.now(), text: originalText, category: 'task', ts: Date.now(), processed: true });
+  items.unshift({ id: generateUUID(), text: originalText, category: 'task', ts: Date.now(), processed: true });
   saveInbox(items);
   renderInbox();
   const msg = parsed.comment || (completed.length === 1

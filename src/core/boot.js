@@ -684,6 +684,70 @@ function runMigrations() {
     }
   }
 
+  // v14 Projects UUID (myshu 11.05.2026 Architecture Refactor Сесія 3B-6):
+  // Project.id був Date.now(). Nested steps/decisions/metrics/resources/risks
+  // мають власні id — теж Date.now() з deduplication. ТIЛЬКИ top-level
+  // project.id мігруємо. Sub-entities — окремо у майбутньому коли стане
+  // блокером для Supabase (зараз не блокер).
+  if (!localStorage.getItem('nm_projects_uuid_migrated_v14')) {
+    try {
+      const projRaw = localStorage.getItem('nm_projects');
+      if (projRaw) {
+        const backupKey = createSelectiveBackup(['nm_projects'], 'pre-project-uuid-v14');
+        if (backupKey) console.log('[boot] v14 projects backup:', backupKey);
+        const projects = JSON.parse(projRaw);
+        if (Array.isArray(projects)) {
+          let migrated = 0;
+          projects.forEach(p => {
+            if (p && typeof p.id === 'number') {
+              p.legacy_id = p.id;
+              p.id = generateUUID();
+              migrated++;
+            }
+          });
+          if (migrated > 0) {
+            localStorage.setItem('nm_projects', JSON.stringify(projects));
+            console.log(`[boot] v14 migration: ${migrated} projects → UUID`);
+          }
+        }
+      }
+      localStorage.setItem('nm_projects_uuid_migrated_v14', '1');
+    } catch (e) {
+      console.error('[boot] v14 projects migration failed:', e);
+    }
+  }
+
+  // v15 Inbox cards UUID (myshu 11.05.2026 Architecture Refactor Сесія 3B-7):
+  // InboxItem.id був Date.now(). FK cross-refs (eventId, reminderId) уже
+  // мігровано у v10 і Сесії 3A. Тепер тільки top-level inbox.id.
+  if (!localStorage.getItem('nm_inbox_uuid_migrated_v15')) {
+    try {
+      const inboxRaw = localStorage.getItem('nm_inbox');
+      if (inboxRaw) {
+        const backupKey = createSelectiveBackup(['nm_inbox'], 'pre-inbox-uuid-v15');
+        if (backupKey) console.log('[boot] v15 inbox backup:', backupKey);
+        const items = JSON.parse(inboxRaw);
+        if (Array.isArray(items)) {
+          let migrated = 0;
+          items.forEach(it => {
+            if (it && typeof it.id === 'number') {
+              it.legacy_id = it.id;
+              it.id = generateUUID();
+              migrated++;
+            }
+          });
+          if (migrated > 0) {
+            localStorage.setItem('nm_inbox', JSON.stringify(items));
+            console.log(`[boot] v15 migration: ${migrated} inbox cards → UUID`);
+          }
+        }
+      }
+      localStorage.setItem('nm_inbox_uuid_migrated_v15', '1');
+    } catch (e) {
+      console.error('[boot] v15 inbox migration failed:', e);
+    }
+  }
+
   // v9 (03.05.2026 MIeXK Health AI-інтерв'ю): шкала статусів 3 → 6 значень.
   // Старе: active/controlled/done. Нове: acute/treatment/improving/remission/chronic/done.
   // Мапінг: active → treatment (нейтральне «активне лікування»), controlled → remission,
