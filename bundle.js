@@ -916,11 +916,11 @@
     const todayKey = DAY_KEYS[(/* @__PURE__ */ new Date()).getDay()];
     const todayISO2 = _todayISO();
     el.style.justifyContent = "space-between";
-    el.style.gap = "2px";
+    el.style.gap = "1px";
     el.style.alignItems = "center";
     el.style.overflow = "visible";
     el.style.flexWrap = "nowrap";
-    const arrowStyle = "width:28px;height:36px;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:600;color:rgba(30,16,64,0.45);cursor:pointer;border-radius:10px;-webkit-tap-highlight-color:transparent;flex-shrink:0;background:rgba(255,255,255,0.4)";
+    const arrowStyle = "width:24px;height:34px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:600;color:rgba(30,16,64,0.45);cursor:pointer;border-radius:8px;-webkit-tap-highlight-color:transparent;flex-shrink:0;background:rgba(255,255,255,0.4)";
     const prevBtn = `<div onclick="routineShiftWeek(-1)" style="${arrowStyle}" aria-label="${t("routine.aria.prev_week", "\u041C\u0438\u043D\u0443\u043B\u0438\u0439 \u0442\u0438\u0436\u0434\u0435\u043D\u044C")}">\u2039</div>`;
     const nextBtn = `<div onclick="routineShiftWeek(1)" style="${arrowStyle}" aria-label="${t("routine.aria.next_week", "\u041D\u0430\u0441\u0442\u0443\u043F\u043D\u0438\u0439 \u0442\u0438\u0436\u0434\u0435\u043D\u044C")}">\u203A</div>`;
     const daysHtml = ROUTINE_TAB_ORDER.map((key) => {
@@ -929,7 +929,7 @@
       const isToday = dateISO === todayISO2;
       const hasOwn = !!routine[key];
       const dayNum = parseInt(dateISO.split("-")[2], 10);
-      return `<div onclick="routineSelectDay('${key}')" style="padding:6px 8px;border-radius:11px;font-size:13px;font-weight:${isActive ? "800" : "600"};cursor:pointer;white-space:nowrap;min-width:36px;text-align:center;line-height:1.15;
+      return `<div onclick="routineSelectDay('${key}')" style="padding:6px 6px;border-radius:10px;font-size:12px;font-weight:${isActive ? "800" : "600"};cursor:pointer;white-space:nowrap;min-width:32px;text-align:center;line-height:1.15;
       background:${isActive ? "#ea580c" : "rgba(255,255,255,0.5)"};
       color:${isActive ? "white" : isToday ? "#ea580c" : "rgba(30,16,64,0.5)"};
       border:1.5px solid ${isActive ? "#ea580c" : isToday ? "rgba(234,88,12,0.3)" : "rgba(30,16,64,0.08)"};
@@ -939,7 +939,7 @@
       <div style="font-size:11px;font-weight:600;opacity:${isActive ? "0.9" : "0.55"};margin-top:1px">${dayNum}</div>
     </div>`;
     }).join("");
-    el.innerHTML = `${prevBtn}<div id="routine-day-row" style="display:flex;gap:4px;flex:1;justify-content:center;touch-action:pan-y">${daysHtml}</div>${nextBtn}`;
+    el.innerHTML = `${prevBtn}<div id="routine-day-row" style="display:flex;gap:2px;flex:1;justify-content:center;touch-action:pan-y;min-width:0">${daysHtml}</div>${nextBtn}`;
     const dayRow = document.getElementById("routine-day-row");
     if (dayRow && !dayRow._swipeWeekAttached) {
       let startX = 0, startY = 0, moved = false;
