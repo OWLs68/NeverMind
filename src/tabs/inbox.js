@@ -556,8 +556,11 @@ ${aiContext}`;
   if (elapsed < 800) await new Promise(r => setTimeout(r, 800 - elapsed));
 
   if (!msg) {
-    saveOffline(text);
-    addInboxChatMsg('agent', t('inbox.chat.saved', '✓ Збережено'));
+    // myshu 11.05 Architecture Refactor Сесія 1: НЕ silent saveOffline.
+    // Раніше: text зберігався як необроблена нотатка у nm_inbox + юзер бачив
+    // «✓ Збережено» — silent брехня. Тепер чесне повідомлення про мережний фейл.
+    addInboxChatMsg('agent', t('inbox.chat.network_fail',
+      '📡 Не вдалось дзвонити агенту. Перевір зв\'язок або повтори.'));
     aiLoading = false;
     btn.disabled = false;
     btn.innerHTML = SEND_SVG;
@@ -1043,13 +1046,24 @@ ${aiContext}`;
       const { text: replyText, chips } = _parseContentChips(msg.content);
       if (replyText) addInboxChatMsg('agent', replyText, chips);
     } else {
-      saveOffline(text);
-      addInboxChatMsg('agent', t('inbox.chat.saved', '✓ Збережено'));
+      // myshu 11.05 Architecture Refactor Сесія 1: AI повернув і без tool_calls,
+      // і без content — порожня відповідь. Раніше silent saveOffline + ✓ Збережено
+      // (тиха брехня — текст падав у Inbox як необроблена нотатка). Тепер чесне.
+      addInboxChatMsg('agent', t('inbox.chat.ai_empty',
+        'Не зрозумів запит. Спробуй переформулювати простіше — напр. «купив каву 50» або «нагадай завтра о 9».'));
     }
   } catch(e) {
     console.error('Tool call processing error:', e);
-    saveOffline(text);
-    addInboxChatMsg('agent', t('inbox.chat.saved', '✓ Збережено'));
+    // myshu 11.05 Сесія 1: помилка обробки tool_calls (зазвичай invalid JSON або
+    // невідомий tool name). Логуємо у nm_error_log для діагностики, юзеру —
+    // чесне повідомлення. БЕЗ silent saveOffline.
+    try {
+      const errLog = JSON.parse(localStorage.getItem('nm_error_log') || '[]');
+      errLog.unshift({ ts: Date.now(), where: 'inbox.sendToAI.tool_dispatch', msg: String(e?.message || e).slice(0, 200), text: text.slice(0, 100) });
+      localStorage.setItem('nm_error_log', JSON.stringify(errLog.slice(0, 50)));
+    } catch {}
+    addInboxChatMsg('agent', t('inbox.chat.error_processing',
+      '⚠️ Сталась помилка обробки. Перевір API ключ у Налаштуваннях або спробуй коротше.'));
   }
 
   // NpBmN 04.05: тригерим інтерв'ю-провідник (project interview / owl tips).
