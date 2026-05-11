@@ -29,10 +29,18 @@
 // повідомлень асистента — пропускає всі check-и (для випадків
 // false positive: інфраструктурні зміни в .claude/, документація тощо).
 //
+// 5) Правило backticks у template literal (myshu 11.05) — блокує push якщо у
+//    src/ai/prompts.js або src/owl/chips.js знайдено raw backtick всередині
+//    `export const X = `...`` блоку. Той самий клас бага що LfA6w `be6f708`
+//    (08.05) і dyhJu `8d4aef3` (11.05): backticks всередині template literal
+//    ламають esbuild parser → 18h CI fail. `node --check` НЕ ловить (валідний
+//    JS на токенах). Регекс-детектор працює без esbuild у node_modules.
+//
 // Створено: 29.04.2026 oknnM (третя автоматизація після уроку «декларативне
 // правило без автоматичного контролю»). Кандидати «правило 6» і «cleanup»
 // раніше тримались на дисципліні Claude — не працювало.
 // Розширено: 29.04.2026 SK6E2 (правило ротації SESSION_STATE).
+// Розширено: 11.05.2026 myshu (правило backticks у template literal).
 
 const fs = require('fs');
 const path = require('path');
@@ -94,6 +102,14 @@ const UNIVERSAL_BYPASS = /pre-push:\s*ok/i;
 
 const MAX_ACTIVE_SESSION_BLOCKS = 2;
 const SESSION_STATE_PATH = path.join(__dirname, '..', '..', '_ai-tools', 'SESSION_STATE.md');
+
+// Файли з `export const X = `...`` template literal, які двічі ловили
+// раз-у-три-дні build fail через backticks всередині (LfA6w 08.05 + dyhJu 11.05).
+// Якщо з'являться нові такі файли — додавати сюди.
+const TEMPLATE_BACKTICK_FILES = [
+  'src/ai/prompts.js',
+  'src/owl/chips.js',
+];
 
 // CACHE_NAME bump перевірка
 // Файли користувацького коду що впливають на PWA-кеш
@@ -192,6 +208,49 @@ function checkCacheNameBump(repoRoot) {
   } catch {
     return null; // Не блокуємо push при помилках самого хука
   }
+}
+
+// Лінійний сканер: входимо у template literal на `export const X = `,
+// рахуємо raw backticks у наступних рядках. Якщо у одному рядку 2+ backticks
+// (типовий патерн `word` всередині пояснення) — esbuild читає перший як
+// terminator → 'Expected ";" but found ...' → CI fail.
+// Edge case: backticks всередині ${...} expression — false positive, але у
+// поточному src/ таких немає (перевірено grep'ом перед написанням хука).
+function checkNestedBackticks(repoRoot) {
+  const issues = [];
+  for (const relPath of TEMPLATE_BACKTICK_FILES) {
+    const full = path.join(repoRoot, relPath);
+    if (!fs.existsSync(full)) continue;
+    const src = fs.readFileSync(full, 'utf8');
+    const lines = src.split('\n');
+    let inTemplate = false;
+    let openName = null;
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      if (!inTemplate) {
+        const m = line.match(/export\s+const\s+(\w+)\s*=\s*`/);
+        if (!m) continue;
+        inTemplate = true;
+        openName = m[1];
+        const afterOpen = line.slice(line.indexOf('`') + 1);
+        const ticks = (afterOpen.match(/(?<!\\)`/g) || []).length;
+        if (ticks > 0) inTemplate = false; // single-line literal closed
+      } else {
+        const ticks = (line.match(/(?<!\\)`/g) || []).length;
+        if (ticks === 0) continue;
+        if (ticks === 1) { inTemplate = false; continue; } // legitimate close
+        issues.push({
+          file: relPath,
+          line: i + 1,
+          name: openName,
+          ticks,
+          snippet: line.trim().slice(0, 110),
+        });
+        inTemplate = false;
+      }
+    }
+  }
+  return issues;
 }
 
 function countActiveSessionBlocks() {
@@ -296,6 +355,17 @@ process.stdin.on('end', () => {
         `Service Worker (фоновий скрипт PWA) віддасть закешовані старі файли. ` +
         `Виправ: оновити CACHE_NAME у sw.js (формат: nm-YYYYMMDD-HHMM, команда date). ` +
         `Якщо це не торкається користувацького коду (коментарі/console.log) — додай фразу «pre-push: ok».`
+      );
+    }
+
+    // Правило backticks у template literal (myshu 11.05)
+    const backtickIssues = checkNestedBackticks(repoRoot);
+    if (backtickIssues.length > 0) {
+      const list = backtickIssues.map(b =>
+        `   • ${b.file}:${b.line} (${b.name}, ${b.ticks} backticks): «${b.snippet}»`
+      ).join('\n');
+      issues.push(
+        `🚨 BACKTICKS У TEMPLATE LITERAL: знайдено raw backticks всередині export const блоку — esbuild прочитає перший як terminator → 'Expected ";"' → 18h CI fail (LfA6w 08.05 → dyhJu 11.05, той самий клас бага 3-й раз).\n${list}\nФікс: прибери backticks з тексту або заескейпи \\\`. Якщо це false positive (легальна вкладена template у \${...}) — додай фразу «pre-push: ok».`
       );
     }
 
