@@ -89,6 +89,8 @@
 | Файл | Що робить |
 |------|-----------|
 | `src/data/notes-categories.js` | **Канонічний довідник 19 категорій нотаток** (LW3j8 01.05). Англ ID + назва через `t()` для локалізації + `findCategoryByFolder(name)` з нормалізацією апострофів (legacy `Здоровя` без апострофа теж знаходиться). Замінив дві старі мапи з українськими ключами у `notes.js`. Підготовка до перекладу на польську/німецьку. Споживачі: `getFolderIcon`, `getFolderColor`, `_autoIconKey` у `notes.js`. |
+| `src/data/ua-time-parser.js` | **Pure-function парсер часових виразів** (64CXo 09.05, розширено dyhJu 11.05). Експорт: `parseUaTimeOffset(text)` (offset у днях ±N для «вчора»/«через тиждень»), `parseAbsoluteDate(text)` («15 травня»), `parseUaWeekday(text, mode)` («у понеділок»), `resolveDateFromText(text, base, mode)` (комбо вище), `parseUaTimeOfDay(text, base)` (HH:MM з «зранку»/«опівдні»/«через годину»/«о 7 вечора»). 25/25 smoke-тестів. Споживачі: set_reminder/create_event/save_finance handlers у `habits.js`. Готовність до Supabase Edge Function — без localStorage. |
+| `src/data/dispatcher-guards.js` | **6 pure-function guards для tool_calls** (dyhJu G4 11.05). Експорт: `dropEventOnMomentKeyword`, `convertPastEventToMoment` (PAST_INDICATORS), `convertNoteToFinance` (MONEY_RE → save_finance при сумі з валютою — B-166), `dropTaskOnFinance` (dedupe), `dropTaskOnComplete` (dedupe), `dropEventOnMoment` (dedupe) + `applyAllGuards` convenience. Викликаються у `tool-dispatcher.js dispatchChatToolCalls` (7 чатів) і `inbox.js sendToAI` (8-й чат). Реалізує принцип «8 чатів = один мозок» на рівні guards. 16/16 smoke. |
 
 ---
 

@@ -8,7 +8,107 @@
 
 ---
 
-## 🔧 Поточна сесія 64CXo — Bridge-архітектура: парсер + Strict + nested folders (09-10.05.2026)
+## 🔧 Поточна сесія dyhJu — Bridge G2+G4 + 5 багів + Calendar/Routine UI (11.05.2026)
+
+### Зроблено
+
+#### A. Інфраструктурні автоматизації (1 коміт)
+
+1. **`pre-edit-read-check.js` PreToolUse hook** (`8c75950`) — блокує Edit якщо файл НЕ був Read'нутий у сесії. Транскрипт-based (як `check-estimate-without-read`), без окремого state-файла. Bypass `read-bypass: ok`. 6/6 smoke (Read→Edit pass, no-Read→Edit block, Write створив→Edit pass, Bash cat→Edit pass, Write→pass, bypass→pass з warning). Закриває правило 3 CLAUDE.md «Читай код перед змінами» — той самий патерн що i18n (m4Q1o) і pre-push (oknnM): декларативне правило без хука розкладається.
+
+#### B. B-165 delete_event 3-сховищний cleanup (1 коміт)
+
+2. **B-165 закрито** (`fbf797f`) — `delete_event` (habits.js:1415-1450) чистив тільки `nm_events`, не `nm_inbox` → картка «Подія» лишалась зомбі. + `saveEvents()` disp `detail:'events'` (множ), `DETAIL_TO_KEY` мала `'event'` (одн) → silent cross-tab failure (B-130 для events). **Фікс:** `eventId` field у 4 точки створення event-картки + 3-сховищний cleanup у handler + `'events': 'nm_events'` у мапу.
+
+#### C. G4 dispatcher-guards.js — Системний фікс «8 чатів = один мозок» (2 коміти)
+
+3. **G4 Phase 1** (`5f176c1`) — `src/data/dispatcher-guards.js` з 6 pure functions: `dropEventOnMomentKeyword`, `convertPastEventToMoment`, `convertNoteToFinance` (B-166 НОВИЙ MONEY_RE), `dropTaskOnFinance`, `dropTaskOnComplete`, `dropEventOnMoment` + `applyAllGuards` convenience. 16/16 smoke-тестів (включно з критичним `вчора купив хліб 3 євро` → save_finance, не save_moment).
+4. **G4 Phase 2-4 + B-166** (`319004b`) — інтеграція: `tool-dispatcher.js dispatchChatToolCalls` викликає `applyAllGuards` на початку (7 чатів). `inbox.js` 67 рядків inline guards → 1 виклик helper (8-й чат). `prompts.js КРОК 5` додано «з сумою → save_finance». **B-166 закрито системно** — раніше guards жили inline тільки в Inbox, інші 7 чатів — нічого. Тепер 1 модуль pure functions → 2 dispatch-точки → 8 чатів однаково.
+
+#### D. B-167 me-chat history (1 коміт)
+
+5. **B-167 закрито** (`d41f060`) — `me.js:75` пушив `meChatHistory.push({role:'assistant', content: msg.content})` БЕЗ summary tool_calls. AI бачив порожній `assistant: ''` → повторював дію (юзер «Купив хліб 3 євро» → save_finance, потім «Вода 2 євро» → batch 2× save_finance з повтором хліба). **Системний фікс:** новий helper `buildAssistantHistoryEntry(msg)` у `core.js` + рефакторинг `inbox.js:568-580` на той самий helper. Інші 6 чатів автоматично мають summary через `addX('agent', text)` handler — діагностика спочатку переоцінила масштаб (3 чати → насправді тільки me.js).
+
+#### E. G2 parseUaTimeOfDay (2 коміти)
+
+6. **G2 закрито** (`8d4aef3` + `5822f5d9` build fix) — `parseUaTimeOfDay(text, baseDate)` у `src/data/ua-time-parser.js`. 25/25 smoke: абстрактні (зранку=08:00, опівдні=12:00, вдень=13:00, після обіду=14:00, ввечері=18:00, перед сном=22:00, опівночі=00:00), конкретні («о 9-30», «о 7 вечора»→19:00), відносні (через годину, через пів години, через 30 хв). Інтегровано у `set_reminder` handler `habits.js:1611` як fallback коли AI передав `time=null`. Конфлікт у `prompts.js` (REMINDER_RULES:265 декларативна МАПА vs tool:530 «передавай null») усунено.
+
+#### F. B-168 + B-169 (1 коміт)
+
+7. **B-168 закрито** (`ec4e78c`) — `habits.js:1569` дивна логіка `comment !== originalText` пропускала коментар у Inbox-картці коли AI ставив `fin_comment === originalText`. Юзер бачив `-₴5 · Їжа` без «Суп 5 євро». **Фікс:** прибрано `!== originalText` обмеження.
+8. **B-169 закрито** (`ec4e78c`) — «нагадай зранку» о 20:00 → reminder на сьогодні 08:00 (у минулому). `set_reminder` handler не перевіряв timestamp. **Фікс:** guard «date=today + time < now → +1 день». Універсально для всіх абстрактних часів.
+
+#### G. Routine UX (4 коміти)
+
+9. **Week swipe + дати + ‹›** (`ca812be`) — навігація між тижнями. `_routineWeekOffset` state, `routineShiftWeek(±1)`, swipe handler на day-row (поріг 50px, dx>dy*1.5), кнопки `‹ ›`. Day-tabs показують дати під літерами («Пн 11», «Вт 12»...). Header «Цей тиждень» (offset=0) або «Тиждень N» (ISO 8601 week-of-year).
+10. **UI правки** (`5afaa47`) — title nowrap, стрілки не обрізані (overflow:visible, arrow 32→28px, gap 4→2px), прибрано empty hint «Мій розклад: 7 підйом...».
+11. **Drum-picker для часу** (`8ab9cbb`) — заміна `<input type="time">` на стилізований барабан. Нова модалка `#routine-time-picker-modal` у HTML (за зразком health-dt-picker). 24 годин × 12 значень крок 5хв. Helper `_initDrumCol` переюз з calendar.js.
+12. **Min-height** (`ad58450`) — overflow контейнер min-height:420px для фіксованої висоти. ЗАМIНЕНО на `min-height:70vh` (`8a96a58`).
+
+#### H. Calendar UI (4 коміти)
+
+13. **Свайп місяців + 6 рядів** (`6d77562`) — touch на calendar-grid: палець вліво → next, вправо → prev. Фіксована висота сітки через trailing empty cells до 42 (6×7).
+14. **Aspect-ratio trailing** (`ad58450`) — попередній фікс не спрацював бо `<div></div>` без content має height:0. Додано `aspect-ratio:1` на trailing empty → справжня фіксація 6 рядів.
+15. **min-height:70vh** (`8a96a58`) — спроба зафіксувати верх через flex-end + min-height. **Не спрацювало** на iPhone — flex-end приклеює до низу.
+16. **position:absolute top:10vh** (`9342ed7b` + `1a5e5810`) — радикальний перепис: panel `position:absolute; top:10vh; left/right:16px; margin:0 auto; max-width:480px`. Modal wrapper без flex. **Працює надійно** — verifield Романом «чотко працює».
+
+### Обговорено (без виконання)
+
+- **Pre-edit-read-check** — продовження автоматизації декларативних правил (та сама ідея що i18n білд-fail, pre-push hook). Roman: «фіксити не латками а системно».
+- **G4 системно** — Roman: «У нас один мозок. Всі чати мають працювати однаково добре». Замість латки на 1 чат → інфраструктура для 8.
+- **B-167 діагностика** — спочатку оголосив 3 уразливі чати (me/notes/tasks), перевірка показала 1 (me.js). Урок «🔍 ГІПОТЕЗА АГЕНТА ≠ ФАКТ» у дії — на собі.
+- **Position:absolute як остання надія** — після того як flex-start + padding-top не дав ефект (Роман тричі сказав «верх ходить»).
+
+### Ключові рішення
+
+- **G4 з SESSION_STATE Bridge-плану — пріоритет №1** замість лоскута для B-166. Roman: «фіксити не латками а системно».
+- **Pure functions у `src/data/`** — переїдуть у Supabase Edge Function без переписування (правило 12 CLAUDE.md).
+- **buildAssistantHistoryEntry helper** замість дублювання у 2 файлах (inbox + me).
+- **ISO 8601 week-of-year** — стандарт UA/EU для header «Тиждень N» (понеділок-перший).
+- **position:absolute** для модалок з фіксованим верхом — flex centering не дав ефекту на iPhone Safari PWA.
+
+### Інциденти
+
+- **Build fail 18h auto-merge через backticks у REMINDER_RULES** (`8d4aef3` G2 коміт). Внутрішні \`parseUaTimeOfDay\` всередині template literal `REMINDER_RULES = \`...\`` ламали esbuild. `node --check` не ловить — потрібен `node build.js`. **ТОЙ САМИЙ КЛАС БАГА що LfA6w `be6f708` (08.05)** — урок записаний 3 дні тому, повторено. Знайдено через `npm install` + `node build.js` локально. Фікс `5822f5d9` (прибрав внутрішні backticks).
+- **Hook pre-edit-read-check спрацював на собі** — двічі під час сесії заблокував Edit на inbox.js + sw.js. Зробив Read, продовжив. Підтверджена цінність автоматизації.
+- **flex-start + padding-top не дав ефекту** на iPhone — пройшов 2 ітерації перш ніж переписати на position:absolute.
+
+### Конфлікти/суперечності
+
+- **Календар: 3 ітерації фіксації верху** — (1) `min-height:70vh` + flex-end (низ фіксований, верх ходить — навпаки); (2) `flex-start + padding-top:12vh` (теоретично правильно, на iPhone не спрацювало); (3) `position:absolute top:10vh` (працює). Корінь — flex centering на iOS Safari непередбачуваний для bottom sheet.
+- **B-167 переоцінка масштабу** — я спочатку оголосив 3 уразливі чати, потім перевірка через grep показала що 6 з 7 не-Inbox чатів пушать у history через `addX('agent', text)` handler який сам кладе text. Тільки me.js push'ить directly. Поправив діагностику ВІДКРИТО — урок «🔍 ГІПОТЕЗА АГЕНТА ≠ ФАКТ».
+- **Backticks урок не використаний** — записав у lessons.md 3 дні тому, повторив. Серйозний промах.
+
+### Метрики
+
+- Гілка: `claude/start-session-dyhJu`
+- Коміти: ~17 (`8c75950` → `1a5e5810`)
+- Версії: v813 → v821+
+- CACHE_NAME: `nm-20260510-1352` → `nm-20260511-1235` (~12 bumps)
+- Закриті баги: **B-165, B-166, B-167, B-168, B-169** (5)
+- Закриті ROADMAP блоки: **G2 parseUaTimeOfDay, G4 dispatcher-guards** (з Bridge-плану 64CXo)
+- Нові файли: `src/data/dispatcher-guards.js`, `.claude/hooks/pre-edit-read-check.js`
+- Розширені: `src/data/ua-time-parser.js` (parseUaTimeOfDay)
+- Build fail incidents: 1 (backticks → 18h CI fail)
+
+### Спостереження Claude
+
+- **Роман на iPhone цілий день** — швидкий smoke-test тестер. Кожний фікс перевіряв одразу після деплою. Сесія розтягнулась на 2 дні (10-11.05) через його real-time фідбек.
+- **Жорсткий сигнал на повторення помилок** — «🤦» тричі коли модалка не фіксувалась. Видимий frustration. Я повинен реагувати глибше.
+- **«Можеш коли хочеш)))»** — після всього денного фронту — спокій. Завершення сесії на позитиві.
+- **Системне мислення Романа** — «У нас один мозок. Всі чати мають працювати однаково добре». Це фундаментальна цінність архітектури NeverMind, повторив за день кілька разів.
+
+### Відкладене
+
+- **B-pruning дублів** «Був гарний ранок 18:26 ×2» — побачив на скріні 64CXo smoke. Не верифіковано чи повторюється.
+- **G3 corrections log** (`nm_agent_corrections`) — наступний Bridge-блок.
+- **G5 Embeddings classifier** — велика окрема сесія (3-5 днів).
+- **G6 Strict mode для решти 26 tools** — поступово.
+- **Розпорядок per-date** (Блок 3 ROADMAP) — 2-3 сесії.
+
+---
+
+## 🔧 Сесія 64CXo — Bridge-архітектура: парсер + Strict + nested folders (09-10.05.2026)
 
 ### Зроблено (величезна сесія, 30+ комітів v780→v806)
 
@@ -61,7 +161,12 @@
 
 ---
 
-## 🔧 Сесія PJi7l — Велика реформа промптів + UX (08.05.2026)
+## 🔧 Сесія PJi7l (08.05.2026) — архівовано dyhJu 11.05 → [archive](../_archive/SESSION_STATE_archive.md#-сесія-pji7l--велика-реформа-промптів--ux-08052026)
+
+(Велика реформа промптів decision-tree + UX-фікси + закрито B-158. 32 коміти, v757→v780+.)
+
+<details>
+<summary>Архівний блок (розгорни)</summary>
 
 ### Зроблено
 
@@ -170,6 +275,8 @@
 - **Сесія 3 — `notes.js` JSON-dialect → tool calling** — архітектурний рефакторинг.
 - **Архітектура «табло одне на всі вкладки»** — Роман підняв питання. Окрема велика тема.
 
+</details>
+
 ---
 
 ## 🔧 Сесія LfA6w day2 (07-08.05.2026) — архівовано 64CXo 10.05 → [archive](../_archive/SESSION_STATE_archive.md#-сесія-lfa6w-day2--decision-tree-промпти--subcategory--контекстні-чіпи-07-08052026)
@@ -216,9 +323,22 @@
 
 ## ⚠️ ДЛЯ НОВОГО ЧАТУ — найважливіше
 
-**🚀 ПРІОРИТЕТ #1 (64CXo 10.05): Bridge-стратегія продовження — Phases #3, #4, #5 з Gemini-плану.**
+**🚀 ПРІОРИТЕТ #1 (dyhJu 11.05): Bridge-стратегія продовження G3+G5+G6.**
 
-З 5 фаз Bridge-плану зроблено 2 (Strict mode 5 tools + ua-time-parser інтегрований). Лишилось:
+З 5 фаз Bridge-плану закрито 4: Strict mode 5 tools, ua-time-parser (абсолютні дати + дні тижня + parseUaTimeOfDay), G4 dispatcher-guards.js. Лишилось:
+
+**🚀 ПРІОРИТЕТ #2 (dyhJu 11.05 smoke-test): B-pruning дублів** «Був гарний ранок 18:26 ×2» — побачив на скріні 64CXo smoke. Не верифіковано чи повторюється. Гру event-dedupe у `inbox.js` create_event handler — можливо AI batch tool_calls без guard.
+
+**🚀 ПРІОРИТЕТ #3 (64CXo 10.05): "Запиши момент" content text каже «Подію додано»** — навіть коли save_moment виконано. Корінь у промпті — треба узгодити content text у самому handler add_moment або заборонити AI у CHIP_PROMPT_RULES писати «Подію додано» коли tool=save_moment.
+
+**🚨 УРОК dyhJu — backticks у template literal ламають esbuild:**
+Раніше записаний урок з LfA6w `be6f708` (08.05) — повторив 11.05 у `8d4aef3` G2. Build fail 18h CI auto-merge. `node --check` НЕ ловить, ловить тільки `node build.js`. **Якщо правиш `prompts.js` REMINDER_RULES / CHIP_PROMPT_RULES / будь-який template literal — запусти `npm install && node build.js` локально ПЕРЕД pushем.** Урок треба перетворити в автоматизацію (pre-push hook: якщо diff у prompts.js → форсувати node build.js).
+
+**🚀 ПРІОРИТЕТ #3 (старий): Розпорядок дня — повний редизайн.** Блок 3 ROADMAP. Storage `nm_routine` per-date + auto-fill блоків при створенні задачі/події з часом + day-tabs дати-вкладки. Обсяг 2-3 сесії.
+
+---
+
+**📋 Bridge-план статус** (вихідно з 64CXo):
 
 **G2 ЗАКРИТО (dyhJu 10.05):** `parseUaTimeOfDay` додано у `src/data/ua-time-parser.js`. Покриття 25/25 smoke-тестів:
 - Абстрактні: зранку/вранці→08:00, опівдні→12:00, вдень/обід→13:00, після обіду→14:00, ввечері→18:00, пізно ввечері→21:00, перед сном→22:00, опівночі/вночі→00:00

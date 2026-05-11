@@ -1,5 +1,77 @@
 # SESSION_STATE — архів попередніх сесій
 
+## 🔧 Сесія PJi7l — Велика реформа промптів + UX (08.05.2026)
+
+### Зроблено
+
+#### A. Хвости LfA6w (початок сесії)
+
+1. **2 уроки у `lessons.md`** (TODO з LfA6w day2):
+   - «Після зміни коду» — `node --check недостатньо для template literal у prompts.js`. Кейс LfA6w `be6f708` коштував 4 коміти CI auto-merge fail.
+   - «Council 5 агентів» — після рефакторингу промптів обов'язково Council 3 агенти на регресії, не самотест.
+2. **B-158 закрито** — `src/tabs/health.js:113` + `:1524` уніфіковано `Date.now() + Math.random()*1000` як решта 7 точок.
+
+#### B. Сесія 1 — Decision-tree рефакторинг промптів (8 фаз, 14 комітів `d57688a` → `5c2ab61`)
+
+3. **Фаза 1** (`d57688a`) — `INBOX_SYSTEM_PROMPT` cleanup: видалено список 16 інфінітивів КРОК 6, список «бензин/кава/таксі» КРОК 3, дубль ЗДОРОВ'Я + TASK/EVENT, м'яке правило memory_fact, декорація ⚠️🚨❌. Розмір 170 → 80 рядків.
+4. **Фаза 2** (`f7c6176`) — explicit-only memory_fact у tool description.
+5. **Фаза 3** (`6fa3cad`) — `chips.js`: видалено закриті списки слів (амбівалентні товари, бізнес-іменники, fast-path категорії).
+6. **Фаза 4** (`1ae4ada`) — `ROUTINE_RULES` жорсткіше: save_routine ТIЛЬКИ за командою «додай в розпорядок ...».
+7. **Фаза 5** (`fea8f14`) — `NEVERMIND_LOGIC.md` секція «Один мозок» доповнено «поширюється на промпти».
+8. **Регресії після Сесії 1** (`7cbedc7` BARE_NOUN_RE без пробілу, `5c2ab61` КРОК 6 без TODO-стилю).
+
+#### C. Council 5 агентів — діагностика регресій (5 фіксів)
+
+9. **Фікс A — пам'ять діалогу** (`63e9394` `inbox.js:565`) — записуємо `tool_calls` summary у history.
+10. **Фікс B — чіпи ✔️ у proactive** (`573387f` `proactive.js:309-313`) — заборона копіювати назву задачі в інфінітиві.
+11. **Фікс C — wipe board** (`756813a` `boot.js:310`) — `clearAllData` тепер видаляє `nm_owl_board_unified` + `nm_chip_payloads` + `nm_owl_board_seen`.
+12. **Фікс D — brain-pulse cd-bucket** (`3b6de17` `inbox-board.js:_FOLLOWUP_TRIGGER_TYPE`) — `'brain-pulse': 'concern'`.
+13. **Сесія 2 — BASE_CHAT_RULES** (`e6c54b3`) — єдиний фундамент для tab-чатів (Evening/Projects/Finance/Health).
+
+#### D. UX-фікси (4 коміти + 1 revert)
+
+14. **Перемикач Задачі/Звички** (`4f622ea`) — drum-style multi-layer inset shadows.
+15. **API ключ збереження** (`0321870` + `6ac79a5` + `b300a9a`) — dispatch `nm-data-changed` після setItem + окрема кнопка «Зберегти ключ».
+16. **Іконки календар+розпорядок** (`e3bab93` → `cf0b5db`, 4 ітерації) — об'єднано у один широкий блок 120px.
+
+#### E. Контекст AI — empty-state сигнали (3 коміти)
+
+17. **Звички 0** (`0a01ed9` `core.js:170`) — «Звичок поки не створено».
+18. **Активні задачі 0** (`b319b9e` `core.js:96`) — аналогічно для tasks.
+19. **Inbox-board контекст** (`d43e6ad` `proactive.js:323`) — окремий `_getInboxBoardContext`.
+20. **Board cache migration PJi7l** (`3e39998` + `d43e6ad` v2) — boot.js одноразова очистка.
+
+#### F. Видалено клас «амбівалентні фінанси» (3 коміти)
+
+21. **`f0f09c7` → `bd89298` (revert)** — пробував жорсткий «не давай варіанти» → відкат.
+22. **`2fa0740`** — видалено блок «АМБІВАЛЕНТНІ ФІНАНСИ» з CHIP_PROMPT_RULES.
+23. **`ba745fc`** — переписано КРОК 3 у INBOX_SYSTEM_PROMPT: «Сума + іменник → save_finance ОДНОЗНАЧНО».
+24. **`7e9ea7b`** — `subcategory` description: «ЗОБОВ'ЯЗАНИЙ» → «ОПЦІЙНЕ + ніколи не питай юзера».
+
+### Ключові рішення
+
+- **«Найгеніальніше = найпростіше»** — видалили 5+ закритих списків слів (GPT R3 підтвердив).
+- **«Легше навчити юзера ніж AI вгадувати»** — для save_routine, save_memory_fact, save_finance.
+- **BASE_CHAT_RULES як архітектура** — спільна логіка для всіх 4 tab-чатів через єдиний блок інжекту.
+- **Tool description «ЗОБОВ'ЯЗАНИЙ» = hard constraint** — «ОПЦІЙНЕ» + «не питай юзера» — кращий патерн.
+
+### Інциденти
+
+- **`f0f09c7` → `bd89298`** — `git revert` мого жорсткого фіксу chips.js за вимогою юзера.
+- **AI пише варіанти текстом замість JSON-чіпів** — корінь у `subcategory` «ЗОБОВ'ЯЗАНИЙ» (prompt-engineer-auditor агент знайшов).
+- **Stale board після wipe** — Council 4 агенти знайшли 2 коріні: `clearAllData` не чистив `nm_owl_board_unified` + `_migrateOnce()` flag.
+
+### Метрики
+
+- Гілка: `claude/start-session-PJi7l`
+- Коміти: ~32 (з `d57688a` → `7e9ea7b`)
+- Версії: v757 → v780+
+- Закриті баги: B-158
+- Council Sonnet агенти: 6 запусків
+- Раунди з зовнішніми моделями: 4 з GPT + 1 з Gemini
+
+---
+
 ## 🔧 Сесія MPVly-day2 — silent-bug-scout 4-pack + i18n 110 + Аналітика redesign + Council 5 агентів (06.05.2026)
 
 ### Зроблено
