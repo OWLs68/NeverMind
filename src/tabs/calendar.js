@@ -726,12 +726,14 @@ function _renderRoutineDayTabs() {
   // Свайп left на day-row → next тиждень, right → prev.
   // Container не повинен overflow (panel padding:0 20px + container width 100%).
   el.style.justifyContent = 'space-between';
-  el.style.gap = '2px';
+  el.style.gap = '1px';
   el.style.alignItems = 'center';
   el.style.overflow = 'visible'; // НЕ overflow-x:auto — стрілки мають бути видимі
   el.style.flexWrap = 'nowrap';
   // Стрілки ‹ › — компактні, з touch-feedback. flex-shrink:0 щоб не стискались.
-  const arrowStyle = 'width:28px;height:36px;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:600;color:rgba(30,16,64,0.45);cursor:pointer;border-radius:10px;-webkit-tap-highlight-color:transparent;flex-shrink:0;background:rgba(255,255,255,0.4)';
+  // myshu 11.05: arrows 28→24px + min-width cells 36→32 + gap 4→2 — щоб 7 днів
+  // + 2 стрілки вмістились у вузький iPhone-viewport без horizontal overflow.
+  const arrowStyle = 'width:24px;height:34px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:600;color:rgba(30,16,64,0.45);cursor:pointer;border-radius:8px;-webkit-tap-highlight-color:transparent;flex-shrink:0;background:rgba(255,255,255,0.4)';
   const prevBtn = `<div onclick="routineShiftWeek(-1)" style="${arrowStyle}" aria-label="${t('routine.aria.prev_week', 'Минулий тиждень')}">‹</div>`;
   const nextBtn = `<div onclick="routineShiftWeek(1)" style="${arrowStyle}" aria-label="${t('routine.aria.next_week', 'Наступний тиждень')}">›</div>`;
   // Дні зі своїми датами (з урахуванням _routineWeekOffset)
@@ -741,7 +743,7 @@ function _renderRoutineDayTabs() {
     const isToday = dateISO === todayISO;
     const hasOwn = !!routine[key];
     const dayNum = parseInt(dateISO.split('-')[2], 10);
-    return `<div onclick="routineSelectDay('${key}')" style="padding:6px 8px;border-radius:11px;font-size:13px;font-weight:${isActive ? '800' : '600'};cursor:pointer;white-space:nowrap;min-width:36px;text-align:center;line-height:1.15;
+    return `<div onclick="routineSelectDay('${key}')" style="padding:6px 6px;border-radius:10px;font-size:12px;font-weight:${isActive ? '800' : '600'};cursor:pointer;white-space:nowrap;min-width:32px;text-align:center;line-height:1.15;
       background:${isActive ? '#ea580c' : 'rgba(255,255,255,0.5)'};
       color:${isActive ? 'white' : isToday ? '#ea580c' : 'rgba(30,16,64,0.5)'};
       border:1.5px solid ${isActive ? '#ea580c' : isToday ? 'rgba(234,88,12,0.3)' : 'rgba(30,16,64,0.08)'};
@@ -751,7 +753,7 @@ function _renderRoutineDayTabs() {
       <div style="font-size:11px;font-weight:600;opacity:${isActive ? '0.9' : '0.55'};margin-top:1px">${dayNum}</div>
     </div>`;
   }).join('');
-  el.innerHTML = `${prevBtn}<div id="routine-day-row" style="display:flex;gap:4px;flex:1;justify-content:center;touch-action:pan-y">${daysHtml}</div>${nextBtn}`;
+  el.innerHTML = `${prevBtn}<div id="routine-day-row" style="display:flex;gap:2px;flex:1;justify-content:center;touch-action:pan-y;min-width:0">${daysHtml}</div>${nextBtn}`;
 
   // Swipe handler на day-row: палець вліво → наступний тиждень, вправо → минулий
   // dx>50px поріг. touch-action:pan-y дозволяє вертикальний скрол модалки.
