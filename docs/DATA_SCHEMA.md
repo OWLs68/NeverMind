@@ -1,5 +1,12 @@
 # NeverMind — DATA_SCHEMA
 
+> ⚠️ **СТАТУС (myshu 11.05.2026):** документ ЧАСТКОВО ЗАСТАРIЛИЙ після v8 UUID-міграції Tasks + appearance of `nm_action_log`/`nm_chip_payloads`/`nm_device_id`. **Актуальне джерело плану рефактору:** [`docs/ARCHITECTURE_REFACTOR.md`](ARCHITECTURE_REFACTOR.md). Цей файл оновлюється у Сесії 8 (UUID міграція решти 9 entity types + nm_habit_log2 ISO + user_id placeholder).
+>
+> **Зокрема застаріло:**
+> - `Task.id` — вже UUID (v8 migration, не `Date.now()`)
+> - Список ключів пропускає: `nm_action_log`, `nm_chip_payloads`, `nm_chip_stats`, `nm_device_id`, `nm_reasoning_log`, `nm_tool_filter_log`, `nm_intent_router_log`
+> - Розділи «Що робимо ЗАРАЗ» / «Робимо вранці разом з Романом» описують вже завершені кроки
+>
 > **Створено:** нічна сесія qG4fj 25.04.2026 (Підсесія 1 стандартизацій перед Supabase, Фаза 1 — інвентаризація без коду).
 >
 > **Мета:** єдине джерело правди про структури даних. Зараз — щоб бачити різнобій. Потім — щоб мігрувати на Supabase без втрат.

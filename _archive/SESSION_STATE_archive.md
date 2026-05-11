@@ -2979,3 +2979,52 @@ Claude підготував питання для другої думки про
 
 ---
 
+
+## 🔧 Сесія 64CXo — Bridge-архітектура: парсер + Strict + nested folders (09-10.05.2026)
+
+### Зроблено (величезна сесія, 30+ комітів v780→v806)
+
+**A. Кластер «крок vs задача» (B-160..B-164):**
+- B-160 `getAIContext` показує назви активних кроків («активні: перець, цибуля»)
+- B-161 `complete_step` як справжній tool (раніше тільки text-JSON у Tasks)
+- B-162 `add_step` дедуп
+- B-163 `merge_tasks` новий tool (замість add_step+delete_task на «обʼєднай»)
+- B-164 уніфікація 3 complete_task handlers (закриває кроки скрізь)
+
+**B. Council 5 агентів — повний аудит (28+ знахідок):**
+- localStorage: 1 критичний (profile-builder читав `nm_habit_log` замість `nm_habit_log2` → AI бачив порожні звички)
+- AI промпти: подвійний інжект REMINDER+ROUTINE, dead rules, ТИХА ВІДПОВIДЬ суперечність
+- Дублі коду: `\n→<br>` тільки у 3 з 8 add*ChatMsg, showUndoToast() без аргументів TypeError
+- Залежності: utils.js→tabs/inbox.js circular
+- DOM/UI: ID mismatch fin-budget-modal, MutationObserver leaks
+3 знахідки агентів **відкинуто** після верифікації (REMINDER+ROUTINE дубль через UI_TOOLS_RULES — НЕПРАВДА; t-shadowing — false alarm; ТИХА vs VERIFY — самовизначене).
+
+**C. Чекпоінти A-D — Notes nested folders «Щоденник/дейлі»:**
+- Phase A — `formatDailyFolderName` + `findOrCreateDailyFolder` helpers
+- Phase B — hook у `saveMoments` (новий момент → дубль у дейлі-папку «Субота, 9 травня 2026»)
+- Phase C — UI nested 2 рівні (drill-down, recursive swipe-delete)
+- Phase D — `getNotesContext` з ascii-tree + `delete_folder` recursive
+
+**D. Bridge-стратегія (3 раунди Gemini консультацій):**
+- Phase 1.1 — Strict OpenAI mode для 5 топ-tools (save_moment, create_event, set_reminder, save_task, complete_task) з `nullable + required`
+- Phase 1.2a — PAST_INDICATORS guard у inbox.js: конверсія create_event → save_moment коли минулий час
+- Phase 2 — `src/data/ua-time-parser.js` розширено: абсолютні дати «15 травня», дні тижня «у понеділок» (mode='past'/'future')
+- Phase 3 — інтеграція parser у `_resolveFinanceDate`, `create_event` handler, `set_reminder` handler
+
+**E. Правило 12 у CLAUDE.md:** «Перш ніж лоскотити промпт — питай: це детерміноване чи природна мова?» Підтверджений кейс: 3 раунди promptфіксів для «вчора → дейлі-папка» провалилися, поки не написали `ua-time-parser.js` (12/12 тестів пройшло одразу).
+
+### Ключові висновки Gemini Bridge-стратегії
+- **НЕ йти на Supabase зараз** — 3-4 тижні без видимого прогресу
+- **Strict JSON Schema** — ROI ⭐⭐⭐⭐⭐, 0% migration debt
+- **Embeddings classifier на клієнті** ~1.2 МБ JSON, потім swap на pgvector
+- **Pure functions для guards** у `src/data/` — переїде у Edge Functions без переписування
+- **Multi-Agent Router — overkill** для single-user PWA
+
+### Метрики
+- Гілка: `claude/start-session-64CXo`
+- Коміти: ~35 (88df792 → 62aa67a)
+- Версії: v780 → v806
+- Council: 12 запусків (5 архітектура nested + 4 аудит детермінованих + 3 regression-hunter)
+- Gemini раундів: 3
+- Закриті баги: B-160..B-164 (5 нових)
+- Нові файли: `src/data/ua-time-parser.js`
