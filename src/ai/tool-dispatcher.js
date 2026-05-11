@@ -61,6 +61,43 @@ import {
 } from '../tabs/finance.js';
 import { addToTrash } from '../core/trash.js';
 import { getProjects, saveProjects, renderProjects, createProjectProgrammatic, startProjectInboxInterview } from '../tabs/projects.js';
+// G3 myshu 11.05 — Universal Undo
+import { appendActionLog } from '../data/action-log.js';
+import { reversible, needsSnapshot, getSnapshotStorage, buildReverse, summarize } from '../data/action-reversers.js';
+
+// Pre-call snapshot capture для destructive tools (save_routine, edit_*).
+// Знімає тільки зачеплені поля (для save_routine — лише args.day, не весь nm_routine).
+function _captureSnapshotBefore(name, args) {
+  if (!needsSnapshot(name)) return null;
+  const key = getSnapshotStorage(name);
+  if (!key) return null;
+  try {
+    const full = JSON.parse(localStorage.getItem(key) || '{}');
+    // save_routine: тільки потрібні days, не весь розпорядок
+    if (name === 'save_routine' && Array.isArray(args.day)) {
+      const subset = {};
+      args.day.forEach(d => { subset[d] = Array.isArray(full[d]) ? [...full[d]] : []; });
+      return subset;
+    }
+    return full;
+  } catch { return null; }
+}
+
+// Post-call: пише запис у action-log якщо reverse можна побудувати.
+// resultId опційний (None для snapshot-based reverses типу save_routine).
+function _logAction(name, args, resultId, snapshotBefore, source) {
+  if (!reversible(name)) return;
+  const reverse = buildReverse(name, args, resultId != null ? { id: resultId } : null, snapshotBefore);
+  if (!reverse) return;
+  appendActionLog({
+    source: source || 'dispatcher',
+    tool: name,
+    args,
+    result: resultId != null ? { id: resultId } : null,
+    reverse,
+    summary: summarize(name, args),
+  });
+}
 
 // ===== _toolCallToUniversalAction — мапа tool → action =====
 // Покриває CRUD tools які обробляються через processUniversalAction.
@@ -566,11 +603,22 @@ export function dispatchChatToolCalls(toolCalls, addMsg, originalText) {
       continue;
     }
 
-    // 5. Решта CRUD через universal action
+    // 5. Решта CRUD через universal action.
+    // G3 myshu 11.05: ДО виклику handler — захоплюємо snapshot для деструктивних
+    // tools (save_routine). ПIСЛЯ успіху — пишемо action log з reverse instr.
+    // Для post-hoc capture ID нових сутностей (save_task → id у tasks[0])
+    // використовується storage-read у _capturePostResultId (Phase 1D).
+    const snapshotBefore = _captureSnapshotBefore(name, args);
     const acts = _toolCallToUniversalAction(name, args);
     let universalHandled = false;
     for (const a of acts) {
       if (processUniversalAction(a, originalText, addMsg)) { any = true; universalHandled = true; }
+    }
+    if (universalHandled) {
+      // Phase 1C: тільки snapshot-based tools (save_routine). ID-based tools — Phase 1D.
+      if (snapshotBefore != null) {
+        _logAction(name, args, null, snapshotBefore, 'dispatcher');
+      }
     }
 
     // 6. SILENT FALLBACK GUARD (rC4TO 04.05) — якщо tool НЕ оброблений жодним з шарів,
