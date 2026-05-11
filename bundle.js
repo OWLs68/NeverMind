@@ -639,7 +639,11 @@
     }
     const totalCells = firstDow + daysInMonth;
     const trailingEmpty = 42 - totalCells;
-    for (let i = 0; i < trailingEmpty; i++) cells += "<div></div>";
+    for (let i = 0; i < trailingEmpty; i++) cells += '<div style="aspect-ratio:1"></div>';
+    cells = cells.replace(/^(<div><\/div>)+/, (m) => {
+      const n = m.match(/<div><\/div>/g).length;
+      return '<div style="aspect-ratio:1"></div>'.repeat(n);
+    });
     grid.innerHTML = cells;
     _attachCalendarSwipe(grid);
   }
