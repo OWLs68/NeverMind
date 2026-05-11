@@ -23,6 +23,7 @@ import { formatFactsForContext, getFacts } from './memory.js';
 import { getOWLPersonality, INBOX_SYSTEM_PROMPT, INBOX_TOOLS, getOwlChatSystemPrompt } from './prompts.js';
 import { clearUnreadBadge, showUnreadBadge } from '../ui/unread-badge.js';
 import { logUsage } from '../core/usage-meter.js';
+import { parseExplicitIntent } from '../data/intent-router.js';
 
 // Backward-compat: re-export промптів з prompts.js — щоб 11 файлів
 // які імпортують ці константи з './ai/core.js' продовжували працювати без змін.
@@ -659,7 +660,6 @@ export async function callAIWithTools(systemPrompt, history, tools, module = 'ca
     // виклику OpenAI. 0ms latency, $0 cost, без галюцинацій GPT-4o-mini.
     // CLAUDE.md правило 12: «детерміноване → парсер, не AI».
     try {
-      const { parseExplicitIntent } = await import('../data/intent-router.js');
       const parsed = parseExplicitIntent(userText);
       if (parsed) {
         // Log для діагностики bypass-rate (перші 2 тижні — моніторити)
