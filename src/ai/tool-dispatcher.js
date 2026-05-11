@@ -62,69 +62,13 @@ import {
 import { addToTrash } from '../core/trash.js';
 import { getTrash, restoreFromTrash } from '../core/trash.js';
 import { getProjects, saveProjects, renderProjects, createProjectProgrammatic, startProjectInboxInterview } from '../tabs/projects.js';
-// G3 myshu 11.05 — Universal Undo
-import { appendActionLog, readLastReversible, markReversed } from '../data/action-log.js';
-import { reversible, needsSnapshot, getSnapshotStorage, buildReverse, summarize } from '../data/action-reversers.js';
+// G3 myshu 11.05 — Universal Undo. Helpers переїхали у action-log.js (single source).
+import {
+  readLastReversible, markReversed,
+  captureSnapshotBefore, capturePostResultId, logAction,
+} from '../data/action-log.js';
+import { reversible } from '../data/action-reversers.js';
 import { executeReverse } from '../data/action-undo.js';
-
-// Pre-call snapshot capture для destructive tools (save_routine, edit_*).
-// Знімає тільки зачеплені поля (для save_routine — лише args.day, не весь nm_routine).
-function _captureSnapshotBefore(name, args) {
-  if (!needsSnapshot(name)) return null;
-  const key = getSnapshotStorage(name);
-  if (!key) return null;
-  try {
-    const full = JSON.parse(localStorage.getItem(key) || '{}');
-    // save_routine: тільки потрібні days, не весь розпорядок
-    if (name === 'save_routine' && Array.isArray(args.day)) {
-      const subset = {};
-      args.day.forEach(d => { subset[d] = Array.isArray(full[d]) ? [...full[d]] : []; });
-      return subset;
-    }
-    return full;
-  } catch { return null; }
-}
-
-// Post-hoc capture ID нової сутності з localStorage (для tools що unshift/push).
-// Узгоджено з handlers у habits.js:
-//   save_task    → tasks.unshift(newTask) — newest at index 0
-//   save_finance → txs.unshift(newTx)      — index 0
-//   save_habit   → habits.push(newHabit)   — newest at last
-//   create_event → events.push(newEvent)   — last
-//   set_reminder → fuzzy match by text (не потрібен ID — reverse через delete_reminder by text)
-//   save_routine → snapshot (не потрібен ID)
-const POST_ID_POSITIONS = {
-  save_task:    { key: 'nm_tasks',    pos: 'first' },
-  save_finance: { key: 'nm_finance',  pos: 'first' },
-  save_habit:   { key: 'nm_habits2',  pos: 'last' },
-  create_event: { key: 'nm_events',   pos: 'last' },
-};
-function _capturePostResultId(name) {
-  const spec = POST_ID_POSITIONS[name];
-  if (!spec) return null;
-  try {
-    const arr = JSON.parse(localStorage.getItem(spec.key) || '[]');
-    if (!Array.isArray(arr) || arr.length === 0) return null;
-    const item = spec.pos === 'first' ? arr[0] : arr[arr.length - 1];
-    return item?.id != null ? item.id : null;
-  } catch { return null; }
-}
-
-// Post-call: пише запис у action-log якщо reverse можна побудувати.
-// resultId опційний (None для snapshot-based reverses типу save_routine).
-function _logAction(name, args, resultId, snapshotBefore, source) {
-  if (!reversible(name)) return;
-  const reverse = buildReverse(name, args, resultId != null ? { id: resultId } : null, snapshotBefore);
-  if (!reverse) return;
-  appendActionLog({
-    source: source || 'dispatcher',
-    tool: name,
-    args,
-    result: resultId != null ? { id: resultId } : null,
-    reverse,
-    summary: summarize(name, args),
-  });
-}
 
 // ===== _toolCallToUniversalAction — мапа tool → action =====
 // Покриває CRUD tools які обробляються через processUniversalAction.
@@ -674,8 +618,8 @@ export function dispatchChatToolCalls(toolCalls, addMsg, originalText) {
     // G3 myshu 11.05: ДО виклику handler — захоплюємо snapshot для деструктивних
     // tools (save_routine). ПIСЛЯ успіху — пишемо action log з reverse instr.
     // Для post-hoc capture ID нових сутностей (save_task → id у tasks[0])
-    // використовується storage-read у _capturePostResultId (Phase 1D).
-    const snapshotBefore = _captureSnapshotBefore(name, args);
+    // використовується storage-read у capturePostResultId (Phase 1D).
+    const snapshotBefore = captureSnapshotBefore(name, args);
     const acts = _toolCallToUniversalAction(name, args);
     let universalHandled = false;
     for (const a of acts) {
@@ -688,10 +632,10 @@ export function dispatchChatToolCalls(toolCalls, addMsg, originalText) {
       //     tool_call delete_X(id). ID капчимо з storage[0] або storage[len-1].
       //   - set_reminder: reverse через text fuzzy (без ID)
       if (snapshotBefore != null) {
-        _logAction(name, args, null, snapshotBefore, 'dispatcher');
+        logAction(name, args, null, snapshotBefore, 'dispatcher');
       } else if (reversible(name)) {
-        const resultId = _capturePostResultId(name);
-        _logAction(name, args, resultId, null, 'dispatcher');
+        const resultId = capturePostResultId(name);
+        logAction(name, args, resultId, null, 'dispatcher');
       }
     }
 

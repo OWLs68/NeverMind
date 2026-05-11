@@ -9,7 +9,7 @@ import { escapeHtml, saveOffline, extractJsonBlocks, parseContentChips, t, getRe
 import { generateUUID } from '../core/uuid.js';
 import { addToTrash, getTrash, restoreFromTrash, showUndoToast } from '../core/trash.js';
 // G3 myshu 11.05 — Universal Undo читач
-import { readLastReversible, markReversed } from '../data/action-log.js';
+import { readLastReversible, markReversed, captureSnapshotBefore, logAction } from '../data/action-log.js';
 import { executeReverse } from '../data/action-undo.js';
 import { INBOX_SYSTEM_PROMPT, INBOX_TOOLS, callAI, callAIWithTools, callAIWithHistory, getAIContext, getOWLPersonality, saveChatMsg, buildAssistantHistoryEntry, activeChatBar } from '../ai/core.js';
 import { UI_TOOL_NAMES, handleUITool } from '../ai/ui-tools.js';
@@ -797,6 +797,11 @@ ${aiContext}`;
             }
           }
         } else if (action.action === 'save_routine') {
+          // G3 myshu 11.05: action-log snapshot ДО мутації (Verifier P0-1 fix —
+          // Inbox має власний dispatch, не через dispatchChatToolCalls).
+          const _snapshotBefore = captureSnapshotBefore('save_routine', {
+            day: Array.isArray(action.day) ? action.day : [action.day || 'default']
+          });
           const routine = getRoutine();
           const blocks = (action.blocks || []).map(b => ({ time: b.time, activity: b.activity }));
           const days = Array.isArray(action.day) ? action.day : [action.day || 'default'];
@@ -813,6 +818,8 @@ ${aiContext}`;
           };
           days.forEach(d => { routine[d] = [...blocks]; });
           saveRoutine(routine);
+          // G3: пишемо action-log ПIСЛЯ saveRoutine — undo поверне snapshot
+          logAction('save_routine', { day: days, blocks }, null, _snapshotBefore, 'inbox');
           const label = days.length === 1 ? dayLabels[days[0]] || days[0] : days.map(d => dayLabels[d] || d).join(', ');
           addInboxChatMsg('agent', t('inbox.chat.routine_saved', '🕐 Розпорядок збережено на {label} ({n} блоків)', { label, n: blocks.length }));
         } else if (action.action === 'save_memory_fact') {
