@@ -8,6 +8,46 @@
 
 ## ✅ Закриті баги (хронологічно, нові зверху)
 
+_Сесія **PJi7l** (08.05.2026) — хвости LfA6w: 2 уроки у lessons.md + B-158 фікс:_
+- **B-158 закрито** — `src/tabs/health.js:113` (addAllergy) + `:1524` (newCard) — `id: Date.now()` без `Math.random()` суфіксу. Ризик ID колізії при batch tool_calls. Фікс: уніфіковано до `+ Math.floor(Math.random()*1000)`.
+
+_Сесія **LfA6w day2** (07-08.05.2026) — 33 коміти, decision-tree рефакторинг промптів через 3 ітерації Gemini + 5 Sonnet агентів, subcategory у save_finance, контекстні чіпи Phase A+Б, mental models у CLAUDE.md:_
+- **6 регресій від свіжих фіксів** (без B-номерів) — tool-dispatcher.js:80 subcategory, finance-chat.js:105 txSummary без [ID:N], CHIP_PROMPT_RULES забруднював JSON-аналітику me.js, Brain Pulse debounce reset на КОЖНОМУ event, Tab-чати без CHIP_PROMPT_RULES, inbox.js code-guard dedupe save_finance+save_task.
+- **Apostrophe-нормалізація finance category** (`7790a42`+`48c24e7`) — `_normCat = s => s.replace(/[ʼ’`]/g, "'").toLowerCase()` у processFinanceAction + processUniversalAction + matchSubcategoryFromComment.
+- **Build break бектіки у CHIP_PROMPT_RULES** (`be6f708`) — `\`subcategory\`` template literal ламав esbuild. Auto-merge впав 4 коміти підряд. Урок: **node build.js обов'язково для template literal**.
+- **action='complete' guard у normalizeChips** (`8669924`) — code-side safety net.
+- **Інше:** Скрол у нотатках, стрілки переміщення категорій, Phase A+Б контекстні чіпи, перша особа правило.
+
+_Сесія **LfA6w day1** (07.05.2026) — нічний silent-bug-scout аудит знайшов 9 багів, 5 закрито:_
+- **B-151** (`2ab1a71`) — memory.js _saveFacts() не диспатчив nm-data-changed. Регресія Один-Мозок-V2.
+- **B-152** (`c18c7d1`) — escapeHtml не екранує апостроф. `Roman's coffee` ламав onclick. Фікс: новий `escapeJsArg(s)` у utils.js. 10 точок у 5 файлах.
+- **B-153** (`2ab1a71`) — дублює B-151 для saveInbox().
+- **B-154** (`735b525`) — JSON.parse без try/catch у batch-tool_calls. Фікс: try/catch + continue.
+- **B-157 + B-159** разом з B-152 — крихкі escape патерни.
+
+_Сесія **MPVly-day2** (06.05.2026) — 23 баги, Council 5 агентів, Аналітика redesign, календар SVG icons:_
+- **B-150** — Календарна модалка кольори/SVG icons + 6px кольорова крапка-індикатор.
+- **B-149** — memory-modal swipe `data-skip-auto-swipe`.
+- **B-143 (REAL корінь Аналітики)** — `_refreshAnalyticsContent` substring match `"overflow-y:auto"` ламався норм-стилем браузера. Фікс: id + getElementById + cloneNode. **6 попередніх фіксів B-138..B-142 лishали симптом.** Урок Council 5 агентів.
+- **B-135, B-136, B-142, B-141, B-140, B-139, B-138, B-137, B-134, B-132, B-133, B-128, B-129, B-130, B-131** — iOS Safari quirks серія (composite layer, button:active scale, animation forwards, backdrop, swipe threshold, ID conflict, REMINDER_RULES, t-shadow, swipeClose, drum-col mask-image, t() обгортки, DETAIL_TO_KEY reminder, aiLoading guard).
+- **i18n 110 рядків** — habits.js, health.js, nav.js, finance-analytics.js. Baseline 685 → 575.
+
+_Сесія **MPVly** (05.05.2026) — chip render Inbox + B-125 + B-126 + B-127 + tasks.js shadow:_
+- **B-127** — табло Продуктивності stale 13 год. Новий `_isStaleTaskGeneralization` + 60хв safety net.
+- **Critical t-shadow tasks.js** (`7cd2259`) — `t2 is not a function`. 9 shadow точок. Фікс: rename → task.
+- **Inbox чіпи raw-JSON** (`63223f2`) — REMINDER_RULES + parser fallback.
+- **B-125** (`4082a0c`) — чіп «Завтра вранці» → reminder на сьогодні. Фікс REMINDER_RULES.
+- **B-126** — нова tool `delete_reminder` + 3-сховищний cleanup.
+
+_Сесія **QDIGl** (05.05.2026) — Розпорядок merge + delete_project + B-117 audit fix + 19 раундів i18n:_
+- **B-117 закрито остаточно** (`923ae80` + `9e30379`) — табло звичок stale. Pruning content fallback + isHabitTextNegative + DOW Mon=0 + TTL прострочених + findProjectByName.
+
+_Сесія **rC4TO** (04.05.2026) — silent failures fixedo + swipe-delete карток Здоров'я + iOS правило + Notes render guard:_
+- **B-122** (`8a05ada`) — Health Phase C інтерв'ю чіпи мовчать. chips.js whitelist + escape `"`.
+- **B-123** (`431b433`) — `create_project` у Фінансах висне. Handler + універсальний SILENT FAILURE GUARD.
+- **B-124** (`2f96593`) — вкладка Нотатки порожня. 3 захисти у notes.js.
+
+
 ### Сесія UvEHE (03.05.2026) — фінал модалок + drum-picker + Settings 4-ітерац
 
 | ID | Файл | Симптом | Корінь + фікс |
