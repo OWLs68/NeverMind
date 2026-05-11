@@ -5115,7 +5115,7 @@ ${lines.join("\n")}`;
   function createProjectProgrammatic(name, subtitle = "") {
     const projects = getProjects();
     const newProject = {
-      id: Date.now(),
+      id: generateUUID(),
       name,
       subtitle,
       progress: 0,
@@ -5479,7 +5479,7 @@ ${lines.join("\n")}`;
     const subtitle = (document.getElementById("project-input-subtitle").value || "").trim();
     const projects = getProjects();
     const newProject = {
-      id: Date.now(),
+      id: generateUUID(),
       name,
       subtitle,
       progress: 0,
@@ -5678,6 +5678,7 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
   var init_projects = __esm({
     "src/tabs/projects.js"() {
       init_nav();
+      init_uuid();
       init_utils();
       init_usage_meter();
       init_core();
@@ -18999,7 +19000,7 @@ ${aiContext}`;
             if (created) {
               if (currentTab === "health") renderHealth();
               const items = getInbox();
-              items.unshift({ id: Date.now() + 1, text: t("inbox.health.state_inbox", "\u{1F3E5} \u0421\u0442\u0430\u043D: {name}", { name: created.name }), category: "note", ts: Date.now(), processed: true });
+              items.unshift({ id: generateUUID(), text: t("inbox.health.state_inbox", "\u{1F3E5} \u0421\u0442\u0430\u043D: {name}", { name: created.name }), category: "note", ts: Date.now(), processed: true });
               saveInbox(items);
               renderInbox();
               addInboxChatMsg("agent", t("inbox.health.card_created_redirect", '\u{1F3E5} \u0421\u0442\u0432\u043E\u0440\u0438\u0432 \u043A\u0430\u0440\u0442\u043A\u0443 "{name}" \u0443 \u0417\u0434\u043E\u0440\u043E\u0432\u02BC\u0457. \u041F\u0440\u043E\u0439\u0434\u0438 \u043A\u043E\u0440\u043E\u0442\u043A\u0435 \u043E\u043F\u0438\u0442\u0443\u0432\u0430\u043D\u043D\u044F \u0442\u0430\u043C \u2014 3 \u0447\u0456\u043F\u0438 \u0432\u0438\u0441\u0442\u0430\u0432\u043B\u044F\u0442\u044C \u0442\u043E\u0447\u043D\u0438\u0439 \u0441\u0442\u0430\u0442\u0443\u0441.', { name: created.name }));
@@ -19538,7 +19539,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
     renderProdHabits();
     renderHabits();
     const items = getInbox();
-    items.unshift({ id: Date.now(), text: originalText, category: "habit", ts: Date.now(), processed: true });
+    items.unshift({ id: generateUUID(), text: originalText, category: "habit", ts: Date.now(), processed: true });
     saveInbox(items);
     renderInbox();
     const msg = parsed.comment || (completed.length === 1 ? t("inbox.habit.marked_one", '\u2705 \u0412\u0456\u0434\u043C\u0456\u0442\u0438\u0432 \u0437\u0432\u0438\u0447\u043A\u0443 "{name}" \u044F\u043A \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u0443', { name: completed[0] }) : t("inbox.habit.marked_many", "\u2705 \u0412\u0456\u0434\u043C\u0456\u0442\u0438\u0432 {n} \u0437\u0432\u0438\u0447\u043A\u0438: {list}", { n: completed.length, list: completed.join(", ") }));
@@ -19567,7 +19568,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
     saveTasks(tasks);
     renderTasks();
     const items = getInbox();
-    items.unshift({ id: Date.now(), text: originalText, category: "task", ts: Date.now(), processed: true });
+    items.unshift({ id: generateUUID(), text: originalText, category: "task", ts: Date.now(), processed: true });
     saveInbox(items);
     renderInbox();
     const msg = parsed.comment || (completed.length === 1 ? t("inbox.task.closed_one", '\u2705 \u0417\u0430\u0434\u0430\u0447\u0443 "{title}" \u0437\u0430\u043A\u0440\u0438\u0442\u043E', { title: completed[0] }) : t("inbox.task.closed_many", "\u2705 \u0417\u0430\u043A\u0440\u0438\u0432 {n} \u0437\u0430\u0434\u0430\u0447\u0456: {list}", { n: completed.length, list: completed.join(", ") }));
@@ -21914,6 +21915,60 @@ ${logLines}
         localStorage.setItem("nm_finance_uuid_migrated_v13", "1");
       } catch (e) {
         console.error("[boot] v13 finance migration failed:", e);
+      }
+    }
+    if (!localStorage.getItem("nm_projects_uuid_migrated_v14")) {
+      try {
+        const projRaw = localStorage.getItem("nm_projects");
+        if (projRaw) {
+          const backupKey = createSelectiveBackup(["nm_projects"], "pre-project-uuid-v14");
+          if (backupKey) console.log("[boot] v14 projects backup:", backupKey);
+          const projects = JSON.parse(projRaw);
+          if (Array.isArray(projects)) {
+            let migrated = 0;
+            projects.forEach((p) => {
+              if (p && typeof p.id === "number") {
+                p.legacy_id = p.id;
+                p.id = generateUUID();
+                migrated++;
+              }
+            });
+            if (migrated > 0) {
+              localStorage.setItem("nm_projects", JSON.stringify(projects));
+              console.log(`[boot] v14 migration: ${migrated} projects \u2192 UUID`);
+            }
+          }
+        }
+        localStorage.setItem("nm_projects_uuid_migrated_v14", "1");
+      } catch (e) {
+        console.error("[boot] v14 projects migration failed:", e);
+      }
+    }
+    if (!localStorage.getItem("nm_inbox_uuid_migrated_v15")) {
+      try {
+        const inboxRaw = localStorage.getItem("nm_inbox");
+        if (inboxRaw) {
+          const backupKey = createSelectiveBackup(["nm_inbox"], "pre-inbox-uuid-v15");
+          if (backupKey) console.log("[boot] v15 inbox backup:", backupKey);
+          const items = JSON.parse(inboxRaw);
+          if (Array.isArray(items)) {
+            let migrated = 0;
+            items.forEach((it) => {
+              if (it && typeof it.id === "number") {
+                it.legacy_id = it.id;
+                it.id = generateUUID();
+                migrated++;
+              }
+            });
+            if (migrated > 0) {
+              localStorage.setItem("nm_inbox", JSON.stringify(items));
+              console.log(`[boot] v15 migration: ${migrated} inbox cards \u2192 UUID`);
+            }
+          }
+        }
+        localStorage.setItem("nm_inbox_uuid_migrated_v15", "1");
+      } catch (e) {
+        console.error("[boot] v15 inbox migration failed:", e);
       }
     }
     if (!localStorage.getItem("nm_health_status_v2_done")) {
