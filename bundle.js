@@ -637,7 +637,36 @@
       const cls = hasEvent ? ' class="cal-day-event"' : "";
       cells += `<div${cls} onclick="calendarDayTap(${d})" data-day="${d}" style="aspect-ratio:1;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:13px;font-weight:700;background:${bg};color:${color};border:1.5px solid ${border};cursor:pointer;transition:all 0.15s;-webkit-tap-highlight-color:transparent" ontouchstart="this.style.transform='scale(0.88)'" ontouchend="this.style.transform=''">${d}${dot}</div>`;
     }
+    const totalCells = firstDow + daysInMonth;
+    const trailingEmpty = 42 - totalCells;
+    for (let i = 0; i < trailingEmpty; i++) cells += "<div></div>";
     grid.innerHTML = cells;
+    _attachCalendarSwipe(grid);
+  }
+  function _attachCalendarSwipe(grid) {
+    if (grid._swipeMonthAttached) return;
+    let startX = 0, startY = 0, moved = false;
+    grid.addEventListener("touchstart", (e) => {
+      if (!e.touches[0]) return;
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+      moved = false;
+    }, { passive: true });
+    grid.addEventListener("touchmove", (e) => {
+      if (!e.touches[0]) return;
+      const dx = e.touches[0].clientX - startX;
+      const dy = e.touches[0].clientY - startY;
+      if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy)) moved = true;
+    }, { passive: true });
+    grid.addEventListener("touchend", (e) => {
+      if (!moved || !e.changedTouches[0]) return;
+      const dx = e.changedTouches[0].clientX - startX;
+      const dy = e.changedTouches[0].clientY - startY;
+      if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+      if (dx < 0) calendarNextMonth();
+      else calendarPrevMonth();
+    }, { passive: true });
+    grid._swipeMonthAttached = true;
   }
   function highlightEventDays() {
     const cells = document.querySelectorAll("#calendar-grid .cal-day-event");
