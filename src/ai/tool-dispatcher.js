@@ -83,6 +83,31 @@ function _captureSnapshotBefore(name, args) {
   } catch { return null; }
 }
 
+// Post-hoc capture ID нової сутності з localStorage (для tools що unshift/push).
+// Узгоджено з handlers у habits.js:
+//   save_task    → tasks.unshift(newTask) — newest at index 0
+//   save_finance → txs.unshift(newTx)      — index 0
+//   save_habit   → habits.push(newHabit)   — newest at last
+//   create_event → events.push(newEvent)   — last
+//   set_reminder → fuzzy match by text (не потрібен ID — reverse через delete_reminder by text)
+//   save_routine → snapshot (не потрібен ID)
+const POST_ID_POSITIONS = {
+  save_task:    { key: 'nm_tasks',    pos: 'first' },
+  save_finance: { key: 'nm_finance',  pos: 'first' },
+  save_habit:   { key: 'nm_habits2',  pos: 'last' },
+  create_event: { key: 'nm_events',   pos: 'last' },
+};
+function _capturePostResultId(name) {
+  const spec = POST_ID_POSITIONS[name];
+  if (!spec) return null;
+  try {
+    const arr = JSON.parse(localStorage.getItem(spec.key) || '[]');
+    if (!Array.isArray(arr) || arr.length === 0) return null;
+    const item = spec.pos === 'first' ? arr[0] : arr[arr.length - 1];
+    return item?.id != null ? item.id : null;
+  } catch { return null; }
+}
+
 // Post-call: пише запис у action-log якщо reverse можна побудувати.
 // resultId опційний (None для snapshot-based reverses типу save_routine).
 function _logAction(name, args, resultId, snapshotBefore, source) {
@@ -615,9 +640,16 @@ export function dispatchChatToolCalls(toolCalls, addMsg, originalText) {
       if (processUniversalAction(a, originalText, addMsg)) { any = true; universalHandled = true; }
     }
     if (universalHandled) {
-      // Phase 1C: тільки snapshot-based tools (save_routine). ID-based tools — Phase 1D.
+      // G3 myshu 11.05: action-log запис. 2 шляхи:
+      //   - snapshot-based (save_routine): reverse = restore_snapshot
+      //   - ID-based (save_task/save_finance/save_habit/create_event): reverse =
+      //     tool_call delete_X(id). ID капчимо з storage[0] або storage[len-1].
+      //   - set_reminder: reverse через text fuzzy (без ID)
       if (snapshotBefore != null) {
         _logAction(name, args, null, snapshotBefore, 'dispatcher');
+      } else if (reversible(name)) {
+        const resultId = _capturePostResultId(name);
+        _logAction(name, args, resultId, null, 'dispatcher');
       }
     }
 
