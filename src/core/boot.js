@@ -623,6 +623,67 @@ function runMigrations() {
     }
   }
 
+  // v12 Moments UUID (myshu 11.05.2026 Architecture Refactor Сесія 3B-4):
+  // Moment.id був Date.now(). НЕМАЄ persistent cross-references.
+  if (!localStorage.getItem('nm_moments_uuid_migrated_v12')) {
+    try {
+      const momentsRaw = localStorage.getItem('nm_moments');
+      if (momentsRaw) {
+        const backupKey = createSelectiveBackup(['nm_moments'], 'pre-moment-uuid-v12');
+        if (backupKey) console.log('[boot] v12 moments backup:', backupKey);
+        const moments = JSON.parse(momentsRaw);
+        if (Array.isArray(moments)) {
+          let migrated = 0;
+          moments.forEach(m => {
+            if (m && typeof m.id === 'number') {
+              m.legacy_id = m.id;
+              m.id = generateUUID();
+              migrated++;
+            }
+          });
+          if (migrated > 0) {
+            localStorage.setItem('nm_moments', JSON.stringify(moments));
+            console.log(`[boot] v12 migration: ${migrated} moments → UUID`);
+          }
+        }
+      }
+      localStorage.setItem('nm_moments_uuid_migrated_v12', '1');
+    } catch (e) {
+      console.error('[boot] v12 moments migration failed:', e);
+    }
+  }
+
+  // v13 Finance txns UUID (myshu 11.05.2026 Architecture Refactor Сесія 3B-5):
+  // Transaction.id був Date.now(). НЕМАЄ persistent cross-references
+  // (inbox.id finance-card паралельна, без FK).
+  if (!localStorage.getItem('nm_finance_uuid_migrated_v13')) {
+    try {
+      const finRaw = localStorage.getItem('nm_finance');
+      if (finRaw) {
+        const backupKey = createSelectiveBackup(['nm_finance'], 'pre-finance-uuid-v13');
+        if (backupKey) console.log('[boot] v13 finance backup:', backupKey);
+        const txs = JSON.parse(finRaw);
+        if (Array.isArray(txs)) {
+          let migrated = 0;
+          txs.forEach(t => {
+            if (t && typeof t.id === 'number') {
+              t.legacy_id = t.id;
+              t.id = generateUUID();
+              migrated++;
+            }
+          });
+          if (migrated > 0) {
+            localStorage.setItem('nm_finance', JSON.stringify(txs));
+            console.log(`[boot] v13 migration: ${migrated} transactions → UUID`);
+          }
+        }
+      }
+      localStorage.setItem('nm_finance_uuid_migrated_v13', '1');
+    } catch (e) {
+      console.error('[boot] v13 finance migration failed:', e);
+    }
+  }
+
   // v9 (03.05.2026 MIeXK Health AI-інтерв'ю): шкала статусів 3 → 6 значень.
   // Старе: active/controlled/done. Нове: acute/treatment/improving/remission/chronic/done.
   // Мапінг: active → treatment (нейтральне «активне лікування»), controlled → remission,

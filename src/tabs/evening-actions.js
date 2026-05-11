@@ -129,7 +129,7 @@ export function dispatchEveningTool(name, args) {
       case 'save_moment': {
         // save_moment теж нереверсиво поки. Залишаємо як було.
         const moments = getMoments();
-        moments.push({ id: Date.now(), text: args.text || '', mood: args.mood || 'neutral', ts: Date.now() });
+        moments.push({ id: generateUUID(), text: args.text || '', mood: args.mood || 'neutral', ts: Date.now() });
         saveMoments(moments);
         logRecentAction('save_moment', (args.text || '').slice(0, 40), 'evening');
         return { ok: true };
