@@ -13,7 +13,9 @@
 //
 // Інтегрується у `src/ai/core.js callAIWithTools` ПЕРЕД OpenAI fetch.
 //
-// Phase 1: save_routine. Phase 2: set_reminder, save_finance, complete_task.
+// Phase 1: save_routine. Phase 2 (myshu 11.05): set_reminder. Phase 3+: save_finance, complete_task.
+
+import { resolveDateFromText } from './ua-time-parser.js';
 
 // === Day-of-week map (узгоджено з save_routine enum) ===
 // ⚠️ JS `\b` НЕ працює з кирилицею навіть з прапором `u` (Unicode word boundary
@@ -65,15 +67,16 @@ function _stripDays(text) {
 // Повертає {time:'HH:MM', matched:'<original>'} або null.
 // ⚠️ `u` прапор обовʼязковий для всіх patterns з кирилицею — інакше \b ламається.
 // Period word ПЕРЕД bare-HH-with-prefix (інакше «о 7 ранку» → 07:00 без бумпу).
+// myshu Сесія 2: додано «на» як префікс («постав нагадування на 7 ранку»).
 const TIME_PATTERNS = [
-  // HH:MM з префіксом «о/у/в»
-  /(?:^|\s)(?:о|у|в)\s+(\d{1,2})[:.](\d{2})(?=\s|$)/iu,
+  // HH:MM з префіксом «о/у/в/на»
+  /(?:^|\s)(?:о|у|в|на)\s+(\d{1,2})[:.](\d{2})(?=\s|$)/iu,
   // Голий HH:MM
   /(?:^|\s)(\d{1,2})[:.](\d{2})(?=\s|$)/u,
   // HH з ранку/вечора/дня/ночі — period word ПЕРЕД бар-HH
-  /(?:^|\s)(?:о|у|в)\s+(\d{1,2})\s+(ранку|вечора|дня|ночі)(?=\s|$|[.,])/iu,
-  // Голий «о HH» / «в HH»
-  /(?:^|\s)(?:о|у|в)\s+(\d{1,2})(?=\s|$|[.,])/iu,
+  /(?:^|\s)(?:о|у|в|на)\s+(\d{1,2})\s+(ранку|вечора|дня|ночі)(?=\s|$|[.,])/iu,
+  // Голий «о HH» / «в HH» / «на HH»
+  /(?:^|\s)(?:о|у|в|на)\s+(\d{1,2})(?=\s|$|[.,])/iu,
 ];
 
 function _extractTime(text) {
@@ -171,15 +174,86 @@ function _parseRoutineIntent(text) {
   };
 }
 
+// === REMINDER INTENT (myshu 11.05 Сесія 2) ===
+// Тригери: «нагадай», «напомни», «постав нагадування», «постав ремайндер».
+// Опційно «мені»/«мене». Обовʼязково час (інакше REMINDER_RULES каже AI
+// перепитувати — пускаємо AI вирішувати). Дата опційна (null = сьогодні).
+const REMINDER_TRIGGER = new RegExp(
+  BL + '(?:нагадай|напомни|постав\\s+нагадуванн\\p{L}*|постав\\s+ремайндер|нагадат\\p{L}*)(?:\\s+мені|\\s+мене)?',
+  'iu'
+);
+
+// Слова-стоп для cleanup після зняття тригера/часу/дати з тексту нагадування.
+// 'ранку/вечора/дня/ночі' — period-suffix часу (бо TIME_PATTERN ловить «о 9 ранку»
+// як одне ціле, але після _stripTime лишається фраза).
+const REMINDER_STOP_WORDS = /(?:^|\s)(?:в|у|о|на|щоб|про|щодо|треба|потрібно|ранку|вечора|дня|ночі)(?=\s|$)/giu;
+
+// Регекс для зняття дати-фрагменту з тексту після parseAbsoluteDate/parseUaTimeOffset.
+const DATE_STRIP_RE = /(?:^|[\s,.:;\-])(?:завтра|післязавтра|сьогодні|вчора|позавчора|у\s+понеділок|у\s+вівторок|у\s+середу|у\s+четвер|у\s+п['ʼ']?ятницю|у\s+суботу|у\s+неділю|по\s+понеділк\p{L}*|\d{1,2}\s+(?:січн|лют|берез|квітн|травн|червн|липн|серпн|вересн|жовтн|листопад|грудн)\p{L}*|\d{1,2}[.\/]\d{1,2})(?=[\s,.:;\-]|$)/giu;
+
+function _parseReminderIntent(text) {
+  if (!REMINDER_TRIGGER.test(text)) return null;
+
+  // Прибираємо тригер
+  let rest = text.replace(REMINDER_TRIGGER, ' ').trim();
+  if (!rest) return null;
+
+  // Витягуємо час. БЕЗ часу — null (REMINDER_RULES у промпті каже AI запитати).
+  const timeInfo = _extractTime(rest);
+  if (!timeInfo) return null;
+  let time = timeInfo.time;
+  rest = _stripTime(rest, timeInfo.matched);
+
+  // Multi-time check — як у routine. Кілька часів = AI вирішує.
+  if (_extractTime(rest)) return null;
+
+  // Витягуємо дату через ua-time-parser (resolveDateFromText)
+  let dateISO = null;
+  const dateObj = resolveDateFromText(rest, new Date(), 'future');
+  if (dateObj) {
+    const y = dateObj.getFullYear();
+    const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const d = String(dateObj.getDate()).padStart(2, '0');
+    dateISO = `${y}-${m}-${d}`;
+    rest = rest.replace(DATE_STRIP_RE, ' ');
+  }
+
+  // Решта — text нагадування. Прибираємо stop-слова.
+  let reminderText = rest
+    .replace(REMINDER_STOP_WORDS, ' ')
+    .replace(/[:\-—]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!reminderText || reminderText.length < 2) return null;
+
+  // Нормалізація capitalize
+  reminderText = reminderText.toLowerCase();
+  reminderText = reminderText.charAt(0).toUpperCase() + reminderText.slice(1);
+
+  return {
+    tool: 'set_reminder',
+    args: {
+      _reasoning_log: 'Деретермінований парсер intent-router розпізнав явну команду set_reminder. Bypass AI.',
+      text: reminderText,
+      time,
+      date: dateISO,
+    },
+  };
+}
+
 // === ROUTER ENTRY POINT ===
 export function parseExplicitIntent(text) {
   if (!text || typeof text !== 'string') return null;
   const trimmed = text.trim();
   if (!trimmed) return null;
 
-  // Спочатку save_routine. Інші tools — Phase 2.
+  // 1. save_routine (Phase 1)
   const routine = _parseRoutineIntent(trimmed);
   if (routine) return routine;
+
+  // 2. set_reminder (Phase 2)
+  const reminder = _parseReminderIntent(trimmed);
+  if (reminder) return reminder;
 
   return null;
 }
@@ -191,4 +265,5 @@ export const _internals = {
   _stripDays,
   _stripTime,
   _parseRoutineIntent,
+  _parseReminderIntent,
 };
