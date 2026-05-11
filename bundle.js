@@ -7279,6 +7279,219 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
     }
   });
 
+  // src/data/action-reversers.js
+  function reversible(tool) {
+    return tool in REVERSERS;
+  }
+  function needsSnapshot(tool) {
+    return NEEDS_SNAPSHOT.has(tool);
+  }
+  function getSnapshotStorage(tool) {
+    return SNAPSHOT_STORAGE[tool] || null;
+  }
+  function buildReverse(tool, args, result, snapshotBefore) {
+    const builder = REVERSERS[tool];
+    if (!builder) return null;
+    try {
+      return builder(args, result, snapshotBefore);
+    } catch (e) {
+      console.warn("[action-reversers] builder error for", tool, e);
+      return null;
+    }
+  }
+  function summarize(tool, args) {
+    switch (tool) {
+      case "save_task":
+        return `\u0417\u0430\u0434\u0430\u0447\u0430: ${args?.title || args?.text || "?"}`;
+      case "save_finance":
+        return `${args?.fin_type === "income" ? "+" : "\u2212"}${args?.amount || "?"} ${args?.category || ""} ${args?.fin_comment || ""}`.trim();
+      case "save_habit":
+        return `\u0417\u0432\u0438\u0447\u043A\u0430: ${args?.name || "?"}`;
+      case "create_event":
+        return `\u041F\u043E\u0434\u0456\u044F: ${args?.title || "?"}${args?.date ? " \xB7 " + args.date : ""}`;
+      case "set_reminder":
+        return `\u041D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F: ${args?.text || "?"}${args?.time ? " \u043E " + args.time : ""}`;
+      case "save_routine": {
+        const days = Array.isArray(args?.day) ? args.day.join("/") : "?";
+        const firstBlock = args?.blocks?.[0];
+        const blockDesc = firstBlock ? `${firstBlock.time} ${firstBlock.activity}` : "?";
+        const total = args?.blocks?.length || 0;
+        return `\u0420\u043E\u0437\u043F\u043E\u0440\u044F\u0434\u043E\u043A: ${blockDesc}${total > 1 ? ` +${total - 1}` : ""} (${days})`;
+      }
+      default:
+        return tool;
+    }
+  }
+  var REVERSERS, NEEDS_SNAPSHOT, SNAPSHOT_STORAGE;
+  var init_action_reversers = __esm({
+    "src/data/action-reversers.js"() {
+      REVERSERS = {
+        // === Type A: tool_call reverse (additive tools) ===
+        save_task: (args, result) => result?.id ? { type: "tool_call", tool: "delete_task", args: { task_id: String(result.id) } } : null,
+        save_finance: (args, result) => result?.id != null ? { type: "tool_call", tool: "delete_transaction", args: { id: result.id } } : null,
+        save_habit: (args, result) => result?.id != null ? { type: "tool_call", tool: "delete_habit", args: { habit_id: result.id } } : null,
+        create_event: (args, result) => result?.id != null ? { type: "tool_call", tool: "delete_event", args: { event_id: result.id } } : null,
+        set_reminder: (args, result) => args?.text ? { type: "tool_call", tool: "delete_reminder", args: { text: args.text, time: args.time, date: args.date } } : null,
+        // === Type B: snapshot restore (destructive replace tools) ===
+        save_routine: (args, result, snapshot) => snapshot ? { type: "restore_snapshot", storage: "nm_routine", value: snapshot, detail: "routine" } : null
+        // edit_* — будуть додані у Phase 2 (потребують повного snapshot задачі/події)
+      };
+      NEEDS_SNAPSHOT = /* @__PURE__ */ new Set([
+        "save_routine"
+        // 'edit_task', 'edit_event', 'edit_habit' — Phase 2
+      ]);
+      SNAPSHOT_STORAGE = {
+        save_routine: "nm_routine"
+        // edit_task: 'nm_tasks', edit_event: 'nm_events', edit_habit: 'nm_habits2'
+      };
+    }
+  });
+
+  // src/data/action-log.js
+  function _getDeviceId() {
+    let id = localStorage.getItem("nm_device_id");
+    if (!id) {
+      id = generateUUID();
+      localStorage.setItem("nm_device_id", id);
+    }
+    return id;
+  }
+  function getActionLog() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(KEY) || "[]");
+      const cutoff = Date.now() - TTL_MS;
+      const fresh = raw.filter((e) => {
+        const ts = typeof e.ts === "string" ? new Date(e.ts).getTime() : e.ts || 0;
+        return ts >= cutoff;
+      });
+      return fresh.slice(-MAX);
+    } catch {
+      return [];
+    }
+  }
+  function appendActionLog({ source, tool, args, result, reverse, summary }) {
+    const log = getActionLog();
+    log.push({
+      id: generateUUID(),
+      ts: (/* @__PURE__ */ new Date()).toISOString(),
+      schema_version: SCHEMA_VERSION,
+      user_id: null,
+      // Supabase-ready: auth.uid() після міграції
+      device_id: _getDeviceId(),
+      source: source || "unknown",
+      tool,
+      args: args || {},
+      result: result || null,
+      reverse: reverse || null,
+      // null = нереверсиво (інформаційний запис)
+      summary: summary || tool,
+      reversed: false
+    });
+    while (log.length > MAX) log.shift();
+    try {
+      localStorage.setItem(KEY, JSON.stringify(log));
+    } catch (e) {
+      console.warn("[action-log] quota exceeded, trimming aggressively", e);
+      const trimmed = log.slice(-Math.floor(MAX / 2));
+      try {
+        localStorage.setItem(KEY, JSON.stringify(trimmed));
+      } catch {
+      }
+    }
+  }
+  function readLastReversible() {
+    const log = getActionLog();
+    for (let i = log.length - 1; i >= 0; i--) {
+      if (!log[i].reversed && log[i].reverse) return log[i];
+    }
+    return null;
+  }
+  function markReversed(id) {
+    const log = getActionLog();
+    const idx = log.findIndex((e) => e.id === id);
+    if (idx < 0) return false;
+    log[idx].reversed = true;
+    log[idx].reversedAt = (/* @__PURE__ */ new Date()).toISOString();
+    try {
+      localStorage.setItem(KEY, JSON.stringify(log));
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  function captureSnapshotBefore(name, args) {
+    if (!needsSnapshot(name)) return null;
+    const key = getSnapshotStorage(name);
+    if (!key) return null;
+    try {
+      const full = JSON.parse(localStorage.getItem(key) || "{}");
+      if (name === "save_routine" && Array.isArray(args.day)) {
+        const subset = {};
+        args.day.forEach((d) => {
+          subset[d] = Array.isArray(full[d]) ? [...full[d]] : [];
+        });
+        return subset;
+      }
+      return full;
+    } catch {
+      return null;
+    }
+  }
+  function capturePostResultId(name) {
+    const spec = POST_ID_POSITIONS[name];
+    if (!spec) return null;
+    try {
+      const arr = JSON.parse(localStorage.getItem(spec.key) || "[]");
+      if (!Array.isArray(arr) || arr.length === 0) return null;
+      const item = spec.pos === "first" ? arr[0] : arr[arr.length - 1];
+      return item?.id != null ? item.id : null;
+    } catch {
+      return null;
+    }
+  }
+  function logAction(name, args, resultId, snapshotBefore, source) {
+    if (!reversible(name)) return;
+    const reverse = buildReverse(name, args, resultId != null ? { id: resultId } : null, snapshotBefore);
+    if (!reverse) return;
+    appendActionLog({
+      source: source || "dispatcher",
+      tool: name,
+      args,
+      result: resultId != null ? { id: resultId } : null,
+      reverse,
+      summary: summarize(name, args)
+    });
+  }
+  function withActionLog(name, args, mutateFn, source) {
+    if (!reversible(name)) return mutateFn();
+    const snap = captureSnapshotBefore(name, args);
+    const result = mutateFn();
+    if (snap != null) {
+      logAction(name, args, null, snap, source);
+    } else {
+      const resultId = capturePostResultId(name);
+      logAction(name, args, resultId, null, source);
+    }
+    return result;
+  }
+  var KEY, MAX, TTL_MS, SCHEMA_VERSION, POST_ID_POSITIONS;
+  var init_action_log = __esm({
+    "src/data/action-log.js"() {
+      init_uuid();
+      init_action_reversers();
+      KEY = "nm_action_log";
+      MAX = 50;
+      TTL_MS = 7 * 24 * 60 * 60 * 1e3;
+      SCHEMA_VERSION = 1;
+      POST_ID_POSITIONS = {
+        save_task: { key: "nm_tasks", pos: "first" },
+        save_finance: { key: "nm_finance", pos: "first" },
+        save_habit: { key: "nm_habits2", pos: "last" },
+        create_event: { key: "nm_events", pos: "last" }
+      };
+    }
+  });
+
   // src/tabs/finance-insight.js
   function _finInsightHash(allTxs) {
     const exp = allTxs.filter((t2) => t2.type === "expense").reduce((s, t2) => s + t2.amount, 0);
@@ -8291,6 +8504,14 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     if (subcategory) tx.subcategory = subcategory;
     txs.unshift(tx);
     saveFinance(txs);
+    logAction("save_finance", {
+      fin_type: type,
+      amount,
+      category,
+      subcategory,
+      fin_comment: comment,
+      date: parsed.date
+    }, tx.id, null, "inbox");
     const items = getInbox();
     items.unshift({ id: Date.now(), text: originalText, category: "finance", ts, processed: true });
     saveInbox(items);
@@ -8371,6 +8592,7 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
       init_inbox();
       init_habits();
       init_tasks();
+      init_action_log();
       init_health();
       init_months();
       init_finance_cats();
@@ -8779,157 +9001,6 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
         // бірюзовий
       };
       FIN_BROKEN_DEFAULT_COLOR = "#78716c";
-    }
-  });
-
-  // src/data/action-log.js
-  function _getDeviceId() {
-    let id = localStorage.getItem("nm_device_id");
-    if (!id) {
-      id = generateUUID();
-      localStorage.setItem("nm_device_id", id);
-    }
-    return id;
-  }
-  function getActionLog() {
-    try {
-      const raw = JSON.parse(localStorage.getItem(KEY) || "[]");
-      const cutoff = Date.now() - TTL_MS;
-      const fresh = raw.filter((e) => {
-        const ts = typeof e.ts === "string" ? new Date(e.ts).getTime() : e.ts || 0;
-        return ts >= cutoff;
-      });
-      return fresh.slice(-MAX);
-    } catch {
-      return [];
-    }
-  }
-  function appendActionLog({ source, tool, args, result, reverse, summary }) {
-    const log = getActionLog();
-    log.push({
-      id: generateUUID(),
-      ts: (/* @__PURE__ */ new Date()).toISOString(),
-      schema_version: SCHEMA_VERSION,
-      user_id: null,
-      // Supabase-ready: auth.uid() після міграції
-      device_id: _getDeviceId(),
-      source: source || "unknown",
-      tool,
-      args: args || {},
-      result: result || null,
-      reverse: reverse || null,
-      // null = нереверсиво (інформаційний запис)
-      summary: summary || tool,
-      reversed: false
-    });
-    while (log.length > MAX) log.shift();
-    try {
-      localStorage.setItem(KEY, JSON.stringify(log));
-    } catch (e) {
-      console.warn("[action-log] quota exceeded, trimming aggressively", e);
-      const trimmed = log.slice(-Math.floor(MAX / 2));
-      try {
-        localStorage.setItem(KEY, JSON.stringify(trimmed));
-      } catch {
-      }
-    }
-  }
-  function readLastReversible() {
-    const log = getActionLog();
-    for (let i = log.length - 1; i >= 0; i--) {
-      if (!log[i].reversed && log[i].reverse) return log[i];
-    }
-    return null;
-  }
-  function markReversed(id) {
-    const log = getActionLog();
-    const idx = log.findIndex((e) => e.id === id);
-    if (idx < 0) return false;
-    log[idx].reversed = true;
-    log[idx].reversedAt = (/* @__PURE__ */ new Date()).toISOString();
-    try {
-      localStorage.setItem(KEY, JSON.stringify(log));
-      return true;
-    } catch {
-      return false;
-    }
-  }
-  var KEY, MAX, TTL_MS, SCHEMA_VERSION;
-  var init_action_log = __esm({
-    "src/data/action-log.js"() {
-      init_uuid();
-      KEY = "nm_action_log";
-      MAX = 50;
-      TTL_MS = 7 * 24 * 60 * 60 * 1e3;
-      SCHEMA_VERSION = 1;
-    }
-  });
-
-  // src/data/action-reversers.js
-  function reversible(tool) {
-    return tool in REVERSERS;
-  }
-  function needsSnapshot(tool) {
-    return NEEDS_SNAPSHOT.has(tool);
-  }
-  function getSnapshotStorage(tool) {
-    return SNAPSHOT_STORAGE[tool] || null;
-  }
-  function buildReverse(tool, args, result, snapshotBefore) {
-    const builder = REVERSERS[tool];
-    if (!builder) return null;
-    try {
-      return builder(args, result, snapshotBefore);
-    } catch (e) {
-      console.warn("[action-reversers] builder error for", tool, e);
-      return null;
-    }
-  }
-  function summarize(tool, args) {
-    switch (tool) {
-      case "save_task":
-        return `\u0417\u0430\u0434\u0430\u0447\u0430: ${args?.title || args?.text || "?"}`;
-      case "save_finance":
-        return `${args?.fin_type === "income" ? "+" : "\u2212"}${args?.amount || "?"} ${args?.category || ""} ${args?.fin_comment || ""}`.trim();
-      case "save_habit":
-        return `\u0417\u0432\u0438\u0447\u043A\u0430: ${args?.name || "?"}`;
-      case "create_event":
-        return `\u041F\u043E\u0434\u0456\u044F: ${args?.title || "?"}${args?.date ? " \xB7 " + args.date : ""}`;
-      case "set_reminder":
-        return `\u041D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F: ${args?.text || "?"}${args?.time ? " \u043E " + args.time : ""}`;
-      case "save_routine": {
-        const days = Array.isArray(args?.day) ? args.day.join("/") : "?";
-        const firstBlock = args?.blocks?.[0];
-        const blockDesc = firstBlock ? `${firstBlock.time} ${firstBlock.activity}` : "?";
-        const total = args?.blocks?.length || 0;
-        return `\u0420\u043E\u0437\u043F\u043E\u0440\u044F\u0434\u043E\u043A: ${blockDesc}${total > 1 ? ` +${total - 1}` : ""} (${days})`;
-      }
-      default:
-        return tool;
-    }
-  }
-  var REVERSERS, NEEDS_SNAPSHOT, SNAPSHOT_STORAGE;
-  var init_action_reversers = __esm({
-    "src/data/action-reversers.js"() {
-      REVERSERS = {
-        // === Type A: tool_call reverse (additive tools) ===
-        save_task: (args, result) => result?.id ? { type: "tool_call", tool: "delete_task", args: { task_id: String(result.id) } } : null,
-        save_finance: (args, result) => result?.id != null ? { type: "tool_call", tool: "delete_transaction", args: { id: result.id } } : null,
-        save_habit: (args, result) => result?.id != null ? { type: "tool_call", tool: "delete_habit", args: { habit_id: result.id } } : null,
-        create_event: (args, result) => result?.id != null ? { type: "tool_call", tool: "delete_event", args: { event_id: result.id } } : null,
-        set_reminder: (args, result) => args?.text ? { type: "tool_call", tool: "delete_reminder", args: { text: args.text, time: args.time, date: args.date } } : null,
-        // === Type B: snapshot restore (destructive replace tools) ===
-        save_routine: (args, result, snapshot) => snapshot ? { type: "restore_snapshot", storage: "nm_routine", value: snapshot, detail: "routine" } : null
-        // edit_* — будуть додані у Phase 2 (потребують повного snapshot задачі/події)
-      };
-      NEEDS_SNAPSHOT = /* @__PURE__ */ new Set([
-        "save_routine"
-        // 'edit_task', 'edit_event', 'edit_habit' — Phase 2
-      ]);
-      SNAPSHOT_STORAGE = {
-        save_routine: "nm_routine"
-        // edit_task: 'nm_tasks', edit_event: 'nm_events', edit_habit: 'nm_habits2'
-      };
     }
   });
 
@@ -9665,49 +9736,6 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
   });
 
   // src/ai/tool-dispatcher.js
-  function _captureSnapshotBefore(name, args) {
-    if (!needsSnapshot(name)) return null;
-    const key = getSnapshotStorage(name);
-    if (!key) return null;
-    try {
-      const full = JSON.parse(localStorage.getItem(key) || "{}");
-      if (name === "save_routine" && Array.isArray(args.day)) {
-        const subset = {};
-        args.day.forEach((d) => {
-          subset[d] = Array.isArray(full[d]) ? [...full[d]] : [];
-        });
-        return subset;
-      }
-      return full;
-    } catch {
-      return null;
-    }
-  }
-  function _capturePostResultId(name) {
-    const spec = POST_ID_POSITIONS[name];
-    if (!spec) return null;
-    try {
-      const arr = JSON.parse(localStorage.getItem(spec.key) || "[]");
-      if (!Array.isArray(arr) || arr.length === 0) return null;
-      const item = spec.pos === "first" ? arr[0] : arr[arr.length - 1];
-      return item?.id != null ? item.id : null;
-    } catch {
-      return null;
-    }
-  }
-  function _logAction(name, args, resultId, snapshotBefore, source) {
-    if (!reversible(name)) return;
-    const reverse = buildReverse(name, args, resultId != null ? { id: resultId } : null, snapshotBefore);
-    if (!reverse) return;
-    appendActionLog({
-      source: source || "dispatcher",
-      tool: name,
-      args,
-      result: resultId != null ? { id: resultId } : null,
-      reverse,
-      summary: summarize(name, args)
-    });
-  }
   function _toolCallToUniversalAction(name, args) {
     switch (name) {
       case "save_task":
@@ -10264,7 +10292,7 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
         any = true;
         continue;
       }
-      const snapshotBefore = _captureSnapshotBefore(name, args);
+      const snapshotBefore = captureSnapshotBefore(name, args);
       const acts = _toolCallToUniversalAction(name, args);
       let universalHandled = false;
       for (const a of acts) {
@@ -10275,10 +10303,10 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
       }
       if (universalHandled) {
         if (snapshotBefore != null) {
-          _logAction(name, args, null, snapshotBefore, "dispatcher");
+          logAction(name, args, null, snapshotBefore, "dispatcher");
         } else if (reversible(name)) {
-          const resultId = _capturePostResultId(name);
-          _logAction(name, args, resultId, null, "dispatcher");
+          const resultId = capturePostResultId(name);
+          logAction(name, args, resultId, null, "dispatcher");
         }
       }
       if (acts.length === 0 || !universalHandled) {
@@ -10289,7 +10317,6 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
     }
     return any;
   }
-  var POST_ID_POSITIONS;
   var init_tool_dispatcher = __esm({
     "src/ai/tool-dispatcher.js"() {
       init_ui_tools();
@@ -10306,12 +10333,6 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
       init_action_log();
       init_action_reversers();
       init_action_undo();
-      POST_ID_POSITIONS = {
-        save_task: { key: "nm_tasks", pos: "first" },
-        save_finance: { key: "nm_finance", pos: "first" },
-        save_habit: { key: "nm_habits2", pos: "last" },
-        create_event: { key: "nm_events", pos: "last" }
-      };
     }
   });
 
@@ -12012,21 +12033,23 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
       switch (name) {
         // ========== СТВОРЕННЯ ==========
         case "save_task": {
-          const tasks = getTasks();
-          const newTask = {
-            id: Date.now(),
-            title: args.title || args.text || t("default.task_title", "\u0417\u0430\u0434\u0430\u0447\u0430"),
-            desc: args.text && args.text !== args.title ? args.text : "",
-            steps: Array.isArray(args.steps) ? args.steps.map((s) => ({ id: Date.now() + Math.random(), text: s, done: false })) : [],
-            status: "active",
-            createdAt: Date.now()
-          };
-          if (args.due_date) newTask.dueDate = args.due_date;
-          if (args.priority && ["normal", "important", "critical"].includes(args.priority)) newTask.priority = args.priority;
-          tasks.unshift(newTask);
-          saveTasks(tasks);
-          renderTasks();
-          logRecentAction("save_task", newTask.title, "evening");
+          withActionLog("save_task", args, () => {
+            const tasks = getTasks();
+            const newTask = {
+              id: Date.now(),
+              title: args.title || args.text || t("default.task_title", "\u0417\u0430\u0434\u0430\u0447\u0430"),
+              desc: args.text && args.text !== args.title ? args.text : "",
+              steps: Array.isArray(args.steps) ? args.steps.map((s) => ({ id: Date.now() + Math.random(), text: s, done: false })) : [],
+              status: "active",
+              createdAt: Date.now()
+            };
+            if (args.due_date) newTask.dueDate = args.due_date;
+            if (args.priority && ["normal", "important", "critical"].includes(args.priority)) newTask.priority = args.priority;
+            tasks.unshift(newTask);
+            saveTasks(tasks);
+            renderTasks();
+            logRecentAction("save_task", newTask.title, "evening");
+          }, "evening");
           return { ok: true };
         }
         case "save_note": {
@@ -12043,36 +12066,44 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
           return { ok: true };
         }
         case "save_habit": {
-          const habits = getHabits();
-          habits.unshift({ id: Date.now(), name: args.name, details: args.details || "", days: Array.isArray(args.days) ? args.days : [0, 1, 2, 3, 4, 5, 6], targetCount: args.target_count || 1, type: "build", createdAt: Date.now() });
-          saveHabits(habits);
-          renderHabits();
+          withActionLog("save_habit", args, () => {
+            const habits = getHabits();
+            habits.unshift({ id: Date.now(), name: args.name, details: args.details || "", days: Array.isArray(args.days) ? args.days : [0, 1, 2, 3, 4, 5, 6], targetCount: args.target_count || 1, type: "build", createdAt: Date.now() });
+            saveHabits(habits);
+            renderHabits();
+          }, "evening");
           return { ok: true };
         }
         case "create_event": {
-          const res = addEventDedup({ id: Date.now(), title: args.title || t("default.event_title", "\u041F\u043E\u0434\u0456\u044F"), date: args.date, time: args.time || null, priority: args.priority || "normal", createdAt: Date.now() });
+          const ev = { id: Date.now(), title: args.title || t("default.event_title", "\u041F\u043E\u0434\u0456\u044F"), date: args.date, time: args.time || null, priority: args.priority || "normal", createdAt: Date.now() };
+          const res = addEventDedup(ev);
           if (!res.added) return { ok: true, duplicate: true };
+          logAction("create_event", args, ev.id, null, "evening");
           logRecentAction("create_event", args.title || "", "evening");
           return { ok: true };
         }
         case "save_finance": {
-          const txs = getFinance();
-          txs.unshift({
-            id: Date.now(),
-            type: args.fin_type === "income" ? "income" : "expense",
-            amount: parseFloat(args.amount) || 0,
-            category: args.category || t("default.category_other", "\u0406\u043D\u0448\u0435"),
-            comment: args.fin_comment || "",
-            ts: args.date ? (/* @__PURE__ */ new Date(args.date + "T12:00:00")).getTime() : Date.now()
-          });
-          saveFinance(txs);
-          if (currentTab === "finance") renderFinance();
+          withActionLog("save_finance", args, () => {
+            const txs = getFinance();
+            txs.unshift({
+              id: Date.now(),
+              type: args.fin_type === "income" ? "income" : "expense",
+              amount: parseFloat(args.amount) || 0,
+              category: args.category || t("default.category_other", "\u0406\u043D\u0448\u0435"),
+              comment: args.fin_comment || "",
+              ts: args.date ? (/* @__PURE__ */ new Date(args.date + "T12:00:00")).getTime() : Date.now()
+            });
+            saveFinance(txs);
+            if (currentTab === "finance") renderFinance();
+          }, "evening");
           return { ok: true };
         }
         case "set_reminder": {
           const dateISO = args.date || (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
-          const res = addEventDedup({ id: Date.now(), title: "\u23F0 " + (args.text || t("default.reminder_title", "\u041D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F")), date: dateISO, time: args.time || null, priority: "important", createdAt: Date.now() });
+          const ev = { id: Date.now(), title: "\u23F0 " + (args.text || t("default.reminder_title", "\u041D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F")), date: dateISO, time: args.time || null, priority: "important", createdAt: Date.now() };
+          const res = addEventDedup(ev);
           if (!res.added) return { ok: true, duplicate: true };
+          logAction("set_reminder", args, null, null, "evening");
           return { ok: true };
         }
         case "save_memory_fact": {
@@ -12262,6 +12293,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
       init_trash();
       init_nav();
       init_utils();
+      init_action_log();
       init_core();
       init_prompts();
       NM_EVENING_CLOSED_KEY = "nm_evening_closed";
@@ -13977,9 +14009,9 @@ ${CHIP_PROMPT_RULES}`;
     _owlQuitRelapse(habitId, prevStreak, s.freedomDays || 0);
   }
   function _dayWord(n) {
-    if (n % 10 === 1 && n % 100 !== 11) return "\u0434\u0435\u043D\u044C";
-    if ([2, 3, 4].includes(n % 10) && ![12, 13, 14].includes(n % 100)) return "\u0434\u043D\u0456";
-    return "\u0434\u043D\u0456\u0432";
+    if (n % 10 === 1 && n % 100 !== 11) return t("habits.day.one", "\u0434\u0435\u043D\u044C");
+    if ([2, 3, 4].includes(n % 10) && ![12, 13, 14].includes(n % 100)) return t("habits.day.few", "\u0434\u043D\u0456");
+    return t("habits.day.many", "\u0434\u043D\u0456\u0432");
   }
   function _owlQuitRelapse(habitId, prevStreak, freedomDays) {
     const habits = getHabits();
@@ -15297,12 +15329,12 @@ ${CHIP_PROMPT_RULES}`;
           }
         }
       }
-      const reminderId = Date.now();
+      const reminderId = generateUUID();
       const reminders = getReminders();
       reminders.push({ id: reminderId, time, text, date, done: false });
       saveReminders(reminders);
       addEventDedup({
-        id: reminderId + 1,
+        id: generateUUID(),
         title: text,
         date,
         time,
@@ -15313,7 +15345,7 @@ ${CHIP_PROMPT_RULES}`;
       });
       const items = getInbox();
       items.unshift({
-        id: reminderId + 2,
+        id: generateUUID(),
         reminderId,
         text: `${time} \u2014 ${text}`,
         category: "reminder",
@@ -15614,6 +15646,160 @@ ${CHIP_PROMPT_RULES}`;
         holdQuitHabit,
         confirmQuitRelapse
       });
+    }
+  });
+
+  // src/data/intent-router.js
+  function _extractDays(text) {
+    for (const [re, days] of DAY_GROUPS) {
+      if (re.test(text)) return days;
+    }
+    const found = /* @__PURE__ */ new Set();
+    for (const [re, code] of DAY_MAP) {
+      if (re.test(text)) found.add(code);
+    }
+    return found.size > 0 ? Array.from(found) : null;
+  }
+  function _stripDays(text) {
+    let out = text;
+    for (const [re] of DAY_GROUPS) out = out.replace(re, " ");
+    for (const [re] of DAY_MAP) out = out.replace(re, " ");
+    return out;
+  }
+  function _extractTime(text) {
+    for (const re of TIME_PATTERNS) {
+      const m = text.match(re);
+      if (!m) continue;
+      let h = parseInt(m[1], 10);
+      let mm = m[2] && /^\d{2}$/.test(m[2]) ? parseInt(m[2], 10) : 0;
+      const periodWord = m[2] && /(ранку|вечора|дня|ночі)/i.test(m[2]) ? m[2].toLowerCase() : null;
+      if (periodWord === "\u0432\u0435\u0447\u043E\u0440\u0430" && h >= 1 && h <= 11) h += 12;
+      if (periodWord === "\u043D\u043E\u0447\u0456" && h >= 1 && h <= 4) h += 0;
+      if (periodWord === "\u0434\u043D\u044F" && h >= 1 && h <= 6) h += 12;
+      if (h < 0 || h > 23 || mm < 0 || mm > 59) continue;
+      return {
+        time: `${String(h).padStart(2, "0")}:${String(mm).padStart(2, "0")}`,
+        matched: m[0]
+      };
+    }
+    return null;
+  }
+  function _stripTime(text, matched) {
+    return text.replace(matched, " ");
+  }
+  function _parseRoutineIntent(text) {
+    if (!ROUTINE_TRIGGER.test(text)) return null;
+    if (ONE_OFF_DATE_INDICATORS.test(text) && !RECURRING_OVERRIDE.test(text)) {
+      return null;
+    }
+    let rest = text.replace(ROUTINE_TRIGGER, " ").trim();
+    const timeInfo = _extractTime(rest);
+    if (!timeInfo) return null;
+    rest = _stripTime(rest, timeInfo.matched);
+    if (_extractTime(rest)) return null;
+    const days = _extractDays(rest);
+    if (!days || days.length === 0) return null;
+    rest = _stripDays(rest);
+    let activity = rest.replace(/(?:^|\s)(?:в|у|о|на|щоб|до|ранку|вечора|дня|ночі|і|та|також)(?=\s|$)/giu, " ").replace(/[:\-—]+/g, " ").replace(/\s+/g, " ").trim();
+    if (!activity || activity.length < 2) return null;
+    activity = activity.toLowerCase();
+    activity = activity.charAt(0).toUpperCase() + activity.slice(1);
+    return {
+      tool: "save_routine",
+      args: {
+        _reasoning_log: "\u0414\u0435\u0440\u0435\u0442\u0435\u0440\u043C\u0456\u043D\u043E\u0432\u0430\u043D\u0438\u0439 \u043F\u0430\u0440\u0441\u0435\u0440 intent-router \u0440\u043E\u0437\u043F\u0456\u0437\u043D\u0430\u0432 \u044F\u0432\u043D\u0443 \u043A\u043E\u043C\u0430\u043D\u0434\u0443 save_routine. Bypass AI.",
+        day: days,
+        blocks: [{ time: timeInfo.time, activity }]
+      }
+    };
+  }
+  function _parseReminderIntent(text) {
+    if (!REMINDER_TRIGGER.test(text)) return null;
+    let rest = text.replace(REMINDER_TRIGGER, " ").trim();
+    if (!rest) return null;
+    const timeInfo = _extractTime(rest);
+    if (!timeInfo) return null;
+    let time = timeInfo.time;
+    rest = _stripTime(rest, timeInfo.matched);
+    if (_extractTime(rest)) return null;
+    let dateISO = null;
+    const dateObj = resolveDateFromText(rest, /* @__PURE__ */ new Date(), "future");
+    if (dateObj) {
+      const y = dateObj.getFullYear();
+      const m = String(dateObj.getMonth() + 1).padStart(2, "0");
+      const d = String(dateObj.getDate()).padStart(2, "0");
+      dateISO = `${y}-${m}-${d}`;
+      rest = rest.replace(DATE_STRIP_RE, " ");
+    }
+    let reminderText = rest.replace(REMINDER_STOP_WORDS, " ").replace(/[:\-—]+/g, " ").replace(/\s+/g, " ").trim();
+    if (!reminderText || reminderText.length < 2) return null;
+    reminderText = reminderText.toLowerCase();
+    reminderText = reminderText.charAt(0).toUpperCase() + reminderText.slice(1);
+    return {
+      tool: "set_reminder",
+      args: {
+        _reasoning_log: "\u0414\u0435\u0440\u0435\u0442\u0435\u0440\u043C\u0456\u043D\u043E\u0432\u0430\u043D\u0438\u0439 \u043F\u0430\u0440\u0441\u0435\u0440 intent-router \u0440\u043E\u0437\u043F\u0456\u0437\u043D\u0430\u0432 \u044F\u0432\u043D\u0443 \u043A\u043E\u043C\u0430\u043D\u0434\u0443 set_reminder. Bypass AI.",
+        text: reminderText,
+        time,
+        date: dateISO
+      }
+    };
+  }
+  function parseExplicitIntent(text) {
+    if (!text || typeof text !== "string") return null;
+    const trimmed = text.trim();
+    if (!trimmed) return null;
+    const routine = _parseRoutineIntent(trimmed);
+    if (routine) return routine;
+    const reminder = _parseReminderIntent(trimmed);
+    if (reminder) return reminder;
+    return null;
+  }
+  var BL, BR, DAY_MAP, DAY_GROUPS, TIME_PATTERNS, ROUTINE_TRIGGER, ONE_OFF_DATE_INDICATORS, RECURRING_OVERRIDE, REMINDER_TRIGGER, REMINDER_STOP_WORDS, DATE_STRIP_RE;
+  var init_intent_router = __esm({
+    "src/data/intent-router.js"() {
+      init_ua_time_parser();
+      BL = "(?:^|[\\s,.:;\\-])";
+      BR = "(?=[\\s,.:;\\-]|$)";
+      DAY_MAP = [
+        [new RegExp(BL + "(?:\u043F\u043E\u043D\u0435\u0434\u0456\u043B\\p{L}*|\u043F\u043D|\u0443\\s+\u043F\u043E\u043D\u0435\u0434\u0456\u043B\u043E\u043A|\u043F\u043E\\s+\u043F\u043E\u043D\u0435\u0434\u0456\u043B\u043A\\p{L}*)" + BR, "iu"), "mon"],
+        [new RegExp(BL + "(?:\u0432\u0456\u0432\u0442\u043E\u0440\\p{L}*|\u0432\u0442|\u0443\\s+\u0432\u0456\u0432\u0442\u043E\u0440\u043E\u043A|\u043F\u043E\\s+\u0432\u0456\u0432\u0442\u043E\u0440\u043A\\p{L}*)" + BR, "iu"), "tue"],
+        [new RegExp(BL + "(?:\u0441\u0435\u0440\u0435\u0434\\p{L}*|\u0441\u0440|\u0443\\s+\u0441\u0435\u0440\u0435\u0434\u0443|\u043F\u043E\\s+\u0441\u0435\u0440\u0435\u0434\\p{L}*)" + BR, "iu"), "wed"],
+        [new RegExp(BL + "(?:\u0447\u0435\u0442\u0432\u0435\u0440\\p{L}*|\u0447\u0442|\u0443\\s+\u0447\u0435\u0442\u0432\u0435\u0440|\u043F\u043E\\s+\u0447\u0435\u0442\u0432\u0435\u0440\u0433\\p{L}*)" + BR, "iu"), "thu"],
+        [new RegExp(BL + "(?:\u043F['\u02BC']?\u044F\u0442\u043D\u0438\u0446\\p{L}*|\u043F\u0442|\u0443\\s+\u043F['\u02BC']?\u044F\u0442\u043D\u0438\u0446\u044E|\u043F\u043E\\s+\u043F['\u02BC']?\u044F\u0442\u043D\u0438\u0446\\p{L}*)" + BR, "iu"), "fri"],
+        [new RegExp(BL + "(?:\u0441\u0443\u0431\u043E\u0442\\p{L}*|\u0441\u0431|\u0443\\s+\u0441\u0443\u0431\u043E\u0442\u0443|\u043F\u043E\\s+\u0441\u0443\u0431\u043E\u0442\\p{L}*)" + BR, "iu"), "sat"],
+        [new RegExp(BL + "(?:\u043D\u0435\u0434\u0456\u043B\\p{L}*|\u043D\u0434|\u0443\\s+\u043D\u0435\u0434\u0456\u043B\u044E|\u043F\u043E\\s+\u043D\u0435\u0434\u0456\u043B\\p{L}*)" + BR, "iu"), "sun"]
+      ];
+      DAY_GROUPS = [
+        [new RegExp(BL + "(?:\u0431\u0443\u0434\u043D\\p{L}*|\u0437\\s+\u043F\u043D\\s+\u043F\u043E\\s+\u043F\u0442|\u0440\u043E\u0431\\p{L}*\\s+\u0434\u043D\\p{L}*)" + BR, "iu"), ["mon", "tue", "wed", "thu", "fri"]],
+        [new RegExp(BL + "(?:\u0432\u0438\u0445\u0456\u0434\u043D\\p{L}*|\u0441\u0431[\\s-]+\u043D\u0434|\u043D\u0430\\s+\u0432\u0438\u0445\u0456\u0434\u043D\u0438\u0445)" + BR, "iu"), ["sat", "sun"]],
+        [new RegExp(BL + "(?:\u0449\u043E\u0434\u043D\u044F|\u043A\u043E\u0436\u0435\u043D\\s+\u0434\u0435\u043D\u044C|\u043A\u043E\u0436\u043D\u043E\u0433\u043E\\s+\u0434\u043D\u044F|\u0432\u0435\u0441\u044C\\s+\u0442\u0438\u0436\u0434\u0435\u043D\u044C)" + BR, "iu"), ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]]
+      ];
+      TIME_PATTERNS = [
+        // HH:MM з префіксом «о/у/в/на»
+        /(?:^|\s)(?:о|у|в|на)\s+(\d{1,2})[:.](\d{2})(?=\s|$)/iu,
+        // Голий HH:MM
+        /(?:^|\s)(\d{1,2})[:.](\d{2})(?=\s|$)/u,
+        // HH з ранку/вечора/дня/ночі — period word ПЕРЕД бар-HH
+        /(?:^|\s)(?:о|у|в|на)\s+(\d{1,2})\s+(ранку|вечора|дня|ночі)(?=\s|$|[.,])/iu,
+        // Голий «о HH» / «в HH» / «на HH»
+        /(?:^|\s)(?:о|у|в|на)\s+(\d{1,2})(?=\s|$|[.,])/iu
+      ];
+      ROUTINE_TRIGGER = new RegExp(
+        BL + "(?:(?:\u0434\u043E\u0434\u0430\u0439|\u043F\u043E\u0441\u0442\u0430\u0432|\u0441\u0442\u0432\u043E\u0440\\p{L}+|\u0432\u043D\u0435\u0441\u0438|\u0437\u0430\u043F\u0438\u0448\u0438|\u0437\u0440\u043E\u0431\u0438)\\s+(?:(?:\u0432|\u0443)\\s+)?\u0440\u043E\u0437\u043F\u043E\u0440\u044F\u0434\\p{L}+|(?:\u0432|\u0443)\\s+\u0440\u043E\u0437\u043F\u043E\u0440\u044F\u0434\\p{L}+\\s*:?)",
+        "iu"
+      );
+      ONE_OFF_DATE_INDICATORS = new RegExp(
+        BL + "(?:\u0437\u0430\u0432\u0442\u0440\u0430|\u043F\u0456\u0441\u043B\u044F\u0437\u0430\u0432\u0442\u0440\u0430|\u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456|\u0432\u0447\u043E\u0440\u0430|\u043F\u043E\u0437\u0430\u0432\u0447\u043E\u0440\u0430|\\d{1,2}\\s+(?:\u0441\u0456\u0447\u043D|\u043B\u044E\u0442|\u0431\u0435\u0440\u0435\u0437|\u043A\u0432\u0456\u0442\u043D|\u0442\u0440\u0430\u0432\u043D|\u0447\u0435\u0440\u0432\u043D|\u043B\u0438\u043F\u043D|\u0441\u0435\u0440\u043F\u043D|\u0432\u0435\u0440\u0435\u0441\u043D|\u0436\u043E\u0432\u0442\u043D|\u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434|\u0433\u0440\u0443\u0434\u043D)\\p{L}*|\\d{1,2}[.\\/]\\d{1,2})",
+        "iu"
+      );
+      RECURRING_OVERRIDE = new RegExp(BL + "(?:\u0449\u043E\u0442\u0438\u0436\u043D\u044F|\u043F\u043E\u0441\u0442\u0456\u0439\u043D\u043E|\u0440\u0435\u0433\u0443\u043B\u044F\u0440\u043D\u043E|\u043A\u043E\u0436\u0435\u043D\\s+\u0442\u0438\u0436\u0434\u0435\u043D\u044C)", "iu");
+      REMINDER_TRIGGER = new RegExp(
+        BL + "(?:\u043D\u0430\u0433\u0430\u0434\u0430\u0439|\u043D\u0430\u043F\u043E\u043C\u043D\u0438|\u043F\u043E\u0441\u0442\u0430\u0432\\s+\u043D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\\p{L}*|\u043F\u043E\u0441\u0442\u0430\u0432\\s+\u0440\u0435\u043C\u0430\u0439\u043D\u0434\u0435\u0440|\u043D\u0430\u0433\u0430\u0434\u0430\u0442\\p{L}*)(?:\\s+\u043C\u0435\u043D\u0456|\\s+\u043C\u0435\u043D\u0435)?",
+        "iu"
+      );
+      REMINDER_STOP_WORDS = /(?:^|\s)(?:в|у|о|на|щоб|про|щодо|треба|потрібно|ранку|вечора|дня|ночі)(?=\s|$)/giu;
+      DATE_STRIP_RE = /(?:^|[\s,.:;\-])(?:завтра|післязавтра|сьогодні|вчора|позавчора|у\s+понеділок|у\s+вівторок|у\s+середу|у\s+четвер|у\s+п['ʼ']?ятницю|у\s+суботу|у\s+неділю|по\s+понеділк\p{L}*|\d{1,2}\s+(?:січн|лют|берез|квітн|травн|червн|липн|серпн|вересн|жовтн|листопад|грудн)\p{L}*|\d{1,2}[.\/]\d{1,2})(?=[\s,.:;\-]|$)/giu;
     }
   });
 
@@ -16076,6 +16262,29 @@ ${JSON.stringify(contextData, null, 2)}` : "";
     try {
       const lastUser = [...history].reverse().find((m) => m.role === "user");
       const userText = lastUser ? typeof lastUser.content === "string" ? lastUser.content : "" : "";
+      try {
+        const parsed = parseExplicitIntent(userText);
+        if (parsed) {
+          try {
+            const log = JSON.parse(localStorage.getItem("nm_intent_router_log") || "[]");
+            log.unshift({ ts: Date.now(), module, tool: parsed.tool, text: userText.slice(0, 80) });
+            localStorage.setItem("nm_intent_router_log", JSON.stringify(log.slice(0, 50)));
+          } catch {
+          }
+          clearTimeout(timeout);
+          return {
+            role: "assistant",
+            content: null,
+            tool_calls: [{
+              id: "router_" + Date.now(),
+              type: "function",
+              function: { name: parsed.tool, arguments: JSON.stringify(parsed.args) }
+            }]
+          };
+        }
+      } catch (e) {
+        console.warn("[intent-router] parse failed, fallback to AI", e);
+      }
       const filteredTools = selectRelevantTools(userText, tools);
       if (Array.isArray(tools) && filteredTools.length < tools.length) {
         try {
@@ -16352,6 +16561,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
       init_prompts();
       init_unread_badge();
       init_usage_meter();
+      init_intent_router();
       init_prompts();
       activeChatBar = null;
       lastChatClosedTs = 0;
@@ -18527,8 +18737,10 @@ ${aiContext}`;
     const elapsed = Date.now() - _aiStart;
     if (elapsed < 800) await new Promise((r) => setTimeout(r, 800 - elapsed));
     if (!msg) {
-      saveOffline(text);
-      addInboxChatMsg("agent", t("inbox.chat.saved", "\u2713 \u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E"));
+      addInboxChatMsg("agent", t(
+        "inbox.chat.network_fail",
+        "\u{1F4E1} \u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u0434\u0437\u0432\u043E\u043D\u0438\u0442\u0438 \u0430\u0433\u0435\u043D\u0442\u0443. \u041F\u0435\u0440\u0435\u0432\u0456\u0440 \u0437\u0432'\u044F\u0437\u043E\u043A \u0430\u0431\u043E \u043F\u043E\u0432\u0442\u043E\u0440\u0438."
+      ));
       aiLoading = false;
       btn.disabled = false;
       btn.innerHTML = SEND_SVG;
@@ -18660,6 +18872,7 @@ ${aiContext}`;
               addInboxChatMsg("agent", t("inbox.chat.event_dupe", '\u0422\u0430\u043A\u0430 \u043F\u043E\u0434\u0456\u044F "{title}" \u0432\u0436\u0435 \u0454 \u0432 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440\u0456.', { title: ev.title }));
               continue;
             }
+            logAction("create_event", { title: ev.title, date: ev.date, time: ev.time, end_time: ev.endTime, priority: ev.priority }, ev.id, null, "inbox");
             const items = getInbox();
             items.unshift({ id: Date.now() + 1, eventId: ev.id, text: ev.title, category: "event", ts: Date.now(), processed: true });
             saveInbox(items);
@@ -18732,7 +18945,6 @@ ${aiContext}`;
               }
             }
           } else if (action.action === "save_routine") {
-            const routine = getRoutine();
             const blocks = (action.blocks || []).map((b) => ({ time: b.time, activity: b.activity }));
             const days = Array.isArray(action.day) ? action.day : [action.day || "default"];
             const dayLabels = {
@@ -18745,10 +18957,13 @@ ${aiContext}`;
               sat: t("inbox.day.sat_acc", "\u0441\u0443\u0431\u043E\u0442\u0443"),
               sun: t("inbox.day.sun_acc", "\u043D\u0435\u0434\u0456\u043B\u044E")
             };
-            days.forEach((d) => {
-              routine[d] = [...blocks];
-            });
-            saveRoutine(routine);
+            withActionLog("save_routine", { day: days, blocks }, () => {
+              const routine = getRoutine();
+              days.forEach((d) => {
+                routine[d] = [...blocks];
+              });
+              saveRoutine(routine);
+            }, "inbox");
             const label = days.length === 1 ? dayLabels[days[0]] || days[0] : days.map((d) => dayLabels[d] || d).join(", ");
             addInboxChatMsg("agent", t("inbox.chat.routine_saved", "\u{1F550} \u0420\u043E\u0437\u043F\u043E\u0440\u044F\u0434\u043E\u043A \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E \u043D\u0430 {label} ({n} \u0431\u043B\u043E\u043A\u0456\u0432)", { label, n: blocks.length }));
           } else if (action.action === "save_memory_fact") {
@@ -18971,13 +19186,23 @@ ${aiContext}`;
         const { text: replyText, chips } = _parseContentChips2(msg.content);
         if (replyText) addInboxChatMsg("agent", replyText, chips);
       } else {
-        saveOffline(text);
-        addInboxChatMsg("agent", t("inbox.chat.saved", "\u2713 \u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E"));
+        addInboxChatMsg("agent", t(
+          "inbox.chat.ai_empty",
+          "\u041D\u0435 \u0437\u0440\u043E\u0437\u0443\u043C\u0456\u0432 \u0437\u0430\u043F\u0438\u0442. \u0421\u043F\u0440\u043E\u0431\u0443\u0439 \u043F\u0435\u0440\u0435\u0444\u043E\u0440\u043C\u0443\u043B\u044E\u0432\u0430\u0442\u0438 \u043F\u0440\u043E\u0441\u0442\u0456\u0448\u0435 \u2014 \u043D\u0430\u043F\u0440. \xAB\u043A\u0443\u043F\u0438\u0432 \u043A\u0430\u0432\u0443 50\xBB \u0430\u0431\u043E \xAB\u043D\u0430\u0433\u0430\u0434\u0430\u0439 \u0437\u0430\u0432\u0442\u0440\u0430 \u043E 9\xBB."
+        ));
       }
     } catch (e) {
       console.error("Tool call processing error:", e);
-      saveOffline(text);
-      addInboxChatMsg("agent", t("inbox.chat.saved", "\u2713 \u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E"));
+      try {
+        const errLog = JSON.parse(localStorage.getItem("nm_error_log") || "[]");
+        errLog.unshift({ ts: Date.now(), where: "inbox.sendToAI.tool_dispatch", msg: String(e?.message || e).slice(0, 200), text: text.slice(0, 100) });
+        localStorage.setItem("nm_error_log", JSON.stringify(errLog.slice(0, 50)));
+      } catch {
+      }
+      addInboxChatMsg("agent", t(
+        "inbox.chat.error_processing",
+        "\u26A0\uFE0F \u0421\u0442\u0430\u043B\u0430\u0441\u044C \u043F\u043E\u043C\u0438\u043B\u043A\u0430 \u043E\u0431\u0440\u043E\u0431\u043A\u0438. \u041F\u0435\u0440\u0435\u0432\u0456\u0440 API \u043A\u043B\u044E\u0447 \u0443 \u041D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445 \u0430\u0431\u043E \u0441\u043F\u0440\u043E\u0431\u0443\u0439 \u043A\u043E\u0440\u043E\u0442\u0448\u0435."
+      ));
     }
     try {
       maybeAskGuideQuestion();
