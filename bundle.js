@@ -883,9 +883,11 @@
     const todayKey = DAY_KEYS[(/* @__PURE__ */ new Date()).getDay()];
     const todayISO2 = _todayISO();
     el.style.justifyContent = "space-between";
-    el.style.gap = "4px";
+    el.style.gap = "2px";
     el.style.alignItems = "center";
-    const arrowStyle = "width:32px;height:36px;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:600;color:rgba(30,16,64,0.45);cursor:pointer;border-radius:10px;-webkit-tap-highlight-color:transparent;flex-shrink:0;background:rgba(255,255,255,0.4)";
+    el.style.overflow = "visible";
+    el.style.flexWrap = "nowrap";
+    const arrowStyle = "width:28px;height:36px;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:600;color:rgba(30,16,64,0.45);cursor:pointer;border-radius:10px;-webkit-tap-highlight-color:transparent;flex-shrink:0;background:rgba(255,255,255,0.4)";
     const prevBtn = `<div onclick="routineShiftWeek(-1)" style="${arrowStyle}" aria-label="${t("routine.aria.prev_week", "\u041C\u0438\u043D\u0443\u043B\u0438\u0439 \u0442\u0438\u0436\u0434\u0435\u043D\u044C")}">\u2039</div>`;
     const nextBtn = `<div onclick="routineShiftWeek(1)" style="${arrowStyle}" aria-label="${t("routine.aria.next_week", "\u041D\u0430\u0441\u0442\u0443\u043F\u043D\u0438\u0439 \u0442\u0438\u0436\u0434\u0435\u043D\u044C")}">\u203A</div>`;
     const daysHtml = ROUTINE_TAB_ORDER.map((key) => {
@@ -931,24 +933,20 @@
     }
     const label = document.getElementById("routine-day-label");
     if (label) {
-      const dateISO = _lastDateForDayKey(_routineDay);
-      const [, m, d] = dateISO.split("-");
-      const dayDate = `${parseInt(d)} ${monthShort(parseInt(m, 10) - 1).toLowerCase()}`;
-      const diffDays = Math.round((new Date(_todayISO()) - new Date(dateISO)) / (24 * 60 * 60 * 1e3));
-      let dayPart;
-      if (diffDays === 0) dayPart = t("routine.day.today", "\u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456");
-      else if (diffDays === 1) dayPart = t("routine.day.yesterday", "\u0432\u0447\u043E\u0440\u0430");
-      else if (diffDays === 2) dayPart = t("routine.day.day_before", "\u043F\u043E\u0437\u0430\u0432\u0447\u043E\u0440\u0430");
-      else if (diffDays === -1) dayPart = t("routine.day.tomorrow", "\u0437\u0430\u0432\u0442\u0440\u0430");
-      else if (diffDays === -2) dayPart = t("routine.day.day_after", "\u043F\u0456\u0441\u043B\u044F\u0437\u0430\u0432\u0442\u0440\u0430");
-      else dayPart = dayDate;
-      let weekPart = "";
-      if (_routineWeekOffset === 1) weekPart = t("routine.week.next", " \xB7 \u043D\u0430\u0441\u0442\u0443\u043F\u043D\u0438\u0439 \u0442\u0438\u0436\u0434\u0435\u043D\u044C");
-      else if (_routineWeekOffset === -1) weekPart = t("routine.week.prev", " \xB7 \u043C\u0438\u043D\u0443\u043B\u0438\u0439 \u0442\u0438\u0436\u0434\u0435\u043D\u044C");
-      else if (_routineWeekOffset > 1) weekPart = t("routine.week.future_n", " \xB7 \u0447\u0435\u0440\u0435\u0437 {n} \u0442\u0438\u0436\u043D\u0456", { n: _routineWeekOffset });
-      else if (_routineWeekOffset < -1) weekPart = t("routine.week.past_n", " \xB7 {n} \u0442\u0438\u0436\u043D\u0456 \u0442\u043E\u043C\u0443", { n: -_routineWeekOffset });
-      label.textContent = dayPart + weekPart;
+      if (_routineWeekOffset === 0) {
+        label.textContent = t("routine.week.this", "\u0426\u0435\u0439 \u0442\u0438\u0436\u0434\u0435\u043D\u044C");
+      } else {
+        const dateISO = _lastDateForDayKey(_routineDay);
+        const wk = _isoWeekNumber(new Date(dateISO));
+        label.textContent = t("routine.week.num", "\u0422\u0438\u0436\u0434\u0435\u043D\u044C {n}", { n: wk });
+      }
     }
+  }
+  function _isoWeekNumber(date) {
+    const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+    d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    return Math.ceil(((d - yearStart) / 864e5 + 1) / 7);
   }
   function _lastDateForDayKey(dayKey) {
     if (dayKey === "default") return _todayISO();
@@ -967,8 +965,7 @@
     const blocks = _routineDay === "default" ? getRoutineForDay("default").map((b, idx) => ({ time: b.time, activity: b.activity, kind: "routine", sourceIdx: idx, isPast: false })) : getCombinedTimelineForDate(dateISO);
     if (blocks.length === 0) {
       el.innerHTML = `<div style="text-align:center;padding:32px 0;color:rgba(30,16,64,0.3);font-size:14px">
-      ${t("calendar.routine.empty_title", "\u0420\u043E\u0437\u043F\u043E\u0440\u044F\u0434\u043E\u043A \u043F\u043E\u0440\u043E\u0436\u043D\u0456\u0439.")}<br>${t("calendar.routine.empty_hint", "\u041D\u0430\u0442\u0438\u0441\u043D\u0438 \xAB+ \u0414\u043E\u0434\u0430\u0442\u0438 \u0431\u043B\u043E\u043A\xBB \u0430\u0431\u043E \u043D\u0430\u043F\u0438\u0448\u0438 \u0432 \u0447\u0430\u0442:")}<br>
-      <span style="color:rgba(234,88,12,0.6);font-weight:600">${t("calendar.routine.empty_example", '"\u041C\u0456\u0439 \u0440\u043E\u0437\u043A\u043B\u0430\u0434: 7 \u043F\u0456\u0434\u0439\u043E\u043C, 9 \u0440\u043E\u0431\u043E\u0442\u0430, 18 \u0437\u0430\u043B"')}</span>
+      ${t("calendar.routine.empty_title", "\u0420\u043E\u0437\u043F\u043E\u0440\u044F\u0434\u043E\u043A \u043F\u043E\u0440\u043E\u0436\u043D\u0456\u0439.")}<br>${t("calendar.routine.empty_hint_short", "\u041D\u0430\u0442\u0438\u0441\u043D\u0438 \xAB+ \u0414\u043E\u0434\u0430\u0442\u0438 \u0431\u043B\u043E\u043A\xBB.")}
     </div>`;
       return;
     }
