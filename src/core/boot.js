@@ -591,6 +591,38 @@ function runMigrations() {
     }
   }
 
+  // v11 Notes UUID (myshu 11.05.2026 Architecture Refactor Сесія 3B-3):
+  // Note.id був Date.now(). НЕМАЄ persistent cross-references (folder це
+  // текст-поле, не FK). Простіша міграція ніж Events.
+  if (!localStorage.getItem('nm_notes_uuid_migrated_v11')) {
+    try {
+      const notesRaw = localStorage.getItem('nm_notes');
+      if (notesRaw) {
+        const backupKey = createSelectiveBackup(['nm_notes'], 'pre-note-uuid-v11');
+        if (backupKey) console.log('[boot] v11 notes backup:', backupKey);
+
+        const notes = JSON.parse(notesRaw);
+        if (Array.isArray(notes)) {
+          let migrated = 0;
+          notes.forEach(n => {
+            if (n && typeof n.id === 'number') {
+              n.legacy_id = n.id;
+              n.id = generateUUID();
+              migrated++;
+            }
+          });
+          if (migrated > 0) {
+            localStorage.setItem('nm_notes', JSON.stringify(notes));
+            console.log(`[boot] v11 migration: ${migrated} notes migrated to UUID`);
+          }
+        }
+      }
+      localStorage.setItem('nm_notes_uuid_migrated_v11', '1');
+    } catch (e) {
+      console.error('[boot] v11 notes migration failed:', e);
+    }
+  }
+
   // v9 (03.05.2026 MIeXK Health AI-інтерв'ю): шкала статусів 3 → 6 значень.
   // Старе: active/controlled/done. Нове: acute/treatment/improving/remission/chronic/done.
   // Мапінг: active → treatment (нейтральне «активне лікування»), controlled → remission,
