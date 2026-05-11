@@ -7,6 +7,7 @@
 // ============================================================
 
 import { showToast } from '../core/nav.js';
+import { generateUUID } from '../core/uuid.js';
 import { escapeHtml, logRecentAction, t } from '../core/utils.js';
 import { logUsage } from '../core/usage-meter.js';
 import { getTasks, saveTasks, setupModalSwipeClose } from './tasks.js';
@@ -345,7 +346,7 @@ function saveMoment() {
   const text = document.getElementById('moment-input-text').value.trim();
   if (!text) { showToast(t('evening.moment.empty_error', 'Введіть текст моменту')); return; }
   const moments = getMoments();
-  const newMoment = { id: Date.now(), text, mood: currentMomentMood, ts: Date.now() };
+  const newMoment = { id: generateUUID(), text, mood: currentMomentMood, ts: Date.now() };
   moments.push(newMoment);
   saveMoments(moments);
   logRecentAction('add_moment', text.substring(0, 40), 'evening');

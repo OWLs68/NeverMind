@@ -10,6 +10,7 @@
 // ============================================================
 
 import { currentTab, showToast } from '../core/nav.js';
+import { generateUUID } from '../core/uuid.js';
 import { escapeHtml, escapeJsArg, t } from '../core/utils.js';
 import { addToTrash, showUndoToast } from '../core/trash.js';
 import { SWIPE_DELETE_THRESHOLD, applySwipeTrail, clearSwipeTrail, attachSwipeDelete } from '../ui/swipe-delete.js';
@@ -602,7 +603,7 @@ export function processFinanceAction(parsed, originalText) {
   const ts = _resolveFinanceDate(parsed.date, originalText);
 
   const txs = getFinance();
-  const tx = { id: Date.now(), type, amount, category, comment, ts };
+  const tx = { id: generateUUID(), type, amount, category, comment, ts };
   if (subcategory) tx.subcategory = subcategory;
   txs.unshift(tx);
   saveFinance(txs);
@@ -613,7 +614,7 @@ export function processFinanceAction(parsed, originalText) {
   }, tx.id, null, 'inbox');
 
   const items = getInbox();
-  items.unshift({ id: Date.now(), text: originalText, category: 'finance', ts, processed: true });
+  items.unshift({ id: generateUUID(), text: originalText, category: 'finance', ts, processed: true });
   saveInbox(items);
   renderInbox();
 

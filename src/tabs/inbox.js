@@ -1379,7 +1379,7 @@ async function processSaveAction(parsed, originalText) {
       const mood = parsed.mood || (/добре|чудово|супер|відмінно|весело|щасли/i.test(savedText) ? 'positive' :
                    /погано|жахливо|сумно|нудно|важко|втомив/i.test(savedText) ? 'negative' : 'neutral');
       const moments = getMoments();
-      const newMoment = { id: Date.now(), text: savedText, mood, ts: Date.now() };
+      const newMoment = { id: generateUUID(), text: savedText, mood, ts: Date.now() };
       moments.push(newMoment);
       saveMoments(moments);
       generateMomentSummary(newMoment.id, savedText);

@@ -1318,7 +1318,7 @@ export function processUniversalAction(parsed, originalText, addMsg) {
       if (resolved) momentTs = resolved.getTime();
     }
     const moments = getMoments();
-    moments.push({ id: Date.now(), text, mood, ts: momentTs });
+    moments.push({ id: generateUUID(), text, mood, ts: momentTs });
     saveMoments(moments);
     addMsg('agent', t('habits.moment.added', '✨ Момент записано'));
     return true;
