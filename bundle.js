@@ -2402,7 +2402,7 @@ ${lines.join("\n")}`;
     if (!clean) return null;
     const allergies = getAllergies();
     if (allergies.some((a) => a.name.toLowerCase() === clean.toLowerCase())) return null;
-    const entry = { id: Date.now() + Math.floor(Math.random() * 1e3), name: clean, notes: (notes || "").trim(), createdAt: Date.now() };
+    const entry = { id: generateUUID(), name: clean, notes: (notes || "").trim(), createdAt: Date.now() };
     allergies.push(entry);
     saveAllergies(allergies);
     return entry;
@@ -2462,7 +2462,7 @@ ${lines.join("\n")}`;
       const pills = (card.treatments || []).slice(0, 4);
       const isDone = card.status === "done";
       return `<div class="health-card-wrap" data-id="${card.id}" style="position:relative;overflow:hidden;border-radius:14px;margin-bottom:8px">
-        <div onclick="openHealthCard(${card.id})" class="card-glass health-card-item" style="cursor:pointer;opacity:${st.opacity};margin-bottom:0">
+        <div onclick="openHealthCard('${card.id}')" class="card-glass health-card-item" style="cursor:pointer;opacity:${st.opacity};margin-bottom:0">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
             <div style="flex:1">
               <div style="font-size:15px;font-weight:900;color:#1e1040">${escapeHtml(card.name)}</div>
@@ -2499,7 +2499,7 @@ ${lines.join("\n")}`;
     document.querySelectorAll(".health-card-wrap").forEach((wrap) => {
       const card = wrap.querySelector(".health-card-item");
       if (!card) return;
-      const id = Number(wrap.dataset.id);
+      const id = wrap.dataset.id;
       attachSwipeDelete(wrap, card, () => {
         const cards = getHealthCards();
         const removed = cards.find((c) => c.id === id);
@@ -2535,7 +2535,7 @@ ${lines.join("\n")}`;
     if (!name || !name.trim()) return null;
     const cards = getHealthCards();
     const newCard = {
-      id: Date.now() + Math.floor(Math.random() * 1e3),
+      id: generateUUID(),
       name: name.trim(),
       subtitle: (subtitle || "").trim(),
       status: HEALTH_STATUS_DEFS[status] ? status : "treatment",
@@ -2543,7 +2543,7 @@ ${lines.join("\n")}`;
       nextStep: "",
       treatments: [],
       medications: Array.isArray(medications) ? medications.map((m) => ({
-        id: Date.now() + Math.floor(Math.random() * 1e4),
+        id: generateUUID(),
         name: m.name || "",
         dosage: m.dosage || "",
         schedule: Array.isArray(m.schedule) ? m.schedule : m.schedule ? String(m.schedule).split(/[,;]\s*/).filter(Boolean) : [],
@@ -2627,7 +2627,7 @@ ${lines.join("\n")}`;
     if (idx === -1 || !med || !med.name) return null;
     if (!Array.isArray(cards[idx].medications)) cards[idx].medications = [];
     const newMed = {
-      id: Date.now() + Math.floor(Math.random() * 1e4),
+      id: generateUUID(),
       name: String(med.name),
       dosage: med.dosage || "",
       schedule: Array.isArray(med.schedule) ? med.schedule : med.schedule ? String(med.schedule).split(/[,;]\s*/).filter(Boolean) : [],
@@ -2857,7 +2857,7 @@ ${lines.join("\n")}`;
       const schedule = Array.isArray(med.schedule) ? med.schedule : [];
       const steps = schedule.map((s) => ({ id: Date.now() + Math.floor(Math.random() * 1e4), text: s, done: false }));
       const newTask = {
-        id: Date.now() + Math.floor(Math.random() * 1e3),
+        id: generateUUID(),
         title,
         text: t("health.task.take_med_step", "[{card}] {name}{dosage}{course}", { card: cardName, name: med.name, dosage: med.dosage ? " " + med.dosage : "", course: med.courseDuration ? " \xB7 \u043A\u0443\u0440\u0441 " + med.courseDuration : "" }),
         status: "active",
@@ -2964,8 +2964,8 @@ ${lines.join("\n")}`;
         <div style="font-size:12px;font-weight:800;color:#1e1040">${escapeHtml(d.medName)}${d.dosage ? " " + escapeHtml(d.dosage) : ""}</div>
         <div style="font-size:10px;color:rgba(30,16,64,0.5);font-weight:600;margin-top:1px">${escapeHtml(d.cardName)} \xB7 ${escapeHtml(d.scheduledTime)}</div>
       </div>
-      <button onclick="logHealthMedDose(${d.cardId},${d.medId})" style="font-size:11px;font-weight:800;padding:5px 10px;border-radius:8px;border:none;background:#16a34a;color:white;cursor:pointer;white-space:nowrap">${t("health.dose.took_btn", "\u2713 \u041F\u0440\u0438\u0439\u043D\u044F\u0432")}</button>
-      <button onclick="skipHealthMedDose(${d.cardId},${d.medId},'${escapeJsArg(d.scheduledTime)}')" style="font-size:11px;font-weight:700;padding:5px 10px;border-radius:8px;border:1.5px solid rgba(30,16,64,0.15);background:white;color:rgba(30,16,64,0.55);cursor:pointer;white-space:nowrap">${t("health.dose.skip_btn", "\u041F\u0440\u043E\u043F\u0443\u0449\u0443")}</button>
+      <button onclick="logHealthMedDose('${d.cardId}','${d.medId}')" style="font-size:11px;font-weight:800;padding:5px 10px;border-radius:8px;border:none;background:#16a34a;color:white;cursor:pointer;white-space:nowrap">${t("health.dose.took_btn", "\u2713 \u041F\u0440\u0438\u0439\u043D\u044F\u0432")}</button>
+      <button onclick="skipHealthMedDose('${d.cardId}','${d.medId}','${escapeJsArg(d.scheduledTime)}')" style="font-size:11px;font-weight:700;padding:5px 10px;border-radius:8px;border:1.5px solid rgba(30,16,64,0.15);background:white;color:rgba(30,16,64,0.55);cursor:pointer;white-space:nowrap">${t("health.dose.skip_btn", "\u041F\u0440\u043E\u043F\u0443\u0449\u0443")}</button>
     </div>`).join("")}
     ${missed.length > 5 ? `<div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:600;text-align:center">${t("health.dose.more_missed", "+ \u0449\u0435 {n} \u043F\u0440\u043E\u043F\u0443\u0449\u0435\u043D\u0438\u0445", { n: missed.length - 5 })}</div>` : ""}
   </div>`;
@@ -3065,7 +3065,7 @@ ${lines.join("\n")}`;
           <div style="font-size:11px;color:rgba(30,16,64,0.4);font-weight:600;margin-top:2px">${escapeHtml(card.subtitle || "")}</div>
         </div>
         <div style="display:flex;align-items:center;gap:10px;flex-shrink:0">
-          <button onclick="openEditHealthCard(${id})" title="${t("health.card.edit_title", "\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438")}" style="background:rgba(30,16,64,0.06);border:none;border-radius:8px;padding:6px 10px;font-size:11px;font-weight:700;color:rgba(30,16,64,0.65);cursor:pointer">${t("health.card.edit_btn", "\u0420\u0435\u0434.")}</button>
+          <button onclick="openEditHealthCard('${id}')" title="${t("health.card.edit_title", "\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438")}" style="background:rgba(30,16,64,0.06);border:none;border-radius:8px;padding:6px 10px;font-size:11px;font-weight:700;color:rgba(30,16,64,0.65);cursor:pointer">${t("health.card.edit_btn", "\u0420\u0435\u0434.")}</button>
           <div style="font-size:20px;font-weight:900;color:${st.color};line-height:1">${pct}%</div>
         </div>
       </div>
@@ -3081,13 +3081,13 @@ ${lines.join("\n")}`;
         ${HEALTH_STATUS_KEYS.map((s) => {
       const d = _statusDef(s);
       const on = s === card.status;
-      return `<button onclick="setHealthCardStatus(${id},'${s}')" style="font-size:10px;font-weight:700;padding:4px 9px;border-radius:8px;border:1px solid ${on ? d.color : "rgba(30,16,64,0.15)"};background:${on ? d.bg : "transparent"};color:${on ? d.color : "rgba(30,16,64,0.45)"};cursor:pointer;white-space:nowrap">${d.icon} ${d.label}</button>`;
+      return `<button onclick="setHealthCardStatus('${id}','${s}')" style="font-size:10px;font-weight:700;padding:4px 9px;border-radius:8px;border:1px solid ${on ? d.color : "rgba(30,16,64,0.15)"};background:${on ? d.bg : "transparent"};color:${on ? d.color : "rgba(30,16,64,0.45)"};cursor:pointer;white-space:nowrap">${d.icon} ${d.label}</button>`;
     }).join("")}
       </div>
     </div>
 
     <!-- "\u0417\u0430\u043F\u0438\u0442\u0430\u0442\u0438 OWL \u043F\u0440\u043E \u0446\u0435\u0439 \u0441\u0442\u0430\u043D" (\u0424\u0430\u0437\u0430 3 \u2014 preloaded \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442 \u0443 \u0447\u0430\u0442-\u0431\u0430\u0440) -->
-    <div onclick="askOwlAboutHealthCard(${id})" style="display:flex;align-items:center;gap:10px;background:linear-gradient(135deg,rgba(26,92,42,0.08),rgba(74,222,128,0.05));border:1.5px solid rgba(26,92,42,0.18);border-radius:14px;padding:11px 14px;margin-bottom:10px;cursor:pointer">
+    <div onclick="askOwlAboutHealthCard('${id}')" style="display:flex;align-items:center;gap:10px;background:linear-gradient(135deg,rgba(26,92,42,0.08),rgba(74,222,128,0.05));border:1.5px solid rgba(26,92,42,0.18);border-radius:14px;padding:11px 14px;margin-bottom:10px;cursor:pointer">
       <div class="icon-circle" style="width:32px;height:32px;background:rgba(26,92,42,0.12)">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a5c2a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
       </div>
@@ -3122,7 +3122,7 @@ ${lines.join("\n")}`;
               <div style="font-size:13px;font-weight:700;color:#1e1040">${escapeHtml(m.name)}</div>
               <div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:600;margin-top:1px">${escapeHtml(m.dosage || "")}${course}${schedStr ? " \xB7 " + escapeHtml(schedStr) : ""}</div>
             </div>
-            <button onclick="logHealthMedDose(${id},${m.id})" style="font-size:10px;font-weight:800;padding:5px 10px;border-radius:8px;border:1.5px solid ${takenToday && todayDosesCount >= expectedToday ? "rgba(22,163,74,0.3)" : "#1a5c2a"};background:${takenToday && todayDosesCount >= expectedToday ? "rgba(22,163,74,0.08)" : "#1a5c2a"};color:${takenToday && todayDosesCount >= expectedToday ? "#16a34a" : "white"};cursor:pointer;white-space:nowrap">${takenToday && todayDosesCount >= expectedToday ? t("health.dose.taken_label", "\u2713 \u043F\u0440\u0438\u0439\u043D\u044F\u0442\u043E") : t("health.dose.take_now_btn", "+ \u041F\u0440\u0438\u0439\u043D\u044F\u0442\u0438")}</button>
+            <button onclick="logHealthMedDose('${id}','${m.id}')" style="font-size:10px;font-weight:800;padding:5px 10px;border-radius:8px;border:1.5px solid ${takenToday && todayDosesCount >= expectedToday ? "rgba(22,163,74,0.3)" : "#1a5c2a"};background:${takenToday && todayDosesCount >= expectedToday ? "rgba(22,163,74,0.08)" : "#1a5c2a"};color:${takenToday && todayDosesCount >= expectedToday ? "#16a34a" : "white"};cursor:pointer;white-space:nowrap">${takenToday && todayDosesCount >= expectedToday ? t("health.dose.taken_label", "\u2713 \u043F\u0440\u0438\u0439\u043D\u044F\u0442\u043E") : t("health.dose.take_now_btn", "+ \u041F\u0440\u0438\u0439\u043D\u044F\u0442\u0438")}</button>
           </div>
           ${schedArr.length > 0 ? `<div style="display:flex;align-items:center;gap:8px;padding-left:38px">
             <div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:700">${t("health.dose.today_label", "\u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456:")}</div>
@@ -3176,7 +3176,7 @@ ${lines.join("\n")}`;
     </div>` : ""}
 
     <!-- \u041D\u043E\u0442\u0430\u0442\u043A\u0438 \u2192 \u043F\u0430\u043F\u043A\u0430 (B-29 fix: switchTab + delayed openNotesFolder) -->
-    <div onclick="openHealthCardNote(${card.id})" style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.55);border:1.5px dashed rgba(30,16,64,0.14);border-radius:12px;padding:10px 12px;margin-bottom:10px;cursor:pointer">
+    <div onclick="openHealthCardNote('${card.id}')" style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.55);border:1.5px dashed rgba(30,16,64,0.14);border-radius:12px;padding:10px 12px;margin-bottom:10px;cursor:pointer">
       <div class="icon-circle" style="width:30px;height:30px">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1a5c2a" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
       </div>
@@ -3468,7 +3468,7 @@ ${lines.join("\n")}`;
       }
     }
     const newEvent = {
-      id: Date.now() + Math.floor(Math.random() * 1e3),
+      id: generateUUID(),
       title,
       date: newAppointment.date,
       time: newAppointment.time || "",
@@ -3571,7 +3571,7 @@ ${lines.join("\n")}`;
       const schedStr = row.querySelector(".med-schedule")?.value.trim() || "";
       const schedule = schedStr ? schedStr.split(/[,;]\s*/).filter(Boolean) : [];
       meds.push({
-        id: Date.now() + Math.floor(Math.random() * 1e3),
+        id: generateUUID(),
         name: mName,
         dosage,
         schedule,
@@ -3607,7 +3607,7 @@ ${lines.join("\n")}`;
       }
     } else {
       const newCard = {
-        id: Date.now() + Math.floor(Math.random() * 1e3),
+        id: generateUUID(),
         name,
         subtitle,
         status,
@@ -3707,7 +3707,7 @@ ${lines.join("\n")}`;
           <div style="font-size:12px;font-weight:800;color:${coralText};line-height:1.2">${escapeHtml(a.name)}</div>
           ${a.notes ? `<div style="font-size:9px;color:rgba(30,16,64,0.45);font-weight:600;margin-top:1px">${escapeHtml(a.notes)}</div>` : ""}
         </div>
-        <div onclick="deleteAllergyById(${a.id})" style="cursor:pointer;font-size:16px;color:rgba(30,16,64,0.35);line-height:1;padding:0 2px" title="${t("health.allergy.delete_title", "\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438")}">\xD7</div>
+        <div onclick="deleteAllergyById('${a.id}')" style="cursor:pointer;font-size:16px;color:rgba(30,16,64,0.35);line-height:1;padding:0 2px" title="${t("health.allergy.delete_title", "\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438")}">\xD7</div>
       </div>`).join("")}
     </div>
   </div>`;
@@ -4027,6 +4027,7 @@ ${lines.join("\n")}`;
     "src/tabs/health.js"() {
       init_nav();
       init_utils();
+      init_uuid();
       init_trash();
       init_core();
       init_tool_dispatcher();
@@ -21971,6 +21972,149 @@ ${logLines}
         localStorage.setItem("nm_inbox_uuid_migrated_v15", "1");
       } catch (e) {
         console.error("[boot] v15 inbox migration failed:", e);
+      }
+    }
+    if (!localStorage.getItem("nm_health_uuid_migrated_v16")) {
+      try {
+        const cardsRaw = localStorage.getItem("nm_health_cards");
+        const allergiesRaw = localStorage.getItem("nm_allergies");
+        const eventsRaw = localStorage.getItem("nm_events");
+        const tasksRaw = localStorage.getItem("nm_tasks");
+        if (cardsRaw || allergiesRaw) {
+          const backupKey = createSelectiveBackup(
+            ["nm_health_cards", "nm_allergies", "nm_events", "nm_tasks"],
+            "pre-health-uuid-v16"
+          );
+          if (backupKey) console.log("[boot] v16 health backup:", backupKey);
+          const cardIdMap = {};
+          const medIdMap = {};
+          let events = null;
+          if (eventsRaw) {
+            try {
+              events = JSON.parse(eventsRaw);
+            } catch {
+              events = null;
+            }
+          }
+          if (cardsRaw) {
+            const cards = JSON.parse(cardsRaw);
+            if (Array.isArray(cards)) {
+              let migratedCards = 0;
+              let migratedMeds = 0;
+              cards.forEach((card) => {
+                if (card && typeof card.id === "number") {
+                  const oldId = String(card.id);
+                  const newId = generateUUID();
+                  card.legacy_id = card.id;
+                  card.id = newId;
+                  cardIdMap[oldId] = newId;
+                  migratedCards++;
+                }
+                if (Array.isArray(card.medications)) {
+                  card.medications.forEach((med) => {
+                    if (med && typeof med.id === "number") {
+                      const oldMedId = String(med.id);
+                      const newMedId = generateUUID();
+                      med.legacy_id = med.id;
+                      med.id = newMedId;
+                      medIdMap[oldMedId] = newMedId;
+                      migratedMeds++;
+                    }
+                  });
+                }
+              });
+              if (Array.isArray(events)) {
+                let crossEtap1 = 0, crossEtap2 = 0, crossOrphan = 0;
+                cards.forEach((card) => {
+                  const appt = card.nextAppointment;
+                  if (!appt || typeof appt.eventId !== "number") return;
+                  const oldEventId = appt.eventId;
+                  const legacyStr = String(oldEventId);
+                  const byLegacy = events.find((e) => e.legacy_id != null && String(e.legacy_id) === legacyStr);
+                  if (byLegacy) {
+                    appt.eventId = byLegacy.id;
+                    crossEtap1++;
+                    return;
+                  }
+                  const byCurrentId = events.find((e) => e.id === oldEventId);
+                  if (byCurrentId) {
+                    const newEventId = generateUUID();
+                    byCurrentId.legacy_id = byCurrentId.id;
+                    byCurrentId.id = newEventId;
+                    appt.eventId = newEventId;
+                    crossEtap2++;
+                    return;
+                  }
+                  crossOrphan++;
+                });
+                if (crossEtap1 + crossEtap2 + crossOrphan > 0) {
+                  console.log(`[boot] v16 cross-ref forward: ${crossEtap1} via legacy + ${crossEtap2} new-migrated + ${crossOrphan} orphans`);
+                }
+              }
+              if (Array.isArray(events)) {
+                let reverseUpdated = 0;
+                events.forEach((ev) => {
+                  if (ev && typeof ev.sourceCardId === "number") {
+                    const oldStr = String(ev.sourceCardId);
+                    if (cardIdMap[oldStr]) {
+                      ev.sourceCardId = cardIdMap[oldStr];
+                      reverseUpdated++;
+                    }
+                  }
+                });
+                if (reverseUpdated > 0) {
+                  console.log(`[boot] v16 cross-ref reverse: ${reverseUpdated} event.sourceCardId updated`);
+                }
+                localStorage.setItem("nm_events", JSON.stringify(events));
+              }
+              localStorage.setItem("nm_health_cards", JSON.stringify(cards));
+              console.log(`[boot] v16 migration: ${migratedCards} cards, ${migratedMeds} medications \u2192 UUID`);
+            }
+          }
+          if (tasksRaw && Object.keys(medIdMap).length > 0) {
+            try {
+              const tasks2 = JSON.parse(tasksRaw);
+              if (Array.isArray(tasks2)) {
+                let tasksUpdated = 0;
+                tasks2.forEach((task) => {
+                  if (task && typeof task.sourceMedId === "number") {
+                    const oldStr = String(task.sourceMedId);
+                    if (medIdMap[oldStr]) {
+                      task.sourceMedId = medIdMap[oldStr];
+                      tasksUpdated++;
+                    }
+                  }
+                });
+                if (tasksUpdated > 0) {
+                  localStorage.setItem("nm_tasks", JSON.stringify(tasks2));
+                  console.log(`[boot] v16 tasks cross-ref: ${tasksUpdated} task.sourceMedId updated`);
+                }
+              }
+            } catch (taskErr) {
+              console.error("[boot] v16 tasks cross-ref failed:", taskErr);
+            }
+          }
+          if (allergiesRaw) {
+            const allergies = JSON.parse(allergiesRaw);
+            if (Array.isArray(allergies)) {
+              let migratedAllergies = 0;
+              allergies.forEach((a) => {
+                if (a && typeof a.id === "number") {
+                  a.legacy_id = a.id;
+                  a.id = generateUUID();
+                  migratedAllergies++;
+                }
+              });
+              if (migratedAllergies > 0) {
+                localStorage.setItem("nm_allergies", JSON.stringify(allergies));
+                console.log(`[boot] v16 migration: ${migratedAllergies} allergies \u2192 UUID`);
+              }
+            }
+          }
+        }
+        localStorage.setItem("nm_health_uuid_migrated_v16", "1");
+      } catch (e) {
+        console.error("[boot] v16 health migration failed:", e);
       }
     }
     if (!localStorage.getItem("nm_health_status_v2_done")) {
