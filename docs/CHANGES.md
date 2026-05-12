@@ -6,6 +6,64 @@
 
 ---
 
+## 2026-05-12 — db0YY: UUID-блок 100% + 4 класи регресій myshu (B-170..B-177) + Universal undo coverage + Council аудит
+
+**Гілка:** `claude/start-session-db0YY` · 30+ комітів (v841 → v848+) · CACHE `nm-20260512-1310`
+
+Велика сесія: закриття UUID-блоку Architecture Refactor до 100% повного на всіх рівнях (10/10 top-level + sub-entity steps). Знайдено й закрито **4 класи регресій myshu** (B-170 onclick, B-171 Date.now create, B-172 schemas integer, B-173 prompts examples) + **4 нові класи** від Council аудиту (B-174 undo silent fail, B-175 health_card restore, B-176 routine sync, B-177 prompt descriptions). Universal undo тепер реально працює для 8 reversible tools + 10 типів trash (раніше silent fail у половині випадків).
+
+### Ключове
+
+- **B-170/171** — 18+8 точок UUID-регресії myshu (onclick без лапок + Date.now() create-points). `f66acfb` + `2cf5510`.
+- **B-172 КРИТИЧНА** — 28+ tool schemas `integer→string`. OpenAI Strict mode silent відкидав AI delete/edit/update для 7 entity типів **24+ год у проді**. `506d49f`.
+- **Health 3B-8 Health UUID** — `nm_health_cards[].id` + nested medications + allergies + cross-ref FORWARD (legacy_id ETAP1→ETAP2 для нових з myshu) + REVERSE event.sourceCardId + TASKS task.sourceMedId. Backup `pre-health-uuid-v16`. `581aad2` + `552aa00`.
+- **Sub-entity steps v17** — 17 creation-точок task.steps/project.steps на generateUUID + boot v17 міграція. UUID coverage 100% повний. `1b804cc` + `80e0d21`.
+- **B-173** — AI prompts examples числові ID + medID→ID + `src/core/action-mapper.js` extraction (Сесія 4-mini Architecture Refactor — підготовка ґрунту). `9b5e25d`.
+- **ESM cycle break** — `action-undo.js` тепер PURE через DI: `executeReverse(reverse, dispatchFn)`. R1 ризик ARCHITECTURE_REFACTOR.md закрито. `fd66c8d`.
+- **Universal undo coverage** — 9 типів trash (allergy/event/project додано). `c72763e` + `f2bd017` + `08940c1`.
+- **B-174 КРИТИЧНА** (Council code-regression + silent-bug-scout) — undo silent fail для save_finance/create_health_card/add_allergy: reverser шле у `processUniversalAction`, але delete_X жили ТIЛЬКИ у dispatcher direct handlers. save_finance ламався з myshu. **Фікс:** 3 cases у processUniversalAction (habits.js). `bb0c50e`.
+- **B-175 КРИТИЧНА** — restoreFromTrash без case `'health_card'`. Silent data loss при відновленні картки. **Фікс:** + case 'health_card' + saveHealthCards експортовано. `bb0c50e`.
+- **B-176 routine sync** — `save_routine` undo не оновлював Календар (pre-existing з myshu). **Фікс:** + 'routine': 'nm_routine' + 'allergies': 'nm_health_cards' у DETAIL_TO_KEY + 2 рендер-точки у KEY_RENDER_MAP. `b7b9e74`.
+- **B-177 prompt descriptions** — 3 delete_X tools без UUID-уточнення. **Фікс:** «UUID X з контексту [ID:xxxx-xxxx]. НЕ вигадуй — копіюй точно.» `b7b9e74`.
+
+### Council 4 паралельні агенти (Sonnet) — повний аудит сесії
+
+- `doc-consistency-checker` — 7 розривів між документами
+- `prompt-engineer-auditor` — 4 покращення (включно з B-177)
+- `silent-bug-scout` — TOP-5 ризиків (B-174/B-175/B-176 знайдено тут)
+- `code-regression-finder` — B-174 silent undo фундаментально
+
+### Документація
+
+- `NEVERMIND_BUGS.md` — B-170/171/172/173/174/175/176/177 повні описи з file paths (8 нових бугів — найбільший пакет регресій за одну сесію в історії проекту)
+- `lessons.md` — 2 нові уроки + 6-grep чек-ліст для UUID-міграцій оновлено
+- `_archive/SESSION_STATE_archive.md` — додано myshu повний блок перед PJi7l
+- `_ai-tools/SESSION_STATE.md` — db0YY як «Поточна», myshu → stub-посилання
+
+### Нові модулі
+
+- `src/core/action-mapper.js` — pure switch `tool→universal-action` (raніше у tool-dispatcher.js як `_toolCallToUniversalAction`)
+- `boot.js` v16 Health UUID migration (~100 рядків) + v17 sub-entity steps
+- 3 нові cases у `processUniversalAction` (delete_transaction/delete_health_card/delete_allergy)
+- 4 нові cases у `restoreFromTrash` (allergy/event/project/health_card)
+
+### Відкладене (на наступну сесію)
+
+- `add_medication` undo — потрібен новий tool `delete_medication`
+- Moments у getAIContext без `[ID:]` маркера — обмежує AI undo моментів
+- `save_routine` відсутній у evening-actions.js (асиметрія)
+- Сесії 4-8 Architecture Refactor — execute-action.js (відкладено до Сесії 5), canonical 12 інтентів, action-log coverage, nm-data-changed payload, habit_log2 ISO
+
+### Smoke-test для iPhone v848+
+
+DevTools → Application → LocalStorage → перевірити: `nm_health_uuid_migrated_v16`=`"1"`, `nm_steps_uuid_migrated_v17`=`"1"`, `nm_backup_pre-health-uuid-v16` + `nm_backup_pre-steps-uuid-v17` існують. Через AI: «купити молоко» → save_task; «купив каву 50» → save_finance + «відміни» → undo працює; створити Health картку + «відміни» → undo; видалити алергію + «відміни» → restore.
+
+---
+
+> **⚠️ Розрив у журналі 07-11.05.2026:** сесії **LfA6w day2** (07-08.05), **PJi7l** (08.05), **64CXo** (09-10.05), **dyhJu** (10-11.05), **myshu** (11.05) НЕ мають записів у цьому файлі. Повні описи зберігаються у [`_archive/SESSION_STATE_archive.md`](../_archive/SESSION_STATE_archive.md). Наступні сесії можуть наздогнати окремими записами якщо потрібна історична хронологія для CHANGES (зараз — stubs у SESSION_STATE покривають мінімум).
+
+---
+
 ## 2026-05-06 — MPVly-day2: 23 баги + Council 5 агентів + Аналітика redesign + календар SVG icons
 
 **Гілка:** `claude/start-session-MPVly` · 152 коміти (v707 → v724+) · CACHE `nm-20260507-0110`

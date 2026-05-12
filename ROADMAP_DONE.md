@@ -12,6 +12,39 @@
 
 ## 🏆 Завершені Active-блоки
 
+### ✅ Architecture Refactor — Сесія 3 UUID повний блок (myshu 11.05 + db0YY 12.05.2026)
+
+UUID coverage **100% повний** на всіх рівнях — 10 з 10 top-level entities + sub-entity steps.
+
+- **3A reminderId UUID** (myshu `4012759`) — `habits.js:1643` числова арифметика `reminderId+1/+2` для 3 сховищ → UUID кожен. P0 блокер закрито ДО UUID-міграцій entity типів.
+- **3B-1..3B-7** (myshu 5 комітів `05a2fcc`/`a65bf61`/`ef2713f`/`335673c`/`bc01594`) — Habit v9 / Event v10 + cross-ref `inbox.cards.eventId` / Note v11 / Moment+Finance v12+v13 / Project+InboxItem v14+v15.
+- **3B-8 Health UUID** (db0YY `552aa00`) — `nm_health_cards[].id` + nested `medications[].id` + `nm_allergies[].id`. **Cross-ref:** FORWARD `card.nextAppointment.eventId` через legacy_id ETAP1 → ETAP2 для нових з myshu (Date.now-події без legacy_id); REVERSE `event.sourceCardId`; TASKS `task.sourceMedId` через зведений medIdMap. Backup `pre-health-uuid-v16`.
+- **Sub-entity steps v17** (db0YY `80e0d21`) — `task.steps[].id` + `project.steps[].id` UUID. 17 creation-точок мігровано на generateUUID() з тестами String() обгортки у find/filter handlers.
+- **Регресії myshu закриті у db0YY:** B-170 (18 onclick без лапок), B-171 (8 Date.now() create-points), B-172 (28+ schemas integer→string КРИТИЧНА), B-173 (AI prompts examples з числовими ID + medID→ID). 6-grep чек-ліст для майбутніх UUID-міграцій додано у `lessons.md`.
+
+Backup-механізм у дії: кожна v9-v17 міграція робить `createSelectiveBackup(['nm_X', ...], 'pre-X-uuid-vN')` ПЕРЕД мутацією. Auto-cleanup тримає 3 останніх.
+
+Закриває з ROADMAP:
+- Pre-Migration Hardening Підсесія 1 (UUID міграція решти типів) ✅
+- Architecture Refactor Сесія 3 (UUID + reminderId fix) ✅
+
+Лишається з Architecture Refactor: Сесії 4-8 (execute-action / canonical 12 інтентів / action-log coverage / nm-data-changed payload / habit_log2 ISO). Сесія 4 — `src/core/action-mapper.js` extraction (Сесія 4-mini у db0YY `9b5e25d`) як підготовка ґрунту.
+
+---
+
+### ✅ Universal undo coverage — 8 reversible tools + 10 типів trash (myshu 11.05 + db0YY 12.05.2026)
+
+`restore_deleted(query='last')` — universal undo з action-log + nm_trash fallback.
+
+- **8 reversible tools:** save_task / save_finance / save_habit / create_event / set_reminder / save_routine / create_health_card / add_allergy. Reverser pure-функція у `action-reversers.js`. Action-log пише `withActionLog`/`logAction` у 4 dispatch-точках.
+- **10 типів trash:** task / note / habit / inbox / folder / finance / allergy / event / project / health_card. `restoreFromTrash` повертає запис у відповідне localStorage сховище. `addToTrash(type)` ↔ `restoreFromTrash(case type)` парне покриття.
+- **ESM cycle break** (db0YY `fd66c8d`) — `action-undo.js` тепер PURE через DI: `executeReverse(reverse, dispatchFn)`. Розрив циклу inbox ↔ action-undo ↔ habits. iOS cold-start hang ризик закрито.
+- **B-174/B-175 silent fail закрито** (db0YY `bb0c50e`) — undo для save_finance/create_health_card/add_allergy перестав тихо false (3 нові cases у processUniversalAction). restoreFromTrash отримав case 'health_card' (раніше silent data loss).
+
+Лишається: `add_medication` undo (потрібен новий tool `delete_medication`); edit_X reversers Phase 2 (snapshot-based undo для редагувань).
+
+---
+
 ### ✅ Inbox стрічка редизайн (затверджено 30.03 → реалізовано до MPVly-day2 06.05.2026)
 
 Концепція з ROADMAP Блок 3 повністю покрита у `src/tabs/inbox.js renderInbox()` + `style.css`:
