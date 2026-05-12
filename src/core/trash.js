@@ -4,6 +4,7 @@ import { getTasks, saveTasks, renderTasks } from '../tabs/tasks.js';
 import { getNotes, saveNotes, renderNotes } from '../tabs/notes.js';
 import { getHabits, saveHabits, renderHabits, renderProdHabits } from '../tabs/habits.js';
 import { getFinance, saveFinance, renderFinance } from '../tabs/finance.js';
+import { getAllergies, saveAllergies, renderHealth } from '../tabs/health.js';
 
 // === TRASH CACHE (кеш видалених — 7 днів) ===
 const NM_TRASH_KEY = 'nm_trash';
@@ -80,6 +81,16 @@ export function restoreFromTrash(trashId) {
     txs.unshift(item);
     saveFinance(txs);
     if (currentTab === 'finance') renderFinance();
+  } else if (type === 'allergy') {
+    // db0YY 12.05: повернути алергію у nm_allergies. Раніше тип не підтримувався,
+    // тому navigate «відміни видалення алергії» не міг повернути запис.
+    const allergies = getAllergies();
+    // Уникнути дублікату по назві (case-insensitive) як у addAllergy
+    if (!allergies.some(a => a.name.toLowerCase() === item.name.toLowerCase())) {
+      allergies.push(item);
+      saveAllergies(allergies);
+    }
+    if (currentTab === 'health') renderHealth();
   }
   // Прибираємо з кешу після відновлення
   saveTrash(trash.filter(t => t.deletedAt !== trashId));
