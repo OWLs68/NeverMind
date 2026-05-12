@@ -53,6 +53,10 @@ const REVERSERS = {
     ? { type: 'tool_call', tool: 'delete_allergy', args: { allergy_id: result.id, comment: 'undo' } }
     : null,
 
+  add_medication: (args, result) => (result?.id != null && args?.card_id)
+    ? { type: 'tool_call', tool: 'delete_medication', args: { card_id: args.card_id, med_id: result.id, comment: 'undo' } }
+    : null,
+
   // === Type B: snapshot restore (destructive replace tools) ===
 
   save_routine: (args, result, snapshot) => snapshot
@@ -116,6 +120,7 @@ export function summarize(tool, args) {
     }
     case 'create_health_card': return `Картка: ${args?.name || '?'}`;
     case 'add_allergy':        return `Алергія: ${args?.name || '?'}`;
+    case 'add_medication':     return `Препарат: ${args?.med_name || '?'}${args?.dosage ? ' ' + args.dosage : ''}`;
     default: return tool;
   }
 }

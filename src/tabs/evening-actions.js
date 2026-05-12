@@ -25,7 +25,7 @@ import { generateUUID } from '../core/uuid.js';
 import { getTasks, saveTasks, renderTasks } from './tasks.js';
 import { getHabits, saveHabits, getHabitLog, saveHabitLog, renderHabits, renderProdHabits } from './habits.js';
 import { getNotes, saveNotes, addNoteFromInbox, renderNotes } from './notes.js';
-import { getEvents, saveEvents, addEventDedup } from './calendar.js';
+import { getEvents, saveEvents, addEventDedup, getRoutine, saveRoutine } from './calendar.js';
 import { getFinance, saveFinance, renderFinance } from './finance.js';
 import { saveMoments, getMoments } from './evening.js';
 import { addFact } from '../ai/memory.js';
@@ -344,6 +344,23 @@ export function dispatchEveningTool(name, args) {
         const hit = filtered.find(t => JSON.stringify(t.data || t).toLowerCase().includes(q));
         if (hit) { restoreFromTrash(hit.deletedAt); return { ok: true }; }
         return { ok: false, err: 'not found in trash' };
+      }
+
+      case 'save_routine': {
+        // db0YY 12.05 (C): закриває асиметрію 8 чатів — раніше Inbox і
+        // tool-dispatcher мали save_routine handler, evening-actions нема.
+        // Той самий патерн що Inbox: withActionLog + getRoutine + saveRoutine.
+        const days = Array.isArray(args.day) ? args.day : [args.day].filter(Boolean);
+        const blocks = Array.isArray(args.blocks) ? args.blocks : [];
+        if (days.length === 0 || blocks.length === 0) {
+          return { ok: false, err: 'save_routine: days/blocks empty' };
+        }
+        withActionLog('save_routine', { day: days, blocks }, () => {
+          const routine = getRoutine();
+          days.forEach(d => { routine[d] = [...blocks]; });
+          saveRoutine(routine);
+        }, 'evening');
+        return { ok: true };
       }
 
       default:

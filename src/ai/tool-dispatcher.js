@@ -34,6 +34,7 @@ import {
   startHealthInterview,
   addMedicationToCard,
   editMedicationInCard,
+  removeMedicationFromCard,
   logMedicationDose,
   addAllergy,
   deleteAllergy,
@@ -170,6 +171,9 @@ function _handleHealthTool(name, args, addMsg) {
       if (med) {
         if (currentTab === 'health') renderHealth();
         addMsg('agent', `💊 Додав "${args.med_name}" до картки. ${args.comment || ''}`.trim());
+        // db0YY: action-log для universal undo. Reverse — delete_medication.
+        // result містить med.id для reverser; cardId передаємо через args.card_id.
+        logAction('add_medication', args, med.id, null, 'dispatcher');
       } else {
         addMsg('agent', 'Не знайшов картку для препарату.');
       }
@@ -197,6 +201,17 @@ function _handleHealthTool(name, args, addMsg) {
         addMsg('agent', `✓ Позначив дозу "${med.name}". ${args.comment || ''}`.trim());
       } else {
         addMsg('agent', 'Не знайшов препарат для відмітки.');
+      }
+      return true;
+    }
+    case 'delete_medication': {
+      if (!args.card_id || !args.med_id) { addMsg('agent', 'Не зрозумів який препарат видалити.'); return true; }
+      const removed = removeMedicationFromCard(args.card_id, args.med_id);
+      if (removed) {
+        if (currentTab === 'health') renderHealth();
+        addMsg('agent', `🗑️ Видалив "${removed.name}" з картки. ${args.comment || ''}`.trim());
+      } else {
+        addMsg('agent', 'Не знайшов препарат для видалення.');
       }
       return true;
     }

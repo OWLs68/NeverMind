@@ -117,6 +117,20 @@ export function restoreFromTrash(trashId) {
     cards.unshift(item);
     saveHealthCards(cards);
     if (currentTab === 'health') renderHealth();
+  } else if (type === 'medication') {
+    // db0YY 12.05 (A): препарат повертається у конкретну картку через
+    // cardId що зберігся у item. removeMedicationFromCard клав
+    // addToTrash('medication', {...med, cardId}).
+    const cards = getHealthCards();
+    const idx = cards.findIndex(c => c.id === item.cardId);
+    if (idx !== -1) {
+      if (!Array.isArray(cards[idx].medications)) cards[idx].medications = [];
+      // Прибираємо cardId перед поверненням у nested array (службове поле)
+      const { cardId: _drop, ...med } = item;
+      cards[idx].medications.push(med);
+      saveHealthCards(cards);
+      if (currentTab === 'health') renderHealth();
+    }
   }
   // Прибираємо з кешу після відновлення
   saveTrash(trash.filter(t => t.deletedAt !== trashId));

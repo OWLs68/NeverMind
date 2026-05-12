@@ -425,6 +425,24 @@ export function editMedicationInCard(cardId, medId, updates) {
   return meds[mIdx];
 }
 
+// Видалити препарат з картки. db0YY 12.05: для closure Health undo gap
+// (add_medication reverse = delete_medication). Кладе med + cardId у trash
+// щоб restore_deleted міг повернути назад.
+export function removeMedicationFromCard(cardId, medId) {
+  const cards = getHealthCards();
+  const idx = cards.findIndex(c => c.id === cardId);
+  if (idx === -1) return null;
+  const meds = cards[idx].medications || [];
+  const mIdx = meds.findIndex(m => m.id === medId);
+  if (mIdx === -1) return null;
+  const removed = meds[mIdx];
+  meds.splice(mIdx, 1);
+  saveHealthCards(cards);
+  // У trash зберігаємо med + cardId для відновлення у ту саму картку.
+  try { addToTrash('medication', { ...removed, cardId }); } catch(e) {}
+  return removed;
+}
+
 // Записати дозу прийому препарату (Date.now() у med.log[]).
 // medQuery — назва препарату (fuzzy match — нечіткий пошук) АБО medId.
 export function logMedicationDose(cardId, medQuery) {

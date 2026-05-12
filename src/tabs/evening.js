@@ -56,7 +56,9 @@ export function getMomentsContext() {
     const time = d.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' });
     const em = moodEmoji[m.mood] || '';
     const txt = m.summary || m.text;
-    return `- ${time} ${em} "${txt}"`;
+    // db0YY: [ID:] маркер додано щоб AI міг точково посилатись на конкретний
+    // момент (для майбутніх tools edit/delete_moment + universal undo).
+    return `- [ID:${m.id}] ${time} ${em} "${txt}"`;
   }).join('\n');
   return `Моменти дня (що юзер зафіксував сьогодні — використовуй у підсумках і емпатійних відповідях):\n${lines}`;
 }

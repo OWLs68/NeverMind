@@ -68,6 +68,8 @@ export function toolCallToAction(name, args) {
       return [{ action: 'move_note', query: args.query, folder: args.folder }];
     case 'set_reminder':
       return [{ action: 'set_reminder', time: args.time, text: args.text, date: args.date }];
+    case 'delete_medication':
+      return [{ action: 'delete_medication', card_id: args.card_id, med_id: args.med_id }];
     case 'delete_reminder':
       return [{ action: 'delete_reminder', text: args.text, time: args.time, date: args.date }];
     case 'save_routine':

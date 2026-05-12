@@ -18,7 +18,7 @@ import { monthGenitive } from '../data/months.js';
 import { getTasks, saveTasks, renderTasks, openAddTask, addTaskBarMsg, taskBarHistory, taskBarLoading, setTaskBarLoading, setupModalSwipeClose, toggleTaskStatus } from './tasks.js';
 import { getNotes, saveNotes, renderNotes, addNoteFromInbox, currentNotesFolder, setCurrentNotesFolder, getDirectChildren } from './notes.js';
 import { getFinance, saveFinance, renderFinance, formatMoney, getFinCats, saveFinCats, _resolveFinanceDate, createFinCategory } from './finance.js';
-import { deleteHealthCardProgrammatic, deleteAllergy } from './health.js';
+import { deleteHealthCardProgrammatic, deleteAllergy, removeMedicationFromCard } from './health.js';
 import { matchSubcategoryFromComment } from '../data/finance-subcat-keywords.js';
 import { resolveDateFromText, parseUaTimeOfDay } from '../data/ua-time-parser.js';
 import { getMoments, saveMoments } from './evening.js';
@@ -1780,6 +1780,14 @@ export function processUniversalAction(parsed, originalText, addMsg) {
     const ok = deleteAllergy(parsed.allergy_id);
     if (ok) addMsg('agent', t('habits.allergy.del.ok', '🗑️ Алергію видалено.'));
     else addMsg('agent', t('habits.allergy.del.not_found', 'Не знайшов алергію.'));
+    return true;
+  }
+
+  if (action === 'delete_medication') {
+    if (!parsed.card_id || !parsed.med_id) { addMsg('agent', t('habits.med.del.no_id', 'Не зрозумів який препарат видалити.')); return true; }
+    const removed = removeMedicationFromCard(parsed.card_id, parsed.med_id);
+    if (removed) addMsg('agent', t('habits.med.del.ok', '🗑️ Препарат "{name}" видалено.', { name: removed.name }));
+    else addMsg('agent', t('habits.med.del.not_found', 'Не знайшов препарат.'));
     return true;
   }
 
