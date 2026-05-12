@@ -83,11 +83,40 @@
 - **Strangler pattern**, не big bang — всі 8 сесій через wrapper-shims з зворотною сумісністю.
 - **NO pgvector + NO local LLM зараз** — premature complexity для 100 users.
 
+### F. Architecture Refactor — виконані Сесії 1, 2, 3A (3 коміти)
+
+26. **Сесія 1 — AI без silent saveOffline** (`f8fc19f`) — `inbox.js:558/1045/1049` 3 точки `saveOffline + ✓ Збережено` замінено на чесні повідомлення (network_fail / ai_empty / error_processing). Логування у `nm_error_log` (50 записів). Корінь скарг «AI каже зроблено, а нічого не зробив».
+
+27. **Сесія 2 — set_reminder парсер** (`9094692`) — `intent-router.js` розширено: REMINDER_TRIGGER, DATE_STRIP_RE, інтеграція з `ua-time-parser.resolveDateFromText`. TIME_PATTERNS додано «на» префікс + Pattern 5 «N ранку/вечора БЕЗ префіксу» після skрід Романа де AI хибно інтерпретував. 16/17 smoke.
+
+28. **Сесія 3A — reminderId UUID** (`4012759`) — `habits.js:1643` числова арифметика `reminderId+1/+2` для 3 сховищ (nm_reminders/nm_events/nm_inbox) → UUID кожен. Зв'язок через окреме поле `reminderId`. Закрив P0 ризик ДО UUID-міграцій entity типів.
+
+29. **CI auto-merge unblock** (`b63877e`) — `check-imports.js` падав на dynamic `await import('intent-router')` у core.js → static import. Це КОРIНЬ чому Роман бачив v822 з 12:46 (мої 6 комітів не доходили до main). + створено `src/core/backup.js` модуль (foundation Phase 3B).
+
+30. **Парсер bare-N + undo priority fix** (`fa30a69`) — Roman screen v834 viral: «Постав нагадування 7 ранку зробити зарядку» парсер пропускав → AI хибно викликав `delete_reminder("Купити хліб")`. Гіпотеза підтверджена node-side, додано pattern для голого «N ранку». + `restore_deleted(query='last')` тепер action-log пріоритет, trash як fallback (раніше брали новіше за timestamp, trash перемагав свіжий save_routine).
+
+### G. UUID-міграції — Phase 3B-1 → 3B-7 (5 комітів, 7 entity типів)
+
+31. **Habit UUID + boot v9** (`05a2fcc`) — 3 точки у `habits.js`. **CRITICAL cross-ref:** `nm_habit_log2` структура `{date: {habit.id: true}}` — nested ключі переписуються за idMap. Без цього viewing звичок ламається після міграції.
+
+32. **Event UUID + boot v10 + cross-ref update** (`a65bf61`) — 10 точок у 3 файлах (inbox.js + habits.js + evening-actions.js). `inbox.cards.eventId` field оновлюється за idMap на ту ж міграцію.
+
+33. **Note UUID + boot v11** (`ef2713f`) — 4 точки у `notes.js`. БЕЗ persistent cross-refs (folder=string).
+
+34. **Moments + Finance UUID + boot v12+v13** (`335673c`) — 4 точки Moment у 4 файлах (evening/evening-actions/inbox/habits) + 3 точки Finance tx (finance.js + finance-modals.js). БЕЗ FK.
+
+35. **Project + InboxItem UUID + boot v14+v15** (`bc01594`) — 2 точки Project + 3 точки Inbox-карток (включно з прибиранням `Date.now()+1` арифметики). Sub-entities проекту (steps/decisions/etc) — окремо коли стане блокером.
+
+**Backup mechanism у дії:** кожна v9-v15 міграція робить `createSelectiveBackup(['nm_X', ...], 'pre-X-uuid-vN')` ПЕРЕД мутацією. Auto-cleanup тримає 3 останніх. Юзер може відновити через DevTools при потребі.
+
 ### Інциденти
 
 - **Romanов сигнал болю «технічно»** двічі — переписав plan простіше з метафорами (помічник з шпаргалкою / друг що розуміє сенс / маленький AI у телефоні / дорогий експерт у хмарі).
 - **«Простирадло»** — 1 раз. Відразу скоротив відповідь.
 - **«Не на пам'яті»** — Roman нагадав читати код. Спіймав себе на тому що писав imports у inbox.js без перевірки existing — повернувся і прочитав.
+- **CI auto-merge fail 8+ годин (b63877e розблокував)** — `check-imports.js` блокував build через мій dynamic `await import('intent-router.js')` у core.js. Я не знав бо локально CI не запускається. Роман пишав «не оновило» з v822 → знайшов через скрипт перевірку. Урок: ПЕРЕД пушем будь-чого з нового модуля — `node scripts/check-imports.js` локально.
+- **Сцена з відміни (Сесія 3 followup)** — мій код `restore_deleted query=last` змішував action-log + trash і брав новіше за ts. Trash з нещодавно видаленої «Зустріч» переміг save_routine. Юзер: «видалив щось непонятно нашо». Виправлено: action-log завжди пріоритет.
+- **«7 ранку» без префіксу — parser miss → AI dispatch** — Roman: «AI помилково викликав delete_reminder + set_reminder». Гіпотеза верифікована node-side (правило ГІПОТЕЗА ≠ ФАКТ), фікс після перевірки.
 
 ### Конфлікти/суперечності
 
@@ -97,7 +126,15 @@
 ### Метрики
 
 - Гілка: `claude/start-session-myshu`
-- Коміти: ~22 (`13b4e7b` → `19998e9`)
+- Коміти: 34 (`13b4e7b` → `bc01594`)
+- Версії: v823 → v837+ (CACHE_NAME `nm-20260511-2114`)
+- Закриті ризики: AI silent saveOffline (3 точки), reminderId+1/+2 арифметика (P0), 7 entity типів UUID (Habit/Event/Note/Moment/Finance/Project/InboxItem) з backup + cross-ref update
+- Архітектурні рішення: Architecture Refactor план на 8 сесій (`docs/ARCHITECTURE_REFACTOR.md` 170 рядків) — Сесії 1, 2, 3A, 3B-1..3B-7 ✅. Лишилось: 3B-8 Health (sub-entities складніше) + Сесії 4-8.
+- Council Sonnet агенти: 5 (architecture truth, risk pre-mortem, dependency mapping, migration safety, Supabase readiness)
+- Раунди з GPT: 3 (Supabase-specific у раунді 3 — sync via actions, undo як новий action, NO CRDT/pgvector)
+- Нові модулі: `src/data/action-log.js`, `src/data/action-reversers.js`, `src/data/action-undo.js`, `src/data/intent-router.js`, `src/core/backup.js`, `docs/ARCHITECTURE_REFACTOR.md`
+- Розширені: boot.js (+7 migration blocks v9-v15), action-log.js (+withActionLog helper)
+- Stage коміти (legacy): ~22 (`13b4e7b` → `19998e9`)
 - Версії: v823 → v833+
 - CACHE_NAME: ~6 bumps
 - Закриті ризики: backticks build-fail (тепер хук), iOS симптом auto-routing
@@ -390,16 +427,23 @@
 
 ## ⚠️ ДЛЯ НОВОГО ЧАТУ — найважливіше
 
-**🚀 ПРІОРИТЕТ #1 (dyhJu 11.05): Bridge-стратегія продовження G3+G5+G6.**
+**🚀 ПРІОРИТЕТ #1 (myshu 11.05): Architecture Refactor продовження.**
 
-З 5 фаз Bridge-плану закрито 4: Strict mode 5 tools, ua-time-parser (абсолютні дати + дні тижня + parseUaTimeOfDay), G4 dispatcher-guards.js. Лишилось:
+Закрито Сесії 1, 2, 3A, 3B-1..3B-7 з 8-сесійного плану `docs/ARCHITECTURE_REFACTOR.md`. Лишилось:
+- **3B-8 Health UUID** — складніше (4-5 sub-entities: cards / allergies / medications / history entries / schedule steps). ~11+ точок `Date.now() + Math.random()` у `health.js`. Окрема сесія через nested structure.
+- **Сесія 4** — `src/core/execute-action.js` (один executor для 4 dispatch-точок)
+- **Сесія 5** — Canonical action format (12 інтентів замість 66 tools)
+- **Сесія 6** — Action-log coverage для усіх reversible tools у 4 точках + canonical helpers (`saveTasks/saveNotes/...`)
+- **Сесія 7** — Структурований `nm-data-changed` payload через strangler-shim (28 dispatch + 8 listeners)
+- **Сесія 8** — `nm_habit_log2` ISO `YYYY-MM-DD` + `user_id` placeholder + DATA_SCHEMA.md оновлення
 
-**🚀 ПРІОРИТЕТ #2 (dyhJu 11.05 smoke-test): B-pruning дублів** «Був гарний ранок 18:26 ×2» — побачив на скріні 64CXo smoke. Не верифіковано чи повторюється. Гру event-dedupe у `inbox.js` create_event handler — можливо AI batch tool_calls без guard.
+**🚀 ПРІОРИТЕТ #2: Перевірка backup-механізму на iPhone.**
+DevTools → Application → LocalStorage → шукати `nm_backup_pre-{habit/event/note/moment/finance/project/inbox}-uuid-vN`. Має бути 3 останніх (cleanupOldBackups). Якщо щось не так з даними після boot v9-v15 — можна відновити вручну з JSON через DevTools.
 
-**🚀 ПРІОРИТЕТ #3 (64CXo 10.05): "Запиши момент" content text каже «Подію додано»** — навіть коли save_moment виконано. Корінь у промпті — треба узгодити content text у самому handler add_moment або заборонити AI у CHIP_PROMPT_RULES писати «Подію додано» коли tool=save_moment.
+**🚀 ПРІОРИТЕТ #3 (legacy від 64CXo): "Запиши момент" content text каже «Подію додано»** — корінь у промпті. Промпт-фікс при наступному UI-touch.
 
-**🚨 УРОК dyhJu — backticks у template literal ламають esbuild:**
-Раніше записаний урок з LfA6w `be6f708` (08.05) — повторив 11.05 у `8d4aef3` G2. Build fail 18h CI auto-merge. `node --check` НЕ ловить, ловить тільки `node build.js`. **Якщо правиш `prompts.js` REMINDER_RULES / CHIP_PROMPT_RULES / будь-який template literal — запусти `npm install && node build.js` локально ПЕРЕД pushем.** Урок треба перетворити в автоматизацію (pre-push hook: якщо diff у prompts.js → форсувати node build.js).
+**🚨 УРОК myshu — CI auto-merge fail через check-imports:**
+Якщо створюєш новий модуль у `src/` і використовуєш у іншому файлі — **обов'язково static `import { fn } from './module.js'`**, НЕ dynamic `await import()`. `scripts/check-imports.js` не визнає dynamic imports → CI fail → auto-merge не злиє → main застрягне. ПЕРЕД push нового модуля: `node scripts/check-imports.js`.
 
 **🚀 ПРІОРИТЕТ #3 (старий): Розпорядок дня — повний редизайн.** Блок 3 ROADMAP. Storage `nm_routine` per-date + auto-fill блоків при створенні задачі/події з часом + day-tabs дати-вкладки. Обсяг 2-3 сесії.
 
