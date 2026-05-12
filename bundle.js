@@ -3771,7 +3771,7 @@ ${lines.join("\n")}`;
           const meds = card.medications.map((m) => {
             const sched = Array.isArray(m.schedule) && m.schedule.length ? " (" + m.schedule.join(", ") + ")" : "";
             const course = m.courseDuration ? " \xB7 \u043A\u0443\u0440\u0441 " + m.courseDuration : "";
-            return `[medID:${m.id}] ${m.name}${m.dosage ? " " + m.dosage : ""}${sched}${course}`;
+            return `[ID:${m.id}] ${m.name}${m.dosage ? " " + m.dosage : ""}${sched}${course}`;
           }).join("; ");
           lines.push(`  \u043B\u0456\u043A\u0438: ${meds}`);
         }
@@ -9061,6 +9061,76 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     }
   });
 
+  // src/core/action-mapper.js
+  function toolCallToAction(name, args) {
+    switch (name) {
+      case "save_task":
+        return [{ action: "create_task", title: args.title, desc: args.text, steps: args.steps || [], dueDate: args.due_date, priority: args.priority }];
+      case "save_note":
+        return [{ action: "create_note", text: args.text, folder: args.folder }];
+      case "save_habit":
+        return [{ action: "create_habit", name: args.name, details: args.details, days: args.days, target_count: args.target_count }];
+      case "save_moment":
+        return [{ action: "add_moment", text: args.text, mood: args.mood, date: args.date }];
+      case "create_event":
+        return [{ action: "create_event", title: args.title, date: args.date, time: args.time || null, priority: args.priority || "normal" }];
+      case "save_finance":
+        return [{ action: "save_finance", fin_type: args.fin_type, amount: args.amount, category: args.category, subcategory: args.subcategory, fin_comment: args.fin_comment, date: args.date }];
+      case "complete_task": {
+        const ids = Array.isArray(args.task_ids) ? args.task_ids : [];
+        return ids.map((id) => ({ action: "complete_task", task_id: id }));
+      }
+      case "complete_habit": {
+        const ids = Array.isArray(args.habit_ids) ? args.habit_ids : [];
+        return ids.map((id) => ({ action: "complete_habit", habit_id: id }));
+      }
+      case "edit_task":
+        return [{ action: "edit_task", task_id: args.task_id, title: args.title, dueDate: args.due_date, priority: args.priority }];
+      case "edit_habit":
+        return [{ action: "edit_habit", habit_id: args.habit_id, name: args.name, days: args.days, details: args.details }];
+      case "edit_event":
+        return [{ action: "edit_event", event_id: args.event_id, title: args.title, date: args.date, time: args.time, priority: args.priority }];
+      case "edit_note":
+        return [{ action: "edit_note", note_id: args.note_id, text: args.text, folder: args.folder }];
+      case "delete_task":
+        return [{ action: "delete_task", task_id: args.task_id }];
+      case "delete_habit":
+        return [{ action: "delete_habit", habit_id: args.habit_id }];
+      case "delete_project":
+        return [{ action: "delete_project", project_id: args.project_id, project_name: args.project_name }];
+      case "delete_event":
+        return [{ action: "delete_event", event_id: args.event_id }];
+      case "delete_folder":
+        return [{ action: "delete_folder", folder: args.folder }];
+      case "reopen_task":
+        return [{ action: "reopen_task", task_id: args.task_id }];
+      case "add_step": {
+        const steps = Array.isArray(args.steps) ? args.steps : [];
+        return steps.map((s) => ({ action: "add_step", task_id: args.task_id, step: s }));
+      }
+      case "complete_step":
+        return [{ action: "complete_step", task_id: args.task_id, step_text: args.step_text }];
+      case "merge_tasks":
+        return [{ action: "merge_tasks", from_task_id: args.from_task_id, to_task_id: args.to_task_id }];
+      case "move_note":
+        return [{ action: "move_note", query: args.query, folder: args.folder }];
+      case "set_reminder":
+        return [{ action: "set_reminder", time: args.time, text: args.text, date: args.date }];
+      case "delete_reminder":
+        return [{ action: "delete_reminder", text: args.text, time: args.time, date: args.date }];
+      case "save_routine":
+        return [{ action: "save_routine", day: args.day, blocks: args.blocks }];
+      case "show_monthly_summary":
+        return [{ action: "show_monthly_summary", comment: args.comment }];
+      default:
+        return [];
+    }
+  }
+  var init_action_mapper = __esm({
+    "src/core/action-mapper.js"() {
+    }
+  });
+
   // src/tabs/me.js
   var me_exports = {};
   __export(me_exports, {
@@ -9751,70 +9821,6 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
   });
 
   // src/ai/tool-dispatcher.js
-  function _toolCallToUniversalAction(name, args) {
-    switch (name) {
-      case "save_task":
-        return [{ action: "create_task", title: args.title, desc: args.text, steps: args.steps || [], dueDate: args.due_date, priority: args.priority }];
-      case "save_note":
-        return [{ action: "create_note", text: args.text, folder: args.folder }];
-      case "save_habit":
-        return [{ action: "create_habit", name: args.name, details: args.details, days: args.days, target_count: args.target_count }];
-      case "save_moment":
-        return [{ action: "add_moment", text: args.text, mood: args.mood, date: args.date }];
-      case "create_event":
-        return [{ action: "create_event", title: args.title, date: args.date, time: args.time || null, priority: args.priority || "normal" }];
-      case "save_finance":
-        return [{ action: "save_finance", fin_type: args.fin_type, amount: args.amount, category: args.category, subcategory: args.subcategory, fin_comment: args.fin_comment, date: args.date }];
-      case "complete_task": {
-        const ids = Array.isArray(args.task_ids) ? args.task_ids : [];
-        return ids.map((id) => ({ action: "complete_task", task_id: id }));
-      }
-      case "complete_habit": {
-        const ids = Array.isArray(args.habit_ids) ? args.habit_ids : [];
-        return ids.map((id) => ({ action: "complete_habit", habit_id: id }));
-      }
-      case "edit_task":
-        return [{ action: "edit_task", task_id: args.task_id, title: args.title, dueDate: args.due_date, priority: args.priority }];
-      case "edit_habit":
-        return [{ action: "edit_habit", habit_id: args.habit_id, name: args.name, days: args.days, details: args.details }];
-      case "edit_event":
-        return [{ action: "edit_event", event_id: args.event_id, title: args.title, date: args.date, time: args.time, priority: args.priority }];
-      case "edit_note":
-        return [{ action: "edit_note", note_id: args.note_id, text: args.text, folder: args.folder }];
-      case "delete_task":
-        return [{ action: "delete_task", task_id: args.task_id }];
-      case "delete_habit":
-        return [{ action: "delete_habit", habit_id: args.habit_id }];
-      case "delete_project":
-        return [{ action: "delete_project", project_id: args.project_id, project_name: args.project_name }];
-      case "delete_event":
-        return [{ action: "delete_event", event_id: args.event_id }];
-      case "delete_folder":
-        return [{ action: "delete_folder", folder: args.folder }];
-      case "reopen_task":
-        return [{ action: "reopen_task", task_id: args.task_id }];
-      case "add_step": {
-        const steps = Array.isArray(args.steps) ? args.steps : [];
-        return steps.map((s) => ({ action: "add_step", task_id: args.task_id, step: s }));
-      }
-      case "complete_step":
-        return [{ action: "complete_step", task_id: args.task_id, step_text: args.step_text }];
-      case "merge_tasks":
-        return [{ action: "merge_tasks", from_task_id: args.from_task_id, to_task_id: args.to_task_id }];
-      case "move_note":
-        return [{ action: "move_note", query: args.query, folder: args.folder }];
-      case "set_reminder":
-        return [{ action: "set_reminder", time: args.time, text: args.text, date: args.date }];
-      case "delete_reminder":
-        return [{ action: "delete_reminder", text: args.text, time: args.time, date: args.date }];
-      case "save_routine":
-        return [{ action: "save_routine", day: args.day, blocks: args.blocks }];
-      case "show_monthly_summary":
-        return [{ action: "show_monthly_summary", comment: args.comment }];
-      default:
-        return [];
-    }
-  }
   function _handleHealthTool(name, args, addMsg) {
     switch (name) {
       case "create_health_card": {
@@ -10310,7 +10316,7 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
         continue;
       }
       const snapshotBefore = captureSnapshotBefore(name, args);
-      const acts = _toolCallToUniversalAction(name, args);
+      const acts = toolCallToAction(name, args);
       let universalHandled = false;
       for (const a of acts) {
         if (processUniversalAction(a, originalText, addMsg)) {
@@ -10351,6 +10357,7 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
       init_action_log();
       init_action_reversers();
       init_action_undo();
+      init_action_mapper();
     }
   });
 
@@ -13596,8 +13603,8 @@ ${signalLines}
       GLOBAL_TOOLS_RULE = `\u0406\u041D\u0421\u0422\u0420\u0423\u041C\u0415\u041D\u0422\u0418 \u0413\u041B\u041E\u0411\u0410\u041B\u042C\u041D\u0406 (\u043E\u0434\u0438\u043D \u043C\u043E\u0437\u043E\u043A \u2014 \u043D\u0435 8 \u043E\u043A\u0440\u0435\u043C\u0438\u0445 \u0447\u0430\u0442\u0456\u0432):
 - \u0422\u0432\u043E\u0457 tools \u041D\u0415 \u043F\u0440\u0438\u0432\u02BC\u044F\u0437\u0430\u043D\u0456 \u0434\u043E \u0432\u043A\u043B\u0430\u0434\u043A\u0438 \u0443 \u044F\u043A\u0456\u0439 \u0437\u0430\u0440\u0430\u0437 \u044E\u0437\u0435\u0440. \u0422\u0438 \u043C\u0430\u0454\u0448 \u043F\u0440\u0430\u0432\u043E \u0432\u0438\u043A\u043B\u0438\u043A\u0430\u0442\u0438 create_event, delete_event, edit_event, save_task, save_note, save_finance, save_moment, create_health_card, add_allergy, add_health_history_entry, create_project \u0442\u0430 \u0431\u0443\u0434\u044C-\u044F\u043A\u0438\u0439 \u0456\u043D\u0448\u0438\u0439 tool \u0437 \u0411\u0423\u0414\u042C-\u044F\u043A\u043E\u0433\u043E \u0447\u0430\u0442\u0443. \u041D\u0406\u041A\u041E\u041B\u0418 \u043D\u0435 \u043A\u0430\u0436\u0438 "\u0446\u0435 \u043D\u0435 \u0437\u0430\u0434\u0430\u0447\u0430, \u043D\u0435 \u043C\u043E\u0436\u0443" \u0430\u0431\u043E "\u0446\u0435 \u043F\u043E\u0434\u0456\u044F, \u0430 \u043D\u0435 \u0437\u0430\u0434\u0430\u0447\u0430" \u2014 \u043F\u0440\u043E\u0441\u0442\u043E \u0432\u0438\u043A\u043B\u0438\u043A\u0430\u0439 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u043D\u0438\u0439 tool.
 - \u0421\u041A\u0410\u0421\u0423\u0412\u0410\u041D\u041D\u042F \u041F\u041E\u0414\u0406\u0407 (\u0444\u0440\u0430\u0437\u0438 "\u0432\u0456\u0434\u043C\u0456\u043D\u0438 X", "\u0441\u043A\u0430\u0441\u0443\u0439 Y", "\u0432\u0438\u0434\u0430\u043B\u0438 \u043F\u043E\u0434\u0456\u044E Z", "\u0437\u0430\u0431\u0435\u0440\u0438 \u0437 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440\u044F", "\u0432\u0456\u0434\u043C\u0456\u043D\u0438 \u043F\u0440\u0438\u0439\u043E\u043C/\u0437\u0443\u0441\u0442\u0440\u0456\u0447/\u0432\u0456\u0437\u0438\u0442/\u0440\u0435\u0439\u0441"): \u0448\u0443\u043A\u0430\u0439 \u0443 \u0441\u0435\u043A\u0446\u0456\u0457 "\u041D\u0430\u0439\u0431\u043B\u0438\u0436\u0447\u0456 \u043F\u043E\u0434\u0456\u0457 \u0442\u0430 \u0434\u0435\u0434\u043B\u0430\u0439\u043D\u0438" \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443 ID \u043F\u043E\u0434\u0456\u0457 \u0437 \u043D\u0430\u0437\u0432\u043E\u044E \u0449\u043E \u0441\u0435\u043C\u0430\u043D\u0442\u0438\u0447\u043D\u043E \u0437\u0431\u0456\u0433\u0430\u0454\u0442\u044C\u0441\u044F \u0437 \u0442\u0438\u043C \u0449\u043E \u043D\u0430\u0437\u0432\u0430\u0432 \u044E\u0437\u0435\u0440 (\u0444\u0443\u0437\u0456-\u043C\u0430\u0442\u0447 \u0437\u0430 \u043A\u043B\u044E\u0447\u043E\u0432\u0438\u043C\u0438 \u0441\u043B\u043E\u0432\u0430\u043C\u0438, \u043D\u0435 \u0442\u043E\u0447\u043D\u0430 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u043D\u0456\u0441\u0442\u044C). \u0412\u0438\u043A\u043B\u0438\u043A\u0430\u0439 delete_event(event_id:ID, comment:"\u043A\u043E\u0440\u043E\u0442\u043A\u0430 \u043F\u0440\u0438\u0447\u0438\u043D\u0430 \u044F\u043A\u0449\u043E \u044F\u0441\u043D\u043E").
-  \u041F\u0440\u0438\u043A\u043B\u0430\u0434 1: \u044E\u0437\u0435\u0440 "\u041F\u0440\u0438\u0439\u043E\u043C \u0443 \u043B\u0456\u043A\u0430\u0440\u044F \u0432\u0456\u0434\u043C\u0456\u043D\u0438", \u0443 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0456 [ID:123] "\u041F\u0440\u0438\u0439\u043E\u043C \u0443 \u043B\u0456\u043A\u0430\u0440\u044F" \u0437\u0430\u0432\u0442\u0440\u0430 \u2192 delete_event(event_id:123).
-  \u041F\u0440\u0438\u043A\u043B\u0430\u0434 2: \u044E\u0437\u0435\u0440 "\u0441\u043A\u0430\u0441\u0443\u0439 \u0437\u0443\u0441\u0442\u0440\u0456\u0447 \u0437 \u0410\u043D\u0434\u0440\u0456\u0454\u043C", \u0443 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0456 [ID:456] "\u0417\u0443\u0441\u0442\u0440\u0456\u0447 \u0410\u043D\u0434\u0440\u0456\u0439" \u2192 delete_event(event_id:456).
+  \u041F\u0440\u0438\u043A\u043B\u0430\u0434 1: \u044E\u0437\u0435\u0440 "\u041F\u0440\u0438\u0439\u043E\u043C \u0443 \u043B\u0456\u043A\u0430\u0440\u044F \u0432\u0456\u0434\u043C\u0456\u043D\u0438", \u0443 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0456 [ID:550e8400-e29b-41d4-a716-446655440000] "\u041F\u0440\u0438\u0439\u043E\u043C \u0443 \u043B\u0456\u043A\u0430\u0440\u044F" \u0437\u0430\u0432\u0442\u0440\u0430 \u2192 delete_event(event_id:"550e8400-e29b-41d4-a716-446655440000"). ID \u2014 UUID-\u0440\u044F\u0434\u043E\u043A \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443, \u043A\u043E\u043F\u0456\u044E\u0439 \u0442\u043E\u0447\u043D\u043E \u044F\u043A \u0454.
+  \u041F\u0440\u0438\u043A\u043B\u0430\u0434 2: \u044E\u0437\u0435\u0440 "\u0441\u043A\u0430\u0441\u0443\u0439 \u0437\u0443\u0441\u0442\u0440\u0456\u0447 \u0437 \u0410\u043D\u0434\u0440\u0456\u0454\u043C", \u0443 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0456 [ID:7c9e6679-7425-40de-944b-e07fc1f90ae7] "\u0417\u0443\u0441\u0442\u0440\u0456\u0447 \u0410\u043D\u0434\u0440\u0456\u0439" \u2192 delete_event(event_id:"7c9e6679-7425-40de-944b-e07fc1f90ae7").
 - \u041F\u0415\u0420\u0415\u041D\u0415\u0421\u0415\u041D\u041D\u042F \u041F\u041E\u0414\u0406\u0407 ("\u043F\u0435\u0440\u0435\u043D\u0435\u0441\u0438 \u043F\u0440\u0438\u0439\u043E\u043C", "\u0437\u043C\u0456\u043D\u0438 \u0447\u0430\u0441 \u0425", "\u043F\u043E\u043C\u0456\u043D\u044F\u0439 \u0434\u0430\u0442\u0443"): edit_event(event_id:ID, date/time:...).
 - \u042F\u041A\u0429\u041E \u0443 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0456 \u043D\u0435\u043C\u0430 \u0436\u043E\u0434\u043D\u043E\u0457 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u043D\u043E\u0457 \u043F\u043E\u0434\u0456\u0457 \u2014 \u0447\u0435\u0441\u043D\u043E \u0441\u043A\u0430\u0436\u0438 "\u041D\u0435 \u0431\u0430\u0447\u0443 \u0442\u0430\u043A\u043E\u0457 \u043F\u043E\u0434\u0456\u0457 \u0443 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440\u0456. \u041C\u043E\u0436\u0435\u0448 \u0443\u0442\u043E\u0447\u043D\u0438\u0442\u0438 \u043D\u0430\u0437\u0432\u0443 \u0430\u0431\u043E \u0434\u0430\u0442\u0443?". \u041D\u0415 \u0441\u0442\u0432\u043E\u0440\u044E\u0439 \u0437\u0430\u0434\u0430\u0447\u0443-\u0437\u0430\u043C\u0456\u043D\u043D\u0438\u043A ("\u0432\u0456\u0434\u043C\u0456\u043D\u0438 \u043F\u0440\u0438\u0439\u043E\u043C" \u2192 \u041D\u0415 save_task).`;
       ROUTINE_RULES = `\u041F\u0420\u0410\u0412\u0418\u041B\u041E \u0420\u041E\u0417\u041F\u041E\u0420\u042F\u0414\u041A\u0423 (save_routine):
