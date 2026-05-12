@@ -6,6 +6,7 @@
 
 import { switchTab, showToast } from '../core/nav.js';
 import { escapeHtml, escapeJsArg, parseContentChips, t } from '../core/utils.js';
+import { generateUUID } from '../core/uuid.js';
 import { addToTrash, showUndoToast } from '../core/trash.js';
 import { callAIWithTools, getAIContext, openChatBar, safeAgentReply, saveChatMsg, INBOX_TOOLS, handleChatError } from '../ai/core.js';
 import { dispatchChatToolCalls } from '../ai/tool-dispatcher.js';
@@ -110,7 +111,7 @@ export function addAllergy(name, notes = '') {
   const allergies = getAllergies();
   // Уникнути дублікату по назві (case-insensitive)
   if (allergies.some(a => a.name.toLowerCase() === clean.toLowerCase())) return null;
-  const entry = { id: Date.now() + Math.floor(Math.random() * 1000), name: clean, notes: (notes || '').trim(), createdAt: Date.now() };
+  const entry = { id: generateUUID(), name: clean, notes: (notes || '').trim(), createdAt: Date.now() };
   allergies.push(entry);
   saveAllergies(allergies);
   return entry;
@@ -185,7 +186,7 @@ function renderHealthList() {
       // .health-card-wrap — обгортка для swipe-видалення (як у notes/tasks/finance).
       // margin-bottom переїжджає з картки на wrap; card-glass лишається без margin.
       return `<div class="health-card-wrap" data-id="${card.id}" style="position:relative;overflow:hidden;border-radius:14px;margin-bottom:8px">
-        <div onclick="openHealthCard(${card.id})" class="card-glass health-card-item" style="cursor:pointer;opacity:${st.opacity};margin-bottom:0">
+        <div onclick="openHealthCard('${card.id}')" class="card-glass health-card-item" style="cursor:pointer;opacity:${st.opacity};margin-bottom:0">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
             <div style="flex:1">
               <div style="font-size:15px;font-weight:900;color:#1e1040">${escapeHtml(card.name)}</div>
@@ -228,7 +229,7 @@ function _attachHealthSwipeDelete() {
   document.querySelectorAll('.health-card-wrap').forEach(wrap => {
     const card = wrap.querySelector('.health-card-item');
     if (!card) return;
-    const id = Number(wrap.dataset.id);
+    const id = wrap.dataset.id;
     attachSwipeDelete(wrap, card, () => {
       const cards = getHealthCards();
       const removed = cards.find(c => c.id === id);
@@ -281,7 +282,7 @@ export function createHealthCardProgrammatic(opts) {
 
   const cards = getHealthCards();
   const newCard = {
-    id: Date.now() + Math.floor(Math.random() * 1000),
+    id: generateUUID(),
     name: name.trim(),
     subtitle: (subtitle || '').trim(),
     status: HEALTH_STATUS_DEFS[status] ? status : 'treatment',
@@ -289,7 +290,7 @@ export function createHealthCardProgrammatic(opts) {
     nextStep: '',
     treatments: [],
     medications: Array.isArray(medications) ? medications.map(m => ({
-      id: Date.now() + Math.floor(Math.random() * 10000),
+      id: generateUUID(),
       name: m.name || '',
       dosage: m.dosage || '',
       schedule: Array.isArray(m.schedule) ? m.schedule : (m.schedule ? String(m.schedule).split(/[,;]\s*/).filter(Boolean) : []),
@@ -385,7 +386,7 @@ export function addMedicationToCard(cardId, med) {
   if (idx === -1 || !med || !med.name) return null;
   if (!Array.isArray(cards[idx].medications)) cards[idx].medications = [];
   const newMed = {
-    id: Date.now() + Math.floor(Math.random() * 10000),
+    id: generateUUID(),
     name: String(med.name),
     dosage: med.dosage || '',
     schedule: Array.isArray(med.schedule) ? med.schedule : (med.schedule ? String(med.schedule).split(/[,;]\s*/).filter(Boolean) : []),
@@ -652,7 +653,7 @@ function _syncMedicationToTask(cardName, med) {
     const schedule = Array.isArray(med.schedule) ? med.schedule : [];
     const steps = schedule.map(s => ({ id: Date.now() + Math.floor(Math.random() * 10000), text: s, done: false }));
     const newTask = {
-      id: Date.now() + Math.floor(Math.random() * 1000),
+      id: generateUUID(),
       title,
       text: t('health.task.take_med_step', '[{card}] {name}{dosage}{course}', { card: cardName, name: med.name, dosage: med.dosage ? ' ' + med.dosage : '', course: med.courseDuration ? ' · курс ' + med.courseDuration : '' }),
       status: 'active',
@@ -789,8 +790,8 @@ function _buildMissedDosesBannerHtml() {
         <div style="font-size:12px;font-weight:800;color:#1e1040">${escapeHtml(d.medName)}${d.dosage ? ' ' + escapeHtml(d.dosage) : ''}</div>
         <div style="font-size:10px;color:rgba(30,16,64,0.5);font-weight:600;margin-top:1px">${escapeHtml(d.cardName)} · ${escapeHtml(d.scheduledTime)}</div>
       </div>
-      <button onclick="logHealthMedDose(${d.cardId},${d.medId})" style="font-size:11px;font-weight:800;padding:5px 10px;border-radius:8px;border:none;background:#16a34a;color:white;cursor:pointer;white-space:nowrap">${t('health.dose.took_btn', '✓ Прийняв')}</button>
-      <button onclick="skipHealthMedDose(${d.cardId},${d.medId},'${escapeJsArg(d.scheduledTime)}')" style="font-size:11px;font-weight:700;padding:5px 10px;border-radius:8px;border:1.5px solid rgba(30,16,64,0.15);background:white;color:rgba(30,16,64,0.55);cursor:pointer;white-space:nowrap">${t('health.dose.skip_btn', 'Пропущу')}</button>
+      <button onclick="logHealthMedDose('${d.cardId}','${d.medId}')" style="font-size:11px;font-weight:800;padding:5px 10px;border-radius:8px;border:none;background:#16a34a;color:white;cursor:pointer;white-space:nowrap">${t('health.dose.took_btn', '✓ Прийняв')}</button>
+      <button onclick="skipHealthMedDose('${d.cardId}','${d.medId}','${escapeJsArg(d.scheduledTime)}')" style="font-size:11px;font-weight:700;padding:5px 10px;border-radius:8px;border:1.5px solid rgba(30,16,64,0.15);background:white;color:rgba(30,16,64,0.55);cursor:pointer;white-space:nowrap">${t('health.dose.skip_btn', 'Пропущу')}</button>
     </div>`).join('')}
     ${missed.length > 5 ? `<div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:600;text-align:center">${t('health.dose.more_missed', '+ ще {n} пропущених', { n: missed.length - 5 })}</div>` : ''}
   </div>`;
@@ -903,7 +904,7 @@ function renderHealthWorkspace(id) {
           <div style="font-size:11px;color:rgba(30,16,64,0.4);font-weight:600;margin-top:2px">${escapeHtml(card.subtitle || '')}</div>
         </div>
         <div style="display:flex;align-items:center;gap:10px;flex-shrink:0">
-          <button onclick="openEditHealthCard(${id})" title="${t('health.card.edit_title', 'Редагувати')}" style="background:rgba(30,16,64,0.06);border:none;border-radius:8px;padding:6px 10px;font-size:11px;font-weight:700;color:rgba(30,16,64,0.65);cursor:pointer">${t('health.card.edit_btn', 'Ред.')}</button>
+          <button onclick="openEditHealthCard('${id}')" title="${t('health.card.edit_title', 'Редагувати')}" style="background:rgba(30,16,64,0.06);border:none;border-radius:8px;padding:6px 10px;font-size:11px;font-weight:700;color:rgba(30,16,64,0.65);cursor:pointer">${t('health.card.edit_btn', 'Ред.')}</button>
           <div style="font-size:20px;font-weight:900;color:${st.color};line-height:1">${pct}%</div>
         </div>
       </div>
@@ -916,12 +917,12 @@ function renderHealthWorkspace(id) {
       </div>
       <div style="font-size:11px;font-weight:800;padding:3px 10px;border-radius:20px;background:${st.bg};color:${st.color};display:inline-block;margin-bottom:8px">${st.icon} ${st.label}</div>
       <div style="display:flex;gap:5px;flex-wrap:wrap">
-        ${HEALTH_STATUS_KEYS.map(s => { const d = _statusDef(s); const on = s === card.status; return `<button onclick="setHealthCardStatus(${id},'${s}')" style="font-size:10px;font-weight:700;padding:4px 9px;border-radius:8px;border:1px solid ${on ? d.color : 'rgba(30,16,64,0.15)'};background:${on ? d.bg : 'transparent'};color:${on ? d.color : 'rgba(30,16,64,0.45)'};cursor:pointer;white-space:nowrap">${d.icon} ${d.label}</button>`; }).join('')}
+        ${HEALTH_STATUS_KEYS.map(s => { const d = _statusDef(s); const on = s === card.status; return `<button onclick="setHealthCardStatus('${id}','${s}')" style="font-size:10px;font-weight:700;padding:4px 9px;border-radius:8px;border:1px solid ${on ? d.color : 'rgba(30,16,64,0.15)'};background:${on ? d.bg : 'transparent'};color:${on ? d.color : 'rgba(30,16,64,0.45)'};cursor:pointer;white-space:nowrap">${d.icon} ${d.label}</button>`; }).join('')}
       </div>
     </div>
 
     <!-- "Запитати OWL про цей стан" (Фаза 3 — preloaded контекст у чат-бар) -->
-    <div onclick="askOwlAboutHealthCard(${id})" style="display:flex;align-items:center;gap:10px;background:linear-gradient(135deg,rgba(26,92,42,0.08),rgba(74,222,128,0.05));border:1.5px solid rgba(26,92,42,0.18);border-radius:14px;padding:11px 14px;margin-bottom:10px;cursor:pointer">
+    <div onclick="askOwlAboutHealthCard('${id}')" style="display:flex;align-items:center;gap:10px;background:linear-gradient(135deg,rgba(26,92,42,0.08),rgba(74,222,128,0.05));border:1.5px solid rgba(26,92,42,0.18);border-radius:14px;padding:11px 14px;margin-bottom:10px;cursor:pointer">
       <div class="icon-circle" style="width:32px;height:32px;background:rgba(26,92,42,0.12)">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a5c2a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
       </div>
@@ -957,7 +958,7 @@ function renderHealthWorkspace(id) {
               <div style="font-size:13px;font-weight:700;color:#1e1040">${escapeHtml(m.name)}</div>
               <div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:600;margin-top:1px">${escapeHtml(m.dosage || '')}${course}${schedStr ? ' · ' + escapeHtml(schedStr) : ''}</div>
             </div>
-            <button onclick="logHealthMedDose(${id},${m.id})" style="font-size:10px;font-weight:800;padding:5px 10px;border-radius:8px;border:1.5px solid ${takenToday && todayDosesCount >= expectedToday ? 'rgba(22,163,74,0.3)' : '#1a5c2a'};background:${takenToday && todayDosesCount >= expectedToday ? 'rgba(22,163,74,0.08)' : '#1a5c2a'};color:${takenToday && todayDosesCount >= expectedToday ? '#16a34a' : 'white'};cursor:pointer;white-space:nowrap">${takenToday && todayDosesCount >= expectedToday ? t('health.dose.taken_label', '✓ прийнято') : t('health.dose.take_now_btn', '+ Прийняти')}</button>
+            <button onclick="logHealthMedDose('${id}','${m.id}')" style="font-size:10px;font-weight:800;padding:5px 10px;border-radius:8px;border:1.5px solid ${takenToday && todayDosesCount >= expectedToday ? 'rgba(22,163,74,0.3)' : '#1a5c2a'};background:${takenToday && todayDosesCount >= expectedToday ? 'rgba(22,163,74,0.08)' : '#1a5c2a'};color:${takenToday && todayDosesCount >= expectedToday ? '#16a34a' : 'white'};cursor:pointer;white-space:nowrap">${takenToday && todayDosesCount >= expectedToday ? t('health.dose.taken_label', '✓ прийнято') : t('health.dose.take_now_btn', '+ Прийняти')}</button>
           </div>
           ${schedArr.length > 0 ? `<div style="display:flex;align-items:center;gap:8px;padding-left:38px">
             <div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:700">${t('health.dose.today_label', 'Сьогодні:')}</div>
@@ -1011,7 +1012,7 @@ function renderHealthWorkspace(id) {
     </div>` : ''}
 
     <!-- Нотатки → папка (B-29 fix: switchTab + delayed openNotesFolder) -->
-    <div onclick="openHealthCardNote(${card.id})" style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.55);border:1.5px dashed rgba(30,16,64,0.14);border-radius:12px;padding:10px 12px;margin-bottom:10px;cursor:pointer">
+    <div onclick="openHealthCardNote('${card.id}')" style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.55);border:1.5px dashed rgba(30,16,64,0.14);border-radius:12px;padding:10px 12px;margin-bottom:10px;cursor:pointer">
       <div class="icon-circle" style="width:30px;height:30px">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1a5c2a" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
       </div>
@@ -1364,7 +1365,7 @@ function _syncCardAppointmentToEvent(cardId, cardName, newAppointment, oldEventI
 
   // Створити нову
   const newEvent = {
-    id: Date.now() + Math.floor(Math.random() * 1000),
+    id: generateUUID(),
     title,
     date: newAppointment.date,
     time: newAppointment.time || '',
@@ -1486,7 +1487,7 @@ function saveHealthCardFromModal() {
     const schedStr = row.querySelector('.med-schedule')?.value.trim() || '';
     const schedule = schedStr ? schedStr.split(/[,;]\s*/).filter(Boolean) : [];
     meds.push({
-      id: Date.now() + Math.floor(Math.random() * 1000),
+      id: generateUUID(),
       name: mName,
       dosage,
       schedule,
@@ -1521,7 +1522,7 @@ function saveHealthCardFromModal() {
   } else {
     // Create режим
     const newCard = {
-      id: Date.now() + Math.floor(Math.random() * 1000),
+      id: generateUUID(),
       name, subtitle,
       status,
       progress: 0,
@@ -1626,7 +1627,7 @@ function _buildAllergiesCardHtml() {
           <div style="font-size:12px;font-weight:800;color:${coralText};line-height:1.2">${escapeHtml(a.name)}</div>
           ${a.notes ? `<div style="font-size:9px;color:rgba(30,16,64,0.45);font-weight:600;margin-top:1px">${escapeHtml(a.notes)}</div>` : ''}
         </div>
-        <div onclick="deleteAllergyById(${a.id})" style="cursor:pointer;font-size:16px;color:rgba(30,16,64,0.35);line-height:1;padding:0 2px" title="${t('health.allergy.delete_title', 'Видалити')}">×</div>
+        <div onclick="deleteAllergyById('${a.id}')" style="cursor:pointer;font-size:16px;color:rgba(30,16,64,0.35);line-height:1;padding:0 2px" title="${t('health.allergy.delete_title', 'Видалити')}">×</div>
       </div>`).join('')}
     </div>
   </div>`;
