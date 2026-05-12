@@ -104,7 +104,7 @@ function saveHealthCards(arr) { localStorage.setItem('nm_health_cards', JSON.str
 // === АЛЕРГІЇ (Фаза 1, 15.04 jMR6m) ===
 // Проста структура: {id, name, notes, createdAt}. Розширення з severity → ROADMAP.md Ideas.
 export function getAllergies() { try { return JSON.parse(localStorage.getItem('nm_allergies') || '[]'); } catch { return []; } }
-function saveAllergies(arr) { localStorage.setItem('nm_allergies', JSON.stringify(arr)); window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'allergies' })); }
+export function saveAllergies(arr) { localStorage.setItem('nm_allergies', JSON.stringify(arr)); window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'allergies' })); }
 export function addAllergy(name, notes = '') {
   const clean = (name || '').trim();
   if (!clean) return null;
@@ -120,8 +120,12 @@ export function deleteAllergy(id) {
   const allergies = getAllergies();
   const idx = allergies.findIndex(a => a.id === id);
   if (idx === -1) return false;
+  // db0YY 12.05: addToTrash щоб restore_deleted міг відновити (universal undo).
+  // Раніше алергія видалялась без сліду — юзер «відміни» не знаходив.
+  const removed = allergies[idx];
   allergies.splice(idx, 1);
   saveAllergies(allergies);
+  try { addToTrash('allergy', removed); } catch(e) {}
   return true;
 }
 
