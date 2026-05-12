@@ -6,6 +6,7 @@ import { getHabits, saveHabits, renderHabits, renderProdHabits } from '../tabs/h
 import { getFinance, saveFinance, renderFinance } from '../tabs/finance.js';
 import { getAllergies, saveAllergies, renderHealth } from '../tabs/health.js';
 import { getEvents, saveEvents } from '../tabs/calendar.js';
+import { getProjects, saveProjects, renderProjects } from '../tabs/projects.js';
 
 // === TRASH CACHE (кеш видалених — 7 днів) ===
 const NM_TRASH_KEY = 'nm_trash';
@@ -100,6 +101,14 @@ export function restoreFromTrash(trashId) {
     events.push(item);
     saveEvents(events);
     // calendar render — через nm-data-changed listener у boot.js
+  } else if (type === 'project') {
+    // db0YY 12.05: проект повертається у nm_projects. Раніше addToTrash('project')
+    // викликався з 2 точок (projects.js delete + AI delete_project) але restore
+    // тихо ігнорував — undo для проектів не працював.
+    const projects = getProjects();
+    projects.unshift(item);
+    saveProjects(projects);
+    if (currentTab === 'projects') renderProjects();
   }
   // Прибираємо з кешу після відновлення
   saveTrash(trash.filter(t => t.deletedAt !== trashId));
