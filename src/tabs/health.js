@@ -1705,7 +1705,7 @@ export function getHealthContext() {
           const sched = Array.isArray(m.schedule) && m.schedule.length ? ' (' + m.schedule.join(', ') + ')' : '';
           const course = m.courseDuration ? ' · курс ' + m.courseDuration : '';
           // Фаза 2: med id у контексті — для tools edit_medication + log_medication_dose
-          return `[medID:${m.id}] ${m.name}${m.dosage ? ' ' + m.dosage : ''}${sched}${course}`;
+          return `[ID:${m.id}] ${m.name}${m.dosage ? ' ' + m.dosage : ''}${sched}${course}`;
         }).join('; ');
         lines.push(`  ліки: ${meds}`);
       }
