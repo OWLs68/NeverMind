@@ -17337,6 +17337,10 @@ ${JSON.stringify(contextData, null, 2)}` : "";
         saveAllergies(allergies);
       }
       if (currentTab === "health") renderHealth();
+    } else if (type === "event") {
+      const events = getEvents();
+      events.push(item);
+      saveEvents(events);
     }
     saveTrash(trash.filter((t2) => t2.deletedAt !== trashId));
     return true;
@@ -17379,6 +17383,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
       init_habits();
       init_finance();
       init_health();
+      init_calendar();
       NM_TRASH_KEY = "nm_trash";
       TRASH_TTL = 7 * 24 * 60 * 60 * 1e3;
       window.undoDelete = undoDelete;
