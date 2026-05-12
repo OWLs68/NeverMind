@@ -149,6 +149,17 @@
 | `nm_memory` | string (300 слів, AI-профіль) — **legacy з 11.04**, залишений як fallback поки не пройшла міграція | `src/ai/core.js` |
 | `nm_facts` | `[{id, text, category, ts, lastSeen, source, ttl}]` — структурована пам'ять (11.04) | `src/ai/memory.js` |
 | `nm_facts_migrated` | `'1'` — прапор що міграція з legacy nm_memory виконана | `src/ai/memory.js` |
+| `nm_habits_uuid_migrated_v9` | `'1'` — myshu 11.05: Habit.id Date.now()→UUID + nested `nm_habit_log2` keys update | `src/core/boot.js` |
+| `nm_events_uuid_migrated_v10` | `'1'` — myshu 11.05: Event.id UUID + cross-ref `inbox.cards.eventId` update | `src/core/boot.js` |
+| `nm_notes_uuid_migrated_v11` | `'1'` — myshu 11.05: Note.id UUID (БЕЗ cross-refs — folder=string) | `src/core/boot.js` |
+| `nm_moments_uuid_migrated_v12` | `'1'` — myshu 11.05: Moment.id UUID (БЕЗ FK) | `src/core/boot.js` |
+| `nm_finance_uuid_migrated_v13` | `'1'` — myshu 11.05: Finance tx.id UUID (БЕЗ FK) | `src/core/boot.js` |
+| `nm_projects_uuid_migrated_v14` | `'1'` — myshu 11.05: Project.id UUID | `src/core/boot.js` |
+| `nm_inbox_uuid_migrated_v15` | `'1'` — myshu 11.05: InboxItem.id UUID | `src/core/boot.js` |
+| `nm_health_uuid_migrated_v16` | `'1'` — **db0YY 12.05 (Сесія 3B-8):** HealthCard.id + nested medications.id + Allergy.id UUID. Cross-ref FORWARD `card.nextAppointment.eventId` (legacy_id ETAP1 → ETAP2 для нових з myshu) + REVERSE `nm_events[].sourceCardId` + TASKS `task.sourceMedId`. Backup `nm_backup_pre-health-uuid-v16` | `src/core/boot.js` |
+| `nm_steps_uuid_migrated_v17` | `'1'` — **db0YY 12.05 (sub-entity steps fin):** task.steps[].id + project.steps[].id UUID. БЕЗ cross-ref (step.id не FK). Backup `nm_backup_pre-steps-uuid-v17` | `src/core/boot.js` |
+| `nm_backup_pre-<entity>-uuid-v<N>` | `{ts, label, snapshot:{nm_X:[...], ...}}` — backup ПЕРЕД UUID-міграцією. Auto-cleanup тримає 3 останніх. Юзер може відновити через DevTools якщо щось пішло не так. | `src/core/backup.js` |
+| `nm_action_log` | `[{id:UUID, ts:ISO, source, tool, args, result:{id}|null, reverse, user_id:null, device_id, schema_version}]` — append-only лог дій для universal undo. TTL 7 днів. Supabase-ready. | `src/data/action-log.js` |
 | `nm_owl_silence_until` | string (ts) — 4.40 Auto-silence: до якого часу OWL мовчить (4 год після 3 ігнорів поспіль) | `src/owl/proactive.js`, `src/owl/inbox-board.js` |
 | `nm_owl_ignored_msgs` | string (count 0-2) — лічильник проігнорованих повідомлень табло поспіль | `src/owl/proactive.js`, `src/owl/chips.js` |
 | `nm_owl_last_board_ts` | string (ts) — таймстемп останнього згенерованого повідомлення табло | `src/owl/proactive.js` |
