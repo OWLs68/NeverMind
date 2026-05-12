@@ -1325,6 +1325,7 @@
       init_tasks();
       init_trash();
       init_months();
+      init_uuid();
       _selectedDay = null;
       DAYS_UA_FULL = ["\u041D\u0435\u0434\u0456\u043B\u044F", "\u041F\u043E\u043D\u0435\u0434\u0456\u043B\u043E\u043A", "\u0412\u0456\u0432\u0442\u043E\u0440\u043E\u043A", "\u0421\u0435\u0440\u0435\u0434\u0430", "\u0427\u0435\u0442\u0432\u0435\u0440", "\u041F'\u044F\u0442\u043D\u0438\u0446\u044F", "\u0421\u0443\u0431\u043E\u0442\u0430"];
       NM_ROUTINE_KEY = "nm_routine";
@@ -4903,7 +4904,7 @@ ${lines.join("\n")}`;
         saveFinCats(cats);
       }
       const txs = getFinance();
-      txs.unshift({ id: Date.now(), type, amount, category, comment: action.comment || originalText, ts: Date.now() });
+      txs.unshift({ id: generateUUID(), type, amount, category, comment: action.comment || originalText, ts: Date.now() });
       saveFinance(txs);
       if (currentTab === "finance") renderFinance();
       const sign = type === "expense" ? "-" : "+";
@@ -12040,7 +12041,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
           withActionLog("save_task", args, () => {
             const tasks = getTasks();
             const newTask = {
-              id: Date.now(),
+              id: generateUUID(),
               title: args.title || args.text || t("default.task_title", "\u0417\u0430\u0434\u0430\u0447\u0430"),
               desc: args.text && args.text !== args.title ? args.text : "",
               steps: Array.isArray(args.steps) ? args.steps.map((s) => ({ id: Date.now() + Math.random(), text: s, done: false })) : [],
@@ -12072,7 +12073,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
         case "save_habit": {
           withActionLog("save_habit", args, () => {
             const habits = getHabits();
-            habits.unshift({ id: Date.now(), name: args.name, details: args.details || "", days: Array.isArray(args.days) ? args.days : [0, 1, 2, 3, 4, 5, 6], targetCount: args.target_count || 1, type: "build", createdAt: Date.now() });
+            habits.unshift({ id: generateUUID(), name: args.name, details: args.details || "", days: Array.isArray(args.days) ? args.days : [0, 1, 2, 3, 4, 5, 6], targetCount: args.target_count || 1, type: "build", createdAt: Date.now() });
             saveHabits(habits);
             renderHabits();
           }, "evening");
@@ -12090,7 +12091,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
           withActionLog("save_finance", args, () => {
             const txs = getFinance();
             txs.unshift({
-              id: Date.now(),
+              id: generateUUID(),
               type: args.fin_type === "income" ? "income" : "expense",
               amount: parseFloat(args.amount) || 0,
               category: args.category || t("default.category_other", "\u0406\u043D\u0448\u0435"),
@@ -14730,7 +14731,7 @@ ${CHIP_PROMPT_RULES}`;
       saveTasks(tasks);
       if (currentTab === "tasks") renderTasks();
       const items = getInbox();
-      items.unshift({ id: Date.now(), text: title, category: "task", ts: Date.now(), processed: true });
+      items.unshift({ id: generateUUID(), text: title, category: "task", ts: Date.now(), processed: true });
       saveInbox(items);
       addMsg("agent", t("habits.task.created", '\u2705 \u0417\u0430\u0434\u0430\u0447\u0443 "{title}" \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E', { title }));
       if (parsed.ask_after) setTimeout(() => addMsg("agent", parsed.ask_after), 600);
@@ -19385,7 +19386,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
     const savedText = parsed.text || originalText;
     const folder = parsed.folder || null;
     const items = getInbox();
-    const inboxCardId = Date.now();
+    const inboxCardId = generateUUID();
     items.unshift({ id: inboxCardId, text: savedText, category: cat, ts: Date.now(), processed: true });
     saveInbox(items);
     renderInbox();
@@ -19692,7 +19693,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
   }
   function saveOffline(text) {
     const items = getInbox();
-    items.unshift({ id: Date.now(), text, category: "note", ts: Date.now(), processed: false });
+    items.unshift({ id: generateUUID(), text, category: "note", ts: Date.now(), processed: false });
     saveInbox(items);
     renderInbox();
   }
@@ -19858,6 +19859,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
   var init_utils = __esm({
     "src/core/utils.js"() {
       init_inbox();
+      init_uuid();
       NM_RECENT_ACTIONS_KEY = "nm_recent_actions";
       NM_RECENT_ACTIONS_MAX = 20;
       window.autoResizeTextarea = autoResizeTextarea;
