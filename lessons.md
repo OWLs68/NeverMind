@@ -37,6 +37,23 @@
 - **Великий Write ризикує обривом** → розбий на skeleton+Edit. Один `Write` 400+ рядків часто падає, 50-100 рядкові `Edit` майже завжди проходять.
 - **Тригер розбиття існуючого великого файлу = наступна змістовна задача в ньому** (не календарна дата, не «коли дозріє у ROADMAP»). Як з `finance.js` у gHCOh 17.04: був 1300 рядків, прийшла задача → **спочатку розбили на 6 модулів, потім зробили задачу**. Поточні кандидати станом на hEtjy 27.04: `src/tabs/habits.js` (1537 рядків), `style.css` (1654 рядків). Не вносити у ROADMAP окремим пунктом — створює штучний обовʼязок. Натомість: коли наступна задача торкнеться habits.js / великий CSS-блок — підготовча фаза = розбити, потім фіча.
 
+### UUID-міграція ID-формату — ОБОВ'ЯЗКОВИЙ 3-grep чек-ліст (db0YY 12.05.2026)
+- **Кейс:** myshu (11.05) пройшла 7 boot-міграцій v9-v15 для готових даних у localStorage, але забула 2 класи бага у JS-коді → користувач отримав v841 з 26 поломками (18 onclick + 8 create-points). Я знайшов через Council Свіжий погляд + ширший grep.
+- **Клас 1 — onclick без лапок:** 17 точок типу `onclick="fn(${item.id})"` де `item.id` тепер UUID-string з дефісами → парсер бачить `fn(550e8400-e29b-...)` як вираз → `ReferenceError` → юзер тапає, нічого не відбувається. Той самий клас що B-108 (xGe1H 27.04 для tasks). Регресія у 6 файлах: inbox/evening/notes/projects/calendar/finance.
+- **Клас 2 — Date.now() ID при створенні через AI/handler:** 8 точок типу `evening-actions.js:106 { id: Date.now() }` для save_task/save_habit/save_finance/inbox-card. Мігровані старі дані = UUID, нові від AI = number → мікс типів у одному масиві → `find(x => x.id === id)` повертає false → silent fail свайп-видалення/undo.
+- **ОБОВ'ЯЗКОВИЙ 3-grep чек-ліст ПIСЛЯ кожної UUID-міграції (як для Health 3B-8):**
+  ```bash
+  # 1. onclick без лапок (Class 1)
+  grep -rnE 'onclick="[a-zA-Z_]+\([^)]*\$\{[^}]*\.id[^}]*\}' src/ --include="*.js" | grep -v "'\\\${"
+  # 2. parseInt/Number на dataset.id (UUID → NaN)
+  grep -rnE '(parseInt|Number)\([^)]*(\.dataset|\.id\b)' src/ --include="*.js"
+  # 3. id: Date.now() ВСI top-level entity creation (включаючи AI handlers)
+  grep -rnE '\bid:\s*Date\.now\(\)\s*[,}]' src/ --include="*.js" | grep -v generateUUID
+  ```
+- **Обгортати онклик у одинарні лапки** — `onclick="fn('${item.id}')"`. UUID не містить `'` чи `"` (тільки `[0-9a-f-]+`) — безпечно.
+- **String() обгортка у find/filter** — якщо хендлер працює з мікс типами, використовуй `find(x => String(x.id) === String(id))` (приклад: inbox.js:340, notes.js:596, projects.js:187, habits.js:925). Strict `===` між number і string завжди false.
+- **Tasks/Projects steps + Health 3B-8 — ВIДОМО ПОКИ НЕ ВИПРАВЛЕНО** — sub-entity steps досі Date.now(). Це борг. Коли мігруємо їх — пройти той самий 3-grep чек-ліст для step.id.
+
 ### Bridge-стратегія перед великою міграцією (64CXo 10.05.2026)
 - **Контекст:** через 1-2 місяці перехід на Supabase. Виникло питання — лагодити поточну архітектуру чи мігрувати негайно.
 - **Висновок з 3 раундів Gemini:** **НЕ мігрувати негайно** — 3-4 тижні без видимого прогресу. Замість того — робити Bridge fixes що переїдуть на Supabase БЕЗ переписування (0-10% migration debt).
