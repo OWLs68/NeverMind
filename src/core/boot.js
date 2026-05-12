@@ -748,6 +748,172 @@ function runMigrations() {
     }
   }
 
+  // v16 Health UUID (db0YY 12.05.2026 Architecture Refactor Сесія 3B-8 — фінал UUID-блоку):
+  //   - nm_health_cards[].id (top-level) + nested medications[].id
+  //   - nm_allergies[].id (top-level, окреме сховище)
+  //   - Cross-ref FORWARD: card.nextAppointment.eventId → nm_events[].id
+  //       ETAP 1: events.find(e => e.legacy_id === oldId) — старі картки до v10
+  //       ETAP 2: events.find(e => e.id === oldId) — нові події після v10 з
+  //              Date.now() (Клас 2 баг myshu, тут мігруємо event + cross-ref)
+  //   - Cross-ref REVERSE: nm_events[].sourceCardId (число → UUID) через cardIdMap
+  //   - Cross-ref TASKS: nm_tasks[].sourceMedId (число → UUID) через medIdMap
+  if (!localStorage.getItem('nm_health_uuid_migrated_v16')) {
+    try {
+      const cardsRaw = localStorage.getItem('nm_health_cards');
+      const allergiesRaw = localStorage.getItem('nm_allergies');
+      const eventsRaw = localStorage.getItem('nm_events');
+      const tasksRaw = localStorage.getItem('nm_tasks');
+      if (cardsRaw || allergiesRaw) {
+        const backupKey = createSelectiveBackup(
+          ['nm_health_cards', 'nm_allergies', 'nm_events', 'nm_tasks'],
+          'pre-health-uuid-v16'
+        );
+        if (backupKey) console.log('[boot] v16 health backup:', backupKey);
+
+        // Зведений medIdMap (oldNumeric → newUUID) для всіх медикаментів
+        // у всіх картках. Потрібен для nm_tasks[].sourceMedId оновлення.
+        const cardIdMap = {};
+        const medIdMap = {};
+        let events = null;
+        if (eventsRaw) { try { events = JSON.parse(eventsRaw); } catch { events = null; } }
+
+        // --- 1. Cards (top-level) + nested medications ---
+        if (cardsRaw) {
+          const cards = JSON.parse(cardsRaw);
+          if (Array.isArray(cards)) {
+            let migratedCards = 0;
+            let migratedMeds = 0;
+            cards.forEach(card => {
+              if (card && typeof card.id === 'number') {
+                const oldId = String(card.id);
+                const newId = generateUUID();
+                card.legacy_id = card.id;
+                card.id = newId;
+                cardIdMap[oldId] = newId;
+                migratedCards++;
+              }
+              if (Array.isArray(card.medications)) {
+                card.medications.forEach(med => {
+                  if (med && typeof med.id === 'number') {
+                    const oldMedId = String(med.id);
+                    const newMedId = generateUUID();
+                    med.legacy_id = med.id;
+                    med.id = newMedId;
+                    medIdMap[oldMedId] = newMedId;
+                    migratedMeds++;
+                  }
+                });
+              }
+            });
+
+            // --- 2. FORWARD cross-ref: card.nextAppointment.eventId → event UUID ---
+            if (Array.isArray(events)) {
+              let crossEtap1 = 0, crossEtap2 = 0, crossOrphan = 0;
+              cards.forEach(card => {
+                const appt = card.nextAppointment;
+                if (!appt || typeof appt.eventId !== 'number') return;
+                const oldEventId = appt.eventId;
+                const legacyStr = String(oldEventId);
+                // ETAP 1: подія була мігрована у v10 (має legacy_id)
+                const byLegacy = events.find(e => e.legacy_id != null && String(e.legacy_id) === legacyStr);
+                if (byLegacy) {
+                  appt.eventId = byLegacy.id;
+                  crossEtap1++;
+                  return;
+                }
+                // ETAP 2: подія створена ПIСЛЯ v10 з Date.now() (Клас 2 myshu)
+                // — досі число у nm_events. Мігруємо її ТУТ + оновлюємо cross-ref.
+                const byCurrentId = events.find(e => e.id === oldEventId);
+                if (byCurrentId) {
+                  const newEventId = generateUUID();
+                  byCurrentId.legacy_id = byCurrentId.id;
+                  byCurrentId.id = newEventId;
+                  appt.eventId = newEventId;
+                  crossEtap2++;
+                  return;
+                }
+                // Orphan — подія видалена з Календаря, лишаємо як є
+                crossOrphan++;
+              });
+              if (crossEtap1 + crossEtap2 + crossOrphan > 0) {
+                console.log(`[boot] v16 cross-ref forward: ${crossEtap1} via legacy + ${crossEtap2} new-migrated + ${crossOrphan} orphans`);
+              }
+            }
+
+            // --- 3. REVERSE cross-ref: nm_events[].sourceCardId → UUID ---
+            if (Array.isArray(events)) {
+              let reverseUpdated = 0;
+              events.forEach(ev => {
+                if (ev && typeof ev.sourceCardId === 'number') {
+                  const oldStr = String(ev.sourceCardId);
+                  if (cardIdMap[oldStr]) {
+                    ev.sourceCardId = cardIdMap[oldStr];
+                    reverseUpdated++;
+                  }
+                }
+              });
+              if (reverseUpdated > 0) {
+                console.log(`[boot] v16 cross-ref reverse: ${reverseUpdated} event.sourceCardId updated`);
+              }
+              // Зберегти events (могли змінитись через ETAP 2 + sourceCardId)
+              localStorage.setItem('nm_events', JSON.stringify(events));
+            }
+
+            localStorage.setItem('nm_health_cards', JSON.stringify(cards));
+            console.log(`[boot] v16 migration: ${migratedCards} cards, ${migratedMeds} medications → UUID`);
+          }
+        }
+
+        // --- 4. Tasks cross-ref: sourceMedId число → UUID ---
+        if (tasksRaw && Object.keys(medIdMap).length > 0) {
+          try {
+            const tasks = JSON.parse(tasksRaw);
+            if (Array.isArray(tasks)) {
+              let tasksUpdated = 0;
+              tasks.forEach(task => {
+                if (task && typeof task.sourceMedId === 'number') {
+                  const oldStr = String(task.sourceMedId);
+                  if (medIdMap[oldStr]) {
+                    task.sourceMedId = medIdMap[oldStr];
+                    tasksUpdated++;
+                  }
+                }
+              });
+              if (tasksUpdated > 0) {
+                localStorage.setItem('nm_tasks', JSON.stringify(tasks));
+                console.log(`[boot] v16 tasks cross-ref: ${tasksUpdated} task.sourceMedId updated`);
+              }
+            }
+          } catch (taskErr) {
+            console.error('[boot] v16 tasks cross-ref failed:', taskErr);
+          }
+        }
+
+        // --- 5. Allergies (top-level, окреме сховище) ---
+        if (allergiesRaw) {
+          const allergies = JSON.parse(allergiesRaw);
+          if (Array.isArray(allergies)) {
+            let migratedAllergies = 0;
+            allergies.forEach(a => {
+              if (a && typeof a.id === 'number') {
+                a.legacy_id = a.id;
+                a.id = generateUUID();
+                migratedAllergies++;
+              }
+            });
+            if (migratedAllergies > 0) {
+              localStorage.setItem('nm_allergies', JSON.stringify(allergies));
+              console.log(`[boot] v16 migration: ${migratedAllergies} allergies → UUID`);
+            }
+          }
+        }
+      }
+      localStorage.setItem('nm_health_uuid_migrated_v16', '1');
+    } catch (e) {
+      console.error('[boot] v16 health migration failed:', e);
+    }
+  }
+
   // v9 (03.05.2026 MIeXK Health AI-інтерв'ю): шкала статусів 3 → 6 значень.
   // Старе: active/controlled/done. Нове: acute/treatment/improving/remission/chronic/done.
   // Мапінг: active → treatment (нейтральне «активне лікування»), controlled → remission,
