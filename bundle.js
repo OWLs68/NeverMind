@@ -17341,6 +17341,11 @@ ${JSON.stringify(contextData, null, 2)}` : "";
       const events = getEvents();
       events.push(item);
       saveEvents(events);
+    } else if (type === "project") {
+      const projects = getProjects();
+      projects.unshift(item);
+      saveProjects(projects);
+      if (currentTab === "projects") renderProjects();
     }
     saveTrash(trash.filter((t2) => t2.deletedAt !== trashId));
     return true;
@@ -17384,6 +17389,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
       init_finance();
       init_health();
       init_calendar();
+      init_projects();
       NM_TRASH_KEY = "nm_trash";
       TRASH_TTL = 7 * 24 * 60 * 60 * 1e3;
       window.undoDelete = undoDelete;
