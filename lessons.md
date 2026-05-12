@@ -51,6 +51,10 @@
   grep -rnE '\bid:\s*Date\.now\(\)\s*[,}]' src/ --include="*.js" | grep -v generateUUID
   # 4. tool schema {X_id: integer} у prompts.js (Class 3, B-172 — НАЙКРИТИЧНІШИЙ)
   grep -nE '[a-z_]*id[a-z_]*:\s*\{\s*type:\s*"integer"' src/ai/prompts.js
+  # 5. AI prompts EXAMPLES з числовими ID (Class 4, B-173) — AI плутає
+  grep -nE '\[ID:[0-9]+\]|[a-z_]+_id:\s*[0-9]+' src/ai/prompts.js | grep -v "type:"
+  # 6. Інконсистентні ID-префікси у контексті (medID vs ID) — Class 4
+  grep -rnE '\[(med|task|event|note|card|allergy|habit|project|step)ID:' src/ --include="*.js"
   ```
 - **🚨 B-172 урок: OpenAI Strict mode + UUID → schema integer ламає AI-виклики silent.** Знайдено db0YY коли планував Health undo reverser — `card_id: integer` у delete_health_card schema. Юзер казав «видали картку» — AI міг просто не виконати (Strict валідація провалювалась, fallback мовчав). Це найкритичніший клас бага бо невидимий — нема ErrorMessage у консолі, AI просто пропускає виклик. Завжди при UUID-міграції оновлювати prompts.js schemas СИНХРОННО.
 - **Обгортати онклик у одинарні лапки** — `onclick="fn('${item.id}')"`. UUID не містить `'` чи `"` (тільки `[0-9a-f-]+`) — безпечно.
