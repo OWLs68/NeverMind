@@ -2300,6 +2300,7 @@ ${lines.join("\n")}`;
     logMedicationDose: () => logMedicationDose,
     renderHealth: () => renderHealth,
     saveAllergies: () => saveAllergies,
+    saveHealthCards: () => saveHealthCards,
     sendHealthBarMessage: () => sendHealthBarMessage,
     setFocusedHealthCard: () => setFocusedHealthCard,
     startHealthInterview: () => startHealthInterview,
@@ -15448,6 +15449,49 @@ ${CHIP_PROMPT_RULES}`;
       addMsg("agent", t("habits.reminder.del.ok", '\u{1F5D1}\uFE0F \u0412\u0438\u0434\u0430\u043B\u0438\u0432 \u043D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F "{text}" \u043E {time}.', { text: removed.text, time: removed.time }));
       return true;
     }
+    if (action === "delete_transaction") {
+      const txId = parsed.id;
+      if (!txId) {
+        addMsg("agent", t("habits.tx.del.no_id", "\u041D\u0435 \u0437\u0440\u043E\u0437\u0443\u043C\u0456\u0432 \u044F\u043A\u0443 \u0442\u0440\u0430\u043D\u0437\u0430\u043A\u0446\u0456\u044E \u0432\u0438\u0434\u0430\u043B\u0438\u0442\u0438."));
+        return true;
+      }
+      const txs = getFinance();
+      const idx = txs.findIndex((t2) => String(t2.id) === String(txId));
+      if (idx === -1) {
+        addMsg("agent", t("habits.tx.del.not_found", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u0442\u0440\u0430\u043D\u0437\u0430\u043A\u0446\u0456\u044E."));
+        return true;
+      }
+      const removed = txs[idx];
+      txs.splice(idx, 1);
+      saveFinance(txs);
+      try {
+        addToTrash("finance", removed);
+      } catch (e) {
+      }
+      if (currentTab === "finance") renderFinance();
+      addMsg("agent", t("habits.tx.del.ok", "\u{1F5D1}\uFE0F \u0412\u0438\u0434\u0430\u043B\u0438\u0432 \u0442\u0440\u0430\u043D\u0437\u0430\u043A\u0446\u0456\u044E."));
+      return true;
+    }
+    if (action === "delete_health_card") {
+      if (!parsed.card_id) {
+        addMsg("agent", t("habits.health_card.del.no_id", "\u041D\u0435 \u0437\u0440\u043E\u0437\u0443\u043C\u0456\u0432 \u044F\u043A\u0443 \u043A\u0430\u0440\u0442\u043A\u0443 \u0432\u0438\u0434\u0430\u043B\u0438\u0442\u0438."));
+        return true;
+      }
+      const ok = deleteHealthCardProgrammatic(parsed.card_id);
+      if (ok) addMsg("agent", t("habits.health_card.del.ok", "\u{1F5D1}\uFE0F \u041A\u0430\u0440\u0442\u043A\u0443 \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E."));
+      else addMsg("agent", t("habits.health_card.del.not_found", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u043A\u0430\u0440\u0442\u043A\u0443."));
+      return true;
+    }
+    if (action === "delete_allergy") {
+      if (!parsed.allergy_id) {
+        addMsg("agent", t("habits.allergy.del.no_id", "\u041D\u0435 \u0437\u0440\u043E\u0437\u0443\u043C\u0456\u0432 \u044F\u043A\u0443 \u0430\u043B\u0435\u0440\u0433\u0456\u044E \u0432\u0438\u0434\u0430\u043B\u0438\u0442\u0438."));
+        return true;
+      }
+      const ok = deleteAllergy(parsed.allergy_id);
+      if (ok) addMsg("agent", t("habits.allergy.del.ok", "\u{1F5D1}\uFE0F \u0410\u043B\u0435\u0440\u0433\u0456\u044E \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E."));
+      else addMsg("agent", t("habits.allergy.del.not_found", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u0430\u043B\u0435\u0440\u0433\u0456\u044E."));
+      return true;
+    }
     return false;
   }
   async function sendTasksBarMessage() {
@@ -15649,6 +15693,7 @@ ${CHIP_PROMPT_RULES}`;
       init_tasks();
       init_notes();
       init_finance();
+      init_health();
       init_finance_subcat_keywords();
       init_ua_time_parser();
       init_evening();
@@ -17346,6 +17391,11 @@ ${JSON.stringify(contextData, null, 2)}` : "";
       projects.unshift(item);
       saveProjects(projects);
       if (currentTab === "projects") renderProjects();
+    } else if (type === "health_card") {
+      const cards = getHealthCards();
+      cards.unshift(item);
+      saveHealthCards(cards);
+      if (currentTab === "health") renderHealth();
     }
     saveTrash(trash.filter((t2) => t2.deletedAt !== trashId));
     return true;
