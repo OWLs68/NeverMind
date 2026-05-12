@@ -914,6 +914,77 @@ function runMigrations() {
     }
   }
 
+  // v17 Sub-entity steps UUID (db0YY 12.05.2026 Architecture Refactor — фінал UUID-блоку,
+  // sub-entity рівень):
+  //   - nm_tasks[].steps[].id — Date.now() / Date.now()+Math.random() → UUID
+  //   - nm_projects[].steps[].id — те саме
+  // Без cross-ref — step.id ніде не зберігається як FK (sourceMedId був на med,
+  // не на step). Закриває останній мікс типів — старі задачі/проекти зі step.id
+  // числами + нові з UUID → handler-и через String() обгортки уже безпечні,
+  // але краще мати чистий UUID-формат.
+  if (!localStorage.getItem('nm_steps_uuid_migrated_v17')) {
+    try {
+      const tasksRaw = localStorage.getItem('nm_tasks');
+      const projectsRaw = localStorage.getItem('nm_projects');
+      if (tasksRaw || projectsRaw) {
+        const backupKey = createSelectiveBackup(
+          ['nm_tasks', 'nm_projects'],
+          'pre-steps-uuid-v17'
+        );
+        if (backupKey) console.log('[boot] v17 steps backup:', backupKey);
+
+        // --- 1. Tasks steps ---
+        if (tasksRaw) {
+          const tasks = JSON.parse(tasksRaw);
+          if (Array.isArray(tasks)) {
+            let migratedSteps = 0;
+            tasks.forEach(task => {
+              if (Array.isArray(task.steps)) {
+                task.steps.forEach(step => {
+                  if (step && typeof step.id === 'number') {
+                    step.legacy_id = step.id;
+                    step.id = generateUUID();
+                    migratedSteps++;
+                  }
+                });
+              }
+            });
+            if (migratedSteps > 0) {
+              localStorage.setItem('nm_tasks', JSON.stringify(tasks));
+              console.log(`[boot] v17 migration: ${migratedSteps} task.steps → UUID`);
+            }
+          }
+        }
+
+        // --- 2. Projects steps ---
+        if (projectsRaw) {
+          const projects = JSON.parse(projectsRaw);
+          if (Array.isArray(projects)) {
+            let migratedProjSteps = 0;
+            projects.forEach(project => {
+              if (Array.isArray(project.steps)) {
+                project.steps.forEach(step => {
+                  if (step && typeof step.id === 'number') {
+                    step.legacy_id = step.id;
+                    step.id = generateUUID();
+                    migratedProjSteps++;
+                  }
+                });
+              }
+            });
+            if (migratedProjSteps > 0) {
+              localStorage.setItem('nm_projects', JSON.stringify(projects));
+              console.log(`[boot] v17 migration: ${migratedProjSteps} project.steps → UUID`);
+            }
+          }
+        }
+      }
+      localStorage.setItem('nm_steps_uuid_migrated_v17', '1');
+    } catch (e) {
+      console.error('[boot] v17 steps migration failed:', e);
+    }
+  }
+
   // v9 (03.05.2026 MIeXK Health AI-інтерв'ю): шкала статусів 3 → 6 значень.
   // Старе: active/controlled/done. Нове: acute/treatment/improving/remission/chronic/done.
   // Мапінг: active → treatment (нейтральне «активне лікування»), controlled → remission,
