@@ -4,158 +4,107 @@
 >
 > Старіші сесії (до 6GoDe 19.04) — в [`_archive/SESSION_STATE_archive.md`](../_archive/SESSION_STATE_archive.md).
 
-**Оновлено:** 2026-05-11 (сесія **myshu** — G3 Universal Undo + parser intent-router save_routine + 3 раунди GPT + Council 5 агентів + Architecture Refactor план на 8 сесій). Раніше: 2026-05-08 (сесія **PJi7l** — Сесія 1 decision-tree промптів + Сесія 2 BASE_CHAT_RULES).
+**Оновлено:** 2026-05-12 (сесія **db0YY** — Завершення UUID-блоку Architecture Refactor 100% + 4 класи багів регресії myshu (B-170/171/172/173) + Universal undo coverage 8 tools + 10 типів restore + 2 нові класи (B-174/175/176/177) + Council 4-агентний аудит). Раніше: 2026-05-11 (сесія **myshu** — G3 Universal Undo + parser intent-router save_routine + 3 раунди GPT + Council 5 агентів + Architecture Refactor план на 8 сесій).
 
 ---
 
-## 🔧 Поточна сесія myshu — G3 Undo + parser + Architecture Refactor plan (11.05.2026)
+## 🔧 Поточна сесія db0YY — Завершення UUID-блоку 100% + B-170..B-177 регресії myshu + Council аудит (12.05.2026)
 
 ### Зроблено
 
-#### A. Інфраструктурні автоматизації (2 коміти)
+#### A. Регресії myshu UUID-міграцій — 4 класи багів (4 коміти + docs)
 
-1. **`pre-push-check.js` backticks detector** (`13b4e7b`) — регекс-сканер `src/ai/prompts.js` + `src/owl/chips.js` ловить raw backticks всередині `export const X = \`...\`` блоків. Той самий клас бага що LfA6w `be6f708` + dyhJu `8d4aef3` — 18h CI fail. Smoke 3/3: broken commit caught, clean prompts.js + chips.js no false positives.
+1. **B-170 onclick без лапок навколо UUID** (`f66acfb`) — 17 точок у 6 файлах + 1 parseInt(txId)→NaN. UUID з дефісами у HTML-атрибуті парситься як вираз → ReferenceError. Точки: inbox/evening/notes/projects/calendar/finance. **Фікс:** обгортка `'${id}'` + finance.js:259 без parseInt. Той самий клас що B-108 (xGe1H 27.04).
 
-2. **`skill-triggers.sh` iOS симптом-тригер** (`3b2bea3`) — UserPromptSubmit хук ловить «не фіксується / клипається / мерехтить / стрибає / стискається» БЕЗ явного «iOS». Інжектить у контекст 3-точковий чек RULES_UI §5 + кейси false leads (Settings scale, Chips clipping, Calendar dyhJu). Закриває «декларативне правило без хука розкладається».
+2. **B-171 Date.now() ID при створенні entities через AI/handler** (`2cf5510`) — 8 точок у evening-actions/habits/utils/owl/inbox/calendar. Мікс типів (старі UUID-string + нові number) → silent fail swipe-delete/undo. **Фікс:** `Date.now()` → `generateUUID()` + імпорти.
 
-#### B. UI фікси Calendar/Routine (5 комітів)
+3. **B-172 КРИТИЧНА: tool schemas `type: "integer"` для UUID ID** (`506d49f`) — 28+ точок у prompts.js (7 entity типів). OpenAI Strict mode відкидав AI-виклики delete/edit/update silent. Tasks myshu виправила правильно, решту 7 типів забула. **Фікс:** replace_all integer→string + Health undo reversers (create_health_card, add_allergy).
 
-3. **Прибрано scroll-індикатор справа** (`6e290bb`) — додано `.nm-modal-scroll` класу `style.css`. Застосовано до calendar + routine inner scroll div. CACHE bump.
+4. **B-173 AI prompts examples з числовими ID + medID inconsistency** (`9b5e25d`) — GLOBAL_TOOLS_RULE приклади `event_id:123/456` з ери Date.now() + health.js:1708 `[medID:` замість `[ID:`. **Фікс:** приклади на UUID + «копіюй точно як є» + medID→ID + НОВИЙ `src/core/action-mapper.js` extraction (Сесія 4-mini Architecture Refactor — підготовка ґрунту).
 
-4. **Routine компресія + overflow-x:hidden** (`56d3009`) — day-cells 32 замість 36, gap 2 замість 4, arrows 24 замість 28. Inner scroll `overflow-x:hidden`. Видавлено swipe-вбік-всього-вмісту regression.
+#### B. Architecture Refactor — Сесія 3B-8 Health UUID + sub-entity steps v17 (2 етапи)
 
-5. **Restore week swipe** (`952c489`) — мій попередній фікс зламав свайп тижнів. Прибрано `touch-action:pan-y` з day-row + fire-during-touchmove замість touchend + touchcancel handler. iOS Safari при overflow-x:hidden зʼїдав touchend.
+5. **Сесія 3B-8 Health UUID** (`581aad2` + `552aa00`) — health.js: 8 creation Date.now()→generateUUID() (cards/medications/allergies + Класс 2 _syncMedicationToTask task.id + _syncCardAppointmentToEvent event.id) + 9 onclick `'${id}'` + 1 dataset.id Number→string + import generateUUID. boot.js v16 міграція: nm_health_cards[].id + nested medications[].id + nm_allergies[].id з legacy_id. Cross-ref FORWARD (legacy_id ETAP1 → ETAP2 для нових з myshu) + REVERSE (event.sourceCardId) + TASKS (task.sourceMedId). Backup pre-health-uuid-v16.
 
-6. **Розширення зони свайпу + кнопка Додати** (`870b84c` + `222f7ce` + `f64aff5`) — swipe на весь `.nm-modal-scroll` (не тільки day-row). Стрілки/тапи на дні залишилися. Кнопка «+ Додати блок» — білий фон як day-cells + темніша pumpkin штрих-рамка. Hardcoded copy у `index.html:1113` синхронізовано з `routineCancelAdd()` JS.
+6. **Sub-entity steps UUID v17** (`1b804cc` + `80e0d21`) — 17 creation-точок task.steps/project.steps на generateUUID + onclick обгортка + handler String() safety (projects:421, tool-dispatcher:432). boot v17: nm_tasks[].steps[].id + nm_projects[].steps[].id з legacy_id. Backup pre-steps-uuid-v17. **UUID coverage 100% повний на всіх рівнях** (10/10 top-level + 100% sub-entity steps).
 
-#### C. G3 Universal Undo — Phase 1A-1F (7 комітів)
+#### C. Universal undo — 8 tools + 10 типів trash (8 комітів + docs)
 
-7. **action-log.js** (`23bfe7b`) — pure модуль `nm_action_log`. API: appendActionLog, getActionLog (TTL 7д), readLastReversible, markReversed (для idempotency), getRecent (UI Кошик), clearActionLog. UUID id, ISO ts, user_id null (Supabase ready), device_id (lazy gen), schema_version. Quota-safe.
+7. **Health undo reversers** (`506d49f`) — create_health_card → delete_health_card, add_allergy → delete_allergy у action-reversers.js + logAction у dispatcher case'ах.
 
-8. **action-reversers.js** (`0edcb47`) — pure builders forward tool → reverse instruction. 2 типи reverse: `tool_call` (save_task→delete_task by id) і `restore_snapshot` (save_routine → restore prev state з знімка). Coverage: save_task, save_finance, save_habit, create_event, set_reminder, save_routine. Smoke 5/5.
+8. **Розірвав ESM цикл inbox↔action-undo↔habits** (`fd66c8d`) — action-undo.js став PURE: executeReverse(reverse, dispatchFn) через DI. inbox.js:768 + tool-dispatcher.js:579 передають processUniversalAction. R1 ризик ARCHITECTURE_REFACTOR.md закрито. Підготовка ґрунту для Сесії 4 execute-action.
 
-9. **Phase 1C dispatcher save_routine snapshot** (`b5d662d`) — у `tool-dispatcher.js dispatchChatToolCalls` додано `_captureSnapshotBefore` (тільки day-subset для save_routine) + `_logAction` після успіху.
+9. **Universal undo coverage trash 9 типів** (`c72763e` + `f2bd017` + `08940c1`) — deleteAllergy → addToTrash + 3 case у restoreFromTrash: allergy/event/project (раніше silent fail для них).
 
-10. **Phase 1D ID-based tools** (`258ce59`) — `_capturePostResultId` для save_task (nm_tasks[0]), save_finance (nm_finance[0]), save_habit (nm_habits2[len-1]), create_event (nm_events[len-1]). set_reminder reverse через text fuzzy без ID. save_routine через snapshot.
+10. **🚨 B-174 КРИТИЧНА: undo silent fail для save_finance/create_health_card/add_allergy** (`bb0c50e`) — Council аудит знайшов: reverser шле через DI у processUniversalAction, але delete_transaction/delete_health_card/delete_allergy жили ТIЛЬКИ у tool-dispatcher direct handlers → return false → AI пише «⚠️ Не зміг відмінити». save_finance ламався з myshu **24+ год у проді**. **Фікс:** + 3 cases у processUniversalAction (habits.js) + import {deleteHealthCardProgrammatic, deleteAllergy}.
 
-11. **Phase 1E action-undo.js + restore_deleted query=last** (`cc472dc`) — модуль `executeReverse(reverse)`: `tool_call` через processUniversalAction, `restore_snapshot` через Object.assign(storage, value) + dispatch nm-data-changed. У `inbox.js:752` extended `restore_deleted` query=last: порівнює top of action-log і top of nm_trash, бере новіше. i18n keys: inbox.chat.undo_ok, undo_fail.
+11. **B-175 КРИТИЧНА: restoreFromTrash без case 'health_card'** (`bb0c50e`) — Silent data loss при відновленні картки. **Фікс:** + case 'health_card' з імпортом getHealthCards/saveHealthCards (експортовано).
 
-12. **Phase 1F UNDO_RULES у BASE_CHAT_RULES** (`02c572c`) — нове правило промпту: «відміни/скасуй/верни БЕЗ іменника» → restore_deleted(query='last'). «Відміни прийом» (з іменником) → delete_event як раніше. Описи tool restore_deleted оновлено — query='last' = universal undo.
+12. **B-176 save_routine undo не оновлював Календар** (`b7b9e74`) — pre-existing з myshu: DETAIL_TO_KEY не мав 'routine'. **Фікс:** + 'routine': 'nm_routine' + 'allergies': 'nm_health_cards' у DETAIL_TO_KEY; + 2 рендер-точки у KEY_RENDER_MAP; renderCalendar тепер export.
 
-13. **fec80c3** — restore_deleted ПРАЦЮЄ у ВСIХ 7 чатах (Verifier P0-3 фікс). Раніше handler жив тільки у inbox.js — Tasks/Notes/Me/Health/Finance/Projects падали у silent fallback. Спеціальний case у `dispatchChatToolCalls` поряд з show_monthly_summary і create_project.
+13. **B-177 3 delete_X tools з слабкими descriptions** (`b7b9e74`) — delete_event/delete_health_card/delete_allergy без UUID-уточнення → AI міг вигадати ID за назвою. **Фікс:** «UUID X з контексту (формат [ID:xxxx-xxxx]). НЕ вигадуй — копіюй точно.»
 
-#### D. Intent-router parser — Phase G2 (3 коміти)
+#### D. Council 4 агенти аудит
 
-14. **intent-router.js + integration** (`15f43e5`) — pure парсер `parseExplicitIntent(text)` для save_routine. Інтегровано у `callAIWithTools` ПЕРЕД OpenAI fetch — 0ms latency, $0 cost. Day groups (будні/вихідні/щодня) + 7 окремих днів. Time patterns: HH:MM, «о HH ранку/вечора», «о HH». JS pitfall: `\b` НЕ працює з кирилицею навіть з `u` — використано `(?:^|[\s,.:;\-])X(?=[\s,.:;\-]|$)`. Smoke 27/27.
-
-15. **«завтра» → AI, не save_routine** (`df85f27`) — після Романа smoke-теста: парсер впіймав «В розпорядок на завтра 8 вечора» → save_routine на ВСI понеділки (бо AI хибно мапив «завтра»→day-of-week). Додано `ONE_OFF_DATE_INDICATORS` regex (завтра/післязавтра/сьогодні/15 травня/12.05) → парсер бейлить до AI щоб він обрав create_event. `RECURRING_OVERRIDE` («щотижня/постійно») скасовує бейл. Smoke 11/11. + Inbox save_routine handler пише action-log через captureSnapshotBefore + logAction (Verifier P0-1 fix).
-
-16. **withActionLog wrapper у Inbox + Evening + Finance** (`4d70a7e`) — один мозок: helpers переїхали з `tool-dispatcher.js` у `action-log.js` (pure data source). Wrapper `withActionLog(name, args, fn, source)` обгортає мутацію + log. Інтегровано у inbox.js (save_routine), evening-actions.js (save_task/habit/finance/event/reminder), finance.js processFinanceAction (save_finance). save_note + save_moment лишаються — нереверсиві.
-
-#### E. Architecture Refactor план (Session 0 — 4 коміти у цій сесії)
-
-17. **3 раунди консультацій з GPT** — діалог з Romanом про корінь проблем (AI плутається, промпт-патчі ceiling, 1300 рядків правил), переніс intelligence у архітектуру. GPT надав canonical action schema, 4-tier eskalation (regex → embeddings → local LLM → cloud), 8-сесійний план. Раунд 3 додав Supabase-specific деталі (sync через actions, undo як новий action, hybrid action-log + materialized state, NO pgvector now, per-user quotas count cloud escalations).
-
-18. **Council 5 паралельних агентів (Sonnet)** — verification плану проти реального коду:
-    - Agent A: 4 dispatch-точки (не 3), 66 tools (не 30), 72 рядки BASE_CHAT_RULES (не 1300 — то весь prompts.js файл), Inbox взагалі НЕ імпортує dispatchChatToolCalls
-    - Agent B: 5 ризиків — циклічні залежності, reminderId+1 арифметика, check-chat-uniformity build hooks, 65 Date.now() ID, event bus подвоїть тригери
-    - Agent C: UUID + storage adapter FIRST (бо блокує execute-action), Сесія 9 dispatcher collapse — насправді 2-3 сесії (8 файлів)
-    - Agent D: 10 сесій → 6 (об'єднати/відкласти), 3 на цей тиждень: AI без success + парсер + UUID
-    - Agent E: UUID coverage 10% (1 з 10), 128 не-канонічних setItem, 28 dispatch nm-data-changed + 8 listeners активно відкидають object detail, action-log майже Supabase-ready крім reversed_by/source CHECK/jsonb
-
-19. **`docs/ARCHITECTURE_REFACTOR.md`** (`205fc80`) — 170 рядків single source of truth. 6 core принципів + 8 сесій з file paths + 5 топ-ризиків + метрики реальності + перетин з 5 існуючими треками ROADMAP.
-
-20. **ROADMAP Active block** (`19998e9`) — компактний (40 рядків) блок між Pre-Migration Hardening і Test sprint. Посилання на ARCHITECTURE_REFACTOR.md. Позначено що закриває: Pre-Migration Підсесія 1 (UUID решти) + Підсесія 3 (nm-data-changed), OWL V3 Фаза 3 (`nm_agent_corrections`), частково Один мозок V2 Шар 3 + Dynamic chips Шар 5.
-
-### Обговорено (без виконання)
-
-- **Tier 2 (semantic router з embeddings)** — best ROI після парсера, але після 2-3 місяців telemetry. Phase G5 з Bridge plan.
-- **Tier 3 (Local LLM у WebLLM)** — GPT раунд 2 порадив викинути. iOS WebGPU нестабільний, ROI слабкий для 100 users. Залишити у бэклог «коли 50+ юзерів».
-- **Embedding personalization** — НЕ pgvector зараз. Гібрид: local hot learning + cloud corrections log. Тільки після Supabase.
-- **Multi-agent / Fine-tune** — НЕ зараз. Premature complexity для нашого розміру.
+14. **Council Sonnet (4 паралельні)** — doc-consistency-checker (7 розривів) + prompt-engineer-auditor (4 покращення) + silent-bug-scout (TOP-5 ризиків, знайшов B-174/B-175/B-176) + code-regression-finder (B-174 silent undo фундаментальний).
 
 ### Ключові рішення
 
-- **AI ніколи не пише success-text** — це робить тільки executor. Архітектурно ліквідує баг «Крок Перець закрито» (smoke screen Романа).
-- **12 інтентів замість 66 tools** (Сесія 5) — domain-level, не tool-specific. Tools стають execution adapters.
-- **Undo = новий action, не реверс** (GPT раунд 3) — sync-safe, audit-safe, replay-safe. Сесія 7 переробка G3 у цей патерн.
-- **Sync ACTIONS, не STATE** — append-only action-log, materialized state перераховується. NO CRDT.
-- **Strangler pattern**, не big bang — всі 8 сесій через wrapper-shims з зворотною сумісністю.
-- **NO pgvector + NO local LLM зараз** — premature complexity для 100 users.
-
-### F. Architecture Refactor — виконані Сесії 1, 2, 3A (3 коміти)
-
-26. **Сесія 1 — AI без silent saveOffline** (`f8fc19f`) — `inbox.js:558/1045/1049` 3 точки `saveOffline + ✓ Збережено` замінено на чесні повідомлення (network_fail / ai_empty / error_processing). Логування у `nm_error_log` (50 записів). Корінь скарг «AI каже зроблено, а нічого не зробив».
-
-27. **Сесія 2 — set_reminder парсер** (`9094692`) — `intent-router.js` розширено: REMINDER_TRIGGER, DATE_STRIP_RE, інтеграція з `ua-time-parser.resolveDateFromText`. TIME_PATTERNS додано «на» префікс + Pattern 5 «N ранку/вечора БЕЗ префіксу» після skрід Романа де AI хибно інтерпретував. 16/17 smoke.
-
-28. **Сесія 3A — reminderId UUID** (`4012759`) — `habits.js:1643` числова арифметика `reminderId+1/+2` для 3 сховищ (nm_reminders/nm_events/nm_inbox) → UUID кожен. Зв'язок через окреме поле `reminderId`. Закрив P0 ризик ДО UUID-міграцій entity типів.
-
-29. **CI auto-merge unblock** (`b63877e`) — `check-imports.js` падав на dynamic `await import('intent-router')` у core.js → static import. Це КОРIНЬ чому Роман бачив v822 з 12:46 (мої 6 комітів не доходили до main). + створено `src/core/backup.js` модуль (foundation Phase 3B).
-
-30. **Парсер bare-N + undo priority fix** (`fa30a69`) — Roman screen v834 viral: «Постав нагадування 7 ранку зробити зарядку» парсер пропускав → AI хибно викликав `delete_reminder("Купити хліб")`. Гіпотеза підтверджена node-side, додано pattern для голого «N ранку». + `restore_deleted(query='last')` тепер action-log пріоритет, trash як fallback (раніше брали новіше за timestamp, trash перемагав свіжий save_routine).
-
-### G. UUID-міграції — Phase 3B-1 → 3B-7 (5 комітів, 7 entity типів)
-
-31. **Habit UUID + boot v9** (`05a2fcc`) — 3 точки у `habits.js`. **CRITICAL cross-ref:** `nm_habit_log2` структура `{date: {habit.id: true}}` — nested ключі переписуються за idMap. Без цього viewing звичок ламається після міграції.
-
-32. **Event UUID + boot v10 + cross-ref update** (`a65bf61`) — 10 точок у 3 файлах (inbox.js + habits.js + evening-actions.js). `inbox.cards.eventId` field оновлюється за idMap на ту ж міграцію.
-
-33. **Note UUID + boot v11** (`ef2713f`) — 4 точки у `notes.js`. БЕЗ persistent cross-refs (folder=string).
-
-34. **Moments + Finance UUID + boot v12+v13** (`335673c`) — 4 точки Moment у 4 файлах (evening/evening-actions/inbox/habits) + 3 точки Finance tx (finance.js + finance-modals.js). БЕЗ FK.
-
-35. **Project + InboxItem UUID + boot v14+v15** (`bc01594`) — 2 точки Project + 3 точки Inbox-карток (включно з прибиранням `Date.now()+1` арифметики). Sub-entities проекту (steps/decisions/etc) — окремо коли стане блокером.
-
-**Backup mechanism у дії:** кожна v9-v15 міграція робить `createSelectiveBackup(['nm_X', ...], 'pre-X-uuid-vN')` ПЕРЕД мутацією. Auto-cleanup тримає 3 останніх. Юзер може відновити через DevTools при потребі.
+- **action-undo через DI** (`executeReverse(reverse, dispatchFn)`) — pure модуль, цикл inbox↔habits розірвано.
+- **action-mapper.js extracted** — pure switch у core/, готує ґрунт для Сесії 4 execute-action.js без циклу.
+- **Universal undo reverser ПОВИНЕН** мати target tool у processUniversalAction (не direct handler) — інакше silent fail.
+- **`addToTrash(type)` ОБОВ'ЯЗКОВО має парний case у `restoreFromTrash`** — інакше silent data loss.
 
 ### Інциденти
 
-- **Romanов сигнал болю «технічно»** двічі — переписав plan простіше з метафорами (помічник з шпаргалкою / друг що розуміє сенс / маленький AI у телефоні / дорогий експерт у хмарі).
-- **«Простирадло»** — 1 раз. Відразу скоротив відповідь.
-- **«Не на пам'яті»** — Roman нагадав читати код. Спіймав себе на тому що писав imports у inbox.js без перевірки existing — повернувся і прочитав.
-- **CI auto-merge fail 8+ годин (b63877e розблокував)** — `check-imports.js` блокував build через мій dynamic `await import('intent-router.js')` у core.js. Я не знав бо локально CI не запускається. Роман пишав «не оновило» з v822 → знайшов через скрипт перевірку. Урок: ПЕРЕД пушем будь-чого з нового модуля — `node scripts/check-imports.js` локально.
-- **Сцена з відміни (Сесія 3 followup)** — мій код `restore_deleted query=last` змішував action-log + trash і брав новіше за ts. Trash з нещодавно видаленої «Зустріч» переміг save_routine. Юзер: «видалив щось непонятно нашо». Виправлено: action-log завжди пріоритет.
-- **«7 ранку» без префіксу — parser miss → AI dispatch** — Roman: «AI помилково викликав delete_reminder + set_reminder». Гіпотеза верифікована node-side (правило ГІПОТЕЗА ≠ ФАКТ), фікс після перевірки.
+- **Сигнал болю «технічно»** 1× — переписав чек-лист тестів простіше (з прикладом дії юзера, без жаргону DevTools).
+- **Сигнал «копай глибоко»** 2× — після кожного знайшов додаткові класи бугів (B-173 від першого, B-174 від Council другого).
+- **«Не на пам'яті»** Романа — Read'нув кожний файл перед Edit, верифікував Council гіпотези самостійно через Read (правило ГІПОТЕЗА≠ФАКТ).
 
 ### Конфлікти/суперечності
 
-- **Agent C каже UUID першим, Agent D каже AI-без-success першим.** Обидві логіки розумні. Прийняв порядок: AI-без-success (30 хв quick win) → парсер expansion → UUID. Аргумент: UUID — фундамент але невидимий, parser ловить найбільше глюків юзера.
-- **«canonical schema FIRST» vs «execution engine FIRST»** — GPT раунд 2 сказав схема first, раунд 3 сказав engine first. Прийняв engine first (Сесія 4) бо схема без точки виконання — чиста декларація. Engine + schema разом у Сесії 4-5.
+- **Council сказав «відкласти Сесію 4 до Сесії 5»** — wrapper без observable value. Прийняв — замість цього зробив Сесію 4-mini (action-mapper extraction) як підготовку + переніс зусилля на universal undo coverage де є справжній value.
 
 ### Метрики
 
-- Гілка: `claude/start-session-myshu`
-- Коміти: 34 (`13b4e7b` → `bc01594`)
-- Версії: v823 → v837+ (CACHE_NAME `nm-20260511-2114`)
-- Закриті ризики: AI silent saveOffline (3 точки), reminderId+1/+2 арифметика (P0), 7 entity типів UUID (Habit/Event/Note/Moment/Finance/Project/InboxItem) з backup + cross-ref update
-- Архітектурні рішення: Architecture Refactor план на 8 сесій (`docs/ARCHITECTURE_REFACTOR.md` 170 рядків) — Сесії 1, 2, 3A, 3B-1..3B-7 ✅. Лишилось: 3B-8 Health (sub-entities складніше) + Сесії 4-8.
-- Council Sonnet агенти: 5 (architecture truth, risk pre-mortem, dependency mapping, migration safety, Supabase readiness)
-- Раунди з GPT: 3 (Supabase-specific у раунді 3 — sync via actions, undo як новий action, NO CRDT/pgvector)
-- Нові модулі: `src/data/action-log.js`, `src/data/action-reversers.js`, `src/data/action-undo.js`, `src/data/intent-router.js`, `src/core/backup.js`, `docs/ARCHITECTURE_REFACTOR.md`
-- Розширені: boot.js (+7 migration blocks v9-v15), action-log.js (+withActionLog helper)
-- Stage коміти (legacy): ~22 (`13b4e7b` → `19998e9`)
-- Версії: v823 → v833+
-- CACHE_NAME: ~6 bumps
-- Закриті ризики: backticks build-fail (тепер хук), iOS симптом auto-routing
-- Нові модулі: `src/data/action-log.js`, `src/data/action-reversers.js`, `src/data/action-undo.js`, `src/data/intent-router.js`, `docs/ARCHITECTURE_REFACTOR.md`
-- Council Sonnet агенти: 5 (architecture truth + risk pre-mortem + dependency mapping + migration safety + Supabase readiness)
-- Раунди з GPT: 3 (плюс окремий verification раунд)
+- Гілка: `claude/start-session-db0YY`
+- Коміти: 30+ (`f66acfb` → ETAP 3 docs)
+- Версії: v841 → v848+ (CACHE_NAME `nm-20260512-1310`)
+- Закриті ризики: B-170/171/172/173 (myshu регресії), B-174/175/176/177 (нові класи), Health 3B-8 UUID, sub-entity steps v17, ESM cycle inbox-undo-habits
+- Council Sonnet агенти: 4 (doc-consistency + prompt-engineer-auditor + silent-bug-scout + code-regression-finder)
+- Нові модулі: `src/core/action-mapper.js` (Сесія 4-mini)
+- Розширені: boot.js (+v16 Health + v17 steps + DETAIL_TO_KEY/KEY_RENDER_MAP), action-reversers.js (+2 Health), trash.js (+4 cases), processUniversalAction (+3 delete cases)
+- UUID coverage: **100% повний** (10/10 entities + sub-entity steps)
 
 ### Спостереження Claude
 
-- **Roman зрозумів архітектурну ідею за метафорами** — після переходу з технічного жаргону на «секретарка / друг / маленький AI у телефоні / дорогий експерт» одразу сказав «це просто і геніально». Лесон — складність системи розкривати через progressive disclosure (метафора → загальна структура → file paths).
-- **3 раунди консультацій з GPT дали більше ніж сам Claude** — особливо раунд 3 з Supabase (undo як новий action, sync через actions, NO CRDT, hybrid action-log). Claude знає теорію, але GPT-5 reasoning з конкретним product-контекстом дав глибший pre-mortem.
-- **Roman повторив GPT-відповідь дослівно** — двозначно. Або хотів щоб я дав інший кут, або хотів дії. Виявилось — друге. Швидкий quick-step «що далі?» дав ефект.
-- **«Дивимось ширше і копаємо глибше»** як trigger Council — спрацювало. Claude САМ запустив 5 агентів без запиту слашу.
+- **Council ВЖЕ після фіксу знаходить нові баги тих самих класів** — це нормально, бо мій план мав сліпі плями (B-174 silent undo flow, B-175 missed type). Урок: ПЕРЕВIРИТИ ВСI символи що в'яжуться (addToTrash types ↔ restoreFromTrash cases; reverser tools ↔ processUniversalAction cases) перед закриттям сесії.
+- **«Один баг за раз»** Романа — справді працювало. ETAP 1 (критичні) → ETAP 2 (середні) → ETAP 3 (docs) дало чисту історію + контрольовані point-of-failure.
+- **6-grep чек-ліст у lessons.md** — стане канонічною інструкцією для майбутніх UUID/schema-міграцій (B-170/171/172/173/174/175 повторюватись не повинні).
 
 ### Відкладене
 
-- **Storage adapter** (cleanup 128 не-канонічних setItem) — Сесія 6 покриє ~60%, решта після Supabase.
-- **Dispatcher collapse 3→1** — Agent C каже 2-3 окремі сесії. Після Сесії 5 коли canonical schema стабільна.
-- **Embedding router** — після 2-3 місяців telemetry.
-- **Local LLM (WebLLM)** — після 50+ юзерів.
-- **DATA_SCHEMA.md banner** (Session 0 part 4/4) — позначити що документ оновлюється через рефактор.
+- **add_medication undo** — потребує новий tool `delete_medication` (поки нема ні у promtps ні в handlers)
+- **Moments не показуються AI з `[ID:]`** (code-regression #3) — обмежує undo/edit моментів точково
+- **save_routine відсутній у evening-actions.js** (code-regression #4) — асиметрія з inbox + tool-dispatcher
+- **Сесії 4-8 Architecture Refactor** — Сесія 4 execute-action.js (відкладено до Сесії 5 canonical), 5 (12 інтентів), 6 (action-log coverage), 7 (nm-data-changed payload), 8 (habit_log2 ISO + user_id)
+
+---
+
+## 🔧 Сесія myshu (11.05.2026) — архівовано db0YY 12.05 → [archive](../_archive/SESSION_STATE_archive.md#-сесія-myshu--g3-undo--parser--architecture-refactor-plan-11052026)
+
+**Стислі метрики:** 34 коміти + 7 boot-міграцій (Habits/Events/Notes/Moments/Finance/Project/InboxItem UUID v9-v15) + G3 Universal Undo + intent-router парсер + Architecture Refactor план на 8 сесій + Сесії 1-2-3A-3B-1..3B-7 виконані. Лишилось: 3B-8 Health (закрив db0YY) + Сесії 4-8.
+
+**ПЕРЕНЕСЕНI ПIД-ПРОБЛЕМИ → db0YY:** 4 класи регресій (B-170/171/172/173) — onclick/Date.now/integer/medID. Council Pre-mortem попереджав про R1 cycle (закрив db0YY) + action-reversers gap для Health (закрив db0YY).
+
+---
+
+<details>
+<summary>📦 myshu raw block (заархівовано — натисни щоб розкрити)</summary>
+
+Повний детальний блок: див. [`_archive/SESSION_STATE_archive.md`](../_archive/SESSION_STATE_archive.md#-сесія-myshu--g3-undo--parser--architecture-refactor-plan-11052026).
+
+</details>
 
 ---
 
