@@ -5,23 +5,32 @@
 //   - 'tool_call' — викликає processUniversalAction (як ніби AI запитав delete_X)
 //   - 'restore_snapshot' — пряма перезапис localStorage + dispatch nm-data-changed
 //
-// API: executeReverse(reverseInstr) → boolean (true якщо успіх)
+// API: executeReverse(reverseInstr, dispatchFn) → boolean (true якщо успіх)
 //
-// Виклик з `inbox.js restore_deleted` handler (Phase 1E) — коли юзер каже
-// «відміни останню дію» і top of action-log новіший за top of nm_trash.
+// dispatchFn — `processUniversalAction` передається через DI щоб закрити
+// циклічну залежність inbox ↔ action-undo ↔ habits ↔ inbox (db0YY 12.05).
+// Раніше action-undo робив прямий `import processUniversalAction` — це
+// створювало ESM-цикл який міг зависати на iOS Safari cold start (R1 з
+// docs/ARCHITECTURE_REFACTOR.md). Тепер action-undo PURE — не залежить
+// від tabs/habits, caller передає виконавця.
+//
+// Виклик з `inbox.js restore_deleted` handler і `tool-dispatcher.js` —
+// обидва вже мають `processUniversalAction` у scope.
 
-import { processUniversalAction } from '../tabs/habits.js';
-
-export function executeReverse(reverse) {
+export function executeReverse(reverse, dispatchFn) {
   if (!reverse || typeof reverse !== 'object') return false;
 
   if (reverse.type === 'tool_call') {
     if (!reverse.tool) return false;
+    if (typeof dispatchFn !== 'function') {
+      console.warn('[action-undo] tool_call reverse needs dispatchFn (DI)', reverse);
+      return false;
+    }
     const action = { action: reverse.tool, ...(reverse.args || {}) };
     // silent — undo не пише власне повідомлення, caller дає summary
     try {
       const noopAddMsg = () => {};
-      return !!processUniversalAction(action, '', noopAddMsg);
+      return !!dispatchFn(action, '', noopAddMsg);
     } catch (e) {
       console.warn('[action-undo] tool_call reverse failed', reverse, e);
       return false;

@@ -576,7 +576,7 @@ export function dispatchChatToolCalls(toolCalls, addMsg, originalText) {
         // «Відміни» = скасуй останню AI-дію. Trash — fallback тільки коли log порожній.
         const lastAction = typeFilter ? null : readLastReversible();
         if (lastAction) {
-          const ok = executeReverse(lastAction.reverse);
+          const ok = executeReverse(lastAction.reverse, processUniversalAction);
           if (ok) {
             markReversed(lastAction.id);
             addMsg('agent', `✅ Відмінив: ${lastAction.summary}`);
