@@ -342,7 +342,7 @@ function renderProjectWorkspace(id) {
       <!-- Розгорнутий вигляд -->
       <div id="proj-timeline-full-${p.id}" style="display:none">
         ${steps.map((s,i) => `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;${i < steps.length-1 ? 'border-bottom:1px solid rgba(30,16,64,0.05)' : ''}">
-          <div onclick="toggleProjectStep('${p.id}',${s.id})" style="width:18px;height:18px;border-radius:6px;border:1.5px solid ${s.done ? '#3d2e1e' : 'rgba(30,16,64,0.18)'};background:${s.done ? '#3d2e1e' : 'rgba(255,255,255,0.65)'};display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;font-size:10px;color:white">${s.done ? '✓' : ''}</div>
+          <div onclick="toggleProjectStep('${p.id}','${s.id}')" style="width:18px;height:18px;border-radius:6px;border:1.5px solid ${s.done ? '#3d2e1e' : 'rgba(30,16,64,0.18)'};background:${s.done ? '#3d2e1e' : 'rgba(255,255,255,0.65)'};display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;font-size:10px;color:white">${s.done ? '✓' : ''}</div>
           <div style="flex:1;font-size:13px;font-weight:${!s.done && s === nextStep ? 700 : 500};color:${s.done ? 'rgba(30,16,64,0.3)' : '#1e1040'};${s.done ? 'text-decoration:line-through' : ''}">${escapeHtml(s.text)}</div>
         </div>`).join('')}
       </div>
@@ -418,7 +418,7 @@ function toggleProjectStep(projectId, stepId) {
   const projects = getProjects();
   const p = projects.find(pr => pr.id === projectId);
   if (!p) return;
-  const step = (p.steps || []).find(s => s.id === stepId);
+  const step = (p.steps || []).find(s => String(s.id) === String(stepId));
   if (step) {
     step.done = !step.done;
     step.doneAt = step.done ? Date.now() : null;

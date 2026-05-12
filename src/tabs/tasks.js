@@ -125,7 +125,7 @@ function addTaskStep() {
   const inp = document.getElementById('task-step-input');
   const val = inp.value.trim();
   if (!val) return;
-  tempSteps.push({ id: Date.now(), text: val, done: false });
+  tempSteps.push({ id: generateUUID(), text: val, done: false });
   inp.value = '';
   renderTempSteps();
   inp.focus();
@@ -147,9 +147,9 @@ function renderTempSteps() {
   if (tempSteps.length === 0) { el.innerHTML = ''; return; }
   el.innerHTML = tempSteps.map(s => `
     <div style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.7);border:1.5px solid rgba(30,16,64,0.12);border-radius:10px;padding:8px 10px">
-      <div onclick="toggleTempStep(${s.id})" style="width:18px;height:18px;border-radius:5px;border:1.5px solid ${s.done ? '#ea580c' : 'rgba(30,16,64,0.2)'};background:rgba(255,255,255,0.6);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;font-size:12px;color:#ea580c">${s.done ? '✓' : ''}</div>
+      <div onclick="toggleTempStep('${s.id}')" style="width:18px;height:18px;border-radius:5px;border:1.5px solid ${s.done ? '#ea580c' : 'rgba(30,16,64,0.2)'};background:rgba(255,255,255,0.6);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;font-size:12px;color:#ea580c">${s.done ? '✓' : ''}</div>
       <div style="flex:1;font-size:15px;color:#1e1040;${s.done ? 'text-decoration:line-through;opacity:0.4' : ''}">${escapeHtml(s.text)}</div>
-      <div onclick="removeTempStep(${s.id})" style="font-size:18px;color:rgba(30,16,64,0.25);cursor:pointer;padding:0 2px">×</div>
+      <div onclick="removeTempStep('${s.id}')" style="font-size:18px;color:rgba(30,16,64,0.25);cursor:pointer;padding:0 2px">×</div>
     </div>
   `).join('');
 }
@@ -483,7 +483,7 @@ async function sendTaskChatMessage() {
           const allTasks = getTasks();
           const taskIdx = allTasks.findIndex(x => x.id === taskChatId);
           if (taskIdx !== -1) {
-            const newSteps = parsed.steps.map(s => ({ id: Date.now() + Math.random(), text: s, done: false }));
+            const newSteps = parsed.steps.map(s => ({ id: generateUUID(), text: s, done: false }));
             allTasks[taskIdx].steps = [...(allTasks[taskIdx].steps || []), ...newSteps];
             saveTasks(allTasks);
             renderTasks();
@@ -506,7 +506,7 @@ async function sendTaskChatMessage() {
             const allTasks = getTasks();
             const taskIdx = allTasks.findIndex(x => x.id === taskChatId);
             if (taskIdx !== -1) {
-              const newSteps = p.steps.map(s => ({ id: Date.now() + Math.random(), text: s, done: false }));
+              const newSteps = p.steps.map(s => ({ id: generateUUID(), text: s, done: false }));
               allTasks[taskIdx].steps = [...(allTasks[taskIdx].steps || []), ...newSteps];
               saveTasks(allTasks);
               renderTasks();
@@ -587,7 +587,7 @@ export async function autoGenerateTaskSteps(taskId, title) {
       const allTasks = getTasks();
       const idx = allTasks.findIndex(x => x.id === taskId);
       if (idx !== -1 && allTasks[idx].steps.length === 0) {
-        allTasks[idx].steps = parsed.steps.map(s => ({ id: Date.now() + Math.random(), text: s, done: false }));
+        allTasks[idx].steps = parsed.steps.map(s => ({ id: generateUUID(), text: s, done: false }));
         saveTasks(allTasks);
         renderTasks();
       }

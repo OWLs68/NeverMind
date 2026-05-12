@@ -25,6 +25,7 @@
 import { UI_TOOL_NAMES, handleUITool } from './ui-tools.js';
 import { addFact } from './memory.js';
 import { applyAllGuards } from '../data/dispatcher-guards.js';
+import { generateUUID } from '../core/uuid.js';
 import {
   createHealthCardProgrammatic,
   editHealthCardProgrammatic,
@@ -429,7 +430,7 @@ function _handleProjectTool(name, args, addMsg) {
 
   switch (name) {
     case 'complete_project_step': {
-      const step = (p.steps || []).find(s => s.id === args.step_id);
+      const step = (p.steps || []).find(s => String(s.id) === String(args.step_id));
       if (!step) { addMsg('agent', 'Не знайшов крок.'); return true; }
       step.done = true;
       step.doneAt = Date.now();
@@ -440,7 +441,7 @@ function _handleProjectTool(name, args, addMsg) {
     case 'add_project_step': {
       if (!args.step) { addMsg('agent', 'Потрібен текст кроку.'); return true; }
       if (!p.steps) p.steps = [];
-      p.steps.push({ id: Date.now(), text: args.step, done: false });
+      p.steps.push({ id: generateUUID(), text: args.step, done: false });
       p.lastActivity = Date.now();
       break;
     }

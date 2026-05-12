@@ -677,7 +677,7 @@ ${aiContext}`;
           const idx = tasks.findIndex(t => t.id === action.task_id);
           if (idx !== -1) {
             const steps = Array.isArray(action.steps) ? action.steps : [];
-            steps.forEach(s => tasks[idx].steps.push({ id: Date.now() + Math.random(), text: s, done: false }));
+            steps.forEach(s => tasks[idx].steps.push({ id: generateUUID(), text: s, done: false }));
             saveTasks(tasks);
             renderTasks();
             const stepWord = steps.length === 1
@@ -1295,7 +1295,7 @@ async function processSaveAction(parsed, originalText) {
     const taskId = generateUUID();
     const tasks = getTasks();
     const taskSteps = Array.isArray(parsed.task_steps) && parsed.task_steps.length > 0
-      ? parsed.task_steps.map(s => ({ id: Date.now() + Math.random(), text: s, done: false }))
+      ? parsed.task_steps.map(s => ({ id: generateUUID(), text: s, done: false }))
       : [];
     const newTask = { id: taskId, title: taskTitle, desc: savedText !== taskTitle ? savedText : '', steps: taskSteps, status: 'active', createdAt: Date.now() };
     if (parsed.dueDate) newTask.dueDate = parsed.dueDate;

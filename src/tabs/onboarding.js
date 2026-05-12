@@ -8,6 +8,7 @@ import { getAIContext, getOWLPersonality, safeAgentReply } from '../ai/core.js';
 import { logUsage } from '../core/usage-meter.js';
 import { addInboxChatMsg } from './inbox.js';
 import { getProjects, saveProjects } from './projects.js';
+import { generateUUID } from '../core/uuid.js';
 import { t } from '../core/utils.js';
 
 // === SLIDES TOUR ===
@@ -889,7 +890,7 @@ async function generateProjectFirstSteps(projectName) {
         const projects = getProjects();
         const p = projects.find(pr => pr.name === projectName);
         if (p && p.steps.length === 0) {
-          p.steps = parsed.steps.map(s => ({ id: Date.now() + Math.random(), text: s, done: false }));
+          p.steps = parsed.steps.map(s => ({ id: generateUUID(), text: s, done: false }));
           saveProjects(projects);
         }
       } catch(e) {}

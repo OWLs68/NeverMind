@@ -651,7 +651,7 @@ function _syncMedicationToTask(cardName, med) {
     const existing = tasks.find(task => task.title === title && task.status === 'active');
     if (existing) return;
     const schedule = Array.isArray(med.schedule) ? med.schedule : [];
-    const steps = schedule.map(s => ({ id: Date.now() + Math.floor(Math.random() * 10000), text: s, done: false }));
+    const steps = schedule.map(s => ({ id: generateUUID(), text: s, done: false }));
     const newTask = {
       id: generateUUID(),
       title,

@@ -1010,7 +1010,7 @@ export function processUniversalAction(parsed, originalText, addMsg) {
       addMsg('agent', t('habits.event.added', '📅 Подію "{title}" додано на {date}', { title: ev.title, date: dayStr }));
       return true;
     }
-    const steps = Array.isArray(parsed.steps) ? parsed.steps.map(s => ({ id: Date.now() + Math.random(), text: s, done: false })) : [];
+    const steps = Array.isArray(parsed.steps) ? parsed.steps.map(s => ({ id: generateUUID(), text: s, done: false })) : [];
     const newTask = { id: generateUUID(), title, desc: parsed.desc || '', steps, status: 'active', createdAt: Date.now() };
     if (parsed.dueDate) newTask.dueDate = parsed.dueDate;
     if (parsed.priority && ['important','critical'].includes(parsed.priority)) newTask.priority = parsed.priority;
@@ -1261,12 +1261,12 @@ export function processUniversalAction(parsed, originalText, addMsg) {
     let added = 0;
     from.steps.filter(s => !s.done).forEach(s => {
       if (!to.steps.some(ts => ts.text.toLowerCase() === s.text.toLowerCase())) {
-        to.steps.push({ id: Date.now() + Math.floor(Math.random()*1000), text: s.text, done: false });
+        to.steps.push({ id: generateUUID(), text: s.text, done: false });
         added++;
       }
     });
     if (!to.steps.some(ts => ts.text.toLowerCase() === from.title.toLowerCase())) {
-      to.steps.push({ id: Date.now() + Math.floor(Math.random()*1000), text: from.title, done: false });
+      to.steps.push({ id: generateUUID(), text: from.title, done: false });
       added++;
     }
     const idx = tasks.findIndex(x => String(x.id) === String(from.id));
@@ -1291,7 +1291,7 @@ export function processUniversalAction(parsed, originalText, addMsg) {
       addMsg('agent', t('habits.step.dup', 'Крок «{step}» вже є — пропускаю', { step: stepText }));
       return true;
     }
-    task.steps.push({ id: Date.now(), text: stepText, done: false });
+    task.steps.push({ id: generateUUID(), text: stepText, done: false });
     task.updatedAt = Date.now();
     saveTasks(tasks);
     if (currentTab === 'tasks') renderTasks();
@@ -1852,7 +1852,7 @@ export async function sendTasksBarMessage() {
       if (parsed.action === 'add_step') {
         const allTasks = getTasks();
         const task = allTasks.find(x => String(x.id) === String(parsed.task_id));
-        if (task) { task.steps.push({ id: Date.now(), text: parsed.step, done: false }); saveTasks(allTasks); renderTasks(); addTaskBarMsg('agent', '✅ Додав крок "' + parsed.step + '"'); }
+        if (task) { task.steps.push({ id: generateUUID(), text: parsed.step, done: false }); saveTasks(allTasks); renderTasks(); addTaskBarMsg('agent', '✅ Додав крок "' + parsed.step + '"'); }
         return true;
       }
       if (parsed.action === 'complete_habit') {
@@ -1887,7 +1887,7 @@ export async function sendTasksBarMessage() {
         const tasks = getTasks();
         const title = (parsed.title || '').trim();
         if (title) {
-          const steps = Array.isArray(parsed.steps) ? parsed.steps.map(s => ({ id: Date.now() + Math.random(), text: s, done: false })) : [];
+          const steps = Array.isArray(parsed.steps) ? parsed.steps.map(s => ({ id: generateUUID(), text: s, done: false })) : [];
           tasks.unshift({ id: generateUUID(), title, desc: parsed.desc || '', steps, status: 'active', createdAt: Date.now() });
           saveTasks(tasks); renderTasks();
           addTaskBarMsg('agent', '✅ Задачу "' + title + '" створено!');

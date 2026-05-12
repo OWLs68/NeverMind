@@ -1045,7 +1045,7 @@ function executeOwlAction(action, originalText) {
   if (act === 'create_task') {
     const title = (action.title || '').trim();
     if (!title) return;
-    const steps = Array.isArray(action.steps) ? action.steps.map(s => ({ id: Date.now() + Math.random(), text: s, done: false })) : [];
+    const steps = Array.isArray(action.steps) ? action.steps.map(s => ({ id: generateUUID(), text: s, done: false })) : [];
     const tasks = getTasks();
     tasks.unshift({ id: generateUUID(), title, desc: action.desc || '', steps, status: 'active', createdAt: Date.now() });
     saveTasks(tasks);

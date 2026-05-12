@@ -106,7 +106,7 @@ export function dispatchEveningTool(name, args) {
             id: generateUUID(),
             title: args.title || args.text || t('default.task_title', 'Задача'),
             desc: (args.text && args.text !== args.title) ? args.text : '',
-            steps: Array.isArray(args.steps) ? args.steps.map(s => ({ id: Date.now() + Math.random(), text: s, done: false })) : [],
+            steps: Array.isArray(args.steps) ? args.steps.map(s => ({ id: generateUUID(), text: s, done: false })) : [],
             status: 'active',
             createdAt: Date.now(),
           };
@@ -272,7 +272,7 @@ export function dispatchEveningTool(name, args) {
         const idx = tasks.findIndex(t => t.id === args.task_id);
         if (idx === -1) return { ok: false, err: 'task not found' };
         if (!Array.isArray(tasks[idx].steps)) tasks[idx].steps = [];
-        (args.steps || []).forEach(s => tasks[idx].steps.push({ id: Date.now() + Math.random(), text: s, done: false }));
+        (args.steps || []).forEach(s => tasks[idx].steps.push({ id: generateUUID(), text: s, done: false }));
         saveTasks(tasks);
         renderTasks();
         return { ok: true };
