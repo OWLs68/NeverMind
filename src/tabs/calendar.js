@@ -256,7 +256,7 @@ function _calendarEventIcon(type) {
 // === CALENDAR GRID ===
 let _selectedDay = null;
 
-function renderCalendar() {
+export function renderCalendar() {
   const label = document.getElementById('calendar-month-label');
   const grid = document.getElementById('calendar-grid');
   const dayDetails = document.getElementById('calendar-day-tasks');

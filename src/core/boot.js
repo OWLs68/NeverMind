@@ -18,6 +18,7 @@ import { renderMe } from '../tabs/me.js';
 import { checkOnboarding, showFirstVisitTip } from '../tabs/onboarding.js';
 import { renderHealth } from '../tabs/health.js';
 import { renderProjects } from '../tabs/projects.js';
+import { renderCalendar } from '../tabs/calendar.js';
 
 // === PWA MANIFEST ===
 function setupPWA() {
@@ -156,6 +157,8 @@ function setupSync() {
     'nm_projects':        () => { if (currentTab === 'projects') try { renderProjects(); } catch(e) {} },
     'nm_evening_summary': () => { if (currentTab === 'evening')  try { renderEvening(); } catch(e) {} },
     'nm_evening_mood':    () => { if (currentTab === 'evening')  try { renderEvening(); } catch(e) {} },
+    'nm_routine':         () => { if (currentTab === 'tasks') try { renderCalendar(); } catch(e) {} },
+    'nm_events':          () => { if (currentTab === 'tasks') try { renderCalendar(); } catch(e) {} },
     'nm_settings':        () => { try { applyTheme(currentTab); } catch(e) {} },
   };
 
@@ -189,6 +192,10 @@ function setupSync() {
     // 'event' (одн) — cross-tab sync для подій silent failure до dyhJu.
     // Той самий клас бага що B-130 (reminder mismatch).
     'events': 'nm_events',
+    // db0YY 12.05: B-176 fix — save_routine reverser у action-reversers диспатчив
+    // 'routine' але мапа не знала → Календар не оновлювався після undo розпорядку.
+    'routine': 'nm_routine',
+    'allergies': 'nm_health_cards',
   };
   window.addEventListener('nm-data-changed', e => {
     const detail = e.detail;
