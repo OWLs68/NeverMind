@@ -2855,7 +2855,7 @@ ${lines.join("\n")}`;
       const existing = tasks.find((task) => task.title === title && task.status === "active");
       if (existing) return;
       const schedule = Array.isArray(med.schedule) ? med.schedule : [];
-      const steps = schedule.map((s) => ({ id: Date.now() + Math.floor(Math.random() * 1e4), text: s, done: false }));
+      const steps = schedule.map((s) => ({ id: generateUUID(), text: s, done: false }));
       const newTask = {
         id: generateUUID(),
         title,
@@ -4877,7 +4877,7 @@ ${lines.join("\n")}`;
     if (act === "create_task") {
       const title = (action.title || "").trim();
       if (!title) return;
-      const steps = Array.isArray(action.steps) ? action.steps.map((s) => ({ id: Date.now() + Math.random(), text: s, done: false })) : [];
+      const steps = Array.isArray(action.steps) ? action.steps.map((s) => ({ id: generateUUID(), text: s, done: false })) : [];
       const tasks = getTasks();
       tasks.unshift({ id: generateUUID(), title, desc: action.desc || "", steps, status: "active", createdAt: Date.now() });
       saveTasks(tasks);
@@ -5363,7 +5363,7 @@ ${lines.join("\n")}`;
       <!-- \u0420\u043E\u0437\u0433\u043E\u0440\u043D\u0443\u0442\u0438\u0439 \u0432\u0438\u0433\u043B\u044F\u0434 -->
       <div id="proj-timeline-full-${p.id}" style="display:none">
         ${steps.map((s, i) => `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;${i < steps.length - 1 ? "border-bottom:1px solid rgba(30,16,64,0.05)" : ""}">
-          <div onclick="toggleProjectStep('${p.id}',${s.id})" style="width:18px;height:18px;border-radius:6px;border:1.5px solid ${s.done ? "#3d2e1e" : "rgba(30,16,64,0.18)"};background:${s.done ? "#3d2e1e" : "rgba(255,255,255,0.65)"};display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;font-size:10px;color:white">${s.done ? "\u2713" : ""}</div>
+          <div onclick="toggleProjectStep('${p.id}','${s.id}')" style="width:18px;height:18px;border-radius:6px;border:1.5px solid ${s.done ? "#3d2e1e" : "rgba(30,16,64,0.18)"};background:${s.done ? "#3d2e1e" : "rgba(255,255,255,0.65)"};display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;font-size:10px;color:white">${s.done ? "\u2713" : ""}</div>
           <div style="flex:1;font-size:13px;font-weight:${!s.done && s === nextStep ? 700 : 500};color:${s.done ? "rgba(30,16,64,0.3)" : "#1e1040"};${s.done ? "text-decoration:line-through" : ""}">${escapeHtml(s.text)}</div>
         </div>`).join("")}
       </div>
@@ -5438,7 +5438,7 @@ ${lines.join("\n")}`;
     const projects = getProjects();
     const p = projects.find((pr) => pr.id === projectId);
     if (!p) return;
-    const step = (p.steps || []).find((s) => s.id === stepId);
+    const step = (p.steps || []).find((s) => String(s.id) === String(stepId));
     if (step) {
       step.done = !step.done;
       step.doneAt = step.done ? Date.now() : null;
@@ -10119,7 +10119,7 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
     }
     switch (name) {
       case "complete_project_step": {
-        const step = (p.steps || []).find((s) => s.id === args.step_id);
+        const step = (p.steps || []).find((s) => String(s.id) === String(args.step_id));
         if (!step) {
           addMsg("agent", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u043A\u0440\u043E\u043A.");
           return true;
@@ -10136,7 +10136,7 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
           return true;
         }
         if (!p.steps) p.steps = [];
-        p.steps.push({ id: Date.now(), text: args.step, done: false });
+        p.steps.push({ id: generateUUID(), text: args.step, done: false });
         p.lastActivity = Date.now();
         break;
       }
@@ -10327,6 +10327,7 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
       init_ui_tools();
       init_memory();
       init_dispatcher_guards();
+      init_uuid();
       init_health();
       init_habits();
       init_nav();
@@ -12045,7 +12046,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
               id: generateUUID(),
               title: args.title || args.text || t("default.task_title", "\u0417\u0430\u0434\u0430\u0447\u0430"),
               desc: args.text && args.text !== args.title ? args.text : "",
-              steps: Array.isArray(args.steps) ? args.steps.map((s) => ({ id: Date.now() + Math.random(), text: s, done: false })) : [],
+              steps: Array.isArray(args.steps) ? args.steps.map((s) => ({ id: generateUUID(), text: s, done: false })) : [],
               status: "active",
               createdAt: Date.now()
             };
@@ -12203,7 +12204,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
           const idx = tasks.findIndex((t2) => t2.id === args.task_id);
           if (idx === -1) return { ok: false, err: "task not found" };
           if (!Array.isArray(tasks[idx].steps)) tasks[idx].steps = [];
-          (args.steps || []).forEach((s) => tasks[idx].steps.push({ id: Date.now() + Math.random(), text: s, done: false }));
+          (args.steps || []).forEach((s) => tasks[idx].steps.push({ id: generateUUID(), text: s, done: false }));
           saveTasks(tasks);
           renderTasks();
           return { ok: true };
@@ -14723,7 +14724,7 @@ ${CHIP_PROMPT_RULES}`;
         addMsg("agent", t("habits.event.added", '\u{1F4C5} \u041F\u043E\u0434\u0456\u044E "{title}" \u0434\u043E\u0434\u0430\u043D\u043E \u043D\u0430 {date}', { title: ev.title, date: dayStr }));
         return true;
       }
-      const steps = Array.isArray(parsed.steps) ? parsed.steps.map((s) => ({ id: Date.now() + Math.random(), text: s, done: false })) : [];
+      const steps = Array.isArray(parsed.steps) ? parsed.steps.map((s) => ({ id: generateUUID(), text: s, done: false })) : [];
       const newTask = { id: generateUUID(), title, desc: parsed.desc || "", steps, status: "active", createdAt: Date.now() };
       if (parsed.dueDate) newTask.dueDate = parsed.dueDate;
       if (parsed.priority && ["important", "critical"].includes(parsed.priority)) newTask.priority = parsed.priority;
@@ -14981,12 +14982,12 @@ ${CHIP_PROMPT_RULES}`;
       let added = 0;
       from.steps.filter((s) => !s.done).forEach((s) => {
         if (!to.steps.some((ts) => ts.text.toLowerCase() === s.text.toLowerCase())) {
-          to.steps.push({ id: Date.now() + Math.floor(Math.random() * 1e3), text: s.text, done: false });
+          to.steps.push({ id: generateUUID(), text: s.text, done: false });
           added++;
         }
       });
       if (!to.steps.some((ts) => ts.text.toLowerCase() === from.title.toLowerCase())) {
-        to.steps.push({ id: Date.now() + Math.floor(Math.random() * 1e3), text: from.title, done: false });
+        to.steps.push({ id: generateUUID(), text: from.title, done: false });
         added++;
       }
       const idx = tasks.findIndex((x) => String(x.id) === String(from.id));
@@ -15014,7 +15015,7 @@ ${CHIP_PROMPT_RULES}`;
         addMsg("agent", t("habits.step.dup", "\u041A\u0440\u043E\u043A \xAB{step}\xBB \u0432\u0436\u0435 \u0454 \u2014 \u043F\u0440\u043E\u043F\u0443\u0441\u043A\u0430\u044E", { step: stepText }));
         return true;
       }
-      task.steps.push({ id: Date.now(), text: stepText, done: false });
+      task.steps.push({ id: generateUUID(), text: stepText, done: false });
       task.updatedAt = Date.now();
       saveTasks(tasks);
       if (currentTab === "tasks") renderTasks();
@@ -15527,7 +15528,7 @@ ${CHIP_PROMPT_RULES}`;
           const allTasks = getTasks();
           const task = allTasks.find((x) => String(x.id) === String(parsed.task_id));
           if (task) {
-            task.steps.push({ id: Date.now(), text: parsed.step, done: false });
+            task.steps.push({ id: generateUUID(), text: parsed.step, done: false });
             saveTasks(allTasks);
             renderTasks();
             addTaskBarMsg("agent", '\u2705 \u0414\u043E\u0434\u0430\u0432 \u043A\u0440\u043E\u043A "' + parsed.step + '"');
@@ -15567,7 +15568,7 @@ ${CHIP_PROMPT_RULES}`;
           const tasks2 = getTasks();
           const title = (parsed.title || "").trim();
           if (title) {
-            const steps = Array.isArray(parsed.steps) ? parsed.steps.map((s) => ({ id: Date.now() + Math.random(), text: s, done: false })) : [];
+            const steps = Array.isArray(parsed.steps) ? parsed.steps.map((s) => ({ id: generateUUID(), text: s, done: false })) : [];
             tasks2.unshift({ id: generateUUID(), title, desc: parsed.desc || "", steps, status: "active", createdAt: Date.now() });
             saveTasks(tasks2);
             renderTasks();
@@ -16773,7 +16774,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
     const inp = document.getElementById("task-step-input");
     const val = inp.value.trim();
     if (!val) return;
-    tempSteps.push({ id: Date.now(), text: val, done: false });
+    tempSteps.push({ id: generateUUID(), text: val, done: false });
     inp.value = "";
     renderTempSteps();
     inp.focus();
@@ -16795,9 +16796,9 @@ ${JSON.stringify(contextData, null, 2)}` : "";
     }
     el.innerHTML = tempSteps.map((s) => `
     <div style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.7);border:1.5px solid rgba(30,16,64,0.12);border-radius:10px;padding:8px 10px">
-      <div onclick="toggleTempStep(${s.id})" style="width:18px;height:18px;border-radius:5px;border:1.5px solid ${s.done ? "#ea580c" : "rgba(30,16,64,0.2)"};background:rgba(255,255,255,0.6);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;font-size:12px;color:#ea580c">${s.done ? "\u2713" : ""}</div>
+      <div onclick="toggleTempStep('${s.id}')" style="width:18px;height:18px;border-radius:5px;border:1.5px solid ${s.done ? "#ea580c" : "rgba(30,16,64,0.2)"};background:rgba(255,255,255,0.6);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;font-size:12px;color:#ea580c">${s.done ? "\u2713" : ""}</div>
       <div style="flex:1;font-size:15px;color:#1e1040;${s.done ? "text-decoration:line-through;opacity:0.4" : ""}">${escapeHtml(s.text)}</div>
-      <div onclick="removeTempStep(${s.id})" style="font-size:18px;color:rgba(30,16,64,0.25);cursor:pointer;padding:0 2px">\xD7</div>
+      <div onclick="removeTempStep('${s.id}')" style="font-size:18px;color:rgba(30,16,64,0.25);cursor:pointer;padding:0 2px">\xD7</div>
     </div>
   `).join("");
   }
@@ -17063,7 +17064,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
             const allTasks = getTasks();
             const taskIdx = allTasks.findIndex((x) => x.id === taskChatId);
             if (taskIdx !== -1) {
-              const newSteps = parsed.steps.map((s) => ({ id: Date.now() + Math.random(), text: s, done: false }));
+              const newSteps = parsed.steps.map((s) => ({ id: generateUUID(), text: s, done: false }));
               allTasks[taskIdx].steps = [...allTasks[taskIdx].steps || [], ...newSteps];
               saveTasks(allTasks);
               renderTasks();
@@ -17084,7 +17085,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
               const allTasks = getTasks();
               const taskIdx = allTasks.findIndex((x) => x.id === taskChatId);
               if (taskIdx !== -1) {
-                const newSteps = p.steps.map((s) => ({ id: Date.now() + Math.random(), text: s, done: false }));
+                const newSteps = p.steps.map((s) => ({ id: generateUUID(), text: s, done: false }));
                 allTasks[taskIdx].steps = [...allTasks[taskIdx].steps || [], ...newSteps];
                 saveTasks(allTasks);
                 renderTasks();
@@ -17131,7 +17132,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
         const allTasks = getTasks();
         const idx = allTasks.findIndex((x) => x.id === taskId);
         if (idx !== -1 && allTasks[idx].steps.length === 0) {
-          allTasks[idx].steps = parsed.steps.map((s) => ({ id: Date.now() + Math.random(), text: s, done: false }));
+          allTasks[idx].steps = parsed.steps.map((s) => ({ id: generateUUID(), text: s, done: false }));
           saveTasks(allTasks);
           renderTasks();
         }
@@ -17732,7 +17733,7 @@ ${aiContext}` }
           const projects = getProjects();
           const p = projects.find((pr) => pr.name === projectName);
           if (p && p.steps.length === 0) {
-            p.steps = parsed.steps.map((s) => ({ id: Date.now() + Math.random(), text: s, done: false }));
+            p.steps = parsed.steps.map((s) => ({ id: generateUUID(), text: s, done: false }));
             saveProjects(projects);
           }
         } catch (e) {
@@ -17864,6 +17865,7 @@ ${userText}
       init_usage_meter();
       init_inbox();
       init_projects();
+      init_uuid();
       init_utils();
       UPDATE_VERSION = "v065";
       UPDATE_SLIDES = [
@@ -18837,7 +18839,7 @@ ${aiContext}`;
             const idx = tasks.findIndex((t2) => t2.id === action.task_id);
             if (idx !== -1) {
               const steps = Array.isArray(action.steps) ? action.steps : [];
-              steps.forEach((s) => tasks[idx].steps.push({ id: Date.now() + Math.random(), text: s, done: false }));
+              steps.forEach((s) => tasks[idx].steps.push({ id: generateUUID(), text: s, done: false }));
               saveTasks(tasks);
               renderTasks();
               const stepWord = steps.length === 1 ? t("inbox.step_one", "\u043A\u0440\u043E\u043A") : steps.length < 5 ? t("inbox.step_few", "\u043A\u0440\u043E\u043A\u0438") : t("inbox.step_many", "\u043A\u0440\u043E\u043A\u0456\u0432");
@@ -19409,7 +19411,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       }
       const taskId = generateUUID();
       const tasks = getTasks();
-      const taskSteps = Array.isArray(parsed.task_steps) && parsed.task_steps.length > 0 ? parsed.task_steps.map((s) => ({ id: Date.now() + Math.random(), text: s, done: false })) : [];
+      const taskSteps = Array.isArray(parsed.task_steps) && parsed.task_steps.length > 0 ? parsed.task_steps.map((s) => ({ id: generateUUID(), text: s, done: false })) : [];
       const newTask = { id: taskId, title: taskTitle, desc: savedText !== taskTitle ? savedText : "", steps: taskSteps, status: "active", createdAt: Date.now() };
       if (parsed.dueDate) newTask.dueDate = parsed.dueDate;
       if (parsed.priority && ["normal", "important", "critical"].includes(parsed.priority)) newTask.priority = parsed.priority;
@@ -22115,6 +22117,64 @@ ${logLines}
         localStorage.setItem("nm_health_uuid_migrated_v16", "1");
       } catch (e) {
         console.error("[boot] v16 health migration failed:", e);
+      }
+    }
+    if (!localStorage.getItem("nm_steps_uuid_migrated_v17")) {
+      try {
+        const tasksRaw = localStorage.getItem("nm_tasks");
+        const projectsRaw = localStorage.getItem("nm_projects");
+        if (tasksRaw || projectsRaw) {
+          const backupKey = createSelectiveBackup(
+            ["nm_tasks", "nm_projects"],
+            "pre-steps-uuid-v17"
+          );
+          if (backupKey) console.log("[boot] v17 steps backup:", backupKey);
+          if (tasksRaw) {
+            const tasks2 = JSON.parse(tasksRaw);
+            if (Array.isArray(tasks2)) {
+              let migratedSteps = 0;
+              tasks2.forEach((task) => {
+                if (Array.isArray(task.steps)) {
+                  task.steps.forEach((step) => {
+                    if (step && typeof step.id === "number") {
+                      step.legacy_id = step.id;
+                      step.id = generateUUID();
+                      migratedSteps++;
+                    }
+                  });
+                }
+              });
+              if (migratedSteps > 0) {
+                localStorage.setItem("nm_tasks", JSON.stringify(tasks2));
+                console.log(`[boot] v17 migration: ${migratedSteps} task.steps \u2192 UUID`);
+              }
+            }
+          }
+          if (projectsRaw) {
+            const projects = JSON.parse(projectsRaw);
+            if (Array.isArray(projects)) {
+              let migratedProjSteps = 0;
+              projects.forEach((project) => {
+                if (Array.isArray(project.steps)) {
+                  project.steps.forEach((step) => {
+                    if (step && typeof step.id === "number") {
+                      step.legacy_id = step.id;
+                      step.id = generateUUID();
+                      migratedProjSteps++;
+                    }
+                  });
+                }
+              });
+              if (migratedProjSteps > 0) {
+                localStorage.setItem("nm_projects", JSON.stringify(projects));
+                console.log(`[boot] v17 migration: ${migratedProjSteps} project.steps \u2192 UUID`);
+              }
+            }
+          }
+        }
+        localStorage.setItem("nm_steps_uuid_migrated_v17", "1");
+      } catch (e) {
+        console.error("[boot] v17 steps migration failed:", e);
       }
     }
     if (!localStorage.getItem("nm_health_status_v2_done")) {
