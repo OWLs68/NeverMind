@@ -103,7 +103,7 @@ export function dispatchEveningTool(name, args) {
         withActionLog('save_task', args, () => {
           const tasks = getTasks();
           const newTask = {
-            id: Date.now(),
+            id: generateUUID(),
             title: args.title || args.text || t('default.task_title', 'Задача'),
             desc: (args.text && args.text !== args.title) ? args.text : '',
             steps: Array.isArray(args.steps) ? args.steps.map(s => ({ id: Date.now() + Math.random(), text: s, done: false })) : [],
@@ -137,7 +137,7 @@ export function dispatchEveningTool(name, args) {
       case 'save_habit': {
         withActionLog('save_habit', args, () => {
           const habits = getHabits();
-          habits.unshift({ id: Date.now(), name: args.name, details: args.details || '', days: Array.isArray(args.days) ? args.days : [0,1,2,3,4,5,6], targetCount: args.target_count || 1, type: 'build', createdAt: Date.now() });
+          habits.unshift({ id: generateUUID(), name: args.name, details: args.details || '', days: Array.isArray(args.days) ? args.days : [0,1,2,3,4,5,6], targetCount: args.target_count || 1, type: 'build', createdAt: Date.now() });
           saveHabits(habits);
           renderHabits();
         }, 'evening');
@@ -156,7 +156,7 @@ export function dispatchEveningTool(name, args) {
         withActionLog('save_finance', args, () => {
           const txs = getFinance();
           txs.unshift({
-            id: Date.now(),
+            id: generateUUID(),
             type: args.fin_type === 'income' ? 'income' : 'expense',
             amount: parseFloat(args.amount) || 0,
             category: args.category || t('default.category_other', 'Інше'),
