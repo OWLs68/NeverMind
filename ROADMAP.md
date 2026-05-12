@@ -99,14 +99,14 @@
 **Порядок (час орієнтовний — 4-5 годин активної роботи на сесію):**
 1. ✅ AI без success-дублів — **ЗАКРИТО myshu 11.05 (`f8fc19f`)** — 3 точки silent saveOffline → чесні повідомлення
 2. ✅ Парсер expansion для set_reminder — **ЗАКРИТО myshu 11.05 (`9094692` + `fa30a69`)** — інтегровано resolveDateFromText + Pattern 5 «N ранку без префіксу»
-3. ✅ UUID міграція **10 з 10 entity types** + reminderId arithmetic fix — **ЗАКРИТО** — Habits/Events/Notes/Moments/Finance/Project/InboxItem у myshu (3A + 3B-1..3B-7) + Tasks v8 раніше + **Health 3B-8 закрито db0YY 12.05 (`552aa00`)** (health_cards + medications nested + allergies + cross-ref forward через legacy_id/новий UUID + reverse sourceCardId + tasks sourceMedId + B-170/B-171 регресія onclick/Date.now виправлена `f66acfb` + `2cf5510`). UUID-блок Architecture Refactor завершено. Залишковий борг: sub-entity steps (task.steps, project.steps — поки Date.now() number, поки toggleProjectStep НЕ обгортає step.id у onclick — окрема сесія).
+3. ✅ UUID міграція **10 з 10 entity types** + sub-entity steps + reminderId arithmetic fix — **ПОВНІСТЮ ЗАКРИТО (db0YY 12.05)**. Habits/Events/Notes/Moments/Finance/Project/InboxItem у myshu (3A + 3B-1..3B-7) + Tasks v8 раніше + **Health 3B-8 закрито db0YY (`552aa00`)** (health_cards + medications nested + allergies + cross-ref forward через legacy_id/новий UUID + reverse sourceCardId + tasks sourceMedId + B-170/B-171 регресія onclick/Date.now виправлена `f66acfb` + `2cf5510`). **Sub-entity steps закрито db0YY (`1b804cc` + `80e0d21`)** — 17 creation-точок task.steps/project.steps на generateUUID + boot v17 міграція existing + onclick `'${s.id}'` + handler String() safety (projects:421, dispatcher:432). UUID-блок Architecture Refactor завершено 100% (top-level + sub-entity).
 4. ⏸️ `src/core/execute-action.js` — один executor для 4 dispatch-точок
 5. ⏸️ Canonical action format (12 інтентів замість 66 tools)
 6. ⏸️ Action-log coverage скрізь (canonical helpers + 4 dispatchers)
 7. ⏸️ Структурований `nm-data-changed` payload через strangler-shim
 8. ⏸️ `nm_habit_log2` ISO + `user_id` placeholder на всіх entities
 
-**Прогрес db0YY 12.05:** UUID coverage **100%** (10 з 10 entities — Tasks v8 + 7 у myshu + Health 3B-8 у db0YY). Лишається: Сесії 4-8 + sub-entity steps (task.steps/project.steps окрема малa сесія). 37+ комітів сумарно. Парсер тепер ловить save_routine + set_reminder без AI. Action-log + restore_deleted(query='last') — universal undo працює.
+**Прогрес db0YY 12.05:** UUID coverage **100% повний** (10 з 10 top-level entities + всі sub-entity steps у Tasks/Projects). Лишається з Architecture Refactor: Сесії 4-8 (execute-action / canonical action 12 інтентів / action-log coverage / nm-data-changed payload / habit_log2 ISO). 40+ комітів сумарно у db0YY. Парсер ловить save_routine + set_reminder без AI. Action-log + restore_deleted(query='last') — universal undo працює.
 
 **Метрики поточної реальності (з Council audit db0YY 12.05, актуальне):** 66 AI tools (не 30), 4 dispatch-точки (не 3), **10 з 10 entity types на UUID** (Tasks v8 + 7 у myshu 3B-1..7 + Health у db0YY 3B-8 — cards/medications nested/allergies + cross-ref forward через legacy_id або новий event + reverse sourceCardId + tasks sourceMedId), 128 не-канонічних `localStorage.setItem` (поки не чіпаємо), 28 `nm-data-changed` dispatch + 8 listeners (Сесія 7).
 

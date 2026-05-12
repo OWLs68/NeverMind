@@ -41,7 +41,7 @@
 - ✅ 3B-8 (db0YY `552aa00`): Health v16 — nm_health_cards[].id + nested medications[].id + nm_allergies[].id з cross-ref FORWARD (card.nextAppointment.eventId через legacy_id ETAP 1 → new event UUID або ETAP 2 для подій створених після v10 з Date.now), REVERSE (event.sourceCardId), TASKS (task.sourceMedId через зведений medIdMap)
 - ✅ Регресія Класу 1 + 2 виправлена db0YY (`f66acfb` + `2cf5510`): 18+8 onclick/Date.now() точок у inbox/evening/notes/projects/calendar/finance/utils/owl/habits створювалися з мікс типів — обгорнуто `'${id}'` + замінено create-points на generateUUID()
 
-**Залишковий борг (окрема малa сесія):** sub-entity steps — `task.steps[].id` + `project.steps[].id` досі Date.now(). Поки `toggleProjectStep('${p.id}',${s.id})` не обгортає step.id у onclick (бо число) — працює. Коли мігруємо steps на UUID — пройти 3-grep чек-ліст з `lessons.md` (urok db0YY).
+**Sub-entity steps закрито db0YY 12.05 (`1b804cc` + `80e0d21`):** 17 creation-точок task.steps/project.steps на generateUUID + boot v17 міграція existing step.id у nm_tasks + nm_projects з legacy_id + onclick `'${s.id}'` обгортка (tasks:150/152, projects:345) + handler String() safety (projects:421, tool-dispatcher:432). Step.id не має cross-ref на інші entity — ізольована міграція. **UUID-блок повністю закрито (top-level 10/10 + sub-entity steps 100%).**
 
 **Перетин з roadmap:** ✅ закриває Pre-Migration Hardening Підсесія 1 (UUID-міграція всіх типів). UUID coverage 10/10 entities.
 
