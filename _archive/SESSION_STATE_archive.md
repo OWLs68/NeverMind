@@ -1,5 +1,85 @@
 # SESSION_STATE — архів попередніх сесій
 
+## 🔧 Сесія myshu — G3 Undo + parser + Architecture Refactor plan (11.05.2026)
+
+### Зроблено
+
+#### A. Інфраструктурні автоматизації (2 коміти)
+
+1. **`pre-push-check.js` backticks detector** (`13b4e7b`) — регекс-сканер `src/ai/prompts.js` + `src/owl/chips.js` ловить raw backticks всередині `export const X = \`...\`` блоків. Той самий клас бага що LfA6w `be6f708` + dyhJu `8d4aef3` — 18h CI fail. Smoke 3/3: broken commit caught, clean prompts.js + chips.js no false positives.
+
+2. **`skill-triggers.sh` iOS симптом-тригер** (`3b2bea3`) — UserPromptSubmit хук ловить «не фіксується / клипається / мерехтить / стрибає / стискається» БЕЗ явного «iOS». Інжектить у контекст 3-точковий чек RULES_UI §5 + кейси false leads (Settings scale, Chips clipping, Calendar dyhJu). Закриває «декларативне правило без хука розкладається».
+
+#### B. UI фікси Calendar/Routine (5 комітів)
+
+3. **Прибрано scroll-індикатор справа** (`6e290bb`) — додано `.nm-modal-scroll` класу `style.css`. Застосовано до calendar + routine inner scroll div. CACHE bump.
+
+4. **Routine компресія + overflow-x:hidden** (`56d3009`) — day-cells 32 замість 36, gap 2 замість 4, arrows 24 замість 28. Inner scroll `overflow-x:hidden`. Видавлено swipe-вбік-всього-вмісту regression.
+
+5. **Restore week swipe** (`952c489`) — мій попередній фікс зламав свайп тижнів. Прибрано `touch-action:pan-y` з day-row + fire-during-touchmove замість touchend + touchcancel handler. iOS Safari при overflow-x:hidden зʼїдав touchend.
+
+6. **Розширення зони свайпу + кнопка Додати** (`870b84c` + `222f7ce` + `f64aff5`) — swipe на весь `.nm-modal-scroll` (не тільки day-row). Стрілки/тапи на дні залишилися. Кнопка «+ Додати блок» — білий фон як day-cells + темніша pumpkin штрих-рамка. Hardcoded copy у `index.html:1113` синхронізовано з `routineCancelAdd()` JS.
+
+#### C. G3 Universal Undo — Phase 1A-1F (7 комітів)
+
+7. **action-log.js** (`23bfe7b`) — pure модуль `nm_action_log`. API: appendActionLog, getActionLog (TTL 7д), readLastReversible, markReversed, getRecent, clearActionLog. UUID id, ISO ts, user_id null (Supabase ready), device_id (lazy gen), schema_version. Quota-safe.
+
+8. **action-reversers.js** (`0edcb47`) — pure builders forward tool → reverse instruction. 2 типи reverse: `tool_call` і `restore_snapshot`. Coverage: save_task, save_finance, save_habit, create_event, set_reminder, save_routine. Smoke 5/5.
+
+9. **Phase 1C-1F + restore_deleted** — dispatcher snapshot, ID-based capture, action-undo.js, UNDO_RULES, restore_deleted у 7 чатах (commits `b5d662d`/`258ce59`/`cc472dc`/`02c572c`/`fec80c3`).
+
+#### D. Intent-router parser — Phase G2 (3 коміти)
+
+10. **intent-router.js + integration** (`15f43e5`) — pure парсер `parseExplicitIntent(text)` для save_routine. Інтегровано у `callAIWithTools` ПЕРЕД OpenAI fetch — 0ms latency, $0 cost. Smoke 27/27.
+
+11. **«завтра» → AI, не save_routine** (`df85f27`) — ONE_OFF_DATE_INDICATORS regex, RECURRING_OVERRIDE. Smoke 11/11.
+
+12. **withActionLog wrapper у Inbox + Evening + Finance** (`4d70a7e`) — один мозок: helpers переїхали з `tool-dispatcher.js` у `action-log.js`.
+
+#### E. Architecture Refactor план
+
+13. **3 раунди GPT + Council 5 агентів Sonnet** — Agent A-E verification плану проти реального коду.
+
+14. **`docs/ARCHITECTURE_REFACTOR.md`** (`205fc80`) — 170 рядків single source of truth. 6 core принципів + 8 сесій з file paths + 5 топ-ризиків.
+
+15. **ROADMAP Active block** (`19998e9`).
+
+#### F. Architecture Refactor — виконані Сесії 1, 2, 3A, 3B-1..3B-7
+
+- **Сесія 1** (`f8fc19f`) — AI без silent saveOffline (3 точки)
+- **Сесія 2** (`9094692`) — set_reminder парсер
+- **Сесія 3A** (`4012759`) — reminderId UUID (3 сховища)
+- **3B-1..3B-7** (`05a2fcc`/`a65bf61`/`ef2713f`/`335673c`/`bc01594`) — Habit/Event/Note/Moment/Finance/Project/InboxItem UUID
+
+Backup mechanism: кожна v9-v15 робить `createSelectiveBackup` ПЕРЕД мутацією. Auto-cleanup 3 останніх.
+
+### Інциденти
+
+- Сигнал болю «технічно» 2×, «простирадло» 1×, «не на пам'яті» 1×
+- CI auto-merge fail 8+ годин — `check-imports.js` блокував через dynamic import у core.js → static (b63877e)
+- restore_deleted порядок: action-log vs trash — фікс action-log завжди пріоритет
+
+### Метрики
+
+- Гілка: `claude/start-session-myshu`
+- Коміти: 34 (`13b4e7b` → `bc01594`)
+- Версії: v823 → v837+ (CACHE_NAME `nm-20260511-2114`)
+- Закриті ризики: AI silent saveOffline (3 точки), reminderId+1/+2 (P0), 7 entity типів UUID
+- Council Sonnet агенти: 5 (A-E)
+- Раунди з GPT: 3
+- Нові модулі: action-log.js, action-reversers.js, action-undo.js, intent-router.js, backup.js, ARCHITECTURE_REFACTOR.md
+
+### Відкладене
+
+- Storage adapter (cleanup 128 setItem) — Сесія 6
+- Dispatcher collapse — після Сесії 5
+- Embedding router — після telemetry
+- Local LLM — після 50+ юзерів
+
+**Архівовано db0YY 12.05 — повна версія до сесії db0YY 12.05.2026 закриття UUID-міграцій + B-170/171/172/173/174/175/176/177.**
+
+---
+
 ## 🔧 Сесія PJi7l — Велика реформа промптів + UX (08.05.2026)
 
 ### Зроблено
