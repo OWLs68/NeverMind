@@ -5,6 +5,7 @@ import { getNotes, saveNotes, renderNotes } from '../tabs/notes.js';
 import { getHabits, saveHabits, renderHabits, renderProdHabits } from '../tabs/habits.js';
 import { getFinance, saveFinance, renderFinance } from '../tabs/finance.js';
 import { getAllergies, saveAllergies, renderHealth } from '../tabs/health.js';
+import { getEvents, saveEvents } from '../tabs/calendar.js';
 
 // === TRASH CACHE (кеш видалених — 7 днів) ===
 const NM_TRASH_KEY = 'nm_trash';
@@ -91,6 +92,14 @@ export function restoreFromTrash(trashId) {
       saveAllergies(allergies);
     }
     if (currentTab === 'health') renderHealth();
+  } else if (type === 'event') {
+    // db0YY 12.05: подія повертається у nm_events. Раніше addToTrash('event')
+    // викликався з 6 точок (calendar / evening-actions / health 4) але restore
+    // тихо ігнорував — універсальний undo не повертав події.
+    const events = getEvents();
+    events.push(item);
+    saveEvents(events);
+    // calendar render — через nm-data-changed listener у boot.js
   }
   // Прибираємо з кешу після відновлення
   saveTrash(trash.filter(t => t.deletedAt !== trashId));
