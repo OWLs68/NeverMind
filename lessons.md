@@ -41,15 +41,18 @@
 - **Кейс:** myshu (11.05) пройшла 7 boot-міграцій v9-v15 для готових даних у localStorage, але забула 2 класи бага у JS-коді → користувач отримав v841 з 26 поломками (18 onclick + 8 create-points). Я знайшов через Council Свіжий погляд + ширший grep.
 - **Клас 1 — onclick без лапок:** 17 точок типу `onclick="fn(${item.id})"` де `item.id` тепер UUID-string з дефісами → парсер бачить `fn(550e8400-e29b-...)` як вираз → `ReferenceError` → юзер тапає, нічого не відбувається. Той самий клас що B-108 (xGe1H 27.04 для tasks). Регресія у 6 файлах: inbox/evening/notes/projects/calendar/finance.
 - **Клас 2 — Date.now() ID при створенні через AI/handler:** 8 точок типу `evening-actions.js:106 { id: Date.now() }` для save_task/save_habit/save_finance/inbox-card. Мігровані старі дані = UUID, нові від AI = number → мікс типів у одному масиві → `find(x => x.id === id)` повертає false → silent fail свайп-видалення/undo.
-- **ОБОВ'ЯЗКОВИЙ 3-grep чек-ліст ПIСЛЯ кожної UUID-міграції (як для Health 3B-8):**
+- **ОБОВ'ЯЗКОВИЙ 4-grep чек-ліст ПIСЛЯ кожної UUID-міграції (як для Health 3B-8 + db0YY B-172 урок):**
   ```bash
-  # 1. onclick без лапок (Class 1)
+  # 1. onclick без лапок (Class 1, B-170)
   grep -rnE 'onclick="[a-zA-Z_]+\([^)]*\$\{[^}]*\.id[^}]*\}' src/ --include="*.js" | grep -v "'\\\${"
-  # 2. parseInt/Number на dataset.id (UUID → NaN)
+  # 2. parseInt/Number на dataset.id (UUID → NaN) — Class 1
   grep -rnE '(parseInt|Number)\([^)]*(\.dataset|\.id\b)' src/ --include="*.js"
-  # 3. id: Date.now() ВСI top-level entity creation (включаючи AI handlers)
+  # 3. id: Date.now() ВСI top-level entity creation (Class 2, B-171)
   grep -rnE '\bid:\s*Date\.now\(\)\s*[,}]' src/ --include="*.js" | grep -v generateUUID
+  # 4. tool schema {X_id: integer} у prompts.js (Class 3, B-172 — НАЙКРИТИЧНІШИЙ)
+  grep -nE '[a-z_]*id[a-z_]*:\s*\{\s*type:\s*"integer"' src/ai/prompts.js
   ```
+- **🚨 B-172 урок: OpenAI Strict mode + UUID → schema integer ламає AI-виклики silent.** Знайдено db0YY коли планував Health undo reverser — `card_id: integer` у delete_health_card schema. Юзер казав «видали картку» — AI міг просто не виконати (Strict валідація провалювалась, fallback мовчав). Це найкритичніший клас бага бо невидимий — нема ErrorMessage у консолі, AI просто пропускає виклик. Завжди при UUID-міграції оновлювати prompts.js schemas СИНХРОННО.
 - **Обгортати онклик у одинарні лапки** — `onclick="fn('${item.id}')"`. UUID не містить `'` чи `"` (тільки `[0-9a-f-]+`) — безпечно.
 - **String() обгортка у find/filter** — якщо хендлер працює з мікс типами, використовуй `find(x => String(x.id) === String(id))` (приклад: inbox.js:340, notes.js:596, projects.js:187, habits.js:925). Strict `===` між number і string завжди false.
 - **Tasks/Projects steps + Health 3B-8 — ВIДОМО ПОКИ НЕ ВИПРАВЛЕНО** — sub-entity steps досі Date.now(). Це борг. Коли мігруємо їх — пройти той самий 3-grep чек-ліст для step.id.
