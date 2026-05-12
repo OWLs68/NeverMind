@@ -33,14 +33,17 @@
 **Why second:** ловить найбільше user-facing глюків («AI перепитує»). Чистий додаток у pure module — нуль ризику ламання.
 **Перетин з roadmap:** ✅ замінює Dynamic AI-driven chips Шар 5 (Multi-step інтерв'ю — частково покривається парсером).
 
-### Сесія 3 — UUID + reminderId arithmetic (3-4 год) ⚠️
-**Файли:** `src/core/boot.js` (runMigrations v9-v17), `src/tabs/habits.js:1643` (reminderId+1/+2), 27+ Date.now() точок
-**Що:**
-- ПЕРЕД UUID — прибрати `reminderId + 1` / `reminderId + 2` арифметику у `habits.js:1643` (інакше UUID = NaN, 3 сховища reminders/events/inbox перестануть звʼязуватись)
-- Додати v9-v17 boot-міграції для 9 типів entities (Habit, Note, Event, Finance, Moment, Project, HealthCard, Allergy, InboxItem) — за шаблоном v8 Task migration
-- Backup `nm_backup_v*` ПЕРЕД кожною міграцією — Pre-Migration Hardening Підсесія 3 уже декларував цей патерн
-**Why third:** Це БЛОКЕР усього іншого. `capturePostResultId` у action-log очікує UUID-рядок — Date.now() числа дають silent fail undo.
-**Перетин з roadmap:** ✅ закриває частину Pre-Migration Hardening Підсесія 1 (UUID-міграція решти типів).
+### Сесія 3 — UUID + reminderId arithmetic ✅ ЗАВЕРШЕНА (myshu 11.05 + db0YY 12.05)
+**Файли:** `src/core/boot.js` (runMigrations v9-v16), `src/tabs/habits.js` (reminderId UUID), 35+ Date.now() точок у 10 entity types
+**Зроблено:**
+- ✅ 3A reminderId arithmetic (myshu `4012759`) — UUID замість `+1/+2`
+- ✅ 3B-1..3B-7 (myshu): Habit v9 / Event v10 / Note v11 / Moment+Finance v12+v13 / Project+InboxItem v14+v15 з cross-ref update (habit_log2 keys, inbox.cards.eventId, inbox cards eventId/reminderId)
+- ✅ 3B-8 (db0YY `552aa00`): Health v16 — nm_health_cards[].id + nested medications[].id + nm_allergies[].id з cross-ref FORWARD (card.nextAppointment.eventId через legacy_id ETAP 1 → new event UUID або ETAP 2 для подій створених після v10 з Date.now), REVERSE (event.sourceCardId), TASKS (task.sourceMedId через зведений medIdMap)
+- ✅ Регресія Класу 1 + 2 виправлена db0YY (`f66acfb` + `2cf5510`): 18+8 onclick/Date.now() точок у inbox/evening/notes/projects/calendar/finance/utils/owl/habits створювалися з мікс типів — обгорнуто `'${id}'` + замінено create-points на generateUUID()
+
+**Залишковий борг (окрема малa сесія):** sub-entity steps — `task.steps[].id` + `project.steps[].id` досі Date.now(). Поки `toggleProjectStep('${p.id}',${s.id})` не обгортає step.id у onclick (бо число) — працює. Коли мігруємо steps на UUID — пройти 3-grep чек-ліст з `lessons.md` (urok db0YY).
+
+**Перетин з roadmap:** ✅ закриває Pre-Migration Hardening Підсесія 1 (UUID-міграція всіх типів). UUID coverage 10/10 entities.
 
 ### Сесія 4 — Один executor (`src/core/execute-action.js`)
 **Файли:** новий `src/core/execute-action.js`
