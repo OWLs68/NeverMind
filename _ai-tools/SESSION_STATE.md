@@ -48,6 +48,16 @@
 
 14. **Council Sonnet (4 паралельні)** — doc-consistency-checker (7 розривів) + prompt-engineer-auditor (4 покращення) + silent-bug-scout (TOP-5 ризиків, знайшов B-174/B-175/B-176) + code-regression-finder (B-174 silent undo фундаментальний).
 
+#### E. ABC покращення з відкладеного списку (1 коміт `c599190`)
+
+15. **A. delete_medication повний flow** — новий tool у prompts.js + handler у tool-dispatcher.js + dispatch у processUniversalAction (DI) + action-mapper.js + reverser у action-reversers.js + case 'medication' у restoreFromTrash (через cardId у item). health.js: removeMedicationFromCard(cardId, medId) + addToTrash. logAction для add_medication. **9 reversible tools** (раніше 8), **11 типів trash** (раніше 10).
+
+16. **B. Moments [ID:] маркер** — evening.js:60 `[ID:${m.id}]` префікс у getMomentsContext (як для всіх інших entities у проекті). AI може посилатись на конкретний момент — готовність для майбутніх delete_moment/edit_moment tools.
+
+17. **C. save_routine у evening-actions.js** — той самий патерн що Inbox: withActionLog + getRoutine + saveRoutine. Раніше evening fall through (асиметрія з Inbox + tool-dispatcher). Принцип «8 чатів = один мозок» виконано для save_routine.
+
+TESTING_LOG.md: блок v849+ з 6 iPhone-сценаріями для ABC.
+
 ### Ключові рішення
 
 - **action-undo через DI** (`executeReverse(reverse, dispatchFn)`) — pure модуль, цикл inbox↔habits розірвано.
@@ -68,8 +78,8 @@
 ### Метрики
 
 - Гілка: `claude/start-session-db0YY`
-- Коміти: 30+ (`f66acfb` → ETAP 3 docs)
-- Версії: v841 → v848+ (CACHE_NAME `nm-20260512-1310`)
+- Коміти: 24 (`f66acfb` → `c599190`)
+- Версії: v841 → v849+ (CACHE_NAME `nm-20260512-1417`)
 - Закриті ризики: B-170/171/172/173 (myshu регресії), B-174/175/176/177 (нові класи), Health 3B-8 UUID, sub-entity steps v17, ESM cycle inbox-undo-habits
 - Council Sonnet агенти: 4 (doc-consistency + prompt-engineer-auditor + silent-bug-scout + code-regression-finder)
 - Нові модулі: `src/core/action-mapper.js` (Сесія 4-mini)

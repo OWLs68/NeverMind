@@ -6,9 +6,9 @@
 
 ---
 
-## 2026-05-12 — db0YY: UUID-блок 100% + 4 класи регресій myshu (B-170..B-177) + Universal undo coverage + Council аудит
+## 2026-05-12 — db0YY: UUID-блок 100% + 4 класи регресій myshu (B-170..B-177) + Universal undo coverage + Council аудит + ABC
 
-**Гілка:** `claude/start-session-db0YY` · 30+ комітів (v841 → v848+) · CACHE `nm-20260512-1310`
+**Гілка:** `claude/start-session-db0YY` · 24 коміти (v841 → v849+) · CACHE `nm-20260512-1417`
 
 Велика сесія: закриття UUID-блоку Architecture Refactor до 100% повного на всіх рівнях (10/10 top-level + sub-entity steps). Знайдено й закрито **4 класи регресій myshu** (B-170 onclick, B-171 Date.now create, B-172 schemas integer, B-173 prompts examples) + **4 нові класи** від Council аудиту (B-174 undo silent fail, B-175 health_card restore, B-176 routine sync, B-177 prompt descriptions). Universal undo тепер реально працює для 8 reversible tools + 10 типів trash (раніше silent fail у половині випадків).
 
@@ -25,6 +25,7 @@
 - **B-175 КРИТИЧНА** — restoreFromTrash без case `'health_card'`. Silent data loss при відновленні картки. **Фікс:** + case 'health_card' + saveHealthCards експортовано. `bb0c50e`.
 - **B-176 routine sync** — `save_routine` undo не оновлював Календар (pre-existing з myshu). **Фікс:** + 'routine': 'nm_routine' + 'allergies': 'nm_health_cards' у DETAIL_TO_KEY + 2 рендер-точки у KEY_RENDER_MAP. `b7b9e74`.
 - **B-177 prompt descriptions** — 3 delete_X tools без UUID-уточнення. **Фікс:** «UUID X з контексту [ID:xxxx-xxxx]. НЕ вигадуй — копіюй точно.» `b7b9e74`.
+- **ABC покращення** (`c599190`) — **A:** новий tool `delete_medication` повний flow (prompts schema + tool-dispatcher direct handler + action-mapper + processUniversalAction case + action-reversers add_medication→delete_medication + restoreFromTrash case 'medication' + removeMedicationFromCard у health.js). 9 reversible tools, 11 типів trash. **B:** Moments `[ID:]` маркер у getMomentsContext (готовність для майбутніх delete_moment). **C:** save_routine case у evening-actions.js (асиметрія з Inbox+tool-dispatcher закрита). TESTING_LOG v849 з 6 iPhone-сценаріями.
 
 ### Council 4 паралельні агенти (Sonnet) — повний аудит сесії
 
