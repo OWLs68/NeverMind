@@ -314,7 +314,7 @@ export function renderInbox() {
 
     html += `<div class="inbox-item-wrap" id="wrap-${item.id}" data-id="${item.id}">
       <div class="inbox-item" id="item-${item.id}" data-id="${item.id}" data-cat="${item.category}"
-           onclick="navigateInboxItem(${item.id})">
+           onclick="navigateInboxItem('${item.id}')">
         <div class="inbox-item-inner">
           <div class="inbox-item-dot" style="${dotBg}"></div>
           <div class="inbox-item-body">

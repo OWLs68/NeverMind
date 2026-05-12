@@ -557,11 +557,11 @@ function renderNotesList(notes) {
       <div class="note-item-wrap" id="note-wrap-${n.id}" data-id="${n.id}" style="position:relative;overflow:hidden;border-radius:var(--card-radius);margin-bottom:var(--card-gap)">
         <div id="note-item-${n.id}" class="inbox-item"
           style="cursor:default;padding:var(--card-pad-y) var(--card-pad-x);width:100%;box-sizing:border-box;background:${fc.bg};border-color:${fc.border};">
-          <div onclick="openNoteView(${n.id})" style="cursor:pointer">
+          <div onclick="openNoteView('${n.id}')" style="cursor:pointer">
             <div style="font-size:15px;line-height:1.55;color:#1e1040;font-weight:500;margin-bottom:5px">${escapeHtml(preview)}</div>
             <div style="display:flex;align-items:center;justify-content:space-between">
               <div style="font-size:12px;color:rgba(30,16,64,0.3)">${formatTime(n.ts)}${n.source === 'inbox' ? t('notes.source.from_inbox', ' · з Inbox') : n.source === 'agent' ? t('notes.source.from_owl', ' · через OWL') : ''}</div>
-              <div onclick="event.stopPropagation();openNoteMenu(${n.id})" style="padding:4px 8px;cursor:pointer;color:rgba(30,16,64,0.4);font-size:22px;line-height:1;min-width:32px;text-align:center">···</div>
+              <div onclick="event.stopPropagation();openNoteMenu('${n.id}')" style="padding:4px 8px;cursor:pointer;color:rgba(30,16,64,0.4);font-size:22px;line-height:1;min-width:32px;text-align:center">···</div>
             </div>
           </div>
         </div>
@@ -1321,7 +1321,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? ('\n\n' + aiContext) : '');
             if (!el) return;
             const div = document.createElement('div');
             div.style.cssText = 'display:flex';
-            div.innerHTML = `<div onclick="addNotesChatMsg('user','');openNoteView(${n.id})" style="max-width:85%;background:rgba(255,255,255,0.12);color:white;border-radius:4px 12px 12px 12px;padding:8px 11px;font-size:14px;line-height:1.5;font-weight:500;cursor:pointer;border:1px solid rgba(255,255,255,0.15)">
+            div.innerHTML = `<div onclick="addNotesChatMsg('user','');openNoteView('${n.id}')" style="max-width:85%;background:rgba(255,255,255,0.12);color:white;border-radius:4px 12px 12px 12px;padding:8px 11px;font-size:14px;line-height:1.5;font-weight:500;cursor:pointer;border:1px solid rgba(255,255,255,0.15)">
               <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.45);margin-bottom:3px">${escapeHtml(n.folder || t('notes.default_folder', 'Загальне'))}</div>
               ${escapeHtml(preview)}
             </div>`;

@@ -127,7 +127,7 @@ function renderProjectsList() {
     const visibleSteps = steps.slice(0, 4);
 
     return `<div class="project-card-wrap" data-id="${p.id}" style="position:relative">
-      <div onclick="openProjectWorkspace(${p.id})" class="card-glass project-card" id="project-card-${p.id}" style="cursor:pointer;position:relative;z-index:2;background:rgba(248,239,224,0.95)">
+      <div onclick="openProjectWorkspace('${p.id}')" class="card-glass project-card" id="project-card-${p.id}" style="cursor:pointer;position:relative;z-index:2;background:rgba(248,239,224,0.95)">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
         <div style="flex:1">
           <div style="font-size:15px;font-weight:900;color:#1e1040;line-height:1.2">${escapeHtml(p.name)}</div>
@@ -326,7 +326,7 @@ function renderProjectWorkspace(id) {
     ${steps.length > 0 ? `<div class="card-glass" id="proj-timeline-${p.id}">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
         <div class="section-label" style="margin-bottom:0">${t('projects.section.timeline', 'Хронологія · план')}</div>
-        <span onclick="toggleProjectTimeline(${p.id})" style="font-size:10px;font-weight:700;color:#3d2e1e;cursor:pointer" id="proj-timeline-toggle-${p.id}">${t('projects.timeline.expand', 'розгорнути ↓')}</span>
+        <span onclick="toggleProjectTimeline('${p.id}')" style="font-size:10px;font-weight:700;color:#3d2e1e;cursor:pointer" id="proj-timeline-toggle-${p.id}">${t('projects.timeline.expand', 'розгорнути ↓')}</span>
       </div>
       <!-- Згорнутий вигляд -->
       <div id="proj-timeline-collapsed-${p.id}" style="background:rgba(255,255,255,0.5);border-radius:10px;padding:9px 11px">
@@ -342,7 +342,7 @@ function renderProjectWorkspace(id) {
       <!-- Розгорнутий вигляд -->
       <div id="proj-timeline-full-${p.id}" style="display:none">
         ${steps.map((s,i) => `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;${i < steps.length-1 ? 'border-bottom:1px solid rgba(30,16,64,0.05)' : ''}">
-          <div onclick="toggleProjectStep(${p.id},${s.id})" style="width:18px;height:18px;border-radius:6px;border:1.5px solid ${s.done ? '#3d2e1e' : 'rgba(30,16,64,0.18)'};background:${s.done ? '#3d2e1e' : 'rgba(255,255,255,0.65)'};display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;font-size:10px;color:white">${s.done ? '✓' : ''}</div>
+          <div onclick="toggleProjectStep('${p.id}',${s.id})" style="width:18px;height:18px;border-radius:6px;border:1.5px solid ${s.done ? '#3d2e1e' : 'rgba(30,16,64,0.18)'};background:${s.done ? '#3d2e1e' : 'rgba(255,255,255,0.65)'};display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;font-size:10px;color:white">${s.done ? '✓' : ''}</div>
           <div style="flex:1;font-size:13px;font-weight:${!s.done && s === nextStep ? 700 : 500};color:${s.done ? 'rgba(30,16,64,0.3)' : '#1e1040'};${s.done ? 'text-decoration:line-through' : ''}">${escapeHtml(s.text)}</div>
         </div>`).join('')}
       </div>

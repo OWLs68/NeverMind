@@ -165,7 +165,7 @@ function renderMonthEventsList() {
     // Прибрано синій для event-type — погано читалось на світлому склі.
     const dateColor = isToday ? '#ea580c' : 'rgba(30,16,64,0.4)';
     const iconHtml = _calendarEventIcon(item.type);
-    const tapAttr = item.type === 'event' && item.id ? `onclick="openEventEditModal(${item.id})" style="cursor:pointer;` : `style="`;
+    const tapAttr = item.type === 'event' && item.id ? `onclick="openEventEditModal('${item.id}')" style="cursor:pointer;` : `style="`;
     html += `<div ${tapAttr}display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(30,16,64,0.06);${opacity}">
       ${iconHtml}
       <div style="flex:1;min-width:0">
@@ -227,7 +227,7 @@ function renderUpcoming() {
       const iconHtml = _calendarEventIcon(item.type);
       const prio = prioIcons[item.priority] || '';
       const timeStr = item.time ? ` · ${item.time}${item.endTime ? '–' + item.endTime : ''}` : '';
-      const tapAttr = item.type === 'event' && item.id ? `onclick="openEventEditModal(${item.id})" ` : '';
+      const tapAttr = item.type === 'event' && item.id ? `onclick="openEventEditModal('${item.id}')" ` : '';
       return `<div ${tapAttr}style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid rgba(30,16,64,0.06);${tapAttr ? 'cursor:pointer;' : ''}">
         ${iconHtml}
         <div style="flex:1">
@@ -426,7 +426,7 @@ function _openDayScheduleModal(day) {
       alldayEl.style.display = 'block';
       alldayEl.innerHTML = allDayEvents.map(ev => {
         const prio = ev.priority === 'critical' ? '🔴 ' : ev.priority === 'important' ? '🟠 ' : '';
-        return `<div onclick="openEventEditModal(${ev.id})" style="display:flex;align-items:center;gap:10px;padding:8px 4px;cursor:pointer;border-radius:10px;background:rgba(59,130,246,0.10)">
+        return `<div onclick="openEventEditModal('${ev.id}')" style="display:flex;align-items:center;gap:10px;padding:8px 4px;cursor:pointer;border-radius:10px;background:rgba(59,130,246,0.10)">
           <div style="font-size:15px;flex-shrink:0">📅</div>
           <div style="flex:1;font-size:14px;font-weight:600;color:#3b82f6">${prio}${escapeHtml(ev.title)}</div>
           <div style="font-size:11px;color:rgba(30,16,64,0.35);font-weight:600">${t('calendar.event.all_day', 'весь день')}</div>
@@ -483,7 +483,7 @@ function _openDayScheduleModal(day) {
         const prio = (item.priority === 'critical') ? '🔴 ' : (item.priority === 'important') ? '🟠 ' : '';
         const strike = isDone ? 'text-decoration:line-through;' : '';
         let tapAttr;
-        if (isEvent && item.id) tapAttr = `onclick="openEventEditModal(${item.id})" style="cursor:pointer;`;
+        if (isEvent && item.id) tapAttr = `onclick="openEventEditModal('${item.id}')" style="cursor:pointer;`;
         else if (item.type === 'routine') tapAttr = `onclick="openRoutineFromCalendar('${dayKey}')" style="cursor:pointer;`;
         else tapAttr = `style="`;
 

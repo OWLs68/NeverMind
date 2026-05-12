@@ -256,8 +256,8 @@ function _attachFinTxSwipeDelete() {
     const card = sw.querySelector('.tx-row');
     if (!card) return;
     attachSwipeDelete(sw, card, () => {
-      const txId = parseInt(sw.dataset.txId);
-      if (!isNaN(txId)) _deleteFinTxById(txId);
+      const txId = sw.dataset.txId;
+      if (txId) _deleteFinTxById(txId);
     }, { openRatio: SWIPE_OPEN_RATIO });
   });
 }
@@ -471,7 +471,7 @@ function _finTxsBlock(allTxs) {
       : `<span style="font-weight:700;color:#1e1040">${escapeHtml(t.category)}</span>`;
     // B-37: обгортка для swipe-delete (swipe-wrap → tx-row)
     return `<div class="fin-tx-swipe-wrap" data-tx-id="${t.id}" style="position:relative;overflow:hidden;border-radius:10px">
-      <div class="tx-row" onclick="openEditTransaction(${t.id})" style="position:relative;z-index:1;background:#fff">
+      <div class="tx-row" onclick="openEditTransaction('${t.id}')" style="position:relative;z-index:1;background:#fff">
         <div style="flex:1;min-width:0">
           <div style="font-size:13px">${categoryLine}</div>
           ${t.comment ? `<div style="font-size:11px;color:rgba(30,16,64,0.4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(t.comment)}</div>` : ''}
@@ -513,7 +513,7 @@ function openAllTransactions() {
     const categoryLine = t.subcategory
       ? `<span style="font-weight:700;color:#1e1040">${escapeHtml(t.category)}</span><span style="font-size:11px;font-weight:500;color:rgba(30,16,64,0.4);margin-left:4px">· ${escapeHtml(t.subcategory)}</span>`
       : `<span style="font-weight:700;color:#1e1040">${escapeHtml(t.category)}</span>`;
-    return `<div class="tx-row" onclick="document.getElementById('fin-all-txs-modal').remove();openEditTransaction(${t.id})">
+    return `<div class="tx-row" onclick="document.getElementById('fin-all-txs-modal').remove();openEditTransaction('${t.id}')">
       <div style="flex:1;min-width:0">
         <div style="font-size:13px">${categoryLine}</div>
         ${t.comment ? `<div style="font-size:11px;color:rgba(30,16,64,0.4)">${escapeHtml(t.comment)}</div>` : ''}
