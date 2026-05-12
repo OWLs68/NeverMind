@@ -6,6 +6,7 @@ import { escapeHtml, t, getReminders, saveReminders } from '../core/utils.js';
 import { getTasks, setupModalSwipeClose } from './tasks.js';
 import { addToTrash, showUndoToast } from '../core/trash.js';
 import { monthNominative, monthGenitive, monthShort } from '../data/months.js';
+import { generateUUID } from '../core/uuid.js';
 
 // === EVENTS STORAGE ===
 export function getEvents() { return JSON.parse(localStorage.getItem('nm_events') || '[]'); }
@@ -52,7 +53,7 @@ export function generateWeeklySeries(sourceEvent, weeks = 12) {
     const next = new Date(baseDate.getTime() + i * 7 * 86400000);
     const dateISO = `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}-${String(next.getDate()).padStart(2, '0')}`;
     const copy = {
-      id: Date.now() + i,
+      id: generateUUID(),
       title: sourceEvent.title,
       date: dateISO,
       time: sourceEvent.time || null,

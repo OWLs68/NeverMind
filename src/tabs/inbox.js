@@ -1271,7 +1271,7 @@ async function processSaveAction(parsed, originalText) {
   const savedText = parsed.text || originalText;
   const folder = parsed.folder || null;
   const items = getInbox();
-  const inboxCardId = Date.now();
+  const inboxCardId = generateUUID();
   items.unshift({ id: inboxCardId, text: savedText, category: cat, ts: Date.now(), processed: true });
   saveInbox(items);
   renderInbox();

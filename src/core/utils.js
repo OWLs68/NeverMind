@@ -1,4 +1,5 @@
 import { getInbox, saveInbox, renderInbox } from '../tabs/inbox.js';
+import { generateUUID } from './uuid.js';
 
 export function autoResizeTextarea(el) {
   el.style.height = 'auto';
@@ -39,7 +40,7 @@ export function updateChatWindowHeight(tab) {
 // Офлайн-fallback: зберігає миттєво як нотатку
 export function saveOffline(text) {
   const items = getInbox();
-  items.unshift({ id: Date.now(), text, category: 'note', ts: Date.now(), processed: false });
+  items.unshift({ id: generateUUID(), text, category: 'note', ts: Date.now(), processed: false });
   saveInbox(items);
   renderInbox();
 

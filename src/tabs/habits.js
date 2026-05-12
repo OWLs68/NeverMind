@@ -1018,7 +1018,7 @@ export function processUniversalAction(parsed, originalText, addMsg) {
     tasks.unshift(newTask);
     saveTasks(tasks);
     if (currentTab === 'tasks') renderTasks();
-    const items = getInbox(); items.unshift({ id: Date.now(), text: title, category: 'task', ts: Date.now(), processed: true }); saveInbox(items);
+    const items = getInbox(); items.unshift({ id: generateUUID(), text: title, category: 'task', ts: Date.now(), processed: true }); saveInbox(items);
     addMsg('agent', t('habits.task.created', '✅ Задачу "{title}" створено', { title }));
     if (parsed.ask_after) setTimeout(() => addMsg('agent', parsed.ask_after), 600);
     return true;

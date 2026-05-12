@@ -1072,7 +1072,7 @@ function executeOwlAction(action, originalText) {
     const catList = type === 'expense' ? cats.expense : cats.income;
     if (!catList.includes(category)) { catList.push(category); saveFinCats(cats); }
     const txs = getFinance();
-    txs.unshift({ id: Date.now(), type, amount, category, comment: action.comment || originalText, ts: Date.now() });
+    txs.unshift({ id: generateUUID(), type, amount, category, comment: action.comment || originalText, ts: Date.now() });
     saveFinance(txs);
     if (currentTab === 'finance') renderFinance();
     const sign = type === 'expense' ? '-' : '+';
