@@ -97,16 +97,18 @@
 - ⚠️ Частково: Один мозок V2 Шар 3 + Dynamic AI-driven chips Шар 5
 
 **Порядок (час орієнтовний — 4-5 годин активної роботи на сесію):**
-1. AI без success-дублів (30 хв, видимий ефект)
-2. Парсер expansion для set_reminder/save_finance/complete_task (2-3 год)
-3. UUID міграція 9 entity types + reminderId arithmetic fix (3-4 год) ⚠️ блокер
-4. `src/core/execute-action.js` — один executor для 4 dispatch-точок
-5. Canonical action format (12 інтентів замість 66 tools)
-6. Action-log coverage скрізь (canonical helpers + 4 dispatchers)
-7. Структурований `nm-data-changed` payload через strangler-shim
-8. `nm_habit_log2` ISO + `user_id` placeholder на всіх entities
+1. ✅ AI без success-дублів — **ЗАКРИТО myshu 11.05 (`f8fc19f`)** — 3 точки silent saveOffline → чесні повідомлення
+2. ✅ Парсер expansion для set_reminder — **ЗАКРИТО myshu 11.05 (`9094692` + `fa30a69`)** — інтегровано resolveDateFromText + Pattern 5 «N ранку без префіксу»
+3. ⚠️ UUID міграція **7 з 8 entity types** + reminderId arithmetic fix — **ЗАКРИТО myshu 11.05 (3A + 3B-1..3B-7)** — Habits/Events/Notes/Moments/Finance/Project/InboxItem на UUID + cross-ref update + nm_backup_v* механізм. Лишилось **3B-8 Health** (4-5 sub-entities у `health.js`).
+4. ⏸️ `src/core/execute-action.js` — один executor для 4 dispatch-точок
+5. ⏸️ Canonical action format (12 інтентів замість 66 tools)
+6. ⏸️ Action-log coverage скрізь (canonical helpers + 4 dispatchers)
+7. ⏸️ Структурований `nm-data-changed` payload через strangler-shim
+8. ⏸️ `nm_habit_log2` ISO + `user_id` placeholder на всіх entities
 
-**Метрики поточної реальності (з Council audit):** 66 AI tools (не 30), 4 dispatch-точки (не 3), 1 з 10 entity types на UUID, 128 не-канонічних `localStorage.setItem`, 28 `nm-data-changed` dispatch + 8 listeners.
+**Прогрес myshu 11.05:** UUID coverage **80%** (8 з 10 entities — Tasks v8 + 7 у myshu). 34 коміти. Парсер тепер ловить save_routine + set_reminder без AI. Action-log + restore_deleted(query='last') — universal undo працює. Health UUID + Сесії 4-8 — лишається.
+
+**Метрики поточної реальності (з Council audit myshu, актуальне):** 66 AI tools (не 30), 4 dispatch-точки (не 3), **8 з 10 entity types на UUID** (Tasks v8 + Habits/Events/Notes/Moments/Finance/Project/InboxItem у myshu 3B-1..7), 128 не-канонічних `localStorage.setItem` (поки не чіпаємо), 28 `nm-data-changed` dispatch + 8 listeners (Сесія 7).
 
 **Топ-5 ризиків:** циклічні залежності execute-action ↔ habits ↔ ai/core (iOS cold-start hang), `reminderId+1`/`+2` арифметика ламається при UUID, `check-chat-uniformity.js` блокує build при dispatcher collapse, event bus подвоїть тригери followups+brain-pulse, audit-gap для UI-modal edits. Mitigations у `docs/ARCHITECTURE_REFACTOR.md`.
 
