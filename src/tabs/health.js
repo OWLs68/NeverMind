@@ -99,7 +99,7 @@ export function getHealthCards() {
   localStorage.setItem('nm_health_migrated_v2', '1');
   return result;
 }
-function saveHealthCards(arr) { localStorage.setItem('nm_health_cards', JSON.stringify(arr)); window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'health' })); }
+export function saveHealthCards(arr) { localStorage.setItem('nm_health_cards', JSON.stringify(arr)); window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'health' })); }
 
 // === АЛЕРГІЇ (Фаза 1, 15.04 jMR6m) ===
 // Проста структура: {id, name, notes, createdAt}. Розширення з severity → ROADMAP.md Ideas.

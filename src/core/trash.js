@@ -4,7 +4,7 @@ import { getTasks, saveTasks, renderTasks } from '../tabs/tasks.js';
 import { getNotes, saveNotes, renderNotes } from '../tabs/notes.js';
 import { getHabits, saveHabits, renderHabits, renderProdHabits } from '../tabs/habits.js';
 import { getFinance, saveFinance, renderFinance } from '../tabs/finance.js';
-import { getAllergies, saveAllergies, renderHealth } from '../tabs/health.js';
+import { getAllergies, saveAllergies, renderHealth, getHealthCards, saveHealthCards } from '../tabs/health.js';
 import { getEvents, saveEvents } from '../tabs/calendar.js';
 import { getProjects, saveProjects, renderProjects } from '../tabs/projects.js';
 
@@ -109,6 +109,14 @@ export function restoreFromTrash(trashId) {
     projects.unshift(item);
     saveProjects(projects);
     if (currentTab === 'projects') renderProjects();
+  } else if (type === 'health_card') {
+    // db0YY 12.05: B-175 fix — health картка повертається у nm_health_cards.
+    // deleteHealthCardProgrammatic (health.js:382) кидає addToTrash('health_card'),
+    // але до цього коміту restoreFromTrash тихо ігнорував — return true без даних.
+    const cards = getHealthCards();
+    cards.unshift(item);
+    saveHealthCards(cards);
+    if (currentTab === 'health') renderHealth();
   }
   // Прибираємо з кешу після відновлення
   saveTrash(trash.filter(t => t.deletedAt !== trashId));
