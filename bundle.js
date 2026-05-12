@@ -9010,15 +9010,19 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
   });
 
   // src/data/action-undo.js
-  function executeReverse(reverse) {
+  function executeReverse(reverse, dispatchFn) {
     if (!reverse || typeof reverse !== "object") return false;
     if (reverse.type === "tool_call") {
       if (!reverse.tool) return false;
+      if (typeof dispatchFn !== "function") {
+        console.warn("[action-undo] tool_call reverse needs dispatchFn (DI)", reverse);
+        return false;
+      }
       const action = { action: reverse.tool, ...reverse.args || {} };
       try {
         const noopAddMsg = () => {
         };
-        return !!processUniversalAction(action, "", noopAddMsg);
+        return !!dispatchFn(action, "", noopAddMsg);
       } catch (e) {
         console.warn("[action-undo] tool_call reverse failed", reverse, e);
         return false;
@@ -9047,7 +9051,6 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
   }
   var init_action_undo = __esm({
     "src/data/action-undo.js"() {
-      init_habits();
     }
   });
 
@@ -10251,7 +10254,7 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
         if (q === "last") {
           const lastAction = typeFilter ? null : readLastReversible();
           if (lastAction) {
-            const ok = executeReverse(lastAction.reverse);
+            const ok = executeReverse(lastAction.reverse, processUniversalAction);
             if (ok) {
               markReversed(lastAction.id);
               addMsg("agent", `\u2705 \u0412\u0456\u0434\u043C\u0456\u043D\u0438\u0432: ${lastAction.summary}`);
@@ -18918,7 +18921,7 @@ ${aiContext}`;
             } else if (q === "last") {
               const lastAction = typeFilter ? null : readLastReversible();
               if (lastAction) {
-                const ok = executeReverse(lastAction.reverse);
+                const ok = executeReverse(lastAction.reverse, processUniversalAction);
                 if (ok) {
                   markReversed(lastAction.id);
                   addInboxChatMsg("agent", t("inbox.chat.undo_ok", "\u2705 \u0412\u0456\u0434\u043C\u0456\u043D\u0438\u0432: {summary}", { summary: lastAction.summary }));
