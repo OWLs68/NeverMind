@@ -167,6 +167,8 @@ function _handleHealthTool(name, args, addMsg) {
           // Юзер у іншому чаті — повідомлення-вказівник + інтерв'ю чекає у Health-чаті
           addMsg('agent', `🏥 Створив картку "${created.name}" у Здоровʼї. Пройди коротке опитування там — 3 чіпи виставлять точний статус.`);
         }
+        // db0YY: action-log запис для universal undo. Реверс — delete_health_card.
+        logAction('create_health_card', args, created.id, null, 'dispatcher');
         setTimeout(() => { try { startHealthInterview(created); } catch(e) {} }, 300);
       } else {
         addMsg('agent', 'Не вдалось створити картку — потрібна назва.');
@@ -264,6 +266,8 @@ function _handleHealthTool(name, args, addMsg) {
       if (added) {
         if (currentTab === 'health') renderHealth();
         addMsg('agent', `🚨 Додав алергію: ${args.name}. ${args.comment || ''}`.trim());
+        // db0YY: action-log для universal undo. Реверс — delete_allergy.
+        logAction('add_allergy', args, added.id, null, 'dispatcher');
       } else {
         addMsg('agent', `Алергія "${args.name}" вже у списку.`);
       }
