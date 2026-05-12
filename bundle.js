@@ -476,7 +476,7 @@
       const opacity = isPast ? "opacity:0.4;" : "";
       const dateColor = isToday ? "#ea580c" : "rgba(30,16,64,0.4)";
       const iconHtml = _calendarEventIcon(item.type);
-      const tapAttr = item.type === "event" && item.id ? `onclick="openEventEditModal(${item.id})" style="cursor:pointer;` : `style="`;
+      const tapAttr = item.type === "event" && item.id ? `onclick="openEventEditModal('${item.id}')" style="cursor:pointer;` : `style="`;
       html += `<div ${tapAttr}display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(30,16,64,0.06);${opacity}">
       ${iconHtml}
       <div style="flex:1;min-width:0">
@@ -541,7 +541,7 @@
       const iconHtml = _calendarEventIcon(item.type);
       const prio = prioIcons[item.priority] || "";
       const timeStr = item.time ? ` \xB7 ${item.time}${item.endTime ? "\u2013" + item.endTime : ""}` : "";
-      const tapAttr = item.type === "event" && item.id ? `onclick="openEventEditModal(${item.id})" ` : "";
+      const tapAttr = item.type === "event" && item.id ? `onclick="openEventEditModal('${item.id}')" ` : "";
       return `<div ${tapAttr}style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid rgba(30,16,64,0.06);${tapAttr ? "cursor:pointer;" : ""}">
         ${iconHtml}
         <div style="flex:1">
@@ -707,7 +707,7 @@
         alldayEl.style.display = "block";
         alldayEl.innerHTML = allDayEvents.map((ev) => {
           const prio = ev.priority === "critical" ? "\u{1F534} " : ev.priority === "important" ? "\u{1F7E0} " : "";
-          return `<div onclick="openEventEditModal(${ev.id})" style="display:flex;align-items:center;gap:10px;padding:8px 4px;cursor:pointer;border-radius:10px;background:rgba(59,130,246,0.10)">
+          return `<div onclick="openEventEditModal('${ev.id}')" style="display:flex;align-items:center;gap:10px;padding:8px 4px;cursor:pointer;border-radius:10px;background:rgba(59,130,246,0.10)">
           <div style="font-size:15px;flex-shrink:0">\u{1F4C5}</div>
           <div style="flex:1;font-size:14px;font-weight:600;color:#3b82f6">${prio}${escapeHtml(ev.title)}</div>
           <div style="font-size:11px;color:rgba(30,16,64,0.35);font-weight:600">${t("calendar.event.all_day", "\u0432\u0435\u0441\u044C \u0434\u0435\u043D\u044C")}</div>
@@ -751,7 +751,7 @@
           const prio = item.priority === "critical" ? "\u{1F534} " : item.priority === "important" ? "\u{1F7E0} " : "";
           const strike = isDone ? "text-decoration:line-through;" : "";
           let tapAttr;
-          if (isEvent && item.id) tapAttr = `onclick="openEventEditModal(${item.id})" style="cursor:pointer;`;
+          if (isEvent && item.id) tapAttr = `onclick="openEventEditModal('${item.id}')" style="cursor:pointer;`;
           else if (item.type === "routine") tapAttr = `onclick="openRoutineFromCalendar('${dayKey}')" style="cursor:pointer;`;
           else tapAttr = `style="`;
           const timeLabel = item.endTime ? `${item.time}<br><span style="font-size:11px;font-weight:500;color:rgba(30,16,64,0.4)">${item.endTime}</span>` : item.time;
@@ -5164,7 +5164,7 @@ ${lines.join("\n")}`;
       const silenceWarn = silenceDays !== null && silenceDays >= 3;
       const visibleSteps = steps.slice(0, 4);
       return `<div class="project-card-wrap" data-id="${p.id}" style="position:relative">
-      <div onclick="openProjectWorkspace(${p.id})" class="card-glass project-card" id="project-card-${p.id}" style="cursor:pointer;position:relative;z-index:2;background:rgba(248,239,224,0.95)">
+      <div onclick="openProjectWorkspace('${p.id}')" class="card-glass project-card" id="project-card-${p.id}" style="cursor:pointer;position:relative;z-index:2;background:rgba(248,239,224,0.95)">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
         <div style="flex:1">
           <div style="font-size:15px;font-weight:900;color:#1e1040;line-height:1.2">${escapeHtml(p.name)}</div>
@@ -5345,7 +5345,7 @@ ${lines.join("\n")}`;
     ${steps.length > 0 ? `<div class="card-glass" id="proj-timeline-${p.id}">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
         <div class="section-label" style="margin-bottom:0">${t("projects.section.timeline", "\u0425\u0440\u043E\u043D\u043E\u043B\u043E\u0433\u0456\u044F \xB7 \u043F\u043B\u0430\u043D")}</div>
-        <span onclick="toggleProjectTimeline(${p.id})" style="font-size:10px;font-weight:700;color:#3d2e1e;cursor:pointer" id="proj-timeline-toggle-${p.id}">${t("projects.timeline.expand", "\u0440\u043E\u0437\u0433\u043E\u0440\u043D\u0443\u0442\u0438 \u2193")}</span>
+        <span onclick="toggleProjectTimeline('${p.id}')" style="font-size:10px;font-weight:700;color:#3d2e1e;cursor:pointer" id="proj-timeline-toggle-${p.id}">${t("projects.timeline.expand", "\u0440\u043E\u0437\u0433\u043E\u0440\u043D\u0443\u0442\u0438 \u2193")}</span>
       </div>
       <!-- \u0417\u0433\u043E\u0440\u043D\u0443\u0442\u0438\u0439 \u0432\u0438\u0433\u043B\u044F\u0434 -->
       <div id="proj-timeline-collapsed-${p.id}" style="background:rgba(255,255,255,0.5);border-radius:10px;padding:9px 11px">
@@ -5361,7 +5361,7 @@ ${lines.join("\n")}`;
       <!-- \u0420\u043E\u0437\u0433\u043E\u0440\u043D\u0443\u0442\u0438\u0439 \u0432\u0438\u0433\u043B\u044F\u0434 -->
       <div id="proj-timeline-full-${p.id}" style="display:none">
         ${steps.map((s, i) => `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;${i < steps.length - 1 ? "border-bottom:1px solid rgba(30,16,64,0.05)" : ""}">
-          <div onclick="toggleProjectStep(${p.id},${s.id})" style="width:18px;height:18px;border-radius:6px;border:1.5px solid ${s.done ? "#3d2e1e" : "rgba(30,16,64,0.18)"};background:${s.done ? "#3d2e1e" : "rgba(255,255,255,0.65)"};display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;font-size:10px;color:white">${s.done ? "\u2713" : ""}</div>
+          <div onclick="toggleProjectStep('${p.id}',${s.id})" style="width:18px;height:18px;border-radius:6px;border:1.5px solid ${s.done ? "#3d2e1e" : "rgba(30,16,64,0.18)"};background:${s.done ? "#3d2e1e" : "rgba(255,255,255,0.65)"};display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;font-size:10px;color:white">${s.done ? "\u2713" : ""}</div>
           <div style="flex:1;font-size:13px;font-weight:${!s.done && s === nextStep ? 700 : 500};color:${s.done ? "rgba(30,16,64,0.3)" : "#1e1040"};${s.done ? "text-decoration:line-through" : ""}">${escapeHtml(s.text)}</div>
         </div>`).join("")}
       </div>
@@ -5860,13 +5860,13 @@ ${lines.join("\n\n")}`;
           const dot = m.isNote ? "#818cf8" : moodDots[m.mood] || "#888";
           const timeStr = m.ts ? new Date(m.ts).toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" }) : "";
           const clickable = !m.isNote;
-          return `<div style="display:flex;gap:8px;align-items:flex-start;padding:7px 0;border-bottom:1px solid rgba(30,16,64,0.06)${clickable ? ";cursor:pointer" : ""}"${clickable ? ` onclick="openMomentView(${m.id})"` : ""}>
+          return `<div style="display:flex;gap:8px;align-items:flex-start;padding:7px 0;border-bottom:1px solid rgba(30,16,64,0.06)${clickable ? ";cursor:pointer" : ""}"${clickable ? ` onclick="openMomentView('${m.id}')"` : ""}>
           <div style="width:7px;height:7px;border-radius:50%;background:${dot};flex-shrink:0;margin-top:5px"></div>
           <div style="flex:1">
             <div style="font-size:13px;color:#1e1040;font-weight:500;line-height:1.45">${escapeHtml(m.summary || m.text)}</div>
             ${timeStr ? `<div style="font-size:10px;color:rgba(30,16,64,0.3);font-weight:600;margin-top:2px">${timeStr}</div>` : ""}
           </div>
-          ${!m.isNote ? `<div onclick="event.stopPropagation();deleteMoment(${m.id})" style="font-size:18px;color:rgba(30,16,64,0.2);cursor:pointer;padding:0 2px">\xD7</div>` : ""}
+          ${!m.isNote ? `<div onclick="event.stopPropagation();deleteMoment('${m.id}')" style="font-size:18px;color:rgba(30,16,64,0.2);cursor:pointer;padding:0 2px">\xD7</div>` : ""}
         </div>`;
         }).join("");
       }
@@ -5949,8 +5949,8 @@ ${lines.join("\n\n")}`;
           <div style="font-size:14px;color:#1e1040;font-weight:600">${escapeHtml(h.name)}</div>
           <div style="font-size:11px;color:rgba(30,16,64,0.5);font-weight:600;margin-top:2px">${streakText}</div>
         </div>
-        <button onclick="holdQuitHabit(${h.id});renderEvening()" style="background:rgba(22,163,74,0.12);color:#15803d;border:1px solid rgba(22,163,74,0.35);border-radius:999px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">${lblHold}</button>
-        <button onclick="confirmQuitRelapse(${h.id});setTimeout(renderEvening,50)" style="background:rgba(30,16,64,0.06);color:rgba(30,16,64,0.7);border:1px solid rgba(30,16,64,0.12);border-radius:999px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">${lblRelapse}</button>
+        <button onclick="holdQuitHabit('${h.id}');renderEvening()" style="background:rgba(22,163,74,0.12);color:#15803d;border:1px solid rgba(22,163,74,0.35);border-radius:999px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">${lblHold}</button>
+        <button onclick="confirmQuitRelapse('${h.id}');setTimeout(renderEvening,50)" style="background:rgba(30,16,64,0.06);color:rgba(30,16,64,0.7);border:1px solid rgba(30,16,64,0.12);border-radius:999px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">${lblRelapse}</button>
       </div>`;
     }).join("");
   }
@@ -8255,8 +8255,8 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
       const card = sw.querySelector(".tx-row");
       if (!card) return;
       attachSwipeDelete(sw, card, () => {
-        const txId = parseInt(sw.dataset.txId);
-        if (!isNaN(txId)) _deleteFinTxById(txId);
+        const txId = sw.dataset.txId;
+        if (txId) _deleteFinTxById(txId);
       }, { openRatio: SWIPE_OPEN_RATIO });
     });
   }
@@ -8406,7 +8406,7 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
       const dateStr = new Date(t2.ts).toLocaleDateString("uk-UA", { day: "numeric", month: "short" });
       const categoryLine = t2.subcategory ? `<span style="font-weight:700;color:#1e1040">${escapeHtml(t2.category)}</span><span style="font-size:11px;font-weight:500;color:rgba(30,16,64,0.4);margin-left:4px">\xB7 ${escapeHtml(t2.subcategory)}</span>` : `<span style="font-weight:700;color:#1e1040">${escapeHtml(t2.category)}</span>`;
       return `<div class="fin-tx-swipe-wrap" data-tx-id="${t2.id}" style="position:relative;overflow:hidden;border-radius:10px">
-      <div class="tx-row" onclick="openEditTransaction(${t2.id})" style="position:relative;z-index:1;background:#fff">
+      <div class="tx-row" onclick="openEditTransaction('${t2.id}')" style="position:relative;z-index:1;background:#fff">
         <div style="flex:1;min-width:0">
           <div style="font-size:13px">${categoryLine}</div>
           ${t2.comment ? `<div style="font-size:11px;color:rgba(30,16,64,0.4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(t2.comment)}</div>` : ""}
@@ -8440,7 +8440,7 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
       const isExp = t2.type === "expense";
       const dateStr = new Date(t2.ts).toLocaleDateString("uk-UA", { day: "numeric", month: "short" });
       const categoryLine = t2.subcategory ? `<span style="font-weight:700;color:#1e1040">${escapeHtml(t2.category)}</span><span style="font-size:11px;font-weight:500;color:rgba(30,16,64,0.4);margin-left:4px">\xB7 ${escapeHtml(t2.subcategory)}</span>` : `<span style="font-weight:700;color:#1e1040">${escapeHtml(t2.category)}</span>`;
-      return `<div class="tx-row" onclick="document.getElementById('fin-all-txs-modal').remove();openEditTransaction(${t2.id})">
+      return `<div class="tx-row" onclick="document.getElementById('fin-all-txs-modal').remove();openEditTransaction('${t2.id}')">
       <div style="flex:1;min-width:0">
         <div style="font-size:13px">${categoryLine}</div>
         ${t2.comment ? `<div style="font-size:11px;color:rgba(30,16,64,0.4)">${escapeHtml(t2.comment)}</div>` : ""}
@@ -10817,11 +10817,11 @@ ${recent}`;
       <div class="note-item-wrap" id="note-wrap-${n.id}" data-id="${n.id}" style="position:relative;overflow:hidden;border-radius:var(--card-radius);margin-bottom:var(--card-gap)">
         <div id="note-item-${n.id}" class="inbox-item"
           style="cursor:default;padding:var(--card-pad-y) var(--card-pad-x);width:100%;box-sizing:border-box;background:${fc.bg};border-color:${fc.border};">
-          <div onclick="openNoteView(${n.id})" style="cursor:pointer">
+          <div onclick="openNoteView('${n.id}')" style="cursor:pointer">
             <div style="font-size:15px;line-height:1.55;color:#1e1040;font-weight:500;margin-bottom:5px">${escapeHtml(preview)}</div>
             <div style="display:flex;align-items:center;justify-content:space-between">
               <div style="font-size:12px;color:rgba(30,16,64,0.3)">${formatTime(n.ts)}${n.source === "inbox" ? t("notes.source.from_inbox", " \xB7 \u0437 Inbox") : n.source === "agent" ? t("notes.source.from_owl", " \xB7 \u0447\u0435\u0440\u0435\u0437 OWL") : ""}</div>
-              <div onclick="event.stopPropagation();openNoteMenu(${n.id})" style="padding:4px 8px;cursor:pointer;color:rgba(30,16,64,0.4);font-size:22px;line-height:1;min-width:32px;text-align:center">\xB7\xB7\xB7</div>
+              <div onclick="event.stopPropagation();openNoteMenu('${n.id}')" style="padding:4px 8px;cursor:pointer;color:rgba(30,16,64,0.4);font-size:22px;line-height:1;min-width:32px;text-align:center">\xB7\xB7\xB7</div>
             </div>
           </div>
         </div>
@@ -11471,7 +11471,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
               if (!el) return;
               const div = document.createElement("div");
               div.style.cssText = "display:flex";
-              div.innerHTML = `<div onclick="addNotesChatMsg('user','');openNoteView(${n.id})" style="max-width:85%;background:rgba(255,255,255,0.12);color:white;border-radius:4px 12px 12px 12px;padding:8px 11px;font-size:14px;line-height:1.5;font-weight:500;cursor:pointer;border:1px solid rgba(255,255,255,0.15)">
+              div.innerHTML = `<div onclick="addNotesChatMsg('user','');openNoteView('${n.id}')" style="max-width:85%;background:rgba(255,255,255,0.12);color:white;border-radius:4px 12px 12px 12px;padding:8px 11px;font-size:14px;line-height:1.5;font-weight:500;cursor:pointer;border:1px solid rgba(255,255,255,0.15)">
               <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.45);margin-bottom:3px">${escapeHtml(n.folder || t("notes.default_folder", "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435"))}</div>
               ${escapeHtml(preview)}
             </div>`;
@@ -18497,7 +18497,7 @@ ${userText}
       const tagStyle = CAT_TAG_STYLE[item.category] || CAT_TAG_STYLE.note;
       html += `<div class="inbox-item-wrap" id="wrap-${item.id}" data-id="${item.id}">
       <div class="inbox-item" id="item-${item.id}" data-id="${item.id}" data-cat="${item.category}"
-           onclick="navigateInboxItem(${item.id})">
+           onclick="navigateInboxItem('${item.id}')">
         <div class="inbox-item-inner">
           <div class="inbox-item-dot" style="${dotBg}"></div>
           <div class="inbox-item-body">
