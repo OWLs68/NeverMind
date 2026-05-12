@@ -2299,6 +2299,7 @@ ${lines.join("\n")}`;
     getHealthContext: () => getHealthContext,
     logMedicationDose: () => logMedicationDose,
     renderHealth: () => renderHealth,
+    saveAllergies: () => saveAllergies,
     sendHealthBarMessage: () => sendHealthBarMessage,
     setFocusedHealthCard: () => setFocusedHealthCard,
     startHealthInterview: () => startHealthInterview,
@@ -2411,8 +2412,13 @@ ${lines.join("\n")}`;
     const allergies = getAllergies();
     const idx = allergies.findIndex((a) => a.id === id);
     if (idx === -1) return false;
+    const removed = allergies[idx];
     allergies.splice(idx, 1);
     saveAllergies(allergies);
+    try {
+      addToTrash("allergy", removed);
+    } catch (e) {
+    }
     return true;
   }
   function setFocusedHealthCard(id) {
@@ -17324,6 +17330,13 @@ ${JSON.stringify(contextData, null, 2)}` : "";
       txs.unshift(item);
       saveFinance(txs);
       if (currentTab === "finance") renderFinance();
+    } else if (type === "allergy") {
+      const allergies = getAllergies();
+      if (!allergies.some((a) => a.name.toLowerCase() === item.name.toLowerCase())) {
+        allergies.push(item);
+        saveAllergies(allergies);
+      }
+      if (currentTab === "health") renderHealth();
     }
     saveTrash(trash.filter((t2) => t2.deletedAt !== trashId));
     return true;
@@ -17365,6 +17378,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
       init_notes();
       init_habits();
       init_finance();
+      init_health();
       NM_TRASH_KEY = "nm_trash";
       TRASH_TTL = 7 * 24 * 60 * 60 * 1e3;
       window.undoDelete = undoDelete;
