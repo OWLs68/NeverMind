@@ -59,7 +59,29 @@
 - **🚨 B-172 урок: OpenAI Strict mode + UUID → schema integer ламає AI-виклики silent.** Знайдено db0YY коли планував Health undo reverser — `card_id: integer` у delete_health_card schema. Юзер казав «видали картку» — AI міг просто не виконати (Strict валідація провалювалась, fallback мовчав). Це найкритичніший клас бага бо невидимий — нема ErrorMessage у консолі, AI просто пропускає виклик. Завжди при UUID-міграції оновлювати prompts.js schemas СИНХРОННО.
 - **Обгортати онклик у одинарні лапки** — `onclick="fn('${item.id}')"`. UUID не містить `'` чи `"` (тільки `[0-9a-f-]+`) — безпечно.
 - **String() обгортка у find/filter** — якщо хендлер працює з мікс типами, використовуй `find(x => String(x.id) === String(id))` (приклад: inbox.js:340, notes.js:596, projects.js:187, habits.js:925). Strict `===` між number і string завжди false.
-- **Tasks/Projects steps + Health 3B-8 — ВIДОМО ПОКИ НЕ ВИПРАВЛЕНО** — sub-entity steps досі Date.now(). Це борг. Коли мігруємо їх — пройти той самий 3-grep чек-ліст для step.id.
+- **Tasks/Projects steps + Health 3B-8 — ЗАКРИТО db0YY** — sub-entity steps мігровано на UUID (v17), Health UUID v16, 4-grep чек-ліст пройдено. Залишковий борг: `add_medication` undo (потрібен новий tool `delete_medication`).
+
+### Universal undo через DI — silent fail коли handler НЕ у processUniversalAction (db0YY 12.05.2026, B-174 урок)
+- **Кейс:** після Council аудиту знайшов що undo для `save_finance` ламався з myshu (24+ год у проді). Reverser у `action-reversers.js` будував `{type:'tool_call', tool:'delete_transaction', args:{id}}`. `executeReverse` через DI шле у `processUniversalAction` (habits.js). Але `delete_transaction` живе ТIЛЬКИ у `tool-dispatcher.js` direct handler — не у `processUniversalAction` → return false → AI пише «⚠️ Не зміг відмінити». Я повторив помилку у db0YY коли додав `create_health_card`/`add_allergy` reversers — той самий патерн silent fail.
+- **Корінь:** `tool-dispatcher.js dispatchChatToolCalls` має ДВА шляхи виконання tool:
+  1. **Direct handler** (case 'create_health_card', 'delete_transaction', '_handleHealthTool', '_handleProjectTool' etc) — для специфічних доменів
+  2. **Universal action** через `_toolCallToUniversalAction` → `processUniversalAction` (habits.js) — для CRUD tools
+  
+  Reverser, що будує `{tool:'delete_X'}` для action-undo, виконається ТIЛЬКИ якщо `delete_X` є у шляху 2 (processUniversalAction). Якщо delete_X — direct handler — silent fail.
+- **ПРАВИЛО:** перш ніж додавати reverser у `action-reversers.js`, ПЕРЕВIР що reverse-tool існує у `habits.js processUniversalAction` (не лише у tool-dispatcher direct handlers). Якщо у direct — або додай case у processUniversalAction, або передавай `dispatchChatToolCalls` як DI замість `processUniversalAction`.
+- **Підтверджений кейс db0YY:** save_finance (з myshu), create_health_card, add_allergy — всі 3 reverser silent fail до фіксу `bb0c50e`. Council `code-regression-finder` + `silent-bug-scout` знайшли одночасно за один аудит.
+
+### restoreFromTrash — кожен `addToTrash(type, ...)` потребує case (db0YY 12.05.2026, B-175 урок)
+- **Кейс:** `deleteHealthCardProgrammatic` кидав `addToTrash('health_card', removed)` але `restoreFromTrash` НЕ мав case 'health_card'. Функція повертала `true` після cleanup кошика (рядок 115) → юзер бачив «✅ Відновив» але картка не з'являлась. Silent data loss.
+- **Чек-ліст ПIСЛЯ кожного `addToTrash(NEW_TYPE, ...)`:**
+  ```bash
+  # Знайти ВСI типи що addToTrash:
+  grep -rnoE "addToTrash\('[a-z_]+'" src/ --include="*.js" | awk -F"'" '{print $2}' | sort -u
+  # Знайти ВСI типи у restoreFromTrash:
+  grep -onE "type === '[a-z_]+'" src/core/trash.js | awk -F"'" '{print $2}' | sort -u
+  # Різниця — це silent failures.
+  ```
+- **Підтверджений кейс db0YY:** allergy/event/project/health_card — 4 типи кидались у trash але restoreFromTrash тихо ігнорував до фіксів `c72763e`/`f2bd017`/`08940c1`/`bb0c50e`.
 
 ### Bridge-стратегія перед великою міграцією (64CXo 10.05.2026)
 - **Контекст:** через 1-2 місяці перехід на Supabase. Виникло питання — лагодити поточну архітектуру чи мігрувати негайно.
