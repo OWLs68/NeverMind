@@ -451,20 +451,20 @@ export function renderHabits() {
         const isBonus = i >= target;
         const bg = filled ? (isBonus ? '#fbbf24' : '#16a34a') : 'rgba(30,16,64,0.08)';
         const border = filled ? 'none' : '1.5px solid rgba(30,16,64,0.12)';
-        squaresHtml += `<div onclick="event.stopPropagation();tapHabitSquareMe(${h.id},${i})" style="width:13px;height:13px;border-radius:3px;background:${bg};border:${border};cursor:pointer;transition:all 0.15s;display:flex;align-items:center;justify-content:center">`;
+        squaresHtml += `<div onclick="event.stopPropagation();tapHabitSquareMe('${h.id}',${i})" style="width:13px;height:13px;border-radius:3px;background:${bg};border:${border};cursor:pointer;transition:all 0.15s;display:flex;align-items:center;justify-content:center">`;
         if (filled) squaresHtml += `<svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg>`;
         squaresHtml += '</div>';
       }
-      if (cur < 20) squaresHtml += `<div onclick="event.stopPropagation();toggleHabitToday(${h.id})" style="width:13px;height:13px;border-radius:3px;background:rgba(30,16,64,0.04);border:1.5px dashed rgba(30,16,64,0.15);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:9px;color:rgba(30,16,64,0.3)">+</div>`;
+      if (cur < 20) squaresHtml += `<div onclick="event.stopPropagation();toggleHabitToday('${h.id}')" style="width:13px;height:13px;border-radius:3px;background:rgba(30,16,64,0.04);border:1.5px dashed rgba(30,16,64,0.15);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:9px;color:rgba(30,16,64,0.3)">+</div>`;
       squaresHtml += '</div>';
     }
 
     const countLabel = target > 1 ? `<span style="font-size:11px;font-weight:700;color:${cur>=target?'#16a34a':'rgba(30,16,64,0.4)'};margin-left:4px">${cur}/${target}</span>` : '';
 
     return '<div class="habit-me-item-wrap" data-id="' + h.id + '" style="position:relative;overflow:hidden;border-radius:14px;margin-bottom:6px">'
-      + '<div id="habit-me-item-' + h.id + '" class="inbox-item" style="padding:10px 12px;cursor:pointer;width:100%;box-sizing:border-box;-webkit-tap-highlight-color:transparent" onclick="openEditHabit(' + h.id + ')">'
+      + '<div id="habit-me-item-' + h.id + '" class="inbox-item" style="padding:10px 12px;cursor:pointer;width:100%;box-sizing:border-box;-webkit-tap-highlight-color:transparent" onclick="openEditHabit(\'' + h.id + '\')">'
         + '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">'
-          + '<div onclick="event.stopPropagation();toggleHabitToday(' + h.id + ')" data-habit-check="1" style="width:36px;height:36px;border-radius:50%;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.25s;-webkit-tap-highlight-color:transparent;' + checkBg + '">'
+          + '<div onclick="event.stopPropagation();toggleHabitToday(\'' + h.id + '\')" data-habit-check="1" style="width:36px;height:36px;border-radius:50%;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.25s;-webkit-tap-highlight-color:transparent;' + checkBg + '">'
             + `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${checkStroke}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`
           + '</div>'
           + '<div style="flex:1;min-width:0">'
@@ -772,20 +772,20 @@ export function renderProdHabits() {
         const isBonus = i >= target;
         const bg = filled ? (isBonus ? '#fbbf24' : '#16a34a') : 'rgba(30,16,64,0.08)';
         const border = filled ? 'none' : '1.5px solid rgba(30,16,64,0.12)';
-        squaresHtml += `<div onclick="event.stopPropagation();tapHabitSquare(${h.id},${i})" style="width:14px;height:14px;border-radius:4px;background:${bg};border:${border};cursor:pointer;transition:all 0.15s;display:flex;align-items:center;justify-content:center">`;
+        squaresHtml += `<div onclick="event.stopPropagation();tapHabitSquare('${h.id}',${i})" style="width:14px;height:14px;border-radius:4px;background:${bg};border:${border};cursor:pointer;transition:all 0.15s;display:flex;align-items:center;justify-content:center">`;
         if (filled) squaresHtml += `<svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg>`;
         squaresHtml += '</div>';
       }
-      if (cur < 20) squaresHtml += `<div onclick="event.stopPropagation();toggleProdHabitToday(${h.id})" style="width:14px;height:14px;border-radius:4px;background:rgba(30,16,64,0.04);border:1.5px dashed rgba(30,16,64,0.15);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:10px;color:rgba(30,16,64,0.3);line-height:1">+</div>`;
+      if (cur < 20) squaresHtml += `<div onclick="event.stopPropagation();toggleProdHabitToday('${h.id}')" style="width:14px;height:14px;border-radius:4px;background:rgba(30,16,64,0.04);border:1.5px dashed rgba(30,16,64,0.15);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:10px;color:rgba(30,16,64,0.3);line-height:1">+</div>`;
       squaresHtml += '</div>';
     }
 
     const countLabel = target > 1 ? `<span style="font-size:11px;font-weight:700;color:${cur>=target?'#16a34a':'rgba(30,16,64,0.4)'};margin-left:4px">${cur}/${target}</span>` : '';
 
     return '<div class="prod-habit-item-wrap" id="prod-habit-wrap-' + h.id + '" data-id="' + h.id + '" style="position:relative;border-radius:16px;margin-bottom:var(--card-gap);overflow:hidden">'
-      + '<div id="prod-habit-item-' + h.id + '" onclick="prodHabitCardClick(' + h.id + ', event)" style="background:rgba(255,255,255,0.6);border:1.5px solid rgba(255,255,255,0.85);border-radius:16px;padding:var(--card-pad-y) var(--card-pad-x);box-shadow:var(--card-shadow);position:relative;z-index:1;will-change:transform;cursor:pointer;-webkit-tap-highlight-color:transparent">'
+      + '<div id="prod-habit-item-' + h.id + '" onclick="prodHabitCardClick(\'' + h.id + '\', event)" style="background:rgba(255,255,255,0.6);border:1.5px solid rgba(255,255,255,0.85);border-radius:16px;padding:var(--card-pad-y) var(--card-pad-x);box-shadow:var(--card-shadow);position:relative;z-index:1;will-change:transform;cursor:pointer;-webkit-tap-highlight-color:transparent">'
       + '<div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">'
-        + '<div onclick="event.stopPropagation();toggleProdHabitToday(' + h.id + ')" data-habit-check="1" style="width:40px;height:40px;border-radius:12px;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.25s;-webkit-tap-highlight-color:transparent;' + checkBg + '">'
+        + '<div onclick="event.stopPropagation();toggleProdHabitToday(\'' + h.id + '\')" data-habit-check="1" style="width:40px;height:40px;border-radius:12px;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.25s;-webkit-tap-highlight-color:transparent;' + checkBg + '">'
           + `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${checkStroke}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`
         + '</div>'
         + '<div style="flex:1;min-width:0">'
@@ -862,7 +862,7 @@ function _renderQuitHabitCard(h) {
   const lampHtml = '<div style="flex-shrink:0;width:14px;height:14px;border-radius:50%;background:' + lamp.color + ';box-shadow:0 0 8px 3px ' + lamp.glow + ';margin-top:3px"></div>';
 
   return '<div class="prod-habit-item-wrap" id="quit-wrap-' + h.id + '" data-id="' + h.id + '" style="position:relative;border-radius:16px;margin-bottom:var(--card-gap);overflow:hidden">'
-    + '<div id="prod-habit-item-' + h.id + '" onclick="openEditHabit(' + h.id + ')" style="' + cardBg + ';border:1.5px solid;border-radius:16px;padding:var(--card-pad-y) var(--card-pad-x);position:relative;z-index:1;cursor:pointer;-webkit-tap-highlight-color:transparent">'
+    + '<div id="prod-habit-item-' + h.id + '" onclick="openEditHabit(\'' + h.id + '\')" style="' + cardBg + ';border:1.5px solid;border-radius:16px;padding:var(--card-pad-y) var(--card-pad-x);position:relative;z-index:1;cursor:pointer;-webkit-tap-highlight-color:transparent">'
 
     // Рядок 1: лампа + назва + тренд
     + '<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px">'
@@ -895,10 +895,10 @@ function _renderQuitHabitCard(h) {
 
     // Кнопки дій
     + '<div style="display:flex;gap:8px" onclick="event.stopPropagation()">'
-      + '<button ontouchend="event.preventDefault();event.stopPropagation();holdQuitHabit(' + h.id + ')" onclick="holdQuitHabit(' + h.id + ')" style="flex:2;padding:10px;border-radius:12px;border:none;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;'
+      + '<button ontouchend="event.preventDefault();event.stopPropagation();holdQuitHabit(\'' + h.id + '\')" onclick="holdQuitHabit(\'' + h.id + '\')" style="flex:2;padding:10px;border-radius:12px;border:none;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;'
         + (heldToday ? 'background:rgba(22,163,74,0.15);color:#16a34a' : 'background:rgba(22,163,74,0.1);color:#16a34a')
         + '">' + (heldToday ? t('habits.quit.btn.held_today', '✅ Тримаюсь сьогодні') : t('habits.quit.btn.hold', '✓ Тримаюсь')) + '</button>'
-      + '<button ontouchend="event.preventDefault();event.stopPropagation();confirmQuitRelapse(' + h.id + ')" onclick="confirmQuitRelapse(' + h.id + ')" style="flex:1;padding:10px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.1);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;background:rgba(30,16,64,0.03);color:rgba(30,16,64,0.35)">' + t('habits.quit.btn.relapse', 'Зірвався') + '</button>'
+      + '<button ontouchend="event.preventDefault();event.stopPropagation();confirmQuitRelapse(\'' + h.id + '\')" onclick="confirmQuitRelapse(\'' + h.id + '\')" style="flex:1;padding:10px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.1);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;background:rgba(30,16,64,0.03);color:rgba(30,16,64,0.35)">' + t('habits.quit.btn.relapse', 'Зірвався') + '</button>'
     + '</div>'
     + '</div>'
   + '</div>';
