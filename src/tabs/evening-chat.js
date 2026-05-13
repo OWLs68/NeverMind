@@ -83,7 +83,7 @@ async function openEveningTopic(topic) {
           if (res && res.text) addEveningBarMsg('agent', res.text);
           continue;
         }
-        dispatchEveningTool(tc.function.name, args);
+        dispatchEveningTool(tc.function.name, args, addEveningBarMsg);
       }
     }
     const { text: replyText, chips } = _parseContentChips(msg.content || '');
@@ -208,7 +208,7 @@ export async function sendEveningBarMessage() {
           if (res && res.text) addEveningBarMsg('agent', res.text);
           continue;
         }
-        dispatchEveningTool(tc.function.name, args);
+        dispatchEveningTool(tc.function.name, args, addEveningBarMsg);
       }
     }
 

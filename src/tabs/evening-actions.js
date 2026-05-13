@@ -26,7 +26,7 @@ import { getTasks, saveTasks, renderTasks } from './tasks.js';
 import { getHabits, saveHabits, getHabitLog, saveHabitLog, renderHabits, renderProdHabits } from './habits.js';
 import { getNotes, saveNotes, addNoteFromInbox, renderNotes } from './notes.js';
 import { getEvents, saveEvents, addEventDedup } from './calendar.js';
-import { getFinance, saveFinance, renderFinance } from './finance.js';
+import { getFinance, saveFinance, renderFinance, processFinanceAction } from './finance.js';
 import { saveMoments, getMoments } from './evening.js';
 import { addFact } from '../ai/memory.js';
 import { addToTrash, restoreFromTrash, getTrash } from '../core/trash.js';
@@ -94,7 +94,9 @@ export async function generateEveningRitualSummary(addMsg) {
 // Головний dispatcher. Приймає OpenAI tool call ім'я + args → виконує дію
 // через save-функції модулів. Повертає { ok: true } або { ok: false, err }.
 // AI пише Verify Loop текст у msg.content сам (правило промпту).
-export function dispatchEveningTool(name, args) {
+// Phase 2 nliW8 13.05: addMsg як третій параметр (DI) — для chip-діалогу і
+// budget warning у Evening-чаті. Опційний для зворотної сумісності.
+export function dispatchEveningTool(name, args, addMsg = () => {}) {
   try {
     switch (name) {
       // ========== СТВОРЕННЯ ==========
@@ -153,19 +155,11 @@ export function dispatchEveningTool(name, args) {
         return { ok: true };
       }
       case 'save_finance': {
-        withActionLog('save_finance', args, () => {
-          const txs = getFinance();
-          txs.unshift({
-            id: generateUUID(),
-            type: args.fin_type === 'income' ? 'income' : 'expense',
-            amount: parseFloat(args.amount) || 0,
-            category: args.category || t('default.category_other', 'Інше'),
-            comment: args.fin_comment || '',
-            ts: args.date ? new Date(args.date + 'T12:00:00').getTime() : Date.now(),
-          });
-          saveFinance(txs);
-          if (currentTab === 'finance') renderFinance();
-        }, 'evening');
+        // Phase 2 nliW8 13.05: уніфіковано через processFinanceAction.
+        // Раніше тут був inline handler з Date.now() ID, без syncHealth,
+        // без budget warning, без chip-діалогу, без category fallback логіки.
+        // Тепер один мозок для всіх 8 чатів через DI addMsg.
+        processFinanceAction(args, args.fin_comment || '', addMsg);
         return { ok: true };
       }
       case 'set_reminder': {

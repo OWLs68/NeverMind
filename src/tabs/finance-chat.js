@@ -64,26 +64,9 @@ export function addFinanceChatMsg(role, text, _noSave = false, chips = null) {
   if (!_noSave) saveChatMsg('finance', role, text, chips);
 }
 
-// Перевірка перевищення бюджету (локальна копія — використовується після save_expense)
-function checkFinBudgetWarning(type, category, amount) {
-  if (type !== 'expense') return;
-  const budget = getFinBudget();
-  const from = getFinPeriodRange('month');
-  const txs = getFinance().filter(t => t.type === 'expense' && t.ts >= from);
-  const totalSpent = txs.reduce((s, t) => s + t.amount, 0);
-  if (budget.total > 0) {
-    const pct = totalSpent / budget.total;
-    if (pct >= 1) addFinanceChatMsg('agent', t('finance.budget_month_exceeded', '⚠️ Загальний бюджет на місяць перевищено. Витрачено {spent} з {total}.', { spent: formatMoney(totalSpent), total: formatMoney(budget.total) }));
-    else if (pct >= 0.8) addFinanceChatMsg('agent', t('finance.budget_month_left', '💡 До ліміту місяця залишилось {left}.', { left: formatMoney(budget.total - totalSpent) }));
-  }
-  const catLimit = budget.categories?.[category];
-  if (catLimit > 0) {
-    const catSpent = txs.filter(t => t.category === category).reduce((s, t) => s + t.amount, 0);
-    const pct = catSpent / catLimit;
-    if (pct >= 1) addFinanceChatMsg('agent', t('finance.budget_cat_exceeded', '⚠️ Ліміт по "{cat}" перевищено: {spent} з {limit}.', { cat: category, spent: formatMoney(catSpent), limit: formatMoney(catLimit) }));
-    else if (pct >= 0.8) addFinanceChatMsg('agent', t('finance.budget_cat_left', '💡 По "{cat}" залишилось {left}.', { cat: category, left: formatMoney(catLimit - catSpent) }));
-  }
-}
+// Phase 2 nliW8 13.05: дубль checkFinBudgetWarning видалено — тепер
+// уніфікований у processFinanceAction → addMsg=addFinanceChatMsg (через DI).
+// Той самий мозок для всіх 8 чатів.
 
 export async function sendFinanceBarMessage() {
   if (financeBarLoading) return;
@@ -126,13 +109,11 @@ export async function sendFinanceBarMessage() {
         return;
       }
       dispatchChatToolCalls(msg.tool_calls, addFinanceChatMsg, text);
-      // Budget warning після save_finance (Finance-specific реакція — залишається у чаті).
+      // Phase 2 nliW8 13.05: budget warning ВЖЕ всередині processFinanceAction
+      // через DI addMsg=addFinanceChatMsg — інлайн дубль видалено.
+      // Залишається owl-board signal для save_finance.
       for (const tc of msg.tool_calls) {
         if (tc.function.name === 'save_finance') {
-          try {
-            const a = JSON.parse(tc.function.arguments || '{}');
-            if (a.fin_type === 'expense') checkFinBudgetWarning('expense', a.category, a.amount);
-          } catch (e) {}
           try { localStorage.setItem('nm_owl_tab_ts_finance', '0'); tryBoardUpdate('finance'); } catch(e) {}
         }
       }
