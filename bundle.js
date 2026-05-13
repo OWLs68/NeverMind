@@ -8445,7 +8445,9 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     const rows = sorted.map((t2) => {
       const isExp = t2.type === "expense";
       const dateStr = new Date(t2.ts).toLocaleDateString("uk-UA", { day: "numeric", month: "short" });
-      const categoryLine = t2.subcategory ? `<span style="font-weight:700;color:#1e1040">${escapeHtml(t2.category)}</span><span style="font-size:11px;font-weight:500;color:rgba(30,16,64,0.4);margin-left:4px">\xB7 ${escapeHtml(t2.subcategory)}</span>` : `<span style="font-weight:700;color:#1e1040">${escapeHtml(t2.category)}</span>`;
+      const _catBubble = `<span style="display:inline-block;padding:2px 8px;border-radius:999px;background:rgba(30,16,64,0.09);color:#1e1040;font-size:11px;font-weight:700;line-height:1.4">${escapeHtml(t2.category)}</span>`;
+      const _subBubble = t2.subcategory ? `<span style="display:inline-block;padding:1px 8px;border-radius:999px;background:transparent;border:1px solid rgba(30,16,64,0.18);color:rgba(30,16,64,0.55);font-size:10px;font-weight:500;line-height:1.5;margin-left:5px">${escapeHtml(t2.subcategory)}</span>` : "";
+      const categoryLine = _catBubble + _subBubble;
       return `<div class="fin-tx-swipe-wrap" data-tx-id="${t2.id}" style="position:relative;overflow:hidden;border-radius:10px">
       <div class="tx-row" onclick="openEditTransaction('${t2.id}')" style="position:relative;z-index:1;background:#fff">
         <div style="flex:1;min-width:0">
@@ -8480,7 +8482,9 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     const rows = allTxs.map((t2) => {
       const isExp = t2.type === "expense";
       const dateStr = new Date(t2.ts).toLocaleDateString("uk-UA", { day: "numeric", month: "short" });
-      const categoryLine = t2.subcategory ? `<span style="font-weight:700;color:#1e1040">${escapeHtml(t2.category)}</span><span style="font-size:11px;font-weight:500;color:rgba(30,16,64,0.4);margin-left:4px">\xB7 ${escapeHtml(t2.subcategory)}</span>` : `<span style="font-weight:700;color:#1e1040">${escapeHtml(t2.category)}</span>`;
+      const _catBubble = `<span style="display:inline-block;padding:2px 8px;border-radius:999px;background:rgba(30,16,64,0.09);color:#1e1040;font-size:11px;font-weight:700;line-height:1.4">${escapeHtml(t2.category)}</span>`;
+      const _subBubble = t2.subcategory ? `<span style="display:inline-block;padding:1px 8px;border-radius:999px;background:transparent;border:1px solid rgba(30,16,64,0.18);color:rgba(30,16,64,0.55);font-size:10px;font-weight:500;line-height:1.5;margin-left:5px">${escapeHtml(t2.subcategory)}</span>` : "";
+      const categoryLine = _catBubble + _subBubble;
       return `<div class="tx-row" onclick="document.getElementById('fin-all-txs-modal').remove();openEditTransaction('${t2.id}')">
       <div style="flex:1;min-width:0">
         <div style="font-size:13px">${categoryLine}</div>
