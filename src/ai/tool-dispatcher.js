@@ -170,6 +170,8 @@ function _handleHealthTool(name, args, addMsg) {
       if (med) {
         if (currentTab === 'health') renderHealth();
         addMsg('agent', `💊 Додав "${args.med_name}" до картки. ${args.comment || ''}`.trim());
+        // nliW8 13.05: action-log для universal undo coverage. Дзеркальна діра до B-174 — early-return обходив dispatcher-loop logAction. Reverser delete_medication поки відсутній (TODO у ROADMAP).
+        logAction('add_medication', args, med.id, null, 'dispatcher');
       } else {
         addMsg('agent', 'Не знайшов картку для препарату.');
       }
