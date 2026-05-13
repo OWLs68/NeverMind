@@ -425,6 +425,23 @@ export function editMedicationInCard(cardId, medId, updates) {
   return meds[mIdx];
 }
 
+// Видалити препарат з картки (з kоrзиною на 7 днів).
+// nliW8 13.05: для повного undo circle add_medication (B-174/B-175 patten —
+// addToTrash тут + restoreFromTrash case 'medication' у trash.js).
+export function deleteMedicationFromCard(cardId, medId) {
+  const cards = getHealthCards();
+  const idx = cards.findIndex(c => c.id === cardId);
+  if (idx === -1) return false;
+  const meds = cards[idx].medications || [];
+  const mIdx = meds.findIndex(m => m.id === medId);
+  if (mIdx === -1) return false;
+  const removed = meds[mIdx];
+  cards[idx].medications = meds.filter(m => m.id !== medId);
+  saveHealthCards(cards);                          // dispatch nm-data-changed 'health'
+  addToTrash('medication', { cardId, med: removed });
+  return true;
+}
+
 // Записати дозу прийому препарату (Date.now() у med.log[]).
 // medQuery — назва препарату (fuzzy match — нечіткий пошук) АБО medId.
 export function logMedicationDose(cardId, medQuery) {

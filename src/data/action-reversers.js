@@ -53,6 +53,13 @@ const REVERSERS = {
     ? { type: 'tool_call', tool: 'delete_allergy', args: { allergy_id: result.id, comment: 'undo' } }
     : null,
 
+  // nliW8 13.05: add_medication reverser — закриває повний undo circle.
+  // result = новий med object з generateUUID() id (health.js addMedicationToCard).
+  // args.card_id потрібен бо med живе у nm_health_cards[card_id].medications[].
+  add_medication: (args, result) => (result?.id != null && args?.card_id)
+    ? { type: 'tool_call', tool: 'delete_medication', args: { card_id: args.card_id, med_id: result.id, comment: 'undo' } }
+    : null,
+
   // === Type B: snapshot restore (destructive replace tools) ===
 
   save_routine: (args, result, snapshot) => snapshot
