@@ -63,6 +63,14 @@
           {
             "type": "command",
             "command": "node .claude/hooks/pre-commit-imports.js"
+          },
+          {
+            "type": "command",
+            "command": "node .claude/hooks/pre-commit-reverser-check.js"
+          },
+          {
+            "type": "command",
+            "command": "node .claude/hooks/pre-commit-uuid-grep.js"
           }
         ]
       },
