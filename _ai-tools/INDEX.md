@@ -168,18 +168,25 @@
 ### `.claude/`
 
 - `commands/` — всі скіли (`/ux-ui`, `/prompt-engineer`, `/pwa-ios-fix`, `/refactor-large`, `/supabase-prep`, `/audit`, `/fix`, `/new-file`, `/start`, `/finish`, `/deploy`, `/mockup`, `/gemini`, `/a11y-enforcer`, `/gamification-engine`)
-- `hooks/` — автоматичні нагадування:
+- `hooks/` — автоматичні нагадування і сторожі (13 хуків, 2026-05-13 nliW8: додано 6):
   - `rules-reminder.sh` — нагадує правила CLAUDE.md тільки на сигнали болю Романа («простіше / коротше / не розумію»). Спрощено 6ANWm 01.05 — раніше було ще «кожне 5-те повідомлення» (це створювало шум коли все нормально).
   - `context-warning.sh` — попередження при 80/90% контексту
   - `cache-name-reminder.sh` — CACHE_NAME bump при зміні src/*
   - `md-index-reminder.sh` — додати новий .md у INDEX
   - `ai-tools-sync.sh` — оновити AI_TOOLS.md при зміні промптів
-  - `skill-triggers.sh` — детектор ключових слів скілів + "Роби"
+  - `skill-triggers.sh` — детектор ключових слів скілів + "Роби" + (nliW8) «копай глибше / системно / ніяких латок» інжектить 3 питання перед фіксом
   - `pre-push-check.js` — pre-push guard (блокує без CACHE bump при правці src/, ламається i18n білд)
   - `pre-commit-testing-log.js` — блокує `feat:` коміти що чіпають src/ без `TESTING_LOG.md` у staged
+  - `pre-commit-i18n.js` — блокує коміт якщо зросла кількість необгорнутих українських рядків
+  - **`pre-commit-imports.js`** (nliW8 13.05) — блокує коміт якщо забутий import у src/ (ReferenceError у проді → біла сторінка)
+  - **`pre-commit-trash-sync.js`** (nliW8 13.05) — блокує коміт якщо `addToTrash('TYPE')` БЕЗ парного case у restoreFromTrash (silent data loss юзера)
+  - **`pre-commit-schema-check.js`** (nliW8 13.05) — блокує `id:integer` у prompts.js (UUID → Strict mode silent reject) + «ЗОБОВ'ЯЗАНИЙ» у tool description (PJi7l B-158 patten)
+  - **`pre-commit-reverser-check.js`** (nliW8 13.05) — блокує reverser у action-reversers.js без парного case у processUniversalAction (B-174 дзеркальна — silent undo fail)
+  - **`pre-commit-uuid-grep.js`** (nliW8 13.05) — 4 grep-перевірки UUID-міграції (onclick template literal/string concat без обгортки + ontouchend + parseInt(dataset.id)) — закриває B-170 клас
   - `check-estimate-without-read.js` — попереджає коли я даю оцінку часу/складності без Read коду
   - `lesson-reminder.sh` — показує `lessons.md` пункти при відкритті файлу що згадується в уроках
   - `i18n-reminder.sh` — PostToolUse hook: показує необгорнуті рядки у файлі який щойно правив
+  - `pre-edit-read-check.js` — блокує Edit якщо файл НЕ був Read'нутий у сесії (правило 3 CLAUDE.md «Читай код перед змінами»)
   - `start-self-test.sh` — на `/start` показує 3 питання про найболючіші правила (свої слова, не цитати)
 - `settings.json` — конфіг хуків + permissions (deny git reset --hard, push --force, rm -rf)
 

@@ -45,6 +45,23 @@ Council 3 агенти Sonnet знайшли 4 silent holes (дзеркальн�
 12. **`7edfa37`** — 7 точок: prompts.js delete_medication tool def + tool-dispatcher.js handler + habits.js processUniversalAction case + action-reversers.js reverser + trash.js case 'medication' + health.js deleteMedicationFromCard + inbox.js normalizeAction.
 13. **`91c7b67`** — аудит-фікси: orphan task cleanup (createTasks:true sourceMedId у nm_tasks) + Inbox flow без logAction.
 
+#### F. Авто-сторожі: 6 нових pre-commit хуків + розширений skill-triggers (2 коміти)
+
+Roman прямо сказав: «декларативні правила я забуваю, потрібні хуки». Council 3 агенти (audit існуючих хуків + 5-сесійний аналіз болів + pre-mortem) знайшли 6 класів регресій що повторювались попри правила у CLAUDE.md. Усі тепер блокуються автоматично перед коміт:
+
+16. **`1e71d69`** — 4 хуки:
+    - `pre-commit-imports.js` — забутий import → біла сторінка у юзера
+    - `pre-commit-trash-sync.js` — addToTrash без restoreFromTrash (silent data loss)
+    - `pre-commit-schema-check.js` — id:integer + «ЗОБОВ'ЯЗАНИЙ» у prompts.js
+    - `skill-triggers.sh` розширено — «копай глибше / системно / ніяких латок» → 3 питання у контекст
+17. **`48415d2`** — 2 додаткові хуки:
+    - `pre-commit-reverser-check.js` — reverser без processUniversalAction case (B-174 дзеркальна)
+    - `pre-commit-uuid-grep.js` — 4 grep UUID-патернів (B-170 клас)
+
+**Загалом тепер 7 pre-commit сторожів + skill-triggers reminder.** Усі тестовані на чистому коді — exit 0 нічого не блокують зараз. Бувають справжні захисти від майбутніх регресій.
+
+**Чого НЕ зробив свідомо:** `pre-edit-arch-check` (блокування Edit у архітектурних файлах без агентів) — Council pre-mortem показав false-positive ризик: 80% правок у prompts.js = однорядкові заміни слів → bypass став би рефлексом → хук мертвий за тиждень.
+
 #### E. Пункт 4: B-178 cross-chat interview handoff (2 коміти)
 
 Council 3 агенти Sonnet знайшли 2 корені: startHealthInterview обходив `addMsgForTab` (5 пар прямих addHealthChatMsg/saveChatMsg з гілкою currentTab) + stale chips старих карток.

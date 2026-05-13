@@ -21,6 +21,20 @@
 
 ### Закриті (без B-номерів — архітектурні треки)
 
+- **Auto-сторожі — 6 нових pre-commit хуків + розширений skill-triggers** (`1e71d69` + `48415d2`) — закривають 6 класів регресій що повторювались 5 сесій підряд попри декларативні правила у CLAUDE.md. Список:
+  - `pre-commit-imports.js` — забутий import → ReferenceError у проді
+  - `pre-commit-trash-sync.js` — addToTrash без restoreFromTrash case (silent data loss)
+  - `pre-commit-schema-check.js` — id:integer + «ЗОБОВ'ЯЗАНИЙ» у prompts.js (B-172, PJi7l B-158)
+  - `pre-commit-reverser-check.js` — reverser без processUniversalAction case (B-174)
+  - `pre-commit-uuid-grep.js` — 4 grep UUID-міграції (B-170, B-171)
+  - `skill-triggers.sh` розширено — «копай глибше / системно / ніяких латок» інжектить 3 питання перед фіксом
+
+  **Принцип:** декларативне правило ↔ автоматичний блок. Декларативні Roman забуває нагадувати, я забуваю виконувати. Автоматичні — стабільні. Той самий patten що i18n блок + pre-edit-read-check (працюють у проді тижнями).
+
+  **Чого НЕ зробив свідомо:** `pre-edit-arch-check` — Council pre-mortem показав ризик false-positive (80% правок у prompts.js = заміни слів) → bypass став би рефлексом → хук мертвий за тиждень.
+
+
+
 - **Phase 2 уніфікація save_finance** (`261d710` + `01de0c6` + `9cafb46` + `6eaeeb8` + `aaf5a94`) — 3 окремих handler'и save_finance (Inbox/habits/evening) уніфіковано через DI `addMsgFn` у `processFinanceAction`. Видалено 50-рядковий дубль у habits.js + дубль checkFinBudgetWarning у finance-chat.js. Новий pure module `src/data/finance-classifier.js` готовий до Supabase Edge Function. 7 non-Inbox чатів автоматично отримали syncHealthFinanceToHistory + checkFinBudgetWarning + logAction (раніше відсутні).
 - **delete_medication повний undo circle** (`7edfa37` + `91c7b67`) — 7-точковий патерн: prompts.js tool def + tool-dispatcher.js handler + habits.js processUniversalAction case + action-reversers.js reverser + trash.js case 'medication' + health.js deleteMedicationFromCard + inbox.js normalizeAction. Аудит-фікси: orphan task cleanup через sourceMedId + Inbox flow logAction.
 - **Bubble UI category/sub** (`7c0a659`) — візуальна ієрархія у списку транзакцій. Solid pill для category, outlined pill для subcategory. Запобігає візуальному дублю коли comment збігається з sub.
