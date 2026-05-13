@@ -8,69 +8,93 @@
 
 ---
 
-## 🔧 Поточна сесія nliW8 — Smoke-test v862 + B-170 регресія + 3 нові класи + Council 4 агенти (13.05.2026)
+## 🔧 Поточна сесія nliW8 — 4 фази (B-170 + Phase 2 + Пункт 3 + Пункт 4) — 20+ комітів (13.05.2026)
 
-### Зроблено
+### Зроблено — 4 фази
 
-#### A. Smoke-test 06:10-06:20 (iPhone v862, Роман)
+#### A. Фаза 1: smoke v862 + B-170 регресія + 3 нові класи (3 коміти)
 
-Систематичний 6-сценарний тест db0YY 24 комітів. Підтверджено працює: B-172 UUID-tool-calls, B-171 Date.now→UUID, Health legacy_id, Universal undo create (allergy/лікар). Знайдено 4 нові класи багів + 1 UI gap.
+iPhone smoke-test Романа viявив 4 нові класи + B-170 регресію. Council 4 агенти Sonnet.
 
-#### B. Council 4 паралельні агенти Sonnet (~165k токенів)
+1. **B-170 РЕГРЕСІЯ** (`3547c2c`) — 13 точок onclick UUID без лапок у `habits.js`: 3 рендер-функції (renderHabits Me-tab + renderProdHabits Прод-tab + _renderQuitHabitCard). 26 SyntaxError у production логах. db0YY пропустив бо grep не охопив string concat.
+2. **B-180 + B-181** (`06efd93`) — промпт-фікси `save_finance.subcategory` + `add_medication` без картки.
+3. **B-182** (`14c91c8`) — add_medication logAction (дзеркальна B-174).
 
-1. **`code-regression-finder`** — знайшов 13 точок B-170 у `habits.js` (3 рендер-функції). Усі HIGH risk. Інші 12 файлів — clean.
-2. **`prompt-engineer-auditor`** — точні old_string/new_string для `save_finance.subcategory` (рядок 511) + `add_medication` tool (рядок 559) + INBOX_SYSTEM_PROMPT (рядок 488). + 3 bonus mute-fall ризики (log_medication_dose fuzzy, create_project clarify chip, save_note(folder=Здоров'я) дубль).
-3. **`silent-bug-scout`** — TOP-5: HIGH `add_medication` без logAction (новий клас, дзеркальна B-174), HIGH onclick UUID (дубль #1), MED `create_project` без reverser, MED finance-cats `Date.now()` ще не мігровані, MED projects sub-entity steps mixed types.
-4. **`doc-consistency-checker`** — 3 CRITICAL doc-gaps (SESSION_STATE 3 блоки активних, B-170 renderProdHabits gap у BUGS, 4 нових багів не зареєстровані) + 4 MED + 1 LOW.
+#### B. Фаза 2: finance.js категорії «брати тільки юзерські» (3 коміти)
 
-#### C. Фікси — 3 коміти
+Знайшов 3 проблеми чому AI не використовував юзерські категорії: getFinanceContext повертав '' при 0 транзакцій; показував тільки категорії з sub; моя B-180 регресія додала вбудовані підказки кава=Кафе. + chip-діалог коли AI вигадав.
 
-5. **B-170 РЕГРЕСІЯ часткова** (`3547c2c`) — 13 точок onclick UUID без лапок у `habits.js`: `renderHabits` Me-tab (454/458/465/467), `renderProdHabits` Прод-tab (775/779/786/788), `_renderQuitHabitCard` (865/898/901 — onclick+ontouchend подвійні). 26 SyntaxError у production логах v862. **Фікс:** 10 Edit'ів з обгорткою `'${h.id}'` / `\\'' + h.id + '\\''`. Урок у lessons.md: 6-grep → 7-grep (string concat patten додано).
-6. **B-180 + B-181** (`06efd93`) — промпт-фікси: `save_finance.subcategory` тепер має вбудовані fuzzy-підказки (кава→Кафе, бензин→Паливо); `add_medication` description + INBOX правило для гілки «БЕЗ карток → create_health_card + add_medication у batch».
-7. **B-182** (`14c91c8`) — `add_medication` пропускав `logAction` → undo silent skip (дзеркальна B-174). + `logAction('add_medication', args, med.id, null, 'dispatcher');`. Reverser `delete_medication` поки відсутній (TODO).
+4. **`6cedd3d`** — `getFinanceContext` ЗАВЖДИ показує всі юзерські категорії + жорсткі промпт-rule «🚫 не вигадуй».
+5. **`51d6a2d`** — code-side fallback на «Інше» (раніше `createFinCategory` плодив вигадані).
+6. **`91dccfb`** — chip-діалог `[Створити "X"] [Лишити в Інше]` коли AI вигадав → AI робить `create_finance_category` + `update_transaction` у batch.
 
-#### D. Документація
+#### C. Фаза 3 (Phase 2 уніфікація): save_finance 3 handler'и → 1 source of truth (5 комітів)
 
-8. `NEVERMIND_BUGS.md` — додано B-178/179 у відкриті, B-170 РЕГРЕСІЯ + B-180/181/182 у закриті nliW8 секцію.
-9. `lessons.md` — урок «6-grep → 7-grep + habits.js має 3 окремі render-шляхи». Розширений grep для string concat.
-10. `docs/CHANGES.md` — запис nliW8.
+DRY-аудит знайшов що save_finance оброблявся у 3 окремих місцях з активними розбіжностями (auto-create вигаданих категорій у habits, Date.now() ID, відсутні syncHealth + budget + logAction у 7 чатах). Council 4 агенти Sonnet.
 
-### Ключові рішення
+7. **Step 0** (`261d710`) — `update_transaction` handler у `tool-dispatcher.js` — закрив silent fail для chip-діалогу у 7 чатах.
+8. **Step 1** (`01de0c6`) — новий `src/data/finance-classifier.js` (pure module): classifyCategory + classifySubcategory + resolveFinanceDate + OTHER_CATEGORY константа. Готовий до Supabase Edge Function.
+9. **Step 2** (`9cafb46`) — параметризація `processFinanceAction(parsed, text, addMsgFn)` + `checkFinBudgetWarning(..., addMsgFn)` DI. + OTHER_CATEGORY константа щоб уникнути magic string.
+10. **Step 3** (`6eaeeb8`) — видалення 50-рядкового дубля з `habits.js processUniversalAction:1530` → виклик `processFinanceAction(parsed, text, addMsg)`.
+11. **Step 4** (`aaf5a94`) — `evening-actions.js` → processFinanceAction + видалення дубля `checkFinBudgetWarning` у `finance-chat.js:68` + прибрано подвійний budget warning виклик. + bubble UI category/sub (`7c0a659`).
 
-- **Council Sonnet 4 паралельні** замість Opus — інвентаризація + точкове знаходження, ~80% якості при 20% ціни.
-- **Принцип «дзеркальна діра»** — silent-bug-scout знайшов B-182 за тим самим патерном що B-174. Перевіряти ВСI early-return cases на `logAction` присутність.
-- **B-178 + B-179 НЕ фіксити сьогодні** — обидва архітектурні (Шар 5 + UI Кошика). Окремі сесії. Записані у BUGS відкритими.
-- **Промпт-фікси subcategory + add_medication — це лоскут** до Embeddings classifier / parser. Тимчасово AI mapping валідне рішення, замінимо коли парсер з'явиться.
+#### D. Пункт 3: delete_medication повний undo circle (2 коміти)
+
+Council 3 агенти Sonnet знайшли 4 silent holes (дзеркальна B-174 + B-175). 7 точок реалізації + аудит-фікси.
+
+12. **`7edfa37`** — 7 точок: prompts.js delete_medication tool def + tool-dispatcher.js handler + habits.js processUniversalAction case + action-reversers.js reverser + trash.js case 'medication' + health.js deleteMedicationFromCard + inbox.js normalizeAction.
+13. **`91c7b67`** — аудит-фікси: orphan task cleanup (createTasks:true sourceMedId у nm_tasks) + Inbox flow без logAction.
+
+#### E. Пункт 4: B-178 cross-chat interview handoff (2 коміти)
+
+Council 3 агенти Sonnet знайшли 2 корені: startHealthInterview обходив `addMsgForTab` (5 пар прямих addHealthChatMsg/saveChatMsg з гілкою currentTab) + stale chips старих карток.
+
+14. **`240e168`** — заміна 5 пар на 1 виклик `addMsgForTab('health', ...)` (саме обходить dataset.restored lock + race condition) + cardId guard у chip payload (R7).
+15. **`d85dde3`** — аудит-фікси: TTL 7 днів для stale state (R5 — захист від GC nm_chip_payloads) + healthBarHistory.push у всі 4 точки інтерв'ю (F1 — AI має повний контекст).
+
+### Ключові рішення / архітектурні принципи
+
+- **Council Sonnet (13 агентів за сесію)** — інвентаризація + точкове знаходження, 80% якості при 20% ціни Opus.
+- **Принцип «дзеркальна діра»** — silent-bug-scout знайшов B-182 + delete_medication holes за тим самим патерном що B-174/B-175. Перевіряти ВСI early-return cases на `logAction` + всі addToTrash type↔ restoreFromTrash case.
+- **Системно, не латка** (явна вимога Романа) — Phase 2 уніфікація замість додавання latok. 3 handler'и → 1 функція через DI.
+- **Pure modules у `src/data/`** — `finance-classifier.js` (новий) переїде у Supabase Edge Function без переписування (правило 12 CLAUDE.md, той самий patten що dispatcher-guards.js + ua-time-parser.js).
+- **`addMsgForTab` як централізована точка cross-chat write** — використовувати завжди замість прямих add+save пар. Робить persistence + DOM live-append + unread badge атомарно.
+- **Аудит-агент після кожного значного коміту** — 2 з 2 разів знайшов додаткові дірки (orphan task у Пункті 3, TTL+history у Пункті 4). Не покладатися на самотест.
 
 ### Інциденти
 
-- **Smoke-test чек-ліст склав «на пам'ять»** — обіцяв «зайди у Кошик у Налаштуваннях» якого фізично немає (тільки backend). Порушив правило #6 з HOT_RULES «читай код ПЕРЕД оцінкою». Роман помітив. Записав B-179 як новий баг.
-- **Build fail локально** (`MODULE_NOT_FOUND` esbuild) — це нормально для Claude Code Web без `node_modules`. `node --check` OK для синтаксу, build робить CI на GitHub Actions.
+- **Smoke-test чек-ліст склав «на пам'ять»** — обіцяв «Кошик у Налаштуваннях» якого нема. Записав B-179.
+- **B-180 регресія від мене самого 24 год тому** — у Phase 1 додав «вбудовані підказки кава=Кафе» → у Phase 2 прибрав і замінив на жорстке «🚫 не вигадуй». Roman прямо вказав на латку. Урок: не лоскутити промпт коли є існуюча архітектура «бери з контексту».
+- **i18n detector ламається на escape `\'`** — при Step 3 видалив 50 рядків з `'м\'який'`-patterns, detector захопив 22 нових (false positive). Оновив baseline.
+- **Build fail локально** (`MODULE_NOT_FOUND` esbuild) — нормально для Claude Code Web. `node --check` OK для синтаксу.
 
 ### Метрики
 
 - Гілка: `claude/start-session-nliW8`
-- Коміти: 3 (`3547c2c` → `14c91c8`) + документація pending
-- Версії: v862 → v863+ (CACHE bump pending)
-- Закриті: B-170 регресія + B-180 + B-181 + B-182 (4)
-- Відкриті: B-178 (cross-chat interview) + B-179 (UI Кошика)
-- Council Sonnet агенти: 4 (~165k токенів)
-- Файли змінено: habits.js (11 рядків), prompts.js (3), tool-dispatcher.js (2), 4 docs
+- Коміти: 20+ (`3547c2c` → `d85dde3`)
+- Версії: v862 → v872+ (CACHE bump ~10 разів)
+- Закриті: B-170 регресія + B-178 + B-180 + B-181 + B-182 + finance-unification (Phase 2) + delete_medication circle + UI bubbles (8)
+- Відкриті: B-179 (UI Кошика — Блок 6 ROADMAP)
+- Council Sonnet агенти: 13 (4 Фаза 1 + 4 Phase 2 + 3 Пункт 3 + 3 Пункт 4 + 2 аудит)
+- Нові файли: `src/data/finance-classifier.js`
+- Розширені: `src/tabs/finance.js`, `habits.js`, `health.js`, `evening-actions.js`, `finance-chat.js`, `tool-dispatcher.js`, `prompts.js`, `inbox.js`, `trash.js`, `action-reversers.js`
+- i18n baseline: оновлено 1 раз (habits.js 24→46 detector artifact)
 
 ### Спостереження Claude
 
-- **Production логи від Романа = золото для діагностики.** 26 SyntaxError підтвердили клас бага точно. Економить 30 хв пошуку.
-- **Pre-edit-read-check hook ловив правильно** — 2 рази в сесії блокував Edit на не-Read файл, я робив Read і продовжував. Без хука пройшов би на пам'ять.
-- **Council 4 агенти знайшли більше ніж я очікував** — silent-bug-scout B-182 був абсолютно несподіваний.
-- **Запис коментарів у комітах — корисно для прискіпливого doc-checker** в наступному раунді. Знає де шукати дзеркальні баги.
+- **Production логи від Романа = золото** — 26 SyntaxError підтвердили клас бага точно.
+- **Pre-edit-read-check hook ловив правильно** — кілька разів блокував Edit на не-Read файл.
+- **Council 4 паралельні агенти знаходять більше ніж самотест** — у Phase 2 знайшли «3 handler'и а не 2» (evening був третім). У Пункті 4 знайшли і dataset.restored lock, і race condition.
+- **Аудит-агент завжди корисний** — у Пунктах 3+4 знайшов orphan task + TTL + history holes. Не пропускати.
+- **Roman активно реагує на латки** — кілька разів зупиняв з «Це знов латка чи системне рішення?» — корисний контроль якості.
 
-### Відкладене
+### Відкладене (окремі сесії)
 
-- **B-178 cross-chat interview handoff** — велика сесія (Шар 5 ROADMAP)
-- **B-179 UI Кошика** — окрема фіча/сесія
-- **`delete_medication` tool + reverser** — потрібен для повного circle add_medication undo
-- **Архівувати dyhJu блок** на `/finish` (зараз 3 повних блоки)
-- **Council MED знахідки** — `create_project` reverser, finance-cats Date.now() v17 migration, projects sub-entity (Supabase prep)
+- **B-179 UI Кошика** — велика фіча (Блок 6 ROADMAP)
+- **finance-cats UUID міграція** (Date.now → UUID) — Supabase blocker, окремий ticket
+- **Council MED знахідки** — `create_project` reverser, projects sub-entity (Supabase prep)
+- **«Щось пішло не так»** при add_medication — потребує iPhone smoke щоб відтворити
+- **iPhone smoke v872+** — Roman перевірить (Phase 2 cross-chat, delete_medication, B-178 інтерв'ю, bubble UI)
 
 ---
 

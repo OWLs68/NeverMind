@@ -59,7 +59,25 @@
 - **🚨 B-172 урок: OpenAI Strict mode + UUID → schema integer ламає AI-виклики silent.** Знайдено db0YY коли планував Health undo reverser — `card_id: integer` у delete_health_card schema. Юзер казав «видали картку» — AI міг просто не виконати (Strict валідація провалювалась, fallback мовчав). Це найкритичніший клас бага бо невидимий — нема ErrorMessage у консолі, AI просто пропускає виклик. Завжди при UUID-міграції оновлювати prompts.js schemas СИНХРОННО.
 - **Обгортати онклик у одинарні лапки** — `onclick="fn('${item.id}')"`. UUID не містить `'` чи `"` (тільки `[0-9a-f-]+`) — безпечно.
 - **String() обгортка у find/filter** — якщо хендлер працює з мікс типами, використовуй `find(x => String(x.id) === String(id))` (приклад: inbox.js:340, notes.js:596, projects.js:187, habits.js:925). Strict `===` між number і string завжди false.
-- **Tasks/Projects steps + Health 3B-8 — ЗАКРИТО db0YY** — sub-entity steps мігровано на UUID (v17), Health UUID v16, 4-grep чек-ліст пройдено. Залишковий борг: `add_medication` undo (потрібен новий tool `delete_medication`).
+- **Tasks/Projects steps + Health 3B-8 — ЗАКРИТО db0YY** — sub-entity steps мігровано на UUID (v17), Health UUID v16, 4-grep чек-ліст пройдено.
+- **`delete_medication` undo circle — ЗАКРИТО nliW8 13.05** (`7edfa37` + `91c7b67`) — повний 7-точковий патерн для будь-якого нового create-tool: (1) tool def у prompts.js + (2) handler у tool-dispatcher + (3) case у processUniversalAction для DI flow + (4) reverser у action-reversers + (5) delete-функція у tab.js + (6) case у restoreFromTrash + (7) normalizeAction у inbox.js. Без ВСIХ 7 — silent fail на якомусь шарі.
+
+### DRY уніфікація 3 handler'ів через DI (Phase 2 nliW8 13.05.2026)
+
+- **Тригер:** Roman прямо сказав «це латка чи системне рішення?» коли я додавав chip-діалог тільки у Inbox-handler. Council DRY-finder показав 3 окремих handler'и save_finance з активними розбіжностями.
+- **Корінь:** save_finance мав 3 dispatch-шляхи (Inbox direct → processFinanceAction; 6 tab-чатів через tool-dispatcher → processUniversalAction; Evening через dispatchEveningTool). Кожен мав власну копію логіки category/subcategory matching → різна поведінка («Інше» fallback у Inbox, auto-create вигаданих категорій у habits, тощо).
+- **Рішення — `processFinanceAction(parsed, text, addMsgFn = addInboxChatMsg)`** з 3-м параметром DI. Default — backward-compat для Inbox. 7 non-Inbox чатів передають свій addMsg → 1 функція обслуговує 8 чатів. Дубль у habits.js (50 рядків) видалений → виклик уніфікованої. Те саме для evening-actions + finance-chat дубль checkFinBudgetWarning.
+- **Pure module у `src/data/finance-classifier.js`** — класифікаційна логіка (category match, subcategory match, date resolve) винесена як pure functions для Supabase Edge Function (правило 12 CLAUDE.md).
+- **Чек-ліст «коли торкаюсь Save-handler»:** ВСI dispatch-шляхи цього tool використовують ОДНУ функцію? Якщо ні — це копіпаст. Через DI addMsgFn можна параметризувати UI-частину без втрати DOM.
+
+### addMsgForTab — централізований cross-chat write (B-178 nliW8 13.05.2026)
+
+- **Тригер:** B-178 cross-chat interview handoff — AI у Inbox писав у Health-чат через прямі addHealthChatMsg/saveChatMsg з гілкою currentTab. Race condition + dataset.restored lock у restoreChatUI блокували відображення.
+- **Корінь:** `restoreChatUI` (core.js:867) має guard `if (el.dataset.restored) return` — після першого відкриття чату повторне відновлення з storage блокується. Прямий saveChatMsg пише у localStorage, але DOM не оновлюється коли чат уже restored.
+- **Рішення — `addMsgForTab(tab, role, text, chips)` з `core.js:797`** — централізована функція що робить АТОМАРНО: (a) saveChatMsg → persistence у nm_chat_<tab>, (b) DOM live-append якщо контейнер restored через renderMap, (c) showUnreadBadge для cross-tab сигналу. Обходить dataset.restored lock через прямий appendChild.
+- **Правило:** будь-який cross-chat write з іншого чату — використовувати `addMsgForTab`, НЕ прямі add*ChatMsg + saveChatMsg пари. Це той самий patten що DRY save_finance — централізована точка замість 8 копій.
+- **TTL для FSM state у localStorage** — якщо state може жити вічно (юзер не довів інтерв'ю до кінця), додати TTL check у обробник. 7 днів синхронно з `nm_chip_payloads` GC.
+- **Persistent state + history паралельно** — `nm_health_interview_pending` для FSM + `nm_chat_health` для chips у history + `healthBarHistory` для AI-контексту. Усі 3 шари оновлюються разом, інакше AI втратить контекст після інтерв'ю.
 - **⚠️ Урок nliW8 13.05.2026 — grep #1 НЕ покриває string concat у onclick.** Регресія habits.js: db0YY запустив grep `onclick="...\${...id}...` і пройшовся 6 файлами. Але `habits.js` мав ОБИДВА патерни: template literal `${h.id}` (4 точки 454/458/775/779 — мали б спіймати) **АЛЕ ще 7 точок string concat** `' + h.id + ')` (465/467/786/788/865/898×2/901×2 — grep #1 ПРОПУСТИВ). Symptom: 26 SyntaxError у production логах v862 на тапі галочки.
 - **Розширений 7-grep чек-ліст:** додати окремий grep для string concat:
   ```bash

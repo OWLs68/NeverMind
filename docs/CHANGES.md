@@ -6,9 +6,26 @@
 
 ---
 
-## 2026-05-13 — nliW8: smoke-test v862 + B-170 регресія habits.js + 3 нові класи (B-180/181/182) + 2 нові відкриті (B-178/179) + Council 4 агенти
+## 2026-05-13 — nliW8: 4 фази — B-170 + Phase 2 уніфікація save_finance + delete_medication повний undo + B-178 cross-chat handoff (20+ комітів, Council 13 агентів Sonnet)
 
-**Гілка:** `claude/start-session-nliW8` · 3 коміти · CACHE bump pending
+**Гілка:** `claude/start-session-nliW8` · 20+ комітів · CACHE bump v862 → v872+
+
+Найбільша сесія NeverMind за останній місяць. Стартувала з iPhone smoke-test Романа v862 (B-170 регресія habits.js — 26 SyntaxError у production логах) → виявила DRY-дубль save_finance handler у 3 окремих місцях → переросла у Phase 2 архітектурну уніфікацію → закрила B-178 (cross-chat interview блокер Шару 5) + delete_medication повний undo circle. Усі рішення системні (не латки) — Roman активно зупиняв коли підозрював латку.
+
+### Закриті (нумеровані баги)
+- **B-170 РЕГРЕСІЯ часткова** (`3547c2c`) — db0YY покрив 17 точок у 6 файлах, але пропустив `habits.js`: `renderHabits` Me-tab (4 точки), `renderProdHabits` Прод-tab (4 точки), `_renderQuitHabitCard` (5 точок — onclick+ontouchend подвійні). 13 точок onclick UUID без лапок. 26 SyntaxError у production. Корінь: 6-grep чек-ліст з `lessons.md` не покривав string concat. 10 Edit'ів.
+- **B-178 ЗАКРИТО** (`240e168` + `d85dde3`) — Cross-chat interview handoff Inbox→Health. Корінь 1: `startHealthInterview` обходив `addMsgForTab` → race condition + DOM dataset.restored lock. Корінь 2: stale chips старих карток. Фікс: заміна 5 пар прямих `addHealthChatMsg/saveChatMsg` на 1 виклик `addMsgForTab('health', ...)` + cardId guard у chip payload + TTL 7 днів для FSM state + healthBarHistory.push у всі 4 точки.
+- **B-180** (`06efd93` → `6cedd3d` повний) — save_finance.subcategory/category вигадування. Початково регресія від PJi7l `7e9ea7b`. Моя свіжа правка `06efd93` додала «вбудовані підказки» — це порушило принцип «брати тільки юзерські». Повний фікс: 3-рівневий захист (код + промпт + clarify chips).
+- **B-181** (`06efd93`) — add_medication без health-картки → AI fallback на save_memory_fact. Tool description оновлено + правило в INBOX_SYSTEM_PROMPT.
+- **B-182** (`14c91c8`) — add_medication пропускав logAction → undo silent skip (дзеркальна B-174). Закрив повний undo circle разом з `delete_medication` tool.
+
+### Закриті (без B-номерів — архітектурні треки)
+
+- **Phase 2 уніфікація save_finance** (`261d710` + `01de0c6` + `9cafb46` + `6eaeeb8` + `aaf5a94`) — 3 окремих handler'и save_finance (Inbox/habits/evening) уніфіковано через DI `addMsgFn` у `processFinanceAction`. Видалено 50-рядковий дубль у habits.js + дубль checkFinBudgetWarning у finance-chat.js. Новий pure module `src/data/finance-classifier.js` готовий до Supabase Edge Function. 7 non-Inbox чатів автоматично отримали syncHealthFinanceToHistory + checkFinBudgetWarning + logAction (раніше відсутні).
+- **delete_medication повний undo circle** (`7edfa37` + `91c7b67`) — 7-точковий патерн: prompts.js tool def + tool-dispatcher.js handler + habits.js processUniversalAction case + action-reversers.js reverser + trash.js case 'medication' + health.js deleteMedicationFromCard + inbox.js normalizeAction. Аудит-фікси: orphan task cleanup через sourceMedId + Inbox flow logAction.
+- **Bubble UI category/sub** (`7c0a659`) — візуальна ієрархія у списку транзакцій. Solid pill для category, outlined pill для subcategory. Запобігає візуальному дублю коли comment збігається з sub.
+
+### Відкриті (винесено у NEVERMIND_BUGS.md)
 
 iPhone smoke-test v862 виявив що db0YY залишила непокритими 3 рендер-функції у `habits.js` — 26 SyntaxError у production логах (галочка звички не реагує на тап). Запустив Council 4 паралельних агентів Sonnet (code-regression-finder + prompt-engineer-auditor + silent-bug-scout + doc-consistency-checker). Знайдено й виправлено 4 проблеми.
 
@@ -20,15 +37,22 @@ iPhone smoke-test v862 виявив що db0YY залишила непокрит
 
 ### Відкриті (винесено у NEVERMIND_BUGS.md)
 - **B-178** — cross-chat interview handoff Inbox→Health не передає чіпи + FSM. Блокер Шару 5 ROADMAP.
-- **B-179** — UI Кошика відсутній (тільки backend `nm_trash` + 10 типів restore). AI-only restore. Окрема сесія.
+- **B-179** — UI Кошика відсутній (тільки backend `nm_trash` + 11 типів restore після nliW8). AI-only restore. Окрема сесія (Блок 6 ROADMAP).
 
 ### Уроки в lessons.md
-- 6-grep чек-ліст розширено до **7-grep** — додано grep для string concat (`' + obj.id + '`) у onclick + ontouchend. Конкретний нюанс: `habits.js` має 3 окремі render-функції з різними patterns — завжди запускати ОБИДВА grep'и.
+- **7-grep чек-ліст** для UUID-міграцій — додано grep для string concat (`' + obj.id + '`) у onclick + ontouchend. Конкретний нюанс: `habits.js` має 3 окремі render-функції.
+- **DRY уніфікація 3 handler'ів через DI** — patten Phase 2: `processFinanceAction(parsed, text, addMsgFn=default)` дозволяє 1 функції обслуговувати 8 чатів. Pure module у `src/data/` готовий до Edge Function.
+- **`addMsgForTab` як централізований cross-chat write** — обходить dataset.restored lock. Завжди використовувати замість прямих add+save пар при cross-chat.
+- **TTL для FSM state** — 7 днів синхронно з `nm_chip_payloads` GC. Захист від stale chips.
+- **delete-tool 7-точковий patten** — нагадування для будь-якого нового create-tool який потребує undo.
 
 ### Метрики
-- Council 4 агенти Sonnet (~165k токенів)
-- Зміни: `habits.js` (11 рядків), `prompts.js` (3), `tool-dispatcher.js` (2), документація 4 файли
-- Smoke-test verifield: 6/8 сценаріїв OK, 2 промпт-баги вилікувано, 1 код-баг вилікувано, 2 нові відкриті
+- 20+ комітів (`3547c2c` → `d85dde3`)
+- Версії: v862 → v872+ (10 CACHE bumps)
+- Council Sonnet агенти: 13 (4 Фаза 1 + 4 Phase 2 + 3 Пункт 3 + 3 Пункт 4 + 2 аудит)
+- Новий файл: `src/data/finance-classifier.js` (pure module)
+- Розширені: 11 файлів (`finance.js`, `habits.js`, `health.js`, `evening-actions.js`, `finance-chat.js`, `evening-chat.js`, `tool-dispatcher.js`, `prompts.js`, `inbox.js`, `trash.js`, `action-reversers.js`)
+- Аудит-фікси: 4 (2 у Пункті 3 + 2 у Пункті 4) — кожен раз агент знаходив додаткові holes
 
 ---
 
