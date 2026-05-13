@@ -98,7 +98,27 @@
 - **ПРАВИЛО:** перш ніж додавати reverser у `action-reversers.js`, ПЕРЕВIР що reverse-tool існує у `habits.js processUniversalAction` (не лише у tool-dispatcher direct handlers). Якщо у direct — або додай case у processUniversalAction, або передавай `dispatchChatToolCalls` як DI замість `processUniversalAction`.
 - **Підтверджений кейс db0YY:** save_finance (з myshu), create_health_card, add_allergy — всі 3 reverser silent fail до фіксу `bb0c50e`. Council `code-regression-finder` + `silent-bug-scout` знайшли одночасно за один аудит.
 
-### restoreFromTrash — кожен `addToTrash(type, ...)` потребує case (db0YY 12.05.2026, B-175 урок)
+### 6 класів регресій автоматизовано хуками (nliW8 13.05.2026)
+
+**Контекст:** Roman прямо вказав «декларативні правила у CLAUDE.md я систематично забуваю через сесію». 5 сесій підряд я повторював однакові помилки попри правила у файлах. Перехід на автоматичні сторожі (pre-commit hooks).
+
+**6 класів регресій тепер блокуються авто перед коміт:**
+
+| Клас | Хук | Урок звідки |
+|---|---|---|
+| Забутий import → ReferenceError у проді (біла сторінка) | `pre-commit-imports.js` (підключає існуючий `scripts/check-imports.js`) | LW3j8, 6ANWm — 2 рази минулого тижня |
+| `addToTrash('TYPE')` без парного case у `restoreFromTrash` → silent data loss | `pre-commit-trash-sync.js` | B-175 db0YY (повторювалось 4 рази — allergy/event/project/health_card) |
+| `id: { type: "integer" }` у prompts.js → OpenAI Strict mode silent reject AI-викликів | `pre-commit-schema-check.js` | B-172 db0YY (28+ точок, 24+ год у проді) |
+| «ЗОБОВ'ЯЗАНИЙ» у tool description → AI не виконував | `pre-commit-schema-check.js` | PJi7l B-158 (revert через 4 коміти) |
+| reverser без парного case у `processUniversalAction` → silent undo fail | `pre-commit-reverser-check.js` | B-174 db0YY (save_finance + create_health_card + add_allergy) |
+| onclick UUID без обгортки `'${id}'` → SyntaxError при тапі | `pre-commit-uuid-grep.js` (4 grep patterns) | B-170 myshu/db0YY/nliW8 (26 SyntaxError у v862) |
+
+**+ розширено `skill-triggers.sh`:** тригер-слова Романа «копай глибше / дивись широко / ніяких латок / системно» → автоматично інжектить 3 питання у мій контекст ПЕРЕД фіксом (1. поламано в 1 місці чи кількох? 2. корінь чи симптом? 3. DRY дубль?). Замість того щоб Roman повторював «це латка?» — нагадування з'являється авто.
+
+**Принцип:** декларативне правило у CLAUDE.md = я забуваю. Автоматичний сторож = блокує/нагадує незалежно від моєї пам'яті. Той самий patten що i18n блок + pre-push CACHE bump + pre-edit-read-check — усі вже стабільно ловлять реальні проблеми.
+
+**Чого НЕ зробив свідомо (Council pre-mortem):**
+- `pre-edit-arch-check` (блокування Edit у архітектурних файлах без попередніх агентів) — 80% правок у `prompts.js` = однорядкові заміни слів. Хук блокував би все підряд → я почав би писати bypass-фразу автоматично → сторож мертвий за тиждень. Краще точкові pre-commit перевірки (6 хуків вище) ніж wholesale Edit блок.
 - **Кейс:** `deleteHealthCardProgrammatic` кидав `addToTrash('health_card', removed)` але `restoreFromTrash` НЕ мав case 'health_card'. Функція повертала `true` після cleanup кошика (рядок 115) → юзер бачив «✅ Відновив» але картка не з'являлась. Silent data loss.
 - **Чек-ліст ПIСЛЯ кожного `addToTrash(NEW_TYPE, ...)`:**
   ```bash
