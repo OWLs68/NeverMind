@@ -8504,7 +8504,9 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     if (matchedCat) {
       category = matchedCat.name;
     } else {
-      createFinCategory(type, { name: category });
+      console.warn("[finance] AI \u0432\u0438\u0433\u0430\u0434\u0430\u0432 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E \xAB" + category + "\xBB \u2014 fallback \u043D\u0430 \u0406\u043D\u0448\u0435");
+      category = "\u0406\u043D\u0448\u0435";
+      if (!catList.find((c) => c.name === "\u0406\u043D\u0448\u0435")) createFinCategory(type, { name: "\u0406\u043D\u0448\u0435" });
     }
     const cat = catList.find((c) => c.name === category);
     const validSubs = cat && Array.isArray(cat.subcategories) ? cat.subcategories : [];
