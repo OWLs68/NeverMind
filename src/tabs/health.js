@@ -1975,6 +1975,18 @@ export function applyHealthInterviewChoice(payload) {
   // у _interviewChips → перевіряємо match.
   if (payload.card_id && payload.card_id !== state.card_id) return;
 
+  // nliW8 B-178 audit fix C5: TTL guard для stale state.
+  // nm_chip_payloads GC видаляє payload через 7 днів (boot.js:1171). Якщо
+  // юзер повернувся пізніше — chip є у DOM, але payload порожній → silent fail.
+  // Додатково: state може жити вічно якщо юзер закрив без вибору. TTL 7 днів
+  // — після цього інтерв'ю «протермінувалось».
+  const TTL_MS = 7 * 24 * 60 * 60 * 1000;
+  if (state.ts && Date.now() - state.ts > TTL_MS) {
+    try { localStorage.removeItem(HEALTH_INTERVIEW_KEY); } catch {}
+    addMsgForTab('health', 'agent', t('health.iv.expired', 'Час опитування минув. Статус можна змінити з картки.'));
+    return;
+  }
+
   // Чіп вже візуально пропадає у chips.js. Тут — рідер user-вибору + наступний крок.
   const labelMap = {
     recent:     t('health.iv.s1.recent',   '🆕 Щойно з\'явилось'),
@@ -2001,6 +2013,7 @@ export function applyHealthInterviewChoice(payload) {
     const chips = _interviewChips(2, STEP2_OPTIONS, state.card_id);
     const q = t('health.iv.q2', 'Лікар призначив лікування?');
     addMsgForTab('health', 'agent', q, chips);
+    healthBarHistory.push({ role: 'assistant', content: q });
     return;
   }
   if (payload.step === 2) {
@@ -2011,6 +2024,7 @@ export function applyHealthInterviewChoice(payload) {
     const chips = _interviewChips(3, STEP3_OPTIONS, state.card_id);
     const q = t('health.iv.q3', 'Симптоми зараз?');
     addMsgForTab('health', 'agent', q, chips);
+    healthBarHistory.push({ role: 'assistant', content: q });
     return;
   }
   if (payload.step === 3) {
@@ -2027,6 +2041,7 @@ function _finishInterview(state, skipped) {
     // прибирає попередні .chat-chips-row при кожному agent-меседжі.
     const text = t('health.iv.skipped', 'Гаразд, без опитування. Статус можна змінити з картки.');
     addMsgForTab('health', 'agent', text);
+    healthBarHistory.push({ role: 'assistant', content: text });
     try { clearUnreadBadge('health'); } catch {}
     return;
   }
@@ -2036,6 +2051,7 @@ function _finishInterview(state, skipped) {
   const def = HEALTH_STATUS_DEFS[finalStatus] || {};
   const text = t('health.iv.done', 'Записав. Статус "{name}": {icon} {label}.', { name: updated.name, icon: def.icon || '', label: def.label || finalStatus });
   addMsgForTab('health', 'agent', text);
+  healthBarHistory.push({ role: 'assistant', content: text });
   try { clearUnreadBadge('health'); } catch {}
 }
 
