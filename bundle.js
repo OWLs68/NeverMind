@@ -3968,6 +3968,15 @@ ${lines.join("\n")}`;
     }
     if (!state || !state.card_id) return;
     if (payload.card_id && payload.card_id !== state.card_id) return;
+    const TTL_MS2 = 7 * 24 * 60 * 60 * 1e3;
+    if (state.ts && Date.now() - state.ts > TTL_MS2) {
+      try {
+        localStorage.removeItem(HEALTH_INTERVIEW_KEY);
+      } catch {
+      }
+      addMsgForTab("health", "agent", t("health.iv.expired", "\u0427\u0430\u0441 \u043E\u043F\u0438\u0442\u0443\u0432\u0430\u043D\u043D\u044F \u043C\u0438\u043D\u0443\u0432. \u0421\u0442\u0430\u0442\u0443\u0441 \u043C\u043E\u0436\u043D\u0430 \u0437\u043C\u0456\u043D\u0438\u0442\u0438 \u0437 \u043A\u0430\u0440\u0442\u043A\u0438."));
+      return;
+    }
     const labelMap = {
       recent: t("health.iv.s1.recent", "\u{1F195} \u0429\u043E\u0439\u043D\u043E \u0437'\u044F\u0432\u0438\u043B\u043E\u0441\u044C"),
       treating: t("health.iv.s1.treating", "\u{1F48A} \u041B\u0456\u043A\u0443\u044E"),
@@ -3993,6 +4002,7 @@ ${lines.join("\n")}`;
       const chips = _interviewChips(2, STEP2_OPTIONS, state.card_id);
       const q = t("health.iv.q2", "\u041B\u0456\u043A\u0430\u0440 \u043F\u0440\u0438\u0437\u043D\u0430\u0447\u0438\u0432 \u043B\u0456\u043A\u0443\u0432\u0430\u043D\u043D\u044F?");
       addMsgForTab("health", "agent", q, chips);
+      healthBarHistory.push({ role: "assistant", content: q });
       return;
     }
     if (payload.step === 2) {
@@ -4006,6 +4016,7 @@ ${lines.join("\n")}`;
       const chips = _interviewChips(3, STEP3_OPTIONS, state.card_id);
       const q = t("health.iv.q3", "\u0421\u0438\u043C\u043F\u0442\u043E\u043C\u0438 \u0437\u0430\u0440\u0430\u0437?");
       addMsgForTab("health", "agent", q, chips);
+      healthBarHistory.push({ role: "assistant", content: q });
       return;
     }
     if (payload.step === 3) {
@@ -4021,6 +4032,7 @@ ${lines.join("\n")}`;
     if (skipped && Object.keys(state.answers).length === 0) {
       const text2 = t("health.iv.skipped", "\u0413\u0430\u0440\u0430\u0437\u0434, \u0431\u0435\u0437 \u043E\u043F\u0438\u0442\u0443\u0432\u0430\u043D\u043D\u044F. \u0421\u0442\u0430\u0442\u0443\u0441 \u043C\u043E\u0436\u043D\u0430 \u0437\u043C\u0456\u043D\u0438\u0442\u0438 \u0437 \u043A\u0430\u0440\u0442\u043A\u0438.");
       addMsgForTab("health", "agent", text2);
+      healthBarHistory.push({ role: "assistant", content: text2 });
       try {
         clearUnreadBadge("health");
       } catch {
@@ -4033,6 +4045,7 @@ ${lines.join("\n")}`;
     const def = HEALTH_STATUS_DEFS[finalStatus] || {};
     const text = t("health.iv.done", '\u0417\u0430\u043F\u0438\u0441\u0430\u0432. \u0421\u0442\u0430\u0442\u0443\u0441 "{name}": {icon} {label}.', { name: updated.name, icon: def.icon || "", label: def.label || finalStatus });
     addMsgForTab("health", "agent", text);
+    healthBarHistory.push({ role: "assistant", content: text });
     try {
       clearUnreadBadge("health");
     } catch {
