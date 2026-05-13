@@ -343,6 +343,29 @@ function _handleMemoryOrFinCatTool(name, args, addMsg) {
       addMsg('agent', `🗑️ Видалив: ${item.category} ${formatMoney(item.amount)}.`);
       return true;
     }
+    case 'update_transaction': {
+      // nliW8 Phase 2: handler для 7 non-Inbox чатів. Inbox має власний handler
+      // у inbox.js:655 з addInboxChatMsg. Тут — параметризований addMsg для
+      // Tasks/Notes/Me/Health/Finance/Projects. Eвening має inline у evening-actions.js:290.
+      const txs = getFinance();
+      const idx = txs.findIndex(t => t.id === args.id);
+      if (idx === -1) { addMsg('agent', 'Не знайшов операцію.'); return true; }
+      if (args.category) txs[idx].category = args.category;
+      if (args.subcategory !== undefined) {
+        if (args.subcategory) txs[idx].subcategory = args.subcategory;
+        else delete txs[idx].subcategory;
+      }
+      if (args.amount) txs[idx].amount = parseFloat(args.amount);
+      if (args.comment !== undefined) txs[idx].comment = args.comment;
+      saveFinance(txs);
+      if (currentTab === 'finance') renderFinance();
+      const updParts = [];
+      if (args.category) updParts.push('категорія: ' + txs[idx].category);
+      if (args.subcategory) updParts.push('підкатегорія: ' + args.subcategory);
+      if (args.amount) updParts.push('сума: ' + formatMoney(txs[idx].amount));
+      addMsg('agent', `✓ Оновлено: ${updParts.join(', ') || txs[idx].category}`);
+      return true;
+    }
     case 'set_finance_budget': {
       const bdg = getFinBudget();
       if (args.total !== undefined) bdg.total = args.total;

@@ -17,7 +17,7 @@ import { addInboxChatMsg, getInbox, saveInbox, renderInbox, _detectEventFromTask
 import { monthGenitive } from '../data/months.js';
 import { getTasks, saveTasks, renderTasks, openAddTask, addTaskBarMsg, taskBarHistory, taskBarLoading, setTaskBarLoading, setupModalSwipeClose, toggleTaskStatus } from './tasks.js';
 import { getNotes, saveNotes, renderNotes, addNoteFromInbox, currentNotesFolder, setCurrentNotesFolder, getDirectChildren } from './notes.js';
-import { getFinance, saveFinance, renderFinance, formatMoney, getFinCats, saveFinCats, _resolveFinanceDate, createFinCategory } from './finance.js';
+import { getFinance, saveFinance, renderFinance, formatMoney, getFinCats, saveFinCats, _resolveFinanceDate, createFinCategory, processFinanceAction } from './finance.js';
 import { deleteHealthCardProgrammatic, deleteAllergy } from './health.js';
 import { matchSubcategoryFromComment } from '../data/finance-subcat-keywords.js';
 import { resolveDateFromText, parseUaTimeOfDay } from '../data/ua-time-parser.js';
@@ -1528,55 +1528,14 @@ export function processUniversalAction(parsed, originalText, addMsg) {
   }
 
   if (action === 'save_finance' || action === 'save_expense' || action === 'save_income') {
-    const type = action === 'save_income' ? 'income' : (parsed.fin_type || 'expense');
-    const amount = parseFloat(parsed.amount) || 0;
-    if (!amount || amount <= 0) { addMsg('agent', t('habits.err.amount_unparsed', 'Не вдалось розпізнати суму.')); return true; }
-    let category = parsed.category || 'Інше';
-    const comment = parsed.comment || originalText;
-    // B-70 fix: catList — масив об'єктів, не рядків. Раніше .includes('Їжа') завжди false
-    // і .push('Їжа') додавав рядок у масив об'єктів → биті категорії без id → _finCatsGrid падав.
-    const cats = getFinCats();
-    const catList = type === 'expense' ? cats.expense : cats.income;
-    // LfA6w 08.05: apostrophe-нормалізація (той самий fix що finance.js)
-    const _normCat = s => String(s || '').replace(/[ʼ’`]/g, "'").toLowerCase().trim();
-    const matchedCat = catList.find(c => _normCat(c.name) === _normCat(category));
-    if (matchedCat) {
-      category = matchedCat.name;
-    } else {
-      createFinCategory(type, { name: category });
-    }
-    // LfA6w 08.05: subcategory + apostrophe-нормалізація (B-47 клас)
-    const cat = catList.find(c => c.name === category);
-    const validSubs = cat && Array.isArray(cat.subcategories) ? cat.subcategories : [];
-    let subcategory = (parsed.subcategory || '').trim();
-    if (subcategory) {
-      const matchedSub = validSubs.find(s => _normCat(s) === _normCat(subcategory));
-      subcategory = matchedSub || '';
-    }
-    if (!subcategory && comment && validSubs.length > 0) {
-      subcategory = matchSubcategoryFromComment(comment, validSubs);
-    }
-    const txs = getFinance();
-    const finTs = _resolveFinanceDate(parsed.date, originalText);
-    const txId = Date.now();
-    const tx = { id: txId, type, amount, category, comment, ts: finTs };
-    if (subcategory) tx.subcategory = subcategory;
-    txs.unshift(tx);
-    saveFinance(txs);
-    // B-71 fix: створюємо картку у Inbox стрічці — будь-яка операція видима скрізь,
-    // незалежно від точки введення (чат Фінансів, Task chat, Me chat тощо).
-    // B-168 dyhJu 10.05: завжди показуємо comment (раніше пропускали якщо
-    // comment === originalText — це призводило до карток «-₴5 · Їжа» без
-    // контексту коли AI ставить fin_comment = original text юзера).
-    try {
-      const items = getInbox();
-      const inboxText = (type === 'expense' ? '-' : '+') + formatMoney(amount) + ' · ' + category + (comment ? ' — ' + comment : '');
-      items.unshift({ id: txId, text: inboxText, category: 'finance', ts: finTs, processed: true });
-      saveInbox(items);
-      if (currentTab === 'inbox') renderInbox();
-    } catch(e) {}
-    if (currentTab === 'finance') renderFinance();
-    addMsg('agent', '✓ ' + (type === 'expense' ? '-' : '+') + formatMoney(amount) + ' · категорія: ' + category + (parsed.comment ? ' · ' + parsed.comment : ''));
+    // Phase 2 nliW8 13.05: уніфіковано через processFinanceAction (finance.js).
+    // Раніше тут був 50-рядковий дубль з активними розбіжностями (auto-create
+    // вигаданих категорій, Date.now() ID, відсутні syncHealth + budget + logAction +
+    // chip-діалог). Тепер один мозок для всіх 7 non-Inbox чатів — handler приймає
+    // addMsg як 3-й параметр (DI), повідомлення йде у поточний чат.
+    // save_income → forced fin_type='income' через нормалізацію args.
+    const normalizedParsed = action === 'save_income' ? { ...parsed, fin_type: 'income' } : parsed;
+    processFinanceAction(normalizedParsed, originalText, addMsg);
     return true;
   }
 
