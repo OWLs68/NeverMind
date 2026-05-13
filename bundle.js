@@ -3918,11 +3918,11 @@ ${lines.join("\n")}`;
     }
     healthBarLoading = false;
   }
-  function _interviewChips(step, options) {
+  function _interviewChips(step, options, cardId) {
     return options.map((o) => ({
       label: o.label,
       action: "health_interview",
-      payload: { step, value: o.value }
+      payload: { step, value: o.value, card_id: cardId }
     }));
   }
   function _aggregateInterviewStatus(answers) {
@@ -3954,18 +3954,10 @@ ${lines.join("\n")}`;
       }));
     } catch {
     }
-    const chips = _interviewChips(1, STEP1_OPTIONS);
+    const chips = _interviewChips(1, STEP1_OPTIONS, card.id);
     const text = t("health.iv.intro", '\u0421\u0442\u0432\u043E\u0440\u0438\u0432 \u043A\u0430\u0440\u0442\u043A\u0443 "{name}". 3 \u043A\u043E\u0440\u043E\u0442\u043A\u0456 \u043F\u0438\u0442\u0430\u043D\u043D\u044F \u0449\u043E\u0431 \u0432\u0438\u0441\u0442\u0430\u0432\u0438\u0442\u0438 \u0441\u0442\u0430\u0442\u0443\u0441.\n\n\u0429\u043E \u0437\u0430\u0440\u0430\u0437?', { name: card.name });
-    if (currentTab === "health") {
-      addHealthChatMsg("agent", text, false, chips);
-    } else {
-      saveChatMsg("health", "agent", text, chips);
-      healthBarHistory.push({ role: "assistant", content: text });
-      try {
-        showUnreadBadge("health", "health-send-btn");
-      } catch {
-      }
-    }
+    addMsgForTab("health", "agent", text, chips);
+    healthBarHistory.push({ role: "assistant", content: text });
   }
   function applyHealthInterviewChoice(payload) {
     if (!payload || typeof payload.step !== "number") return;
@@ -3975,6 +3967,7 @@ ${lines.join("\n")}`;
     } catch {
     }
     if (!state || !state.card_id) return;
+    if (payload.card_id && payload.card_id !== state.card_id) return;
     const labelMap = {
       recent: t("health.iv.s1.recent", "\u{1F195} \u0429\u043E\u0439\u043D\u043E \u0437'\u044F\u0432\u0438\u043B\u043E\u0441\u044C"),
       treating: t("health.iv.s1.treating", "\u{1F48A} \u041B\u0456\u043A\u0443\u044E"),
@@ -3988,8 +3981,7 @@ ${lines.join("\n")}`;
       mild: t("health.iv.s3.mild", "\u041C\u0430\u0439\u0436\u0435 \u043D\u0435\u043C\u0430")
     };
     const userText = labelMap[payload.value] || payload.value;
-    if (currentTab === "health") addHealthChatMsg("user", userText);
-    else saveChatMsg("health", "user", userText);
+    addMsgForTab("health", "user", userText);
     if (payload.step === 1) {
       state.answers.stage = payload.value;
       if (payload.value === "skip") return _finishInterview(state, true);
@@ -3998,10 +3990,9 @@ ${lines.join("\n")}`;
         localStorage.setItem(HEALTH_INTERVIEW_KEY, JSON.stringify(state));
       } catch {
       }
-      const chips = _interviewChips(2, STEP2_OPTIONS);
+      const chips = _interviewChips(2, STEP2_OPTIONS, state.card_id);
       const q = t("health.iv.q2", "\u041B\u0456\u043A\u0430\u0440 \u043F\u0440\u0438\u0437\u043D\u0430\u0447\u0438\u0432 \u043B\u0456\u043A\u0443\u0432\u0430\u043D\u043D\u044F?");
-      if (currentTab === "health") addHealthChatMsg("agent", q, false, chips);
-      else saveChatMsg("health", "agent", q, chips);
+      addMsgForTab("health", "agent", q, chips);
       return;
     }
     if (payload.step === 2) {
@@ -4012,10 +4003,9 @@ ${lines.join("\n")}`;
         localStorage.setItem(HEALTH_INTERVIEW_KEY, JSON.stringify(state));
       } catch {
       }
-      const chips = _interviewChips(3, STEP3_OPTIONS);
+      const chips = _interviewChips(3, STEP3_OPTIONS, state.card_id);
       const q = t("health.iv.q3", "\u0421\u0438\u043C\u043F\u0442\u043E\u043C\u0438 \u0437\u0430\u0440\u0430\u0437?");
-      if (currentTab === "health") addHealthChatMsg("agent", q, false, chips);
-      else saveChatMsg("health", "agent", q, chips);
+      addMsgForTab("health", "agent", q, chips);
       return;
     }
     if (payload.step === 3) {
@@ -4030,8 +4020,7 @@ ${lines.join("\n")}`;
     }
     if (skipped && Object.keys(state.answers).length === 0) {
       const text2 = t("health.iv.skipped", "\u0413\u0430\u0440\u0430\u0437\u0434, \u0431\u0435\u0437 \u043E\u043F\u0438\u0442\u0443\u0432\u0430\u043D\u043D\u044F. \u0421\u0442\u0430\u0442\u0443\u0441 \u043C\u043E\u0436\u043D\u0430 \u0437\u043C\u0456\u043D\u0438\u0442\u0438 \u0437 \u043A\u0430\u0440\u0442\u043A\u0438.");
-      if (currentTab === "health") addHealthChatMsg("agent", text2);
-      else saveChatMsg("health", "agent", text2);
+      addMsgForTab("health", "agent", text2);
       try {
         clearUnreadBadge("health");
       } catch {
@@ -4043,8 +4032,7 @@ ${lines.join("\n")}`;
     if (!updated) return;
     const def = HEALTH_STATUS_DEFS[finalStatus] || {};
     const text = t("health.iv.done", '\u0417\u0430\u043F\u0438\u0441\u0430\u0432. \u0421\u0442\u0430\u0442\u0443\u0441 "{name}": {icon} {label}.', { name: updated.name, icon: def.icon || "", label: def.label || finalStatus });
-    if (currentTab === "health") addHealthChatMsg("agent", text);
-    else saveChatMsg("health", "agent", text);
+    addMsgForTab("health", "agent", text);
     try {
       clearUnreadBadge("health");
     } catch {
