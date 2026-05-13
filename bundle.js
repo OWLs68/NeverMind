@@ -8501,10 +8501,12 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     const catList = type === "expense" ? cats.expense : cats.income;
     const _normCat = (s) => String(s || "").replace(/[ʼ’`]/g, "'").toLowerCase().trim();
     const matchedCat = catList.find((c) => _normCat(c.name) === _normCat(category));
+    let aiSuggestedCategory = null;
     if (matchedCat) {
       category = matchedCat.name;
     } else {
-      console.warn("[finance] AI \u0432\u0438\u0433\u0430\u0434\u0430\u0432 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E \xAB" + category + "\xBB \u2014 fallback \u043D\u0430 \u0406\u043D\u0448\u0435");
+      aiSuggestedCategory = (parsed.category || "").trim() || null;
+      console.warn("[finance] AI \u0432\u0438\u0433\u0430\u0434\u0430\u0432 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E \xAB" + aiSuggestedCategory + "\xBB \u2014 fallback \u043D\u0430 \u0406\u043D\u0448\u0435 + \u043F\u0438\u0442\u0430\u0454\u043C\u043E \u044E\u0437\u0435\u0440\u0430");
       category = "\u0406\u043D\u0448\u0435";
       if (!catList.find((c) => c.name === "\u0406\u043D\u0448\u0435")) createFinCategory(type, { name: "\u0406\u043D\u0448\u0435" });
     }
@@ -8544,6 +8546,14 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
       }
     }
     addInboxChatMsg("agent", `${type === "expense" ? "-" : "+"}${formatMoney(amount)} \xB7 ${category}${parsed.fin_comment ? " \u2014 " + parsed.fin_comment : ""}`);
+    if (aiSuggestedCategory && aiSuggestedCategory !== "\u0406\u043D\u0448\u0435") {
+      const newCatName = aiSuggestedCategory.charAt(0).toUpperCase() + aiSuggestedCategory.slice(1);
+      const chips = [
+        { label: t("finance.cat_clarify.create", '\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 "{name}"', { name: newCatName }), action: "chat", text: t("finance.cat_clarify.create_text", '\u0421\u0442\u0432\u043E\u0440\u0438 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E "{name}" \u0434\u043B\u044F \u0432\u0438\u0442\u0440\u0430\u0442, \u043F\u043E\u0442\u0456\u043C \u043F\u0435\u0440\u0435\u043D\u0435\u0441\u0438 \u0442\u0440\u0430\u043D\u0437\u0430\u043A\u0446\u0456\u044E [ID:{id}] \u0437 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457 "\u0406\u043D\u0448\u0435" \u0443 "{name}"', { name: newCatName, id: tx.id }) },
+        { label: t("finance.cat_clarify.keep_other", "\u041B\u0438\u0448\u0438\u0442\u0438 \u0432 \u0406\u043D\u0448\u0435"), action: "chat", text: t("finance.cat_clarify.keep_other_text", "\u043E\u043A, \u043B\u0438\u0448\u0430\u0439 \u0432 \u0406\u043D\u0448\u0435") }
+      ];
+      addInboxChatMsg("agent", t("finance.cat_clarify.question", '\u041A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457 "{name}" \u043D\u0435\u043C\u0430\u0454 \u0443 \u0442\u0432\u043E\u0454\u043C\u0443 \u0441\u043F\u0438\u0441\u043A\u0443. \u0429\u043E \u0440\u043E\u0431\u0438\u043C\u043E?', { name: newCatName }), chips);
+    }
     checkFinBudgetWarning2(type, category, amount);
   }
   function checkFinBudgetWarning2(type, category, amount) {
