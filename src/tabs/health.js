@@ -425,9 +425,12 @@ export function editMedicationInCard(cardId, medId, updates) {
   return meds[mIdx];
 }
 
-// Видалити препарат з картки (з kоrзиною на 7 днів).
+// Видалити препарат з картки (з кошиком на 7 днів).
 // nliW8 13.05: для повного undo circle add_medication (B-174/B-175 patten —
 // addToTrash тут + restoreFromTrash case 'medication' у trash.js).
+// Audit fix: видаляємо orphan task створену через _syncMedicationToTask
+// (createTasks:true → задача з sourceMedId у nm_tasks) щоб не лишалась
+// сирітка після видалення препарату.
 export function deleteMedicationFromCard(cardId, medId) {
   const cards = getHealthCards();
   const idx = cards.findIndex(c => c.id === cardId);
@@ -438,6 +441,13 @@ export function deleteMedicationFromCard(cardId, medId) {
   const removed = meds[mIdx];
   cards[idx].medications = meds.filter(m => m.id !== medId);
   saveHealthCards(cards);                          // dispatch nm-data-changed 'health'
+  // Видалити orphan task якщо при add_medication було createTasks:true.
+  // sourceMedId — маркер з _syncMedicationToTask (health.js:684).
+  try {
+    const tasks = JSON.parse(localStorage.getItem('nm_tasks') || '[]');
+    const filtered = tasks.filter(t => t.sourceMedId !== medId);
+    if (filtered.length !== tasks.length) saveTasks(filtered);
+  } catch (e) { console.warn('[deleteMedicationFromCard] orphan task cleanup failed:', e); }
   addToTrash('medication', { cardId, med: removed });
   return true;
 }
