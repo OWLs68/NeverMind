@@ -467,10 +467,15 @@ function _finTxsBlock(allTxs) {
   const rows = sorted.map(t => {
     const isExp = t.type === 'expense';
     const dateStr = new Date(t.ts).toLocaleDateString('uk-UA', { day: 'numeric', month: 'short' });
-    // B-53: показуємо підкатегорію дрібним текстом після категорії через · розділювач
-    const categoryLine = t.subcategory
-      ? `<span style="font-weight:700;color:#1e1040">${escapeHtml(t.category)}</span><span style="font-size:11px;font-weight:500;color:rgba(30,16,64,0.4);margin-left:4px">· ${escapeHtml(t.subcategory)}</span>`
-      : `<span style="font-weight:700;color:#1e1040">${escapeHtml(t.category)}</span>`;
+    // B-53: підкатегорія дрібним текстом біля категорії.
+    // nliW8 13.05: bubble-стиль — категорія solid pill (тлом), підкатегорія
+    // outlined pill (рамкою) щоб візуально не зливалось з коментарем нижче
+    // коли текст коментаря збігається з підкатегорією («Кафе» / «Кафе»).
+    const _catBubble = `<span style="display:inline-block;padding:2px 8px;border-radius:999px;background:rgba(30,16,64,0.09);color:#1e1040;font-size:11px;font-weight:700;line-height:1.4">${escapeHtml(t.category)}</span>`;
+    const _subBubble = t.subcategory
+      ? `<span style="display:inline-block;padding:1px 8px;border-radius:999px;background:transparent;border:1px solid rgba(30,16,64,0.18);color:rgba(30,16,64,0.55);font-size:10px;font-weight:500;line-height:1.5;margin-left:5px">${escapeHtml(t.subcategory)}</span>`
+      : '';
+    const categoryLine = _catBubble + _subBubble;
     // B-37: обгортка для swipe-delete (swipe-wrap → tx-row)
     return `<div class="fin-tx-swipe-wrap" data-tx-id="${t.id}" style="position:relative;overflow:hidden;border-radius:10px">
       <div class="tx-row" onclick="openEditTransaction('${t.id}')" style="position:relative;z-index:1;background:#fff">
@@ -512,9 +517,13 @@ function openAllTransactions() {
     const isExp = t.type === 'expense';
     const dateStr = new Date(t.ts).toLocaleDateString('uk-UA', { day:'numeric', month:'short' });
     // B-53: підкатегорія дрібним текстом поруч
-    const categoryLine = t.subcategory
-      ? `<span style="font-weight:700;color:#1e1040">${escapeHtml(t.category)}</span><span style="font-size:11px;font-weight:500;color:rgba(30,16,64,0.4);margin-left:4px">· ${escapeHtml(t.subcategory)}</span>`
-      : `<span style="font-weight:700;color:#1e1040">${escapeHtml(t.category)}</span>`;
+    // nliW8 13.05: bubble-стиль (як у _finTxsBlock) — категорія solid pill,
+    // підкатегорія outlined pill. Коментар лишається звичайним текстом.
+    const _catBubble = `<span style="display:inline-block;padding:2px 8px;border-radius:999px;background:rgba(30,16,64,0.09);color:#1e1040;font-size:11px;font-weight:700;line-height:1.4">${escapeHtml(t.category)}</span>`;
+    const _subBubble = t.subcategory
+      ? `<span style="display:inline-block;padding:1px 8px;border-radius:999px;background:transparent;border:1px solid rgba(30,16,64,0.18);color:rgba(30,16,64,0.55);font-size:10px;font-weight:500;line-height:1.5;margin-left:5px">${escapeHtml(t.subcategory)}</span>`
+      : '';
+    const categoryLine = _catBubble + _subBubble;
     return `<div class="tx-row" onclick="document.getElementById('fin-all-txs-modal').remove();openEditTransaction('${t.id}')">
       <div style="flex:1;min-width:0">
         <div style="font-size:13px">${categoryLine}</div>
