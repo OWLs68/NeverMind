@@ -655,35 +655,43 @@ export function getFinanceContext() {
   const today = new Date().toDateString();
   const from = getFinPeriodRange('month');
   const txs = getFinance().filter(t => t.ts >= from);
-  if (txs.length === 0) return '';
 
-  const expenses = txs.filter(t => t.type === 'expense');
-  const incomes = txs.filter(t => t.type === 'income');
-  const totalExp = expenses.reduce((s, t) => s + t.amount, 0);
-  const totalInc = incomes.reduce((s, t) => s + t.amount, 0);
-  const budget = getFinBudget();
+  // nliW8 13.05: ЗАВЖДИ показуємо юзерські категорії AI — навіть при 0 транзакцій.
+  // Раніше повертало '' якщо txs.length===0 → AI без контексту вигадував категорії.
+  let parts = [];
 
-  const catMap = {};
-  expenses.forEach(t => { catMap[t.category] = (catMap[t.category] || 0) + t.amount; });
-  const top3 = Object.entries(catMap).sort((a,b) => b[1]-a[1]).slice(0,3).map(([c,a]) => `${c}: ${formatMoney(a)}`).join(', ');
+  if (txs.length > 0) {
+    const expenses = txs.filter(t => t.type === 'expense');
+    const incomes = txs.filter(t => t.type === 'income');
+    const totalExp = expenses.reduce((s, t) => s + t.amount, 0);
+    const totalInc = incomes.reduce((s, t) => s + t.amount, 0);
+    const budget = getFinBudget();
 
-  const todayTxs = txs.filter(t => new Date(t.ts).toDateString() === today);
-  const todaySum = todayTxs.filter(t => t.type === 'expense').reduce((s,t) => s+t.amount, 0);
+    const catMap = {};
+    expenses.forEach(t => { catMap[t.category] = (catMap[t.category] || 0) + t.amount; });
+    const top3 = Object.entries(catMap).sort((a,b) => b[1]-a[1]).slice(0,3).map(([c,a]) => `${c}: ${formatMoney(a)}`).join(', ');
 
-  let parts = [`[MONTH_EXPENSES:${formatMoney(totalExp)}] [MONTH_INCOME:${formatMoney(totalInc)}] Фінанси за місяць: витрати ${formatMoney(totalExp)}, доходи ${formatMoney(totalInc)}`];
-  if (budget.total > 0) parts.push(`[BUDGET:${formatMoney(budget.total)}] бюджет ${formatMoney(budget.total)}, залишилось ${formatMoney(budget.total - totalExp)}`);
-  if (top3) parts.push(`топ категорії: ${top3}`);
-  if (todaySum > 0) parts.push(`[TODAY_EXPENSES:${formatMoney(todaySum)}] сьогодні витрачено ${formatMoney(todaySum)}`);
-  else parts.push('[TODAY_EXPENSES:0] сьогодні витрат не було');
+    const todayTxs = txs.filter(t => new Date(t.ts).toDateString() === today);
+    const todaySum = todayTxs.filter(t => t.type === 'expense').reduce((s,t) => s+t.amount, 0);
 
-  // LfA6w 07.05: дерево категорій з підкатегоріями для AI — щоб save_finance
-  // міг точно обрати subcategory ("80 бензин" → Транспорт/Паливо, не просто
-  // Транспорт). Показуємо тільки категорії з непорожніми підкатегоріями.
+    parts.push(`[MONTH_EXPENSES:${formatMoney(totalExp)}] [MONTH_INCOME:${formatMoney(totalInc)}] Фінанси за місяць: витрати ${formatMoney(totalExp)}, доходи ${formatMoney(totalInc)}`);
+    if (budget.total > 0) parts.push(`[BUDGET:${formatMoney(budget.total)}] бюджет ${formatMoney(budget.total)}, залишилось ${formatMoney(budget.total - totalExp)}`);
+    if (top3) parts.push(`топ категорії: ${top3}`);
+    if (todaySum > 0) parts.push(`[TODAY_EXPENSES:${formatMoney(todaySum)}] сьогодні витрачено ${formatMoney(todaySum)}`);
+    else parts.push('[TODAY_EXPENSES:0] сьогодні витрат не було');
+  }
+
+  // nliW8 13.05: показуємо ВСI неархівні категорії (з підкатегоріями і без).
+  // Раніше тільки з непорожніми subs → AI не знав про категорії без sub.
+  // Формат: «Назва: [sub1, sub2]» якщо є subs, інакше просто «Назва».
   try {
     const cats = getFinCats();
     const buildTree = (arr) => arr
-      .filter(c => Array.isArray(c.subcategories) && c.subcategories.length > 0)
-      .map(c => `${c.name}: [${c.subcategories.join(', ')}]`)
+      .filter(c => !c.archived)
+      .map(c => {
+        const subs = Array.isArray(c.subcategories) ? c.subcategories : [];
+        return subs.length > 0 ? `${c.name}: [${subs.join(', ')}]` : c.name;
+      })
       .join(' · ');
     const expTree = buildTree(cats.expense || []);
     const incTree = buildTree(cats.income || []);
@@ -691,8 +699,10 @@ export function getFinanceContext() {
     if (incTree) parts.push(t('finance.context.income_cats_tree', 'Категорії доходів з підкатегоріями: {tree}', { tree: incTree }));
   } catch(e) {}
 
-  const recentTxs = txs.slice(0, 5).map(t => `[ID:${t.id}] ${t.type === 'expense' ? '-' : '+'}${t.amount}${getCurrency()} ${t.category}${t.subcategory ? '/' + t.subcategory : ''}${t.comment ? ' ('+t.comment+')' : ''}`).join('; ');
-  if (recentTxs) parts.push(`Останні операції (використовуй ID для update_transaction): ${recentTxs}`);
+  if (txs.length > 0) {
+    const recentTxs = txs.slice(0, 5).map(t => `[ID:${t.id}] ${t.type === 'expense' ? '-' : '+'}${t.amount}${getCurrency()} ${t.category}${t.subcategory ? '/' + t.subcategory : ''}${t.comment ? ' ('+t.comment+')' : ''}`).join('; ');
+    if (recentTxs) parts.push(`Останні операції (використовуй ID для update_transaction): ${recentTxs}`);
+  }
 
   return parts.join('\n');
 }
