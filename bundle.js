@@ -7707,178 +7707,6 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     }
   });
 
-  // src/tabs/finance-chat.js
-  function addFinanceChatMsg(role, text, _noSave = false, chips = null) {
-    if (role === "agent" && (!chips || chips.length === 0) && text) {
-      const _p = parseContentChips(text);
-      if (_p.chips) {
-        text = _p.text;
-        chips = _p.chips;
-      }
-    }
-    const el = document.getElementById("finance-chat-messages");
-    if (!el) return;
-    if (_financeTypingEl) {
-      _financeTypingEl.remove();
-      _financeTypingEl = null;
-    }
-    if (role === "typing") {
-      const td = document.createElement("div");
-      td.style.cssText = "display:flex";
-      td.innerHTML = '<div style="background:rgba(255,255,255,0.12);border-radius:4px 12px 12px 12px;padding:5px 10px"><div class="ai-typing"><span></span><span></span><span></span></div></div>';
-      el.appendChild(td);
-      _financeTypingEl = td;
-      el.scrollTop = el.scrollHeight;
-      return;
-    }
-    if (role === "agent") el.querySelectorAll(".chat-chips-row").forEach((n) => n.remove());
-    if (!_noSave) {
-      try {
-        openChatBar("finance");
-      } catch (e) {
-      }
-    }
-    const isAgent = role === "agent";
-    const div = document.createElement("div");
-    div.style.cssText = `display:flex;${isAgent ? "" : "justify-content:flex-end"}`;
-    div.innerHTML = `<div class="msg-bubble ${isAgent ? "msg-bubble--agent" : "msg-bubble--user"}">${escapeHtml(text).replace(/\n/g, "<br>")}</div>`;
-    el.appendChild(div);
-    if (isAgent && Array.isArray(chips) && chips.length > 0) {
-      const chipsRow = document.createElement("div");
-      chipsRow.className = "chat-chips-row";
-      renderChips(chipsRow, chips, "finance");
-      el.appendChild(chipsRow);
-      requestAnimationFrame(() => chipsRow.scrollIntoView({ block: "end", inline: "nearest" }));
-    }
-    el.scrollTop = el.scrollHeight;
-    requestAnimationFrame(() => {
-      el.scrollTop = el.scrollHeight;
-    });
-    if (role !== "agent") financeBarHistory.push({ role: "user", content: text });
-    else financeBarHistory.push({ role: "assistant", content: text });
-    if (financeBarHistory.length > 20) financeBarHistory = financeBarHistory.slice(-20);
-    if (!_noSave) saveChatMsg("finance", role, text, chips);
-  }
-  function checkFinBudgetWarning(type, category, amount) {
-    if (type !== "expense") return;
-    const budget = getFinBudget();
-    const from = getFinPeriodRange("month");
-    const txs = getFinance().filter((t2) => t2.type === "expense" && t2.ts >= from);
-    const totalSpent = txs.reduce((s, t2) => s + t2.amount, 0);
-    if (budget.total > 0) {
-      const pct = totalSpent / budget.total;
-      if (pct >= 1) addFinanceChatMsg("agent", t("finance.budget_month_exceeded", "\u26A0\uFE0F \u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0438\u0439 \u0431\u044E\u0434\u0436\u0435\u0442 \u043D\u0430 \u043C\u0456\u0441\u044F\u0446\u044C \u043F\u0435\u0440\u0435\u0432\u0438\u0449\u0435\u043D\u043E. \u0412\u0438\u0442\u0440\u0430\u0447\u0435\u043D\u043E {spent} \u0437 {total}.", { spent: formatMoney(totalSpent), total: formatMoney(budget.total) }));
-      else if (pct >= 0.8) addFinanceChatMsg("agent", t("finance.budget_month_left", "\u{1F4A1} \u0414\u043E \u043B\u0456\u043C\u0456\u0442\u0443 \u043C\u0456\u0441\u044F\u0446\u044F \u0437\u0430\u043B\u0438\u0448\u0438\u043B\u043E\u0441\u044C {left}.", { left: formatMoney(budget.total - totalSpent) }));
-    }
-    const catLimit = budget.categories?.[category];
-    if (catLimit > 0) {
-      const catSpent = txs.filter((t2) => t2.category === category).reduce((s, t2) => s + t2.amount, 0);
-      const pct = catSpent / catLimit;
-      if (pct >= 1) addFinanceChatMsg("agent", t("finance.budget_cat_exceeded", '\u26A0\uFE0F \u041B\u0456\u043C\u0456\u0442 \u043F\u043E "{cat}" \u043F\u0435\u0440\u0435\u0432\u0438\u0449\u0435\u043D\u043E: {spent} \u0437 {limit}.', { cat: category, spent: formatMoney(catSpent), limit: formatMoney(catLimit) }));
-      else if (pct >= 0.8) addFinanceChatMsg("agent", t("finance.budget_cat_left", '\u{1F4A1} \u041F\u043E "{cat}" \u0437\u0430\u043B\u0438\u0448\u0438\u043B\u043E\u0441\u044C {left}.', { cat: category, left: formatMoney(catLimit - catSpent) }));
-    }
-  }
-  async function sendFinanceBarMessage() {
-    if (financeBarLoading) return;
-    const input = document.getElementById("finance-bar-input");
-    const text = input.value.trim();
-    if (!text) return;
-    const key = localStorage.getItem("nm_gemini_key");
-    if (!key) {
-      addFinanceChatMsg("agent", t("common.no_api_key", "\u0412\u0432\u0435\u0434\u0438 OpenAI \u043A\u043B\u044E\u0447 \u0432 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445."));
-      return;
-    }
-    input.value = "";
-    input.style.height = "auto";
-    input.focus();
-    addFinanceChatMsg("user", text);
-    financeBarLoading = true;
-    addFinanceChatMsg("typing", "");
-    const from = getFinPeriodRange("month");
-    const txs = getFinance().filter((t2) => t2.ts >= from);
-    const budget = getFinBudget();
-    const cats = getFinCats();
-    const currency = getCurrency();
-    const systemPrompt = getFinanceChatSystem({
-      currency,
-      budget,
-      txSummary: "",
-      expenseCats: (cats.expense || []).map((c) => c.name || c).join(", "),
-      incomeCats: (cats.income || []).map((c) => c.name || c).join(", ")
-    }) + (getAIContext() ? "\n\n" + getAIContext() : "");
-    try {
-      const msg = await callAIWithTools(systemPrompt, financeBarHistory.slice(-10), INBOX_TOOLS, "finance-bar");
-      if (msg && Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
-        const guard = shouldClarify(text, msg.tool_calls, "finance");
-        if (guard) {
-          addFinanceChatMsg("agent", guard.question, false, guard.chips);
-          financeBarLoading = false;
-          return;
-        }
-        dispatchChatToolCalls(msg.tool_calls, addFinanceChatMsg, text);
-        for (const tc of msg.tool_calls) {
-          if (tc.function.name === "save_finance") {
-            try {
-              const a = JSON.parse(tc.function.arguments || "{}");
-              if (a.fin_type === "expense") checkFinBudgetWarning("expense", a.category, a.amount);
-            } catch (e) {
-            }
-            try {
-              localStorage.setItem("nm_owl_tab_ts_finance", "0");
-              tryBoardUpdate("finance");
-            } catch (e) {
-            }
-          }
-        }
-        if (msg.content) {
-          const { text: replyText2, chips: chips2 } = parseContentChips(msg.content);
-          if (replyText2) addFinanceChatMsg("agent", replyText2, false, chips2);
-        }
-        financeBarLoading = false;
-        return;
-      }
-      const reply = msg && msg.content ? msg.content.trim() : "";
-      if (!reply) {
-        handleChatError(addFinanceChatMsg);
-        financeBarLoading = false;
-        return;
-      }
-      const { text: replyText, chips } = parseContentChips(reply);
-      if (replyText) {
-        const looksLikeJson = replyText.startsWith("{") && replyText.endsWith("}") || replyText.startsWith("[") && replyText.endsWith("]");
-        if (looksLikeJson) {
-          try {
-            JSON.parse(replyText);
-            addFinanceChatMsg("agent", t("common.done_check", "\u0417\u0440\u043E\u0431\u043B\u0435\u043D\u043E \u2713"));
-          } catch {
-            addFinanceChatMsg("agent", replyText, false, chips);
-          }
-        } else addFinanceChatMsg("agent", replyText, false, chips);
-      }
-    } catch {
-      addFinanceChatMsg("agent", t("common.network_error", "\u041C\u0435\u0440\u0435\u0436\u0435\u0432\u0430 \u043F\u043E\u043C\u0438\u043B\u043A\u0430."));
-    }
-    financeBarLoading = false;
-  }
-  var _financeTypingEl, financeBarHistory, financeBarLoading;
-  var init_finance_chat = __esm({
-    "src/tabs/finance-chat.js"() {
-      init_utils();
-      init_core();
-      init_prompts();
-      init_tool_dispatcher();
-      init_clarify_guard();
-      init_proactive();
-      init_chips();
-      init_finance();
-      init_finance_cats();
-      _financeTypingEl = null;
-      financeBarHistory = [];
-      financeBarLoading = false;
-      Object.assign(window, { sendFinanceBarMessage });
-    }
-  });
-
   // src/data/ua-time-parser.js
   function _parseNumber(token) {
     if (!token) return NaN;
@@ -8093,6 +7921,203 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
       RELATIVE_HOURS_RE = /через\s+(?:(\d+|пів)\s+)?годин[ауи]?/;
       RELATIVE_MINUTES_RE = /через\s+(\d+)\s*(?:хвилин[ауи]?|хв)/;
       RELATIVE_HALF_HOUR_RE = /через\s+пів\s+години|через\s+півгодини/;
+    }
+  });
+
+  // src/data/finance-classifier.js
+  function classifyCategory(parsedCategory, catList) {
+    const safeList = Array.isArray(catList) ? catList : [];
+    const raw = String(parsedCategory || "").trim();
+    if (!raw) {
+      return { category: OTHER_CATEGORY, aiSuggested: null };
+    }
+    const matched = safeList.find((c) => normalizeCategoryName(c.name) === normalizeCategoryName(raw));
+    if (matched) {
+      return { category: matched.name, aiSuggested: null };
+    }
+    return { category: OTHER_CATEGORY, aiSuggested: raw };
+  }
+  function classifySubcategory(parsedSub, validSubs, comment) {
+    const safeSubs = Array.isArray(validSubs) ? validSubs : [];
+    const raw = String(parsedSub || "").trim();
+    if (raw) {
+      const matched = safeSubs.find((s) => normalizeCategoryName(s) === normalizeCategoryName(raw));
+      if (matched) return { subcategory: matched, aiSuggested: null };
+      return { subcategory: "", aiSuggested: raw };
+    }
+    if (comment && safeSubs.length > 0) {
+      const fromComment = matchSubcategoryFromComment(comment, safeSubs);
+      if (fromComment) return { subcategory: fromComment, aiSuggested: null };
+    }
+    return { subcategory: "", aiSuggested: null };
+  }
+  function resolveFinanceDate(aiDate, text, now) {
+    if (aiDate) {
+      const d = /* @__PURE__ */ new Date(aiDate + "T12:00:00");
+      if (!isNaN(d.getTime())) return d.getTime();
+    }
+    const resolved = resolveDateFromText(text || "", new Date(now), "past");
+    if (resolved) {
+      resolved.setHours(20, 0, 0, 0);
+      return resolved.getTime();
+    }
+    return now;
+  }
+  var OTHER_CATEGORY, normalizeCategoryName;
+  var init_finance_classifier = __esm({
+    "src/data/finance-classifier.js"() {
+      init_finance_subcat_keywords();
+      init_ua_time_parser();
+      OTHER_CATEGORY = "\u0406\u043D\u0448\u0435";
+      normalizeCategoryName = (s) => String(s || "").replace(/[ʼ’`]/g, "'").toLowerCase().trim();
+    }
+  });
+
+  // src/tabs/finance-chat.js
+  function addFinanceChatMsg(role, text, _noSave = false, chips = null) {
+    if (role === "agent" && (!chips || chips.length === 0) && text) {
+      const _p = parseContentChips(text);
+      if (_p.chips) {
+        text = _p.text;
+        chips = _p.chips;
+      }
+    }
+    const el = document.getElementById("finance-chat-messages");
+    if (!el) return;
+    if (_financeTypingEl) {
+      _financeTypingEl.remove();
+      _financeTypingEl = null;
+    }
+    if (role === "typing") {
+      const td = document.createElement("div");
+      td.style.cssText = "display:flex";
+      td.innerHTML = '<div style="background:rgba(255,255,255,0.12);border-radius:4px 12px 12px 12px;padding:5px 10px"><div class="ai-typing"><span></span><span></span><span></span></div></div>';
+      el.appendChild(td);
+      _financeTypingEl = td;
+      el.scrollTop = el.scrollHeight;
+      return;
+    }
+    if (role === "agent") el.querySelectorAll(".chat-chips-row").forEach((n) => n.remove());
+    if (!_noSave) {
+      try {
+        openChatBar("finance");
+      } catch (e) {
+      }
+    }
+    const isAgent = role === "agent";
+    const div = document.createElement("div");
+    div.style.cssText = `display:flex;${isAgent ? "" : "justify-content:flex-end"}`;
+    div.innerHTML = `<div class="msg-bubble ${isAgent ? "msg-bubble--agent" : "msg-bubble--user"}">${escapeHtml(text).replace(/\n/g, "<br>")}</div>`;
+    el.appendChild(div);
+    if (isAgent && Array.isArray(chips) && chips.length > 0) {
+      const chipsRow = document.createElement("div");
+      chipsRow.className = "chat-chips-row";
+      renderChips(chipsRow, chips, "finance");
+      el.appendChild(chipsRow);
+      requestAnimationFrame(() => chipsRow.scrollIntoView({ block: "end", inline: "nearest" }));
+    }
+    el.scrollTop = el.scrollHeight;
+    requestAnimationFrame(() => {
+      el.scrollTop = el.scrollHeight;
+    });
+    if (role !== "agent") financeBarHistory.push({ role: "user", content: text });
+    else financeBarHistory.push({ role: "assistant", content: text });
+    if (financeBarHistory.length > 20) financeBarHistory = financeBarHistory.slice(-20);
+    if (!_noSave) saveChatMsg("finance", role, text, chips);
+  }
+  async function sendFinanceBarMessage() {
+    if (financeBarLoading) return;
+    const input = document.getElementById("finance-bar-input");
+    const text = input.value.trim();
+    if (!text) return;
+    const key = localStorage.getItem("nm_gemini_key");
+    if (!key) {
+      addFinanceChatMsg("agent", t("common.no_api_key", "\u0412\u0432\u0435\u0434\u0438 OpenAI \u043A\u043B\u044E\u0447 \u0432 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445."));
+      return;
+    }
+    input.value = "";
+    input.style.height = "auto";
+    input.focus();
+    addFinanceChatMsg("user", text);
+    financeBarLoading = true;
+    addFinanceChatMsg("typing", "");
+    const from = getFinPeriodRange("month");
+    const txs = getFinance().filter((t2) => t2.ts >= from);
+    const budget = getFinBudget();
+    const cats = getFinCats();
+    const currency = getCurrency();
+    const systemPrompt = getFinanceChatSystem({
+      currency,
+      budget,
+      txSummary: "",
+      expenseCats: (cats.expense || []).map((c) => c.name || c).join(", "),
+      incomeCats: (cats.income || []).map((c) => c.name || c).join(", ")
+    }) + (getAIContext() ? "\n\n" + getAIContext() : "");
+    try {
+      const msg = await callAIWithTools(systemPrompt, financeBarHistory.slice(-10), INBOX_TOOLS, "finance-bar");
+      if (msg && Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
+        const guard = shouldClarify(text, msg.tool_calls, "finance");
+        if (guard) {
+          addFinanceChatMsg("agent", guard.question, false, guard.chips);
+          financeBarLoading = false;
+          return;
+        }
+        dispatchChatToolCalls(msg.tool_calls, addFinanceChatMsg, text);
+        for (const tc of msg.tool_calls) {
+          if (tc.function.name === "save_finance") {
+            try {
+              localStorage.setItem("nm_owl_tab_ts_finance", "0");
+              tryBoardUpdate("finance");
+            } catch (e) {
+            }
+          }
+        }
+        if (msg.content) {
+          const { text: replyText2, chips: chips2 } = parseContentChips(msg.content);
+          if (replyText2) addFinanceChatMsg("agent", replyText2, false, chips2);
+        }
+        financeBarLoading = false;
+        return;
+      }
+      const reply = msg && msg.content ? msg.content.trim() : "";
+      if (!reply) {
+        handleChatError(addFinanceChatMsg);
+        financeBarLoading = false;
+        return;
+      }
+      const { text: replyText, chips } = parseContentChips(reply);
+      if (replyText) {
+        const looksLikeJson = replyText.startsWith("{") && replyText.endsWith("}") || replyText.startsWith("[") && replyText.endsWith("]");
+        if (looksLikeJson) {
+          try {
+            JSON.parse(replyText);
+            addFinanceChatMsg("agent", t("common.done_check", "\u0417\u0440\u043E\u0431\u043B\u0435\u043D\u043E \u2713"));
+          } catch {
+            addFinanceChatMsg("agent", replyText, false, chips);
+          }
+        } else addFinanceChatMsg("agent", replyText, false, chips);
+      }
+    } catch {
+      addFinanceChatMsg("agent", t("common.network_error", "\u041C\u0435\u0440\u0435\u0436\u0435\u0432\u0430 \u043F\u043E\u043C\u0438\u043B\u043A\u0430."));
+    }
+    financeBarLoading = false;
+  }
+  var _financeTypingEl, financeBarHistory, financeBarLoading;
+  var init_finance_chat = __esm({
+    "src/tabs/finance-chat.js"() {
+      init_utils();
+      init_core();
+      init_prompts();
+      init_tool_dispatcher();
+      init_clarify_guard();
+      init_proactive();
+      init_chips();
+      init_finance();
+      init_finance_cats();
+      _financeTypingEl = null;
+      financeBarHistory = [];
+      financeBarLoading = false;
+      Object.assign(window, { sendFinanceBarMessage });
     }
   });
 
@@ -8476,57 +8501,29 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     </div>`;
     document.body.appendChild(modal);
   }
-  function _resolveFinanceDate(aiDate, text) {
-    if (aiDate) {
-      const d = /* @__PURE__ */ new Date(aiDate + "T12:00:00");
-      if (!isNaN(d.getTime())) return d.getTime();
-    }
-    const resolved = resolveDateFromText(text || "", /* @__PURE__ */ new Date(), "past");
-    if (resolved) {
-      resolved.setHours(20, 0, 0, 0);
-      return resolved.getTime();
-    }
-    return Date.now();
-  }
-  function processFinanceAction(parsed, originalText) {
+  function processFinanceAction(parsed, originalText, addMsgFn = addInboxChatMsg) {
     const cats = getFinCats();
     const type = parsed.fin_type || "expense";
     const amount = parseFloat(parsed.amount) || 0;
-    let category = parsed.category || (type === "expense" ? "\u0406\u043D\u0448\u0435" : "\u0406\u043D\u0448\u0435");
     const comment = parsed.comment || originalText;
     if (!amount || amount <= 0) {
-      addInboxChatMsg("agent", t("finance.err.no_amount", '\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u0440\u043E\u0437\u043F\u0456\u0437\u043D\u0430\u0442\u0438 \u0441\u0443\u043C\u0443. \u0421\u043F\u0440\u043E\u0431\u0443\u0439 \u043D\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u0447\u0456\u0442\u043A\u0456\u0448\u0435: "\u0432\u0438\u0442\u0440\u0430\u0442\u0438\u0432 50 \u043D\u0430 \u0457\u0436\u0443"'));
+      addMsgFn("agent", t("finance.err.no_amount", '\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u0440\u043E\u0437\u043F\u0456\u0437\u043D\u0430\u0442\u0438 \u0441\u0443\u043C\u0443. \u0421\u043F\u0440\u043E\u0431\u0443\u0439 \u043D\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u0447\u0456\u0442\u043A\u0456\u0448\u0435: "\u0432\u0438\u0442\u0440\u0430\u0442\u0438\u0432 50 \u043D\u0430 \u0457\u0436\u0443"'));
       return;
     }
     const catList = type === "expense" ? cats.expense : cats.income;
-    const _normCat = (s) => String(s || "").replace(/[ʼ’`]/g, "'").toLowerCase().trim();
-    const matchedCat = catList.find((c) => _normCat(c.name) === _normCat(category));
-    let aiSuggestedCategory = null;
-    if (matchedCat) {
-      category = matchedCat.name;
-    } else {
-      aiSuggestedCategory = (parsed.category || "").trim() || null;
-      console.warn("[finance] AI \u0432\u0438\u0433\u0430\u0434\u0430\u0432 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E \xAB" + aiSuggestedCategory + "\xBB \u2014 fallback \u043D\u0430 \u0406\u043D\u0448\u0435 + \u043F\u0438\u0442\u0430\u0454\u043C\u043E \u044E\u0437\u0435\u0440\u0430");
-      category = "\u0406\u043D\u0448\u0435";
-      if (!catList.find((c) => c.name === "\u0406\u043D\u0448\u0435")) createFinCategory(type, { name: "\u0406\u043D\u0448\u0435" });
+    const catRes = classifyCategory(parsed.category, catList);
+    const category = catRes.category;
+    const aiSuggestedCategory = catRes.aiSuggested;
+    if (aiSuggestedCategory) {
+      console.warn("[finance] AI \u0432\u0438\u0433\u0430\u0434\u0430\u0432 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E \xAB" + aiSuggestedCategory + "\xBB \u2014 fallback \u043D\u0430 \u0406\u043D\u0448\u0435");
+      if (!catList.find((c) => c.name === OTHER_CATEGORY)) createFinCategory(type, { name: OTHER_CATEGORY });
     }
     const cat = catList.find((c) => c.name === category);
     const validSubs = cat && Array.isArray(cat.subcategories) ? cat.subcategories : [];
-    let subcategory = (parsed.subcategory || "").trim();
-    let aiSuggestedSubcategory = null;
-    if (subcategory) {
-      const matchedSub = validSubs.find((s) => _normCat(s) === _normCat(subcategory));
-      if (matchedSub) {
-        subcategory = matchedSub;
-      } else {
-        aiSuggestedSubcategory = subcategory;
-        subcategory = "";
-      }
-    }
-    if (!subcategory && comment && validSubs.length > 0) {
-      subcategory = matchSubcategoryFromComment(comment, validSubs);
-    }
-    const ts = _resolveFinanceDate(parsed.date, originalText);
+    const subRes = classifySubcategory(parsed.subcategory, validSubs, comment);
+    const subcategory = subRes.subcategory;
+    const aiSuggestedSubcategory = subRes.aiSuggested;
+    const ts = resolveFinanceDate(parsed.date, originalText, Date.now());
     const txs = getFinance();
     const tx = { id: generateUUID(), type, amount, category, comment, ts };
     if (subcategory) tx.subcategory = subcategory;
@@ -8551,25 +8548,25 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
       } catch (e) {
       }
     }
-    addInboxChatMsg("agent", `${type === "expense" ? "-" : "+"}${formatMoney(amount)} \xB7 ${category}${parsed.fin_comment ? " \u2014 " + parsed.fin_comment : ""}`);
-    if (aiSuggestedCategory && aiSuggestedCategory !== "\u0406\u043D\u0448\u0435") {
+    addMsgFn("agent", `${type === "expense" ? "-" : "+"}${formatMoney(amount)} \xB7 ${category}${parsed.fin_comment ? " \u2014 " + parsed.fin_comment : ""}`);
+    if (aiSuggestedCategory && aiSuggestedCategory !== OTHER_CATEGORY) {
       const newCatName = aiSuggestedCategory.charAt(0).toUpperCase() + aiSuggestedCategory.slice(1);
       const chips = [
         { label: t("finance.cat_clarify.create", '\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 "{name}"', { name: newCatName }), action: "chat", text: t("finance.cat_clarify.create_text", '\u0421\u0442\u0432\u043E\u0440\u0438 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E "{name}" \u0434\u043B\u044F \u0432\u0438\u0442\u0440\u0430\u0442, \u043F\u043E\u0442\u0456\u043C \u043F\u0435\u0440\u0435\u043D\u0435\u0441\u0438 \u0442\u0440\u0430\u043D\u0437\u0430\u043A\u0446\u0456\u044E [ID:{id}] \u0437 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457 "\u0406\u043D\u0448\u0435" \u0443 "{name}"', { name: newCatName, id: tx.id }) },
         { label: t("finance.cat_clarify.keep_other", "\u041B\u0438\u0448\u0438\u0442\u0438 \u0432 \u0406\u043D\u0448\u0435"), action: "chat", text: t("finance.cat_clarify.keep_other_text", "\u043E\u043A, \u043B\u0438\u0448\u0430\u0439 \u0432 \u0406\u043D\u0448\u0435") }
       ];
-      addInboxChatMsg("agent", t("finance.cat_clarify.question", '\u041A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457 "{name}" \u043D\u0435\u043C\u0430\u0454 \u0443 \u0442\u0432\u043E\u0454\u043C\u0443 \u0441\u043F\u0438\u0441\u043A\u0443. \u0429\u043E \u0440\u043E\u0431\u0438\u043C\u043E?', { name: newCatName }), chips);
+      addMsgFn("agent", t("finance.cat_clarify.question", '\u041A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457 "{name}" \u043D\u0435\u043C\u0430\u0454 \u0443 \u0442\u0432\u043E\u0454\u043C\u0443 \u0441\u043F\u0438\u0441\u043A\u0443. \u0429\u043E \u0440\u043E\u0431\u0438\u043C\u043E?', { name: newCatName }), chips);
     } else if (aiSuggestedSubcategory && !subcategory) {
       const newSubName = aiSuggestedSubcategory.charAt(0).toUpperCase() + aiSuggestedSubcategory.slice(1);
       const chips = [
         { label: t("finance.subcat_clarify.create", '\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 "{name}"', { name: newSubName }), action: "chat", text: t("finance.subcat_clarify.create_text", '\u0414\u043E\u0434\u0430\u0439 \u0443 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E "{cat}" \u043F\u0456\u0434\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E "{sub}", \u043F\u043E\u0442\u0456\u043C \u043E\u043D\u043E\u0432\u0438 \u0442\u0440\u0430\u043D\u0437\u0430\u043A\u0446\u0456\u044E [ID:{id}] \u2014 \u0432\u0441\u0442\u0430\u043D\u043E\u0432\u0438 \u0457\u0439 subcategory "{sub}"', { cat: category, sub: newSubName, id: tx.id }) },
         { label: t("finance.subcat_clarify.keep", "\u041B\u0438\u0448\u0438\u0442\u0438 \u0431\u0435\u0437"), action: "chat", text: t("finance.subcat_clarify.keep_text", "\u043E\u043A, \u0431\u0435\u0437 \u043F\u0456\u0434\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457") }
       ];
-      addInboxChatMsg("agent", t("finance.subcat_clarify.question", '\u0417\u0430\u043F\u0438\u0441\u0430\u0432 \u0443 "{cat}". \u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u043F\u0456\u0434\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E "{sub}"?', { cat: category, sub: newSubName }), chips);
+      addMsgFn("agent", t("finance.subcat_clarify.question", '\u0417\u0430\u043F\u0438\u0441\u0430\u0432 \u0443 "{cat}". \u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u043F\u0456\u0434\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E "{sub}"?', { cat: category, sub: newSubName }), chips);
     }
-    checkFinBudgetWarning2(type, category, amount);
+    checkFinBudgetWarning(type, category, amount, addMsgFn);
   }
-  function checkFinBudgetWarning2(type, category, amount) {
+  function checkFinBudgetWarning(type, category, amount, addMsgFn = addInboxChatMsg) {
     if (type !== "expense") return;
     const budget = getFinBudget();
     const from = getFinPeriodRange("month");
@@ -8577,15 +8574,15 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     const totalSpent = txs.reduce((s, t2) => s + t2.amount, 0);
     if (budget.total > 0) {
       const pct = totalSpent / budget.total;
-      if (pct >= 1) addInboxChatMsg("agent", t("finance.budget.month_over", "\u26A0\uFE0F \u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0438\u0439 \u0431\u044E\u0434\u0436\u0435\u0442 \u043D\u0430 \u043C\u0456\u0441\u044F\u0446\u044C \u043F\u0435\u0440\u0435\u0432\u0438\u0449\u0435\u043D\u043E. \u0412\u0438\u0442\u0440\u0430\u0447\u0435\u043D\u043E {spent} \u0437 {total}.", { spent: formatMoney(totalSpent), total: formatMoney(budget.total) }));
-      else if (pct >= 0.8) addInboxChatMsg("agent", t("finance.budget.month_left", "\u{1F4A1} \u0414\u043E \u043B\u0456\u043C\u0456\u0442\u0443 \u043C\u0456\u0441\u044F\u0446\u044F \u0437\u0430\u043B\u0438\u0448\u0438\u043B\u043E\u0441\u044C {left}.", { left: formatMoney(budget.total - totalSpent) }));
+      if (pct >= 1) addMsgFn("agent", t("finance.budget.month_over", "\u26A0\uFE0F \u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0438\u0439 \u0431\u044E\u0434\u0436\u0435\u0442 \u043D\u0430 \u043C\u0456\u0441\u044F\u0446\u044C \u043F\u0435\u0440\u0435\u0432\u0438\u0449\u0435\u043D\u043E. \u0412\u0438\u0442\u0440\u0430\u0447\u0435\u043D\u043E {spent} \u0437 {total}.", { spent: formatMoney(totalSpent), total: formatMoney(budget.total) }));
+      else if (pct >= 0.8) addMsgFn("agent", t("finance.budget.month_left", "\u{1F4A1} \u0414\u043E \u043B\u0456\u043C\u0456\u0442\u0443 \u043C\u0456\u0441\u044F\u0446\u044F \u0437\u0430\u043B\u0438\u0448\u0438\u043B\u043E\u0441\u044C {left}.", { left: formatMoney(budget.total - totalSpent) }));
     }
     const catLimit = budget.categories?.[category];
     if (catLimit > 0) {
       const catSpent = txs.filter((t2) => t2.category === category).reduce((s, t2) => s + t2.amount, 0);
       const pct = catSpent / catLimit;
-      if (pct >= 1) addInboxChatMsg("agent", t("finance.budget.cat_over", '\u26A0\uFE0F \u041B\u0456\u043C\u0456\u0442 \u043F\u043E "{cat}" \u043F\u0435\u0440\u0435\u0432\u0438\u0449\u0435\u043D\u043E: {spent} \u0437 {limit}.', { cat: category, spent: formatMoney(catSpent), limit: formatMoney(catLimit) }));
-      else if (pct >= 0.8) addInboxChatMsg("agent", t("finance.budget.cat_left", '\u{1F4A1} \u041F\u043E "{cat}" \u0437\u0430\u043B\u0438\u0448\u0438\u043B\u043E\u0441\u044C {left}.', { cat: category, left: formatMoney(catLimit - catSpent) }));
+      if (pct >= 1) addMsgFn("agent", t("finance.budget.cat_over", '\u26A0\uFE0F \u041B\u0456\u043C\u0456\u0442 \u043F\u043E "{cat}" \u043F\u0435\u0440\u0435\u0432\u0438\u0449\u0435\u043D\u043E: {spent} \u0437 {limit}.', { cat: category, spent: formatMoney(catSpent), limit: formatMoney(catLimit) }));
+      else if (pct >= 0.8) addMsgFn("agent", t("finance.budget.cat_left", '\u{1F4A1} \u041F\u043E "{cat}" \u0437\u0430\u043B\u0438\u0448\u0438\u043B\u043E\u0441\u044C {left}.', { cat: category, left: formatMoney(catLimit - catSpent) }));
     }
   }
   function getFinanceContext() {
@@ -8649,6 +8646,7 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
       init_finance_cats();
       init_finance_insight();
       init_finance_subcat_keywords();
+      init_finance_classifier();
       init_finance_chat();
       init_ua_time_parser();
       currentFinTab = "expense";
@@ -10137,6 +10135,29 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
         saveFinance(txs.filter((t2) => t2.id !== args.id));
         if (currentTab === "finance") renderFinance();
         addMsg("agent", `\u{1F5D1}\uFE0F \u0412\u0438\u0434\u0430\u043B\u0438\u0432: ${item.category} ${formatMoney(item.amount)}.`);
+        return true;
+      }
+      case "update_transaction": {
+        const txs = getFinance();
+        const idx = txs.findIndex((t2) => t2.id === args.id);
+        if (idx === -1) {
+          addMsg("agent", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u043E\u043F\u0435\u0440\u0430\u0446\u0456\u044E.");
+          return true;
+        }
+        if (args.category) txs[idx].category = args.category;
+        if (args.subcategory !== void 0) {
+          if (args.subcategory) txs[idx].subcategory = args.subcategory;
+          else delete txs[idx].subcategory;
+        }
+        if (args.amount) txs[idx].amount = parseFloat(args.amount);
+        if (args.comment !== void 0) txs[idx].comment = args.comment;
+        saveFinance(txs);
+        if (currentTab === "finance") renderFinance();
+        const updParts = [];
+        if (args.category) updParts.push("\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F: " + txs[idx].category);
+        if (args.subcategory) updParts.push("\u043F\u0456\u0434\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F: " + args.subcategory);
+        if (args.amount) updParts.push("\u0441\u0443\u043C\u0430: " + formatMoney(txs[idx].amount));
+        addMsg("agent", `\u2713 \u041E\u043D\u043E\u0432\u043B\u0435\u043D\u043E: ${updParts.join(", ") || txs[idx].category}`);
         return true;
       }
       case "set_finance_budget": {
@@ -12094,7 +12115,8 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
     logRecentAction("evening_close", text.slice(0, 40), "evening");
     return { ok: true };
   }
-  function dispatchEveningTool(name, args) {
+  function dispatchEveningTool(name, args, addMsg = () => {
+  }) {
     try {
       switch (name) {
         // ========== СТВОРЕННЯ ==========
@@ -12149,19 +12171,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
           return { ok: true };
         }
         case "save_finance": {
-          withActionLog("save_finance", args, () => {
-            const txs = getFinance();
-            txs.unshift({
-              id: generateUUID(),
-              type: args.fin_type === "income" ? "income" : "expense",
-              amount: parseFloat(args.amount) || 0,
-              category: args.category || t("default.category_other", "\u0406\u043D\u0448\u0435"),
-              comment: args.fin_comment || "",
-              ts: args.date ? (/* @__PURE__ */ new Date(args.date + "T12:00:00")).getTime() : Date.now()
-            });
-            saveFinance(txs);
-            if (currentTab === "finance") renderFinance();
-          }, "evening");
+          processFinanceAction(args, args.fin_comment || "", addMsg);
           return { ok: true };
         }
         case "set_reminder": {
@@ -12423,7 +12433,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
             if (res && res.text) addEveningBarMsg("agent", res.text);
             continue;
           }
-          dispatchEveningTool(tc.function.name, args);
+          dispatchEveningTool(tc.function.name, args, addEveningBarMsg);
         }
       }
       const { text: replyText, chips } = _parseContentChips(msg.content || "");
@@ -12542,7 +12552,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
             if (res && res.text) addEveningBarMsg("agent", res.text);
             continue;
           }
-          dispatchEveningTool(tc.function.name, args);
+          dispatchEveningTool(tc.function.name, args, addEveningBarMsg);
         }
       }
       const { text: replyText, chips } = _parseContentChips(msg.content || "");
@@ -15297,50 +15307,8 @@ ${CHIP_PROMPT_RULES}`;
       return true;
     }
     if (action === "save_finance" || action === "save_expense" || action === "save_income") {
-      const type = action === "save_income" ? "income" : parsed.fin_type || "expense";
-      const amount = parseFloat(parsed.amount) || 0;
-      if (!amount || amount <= 0) {
-        addMsg("agent", t("habits.err.amount_unparsed", "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u0440\u043E\u0437\u043F\u0456\u0437\u043D\u0430\u0442\u0438 \u0441\u0443\u043C\u0443."));
-        return true;
-      }
-      let category = parsed.category || "\u0406\u043D\u0448\u0435";
-      const comment = parsed.comment || originalText;
-      const cats = getFinCats();
-      const catList = type === "expense" ? cats.expense : cats.income;
-      const _normCat = (s) => String(s || "").replace(/[ʼ’`]/g, "'").toLowerCase().trim();
-      const matchedCat = catList.find((c) => _normCat(c.name) === _normCat(category));
-      if (matchedCat) {
-        category = matchedCat.name;
-      } else {
-        createFinCategory(type, { name: category });
-      }
-      const cat = catList.find((c) => c.name === category);
-      const validSubs = cat && Array.isArray(cat.subcategories) ? cat.subcategories : [];
-      let subcategory = (parsed.subcategory || "").trim();
-      if (subcategory) {
-        const matchedSub = validSubs.find((s) => _normCat(s) === _normCat(subcategory));
-        subcategory = matchedSub || "";
-      }
-      if (!subcategory && comment && validSubs.length > 0) {
-        subcategory = matchSubcategoryFromComment(comment, validSubs);
-      }
-      const txs = getFinance();
-      const finTs = _resolveFinanceDate(parsed.date, originalText);
-      const txId = Date.now();
-      const tx = { id: txId, type, amount, category, comment, ts: finTs };
-      if (subcategory) tx.subcategory = subcategory;
-      txs.unshift(tx);
-      saveFinance(txs);
-      try {
-        const items = getInbox();
-        const inboxText = (type === "expense" ? "-" : "+") + formatMoney(amount) + " \xB7 " + category + (comment ? " \u2014 " + comment : "");
-        items.unshift({ id: txId, text: inboxText, category: "finance", ts: finTs, processed: true });
-        saveInbox(items);
-        if (currentTab === "inbox") renderInbox();
-      } catch (e) {
-      }
-      if (currentTab === "finance") renderFinance();
-      addMsg("agent", "\u2713 " + (type === "expense" ? "-" : "+") + formatMoney(amount) + " \xB7 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F: " + category + (parsed.comment ? " \xB7 " + parsed.comment : ""));
+      const normalizedParsed = action === "save_income" ? { ...parsed, fin_type: "income" } : parsed;
+      processFinanceAction(normalizedParsed, originalText, addMsg);
       return true;
     }
     if (action === "save_routine") {
