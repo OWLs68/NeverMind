@@ -451,6 +451,7 @@ function _toolCallToAction(name, args) {
     case 'log_medication_dose': return { action: 'log_medication_dose', card_id: args.card_id, med_name: args.med_name, comment: args.comment };
     case 'add_allergy': return { action: 'add_allergy', name: args.name, notes: args.notes, comment: args.comment };
     case 'delete_allergy': return { action: 'delete_allergy', allergy_id: args.allergy_id, comment: args.comment };
+    case 'delete_medication': return { action: 'delete_medication', card_id: args.card_id, med_id: args.med_id, comment: args.comment };
     case 'add_health_history_entry': return { action: 'add_health_history_entry', card_id: args.card_id, entry_type: args.entry_type, text: args.text, comment: args.comment };
     // Фаза 4 (K-02): CRUD категорій Фінансів через агента
     case 'create_finance_category': return { action: 'create_finance_category', name: args.name, cat_type: args.type || 'expense', icon: args.icon, color: args.color, subcategories: args.subcategories, comment: args.comment };

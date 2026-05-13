@@ -117,6 +117,18 @@ export function restoreFromTrash(trashId) {
     cards.unshift(item);
     saveHealthCards(cards);
     if (currentTab === 'health') renderHealth();
+  } else if (type === 'medication') {
+    // nliW8 13.05: повертаємо препарат у відповідну health-картку.
+    // item структура: { cardId, med } — записує deleteMedicationFromCard (health.js).
+    // Якщо картка була теж видалена і не відновлена — нічого не робимо (silent skip).
+    const cards = getHealthCards();
+    const cIdx = cards.findIndex(c => c.id === item.cardId);
+    if (cIdx !== -1) {
+      if (!Array.isArray(cards[cIdx].medications)) cards[cIdx].medications = [];
+      cards[cIdx].medications.push(item.med);
+      saveHealthCards(cards);
+      if (currentTab === 'health') renderHealth();
+    }
   }
   // Прибираємо з кешу після відновлення
   saveTrash(trash.filter(t => t.deletedAt !== trashId));

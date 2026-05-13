@@ -34,6 +34,7 @@ import {
   startHealthInterview,
   addMedicationToCard,
   editMedicationInCard,
+  deleteMedicationFromCard,
   logMedicationDose,
   addAllergy,
   deleteAllergy,
@@ -170,10 +171,25 @@ function _handleHealthTool(name, args, addMsg) {
       if (med) {
         if (currentTab === 'health') renderHealth();
         addMsg('agent', `💊 Додав "${args.med_name}" до картки. ${args.comment || ''}`.trim());
-        // nliW8 13.05: action-log для universal undo coverage. Дзеркальна діра до B-174 — early-return обходив dispatcher-loop logAction. Reverser delete_medication поки відсутній (TODO у ROADMAP).
+        // nliW8 13.05: action-log для universal undo coverage (B-182 + delete_medication tool).
+        // Reverser add_medication → delete_medication додано у action-reversers.js.
         logAction('add_medication', args, med.id, null, 'dispatcher');
       } else {
         addMsg('agent', 'Не знайшов картку для препарату.');
+      }
+      return true;
+    }
+    case 'delete_medication': {
+      // nliW8 13.05: reverse counterpart до add_medication. Direct handler — для AI-виклику
+      // напряму ("видали препарат X"). Дзеркальний case у processUniversalAction (habits.js)
+      // потрібен для DI flow через executeReverse (урок B-174).
+      if (!args.card_id || !args.med_id) { addMsg('agent', 'Потрібні картка і ID препарату.'); return true; }
+      const ok = deleteMedicationFromCard(args.card_id, args.med_id);
+      if (ok) {
+        if (currentTab === 'health') renderHealth();
+        addMsg('agent', `🗑️ Препарат видалено (7 днів у кошику). ${args.comment || ''}`.trim());
+      } else {
+        addMsg('agent', 'Не знайшов препарат для видалення.');
       }
       return true;
     }
