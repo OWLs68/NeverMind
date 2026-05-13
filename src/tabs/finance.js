@@ -578,7 +578,15 @@ export function processFinanceAction(parsed, originalText) {
   if (matchedCat) {
     category = matchedCat.name; // використовуємо рівно ту назву що у юзера
   } else {
-    createFinCategory(type, { name: category });
+    // nliW8 13.05: ЖОРСТКО НЕ створюємо нову категорію з AI-вигаданих.
+    // Раніше тут був createFinCategory(type, { name: category }) — це АВТОМАТИЧНО
+    // плодило юзеру вигадані категорії (наприклад «Кафе» якщо у нього її немає).
+    // Тепер fallback на 'Інше' (завжди є). Якщо юзер ХОЧЕ нову — має сказати
+    // «створи категорію X», AI зробить create_finance_category першим.
+    console.warn('[finance] AI вигадав категорію «' + category + '» — fallback на Інше');
+    category = 'Інше';
+    // Захист на випадок коли «Інше» з якоїсь причини видалили — критичний fallback.
+    if (!catList.find(c => c.name === 'Інше')) createFinCategory(type, { name: 'Інше' });
   }
 
   // LfA6w 07.05: subcategory приймаємо ТIЛЬКИ якщо вона реально існує
