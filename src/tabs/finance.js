@@ -36,6 +36,8 @@ import {
 } from './finance-cats.js';
 import { finDailyInsight, refreshFinInsight } from './finance-insight.js';
 import { matchSubcategoryFromComment } from '../data/finance-subcat-keywords.js';
+// Phase 2 nliW8 13.05: pure classifier для уніфікації save_finance (Inbox/habits/evening).
+import { classifyCategory, classifySubcategory, resolveFinanceDate, OTHER_CATEGORY } from '../data/finance-classifier.js';
 // Chat bar винесено у finance-chat.js — re-export для backward compat (ai/core.js, chips.js)
 export { addFinanceChatMsg, sendFinanceBarMessage } from './finance-chat.js';
 
@@ -555,68 +557,46 @@ export function _resolveFinanceDate(aiDate, text) {
   return Date.now();
 }
 
-// Обробка фінансів з Inbox
-export function processFinanceAction(parsed, originalText) {
+// Обробка фінансів — уніфікований handler для всіх 8 чатів (Phase 2 nliW8 13.05).
+// До Phase 2 цей код був дубльований у habits.js:1530 і evening-actions.js:155
+// з активними розбіжностями (auto-create вигаданих категорій, відсутні
+// syncHealth + budget, Date.now() ID). Тепер 1 source of truth.
+//
+// @param parsed - parsed args від AI tool_call
+// @param originalText - оригінальний текст юзера
+// @param addMsgFn - функція повідомлення поточного чату (DI). Default addInboxChatMsg.
+export function processFinanceAction(parsed, originalText, addMsgFn = addInboxChatMsg) {
   const cats = getFinCats();
   const type = parsed.fin_type || 'expense';
   const amount = parseFloat(parsed.amount) || 0;
-  let category = parsed.category || (type === 'expense' ? 'Інше' : 'Інше');
   const comment = parsed.comment || originalText;
 
   if (!amount || amount <= 0) {
-    addInboxChatMsg('agent', t('finance.err.no_amount', 'Не вдалось розпізнати суму. Спробуй написати чіткіше: "витратив 50 на їжу"'));
+    addMsgFn('agent', t('finance.err.no_amount', 'Не вдалось розпізнати суму. Спробуй написати чіткіше: "витратив 50 на їжу"'));
     return;
   }
 
   const catList = type === 'expense' ? cats.expense : cats.income;
-  // LfA6w 08.05: apostrophe-нормалізація як у B-47 (папки нотаток).
-  // AI може повернути «Здоров'я» (straight ') або «Здоровʼя» (curly ʼ),
-  // юзерська категорія може мати інший варіант → не матчилось → створювалась
-  // окрема категорія, кільце показувало 0. Тепер шукаємо нечутливо до апострофа.
-  const _normCat = s => String(s || '').replace(/[ʼ’`]/g, "'").toLowerCase().trim();
-  const matchedCat = catList.find(c => _normCat(c.name) === _normCat(category));
-  // nliW8 13.05: зберігаємо AI-вигадану назву щоб запропонувати юзеру створити нову.
-  let aiSuggestedCategory = null;
-  if (matchedCat) {
-    category = matchedCat.name; // використовуємо рівно ту назву що у юзера
-  } else {
-    // nliW8 13.05: ЖОРСТКО НЕ створюємо нову категорію з AI-вигаданих.
-    // Раніше тут був createFinCategory — АВТОМАТИЧНО плодило юзеру вигадані.
-    // Тепер: записуємо в «Інше» + питаємо юзера через чіпи що робити далі
-    // («Створити нову» або «Лишити в Інше»).
-    aiSuggestedCategory = (parsed.category || '').trim() || null;
-    console.warn('[finance] AI вигадав категорію «' + aiSuggestedCategory + '» — fallback на Інше + питаємо юзера');
-    category = 'Інше';
-    if (!catList.find(c => c.name === 'Інше')) createFinCategory(type, { name: 'Інше' });
+
+  // Class category через pure classifier (src/data/finance-classifier.js).
+  // AI-вигадані категорії → fallback на «Інше» + aiSuggestedCategory для chip-діалогу.
+  const catRes = classifyCategory(parsed.category, catList);
+  const category = catRes.category;
+  const aiSuggestedCategory = catRes.aiSuggested;
+  if (aiSuggestedCategory) {
+    console.warn('[finance] AI вигадав категорію «' + aiSuggestedCategory + '» — fallback на Інше');
+    // Захист на випадок коли «Інше» з якоїсь причини видалили (_migrateFinCats гарантує її дефолт).
+    if (!catList.find(c => c.name === OTHER_CATEGORY)) createFinCategory(type, { name: OTHER_CATEGORY });
   }
 
-  // LfA6w 07.05: subcategory приймаємо ТIЛЬКИ якщо вона реально існує
-  // у списку категорії — захист від AI-вигаданих підкатегорій.
-  // LfA6w 08.05: + apostrophe-нормалізація subcategory match.
+  // Class subcategory + keyword fallback з comment.
   const cat = catList.find(c => c.name === category);
   const validSubs = cat && Array.isArray(cat.subcategories) ? cat.subcategories : [];
-  let subcategory = (parsed.subcategory || '').trim();
-  // nliW8 13.05: aiSuggestedSubcategory — щоб запропонувати юзеру створити нову.
-  let aiSuggestedSubcategory = null;
-  if (subcategory) {
-    const matchedSub = validSubs.find(s => _normCat(s) === _normCat(subcategory));
-    if (matchedSub) {
-      subcategory = matchedSub; // юзерська форма
-    } else {
-      aiSuggestedSubcategory = subcategory; // запам'ятати для chip-діалогу
-      subcategory = '';
-    }
-  }
+  const subRes = classifySubcategory(parsed.subcategory, validSubs, comment);
+  const subcategory = subRes.subcategory;
+  const aiSuggestedSubcategory = subRes.aiSuggested;
 
-  // LfA6w 07.05 v2: code-side fallback — якщо AI не передав subcategory
-  // (типовий кейс «60 бензин» де AI ставить тільки category=Транспорт),
-  // матчимо ключові слова з comment проти реальних підкатегорій юзера.
-  // Працює універсально для будь-якої категорії з будь-якими підкатегоріями.
-  if (!subcategory && comment && validSubs.length > 0) {
-    subcategory = matchSubcategoryFromComment(comment, validSubs);
-  }
-
-  const ts = _resolveFinanceDate(parsed.date, originalText);
+  const ts = resolveFinanceDate(parsed.date, originalText, Date.now());
 
   const txs = getFinance();
   const tx = { id: generateUUID(), type, amount, category, comment, ts };
@@ -624,11 +604,15 @@ export function processFinanceAction(parsed, originalText) {
   txs.unshift(tx);
   saveFinance(txs);
 
-  // G3 myshu 11.05: action-log save_finance — undo через delete_transaction by id
+  // G3 myshu 11.05: action-log save_finance — undo через delete_transaction by id.
+  // Source 'inbox' для всіх 8 чатів — action-log єдиний, source потрібен лише
+  // для аналітики. Реальний chat-контекст уже у addMsgFn (DI).
   logAction('save_finance', {
     fin_type: type, amount, category, subcategory, fin_comment: comment, date: parsed.date,
   }, tx.id, null, 'inbox');
 
+  // B-71 (xGe1H): Inbox-картка СКРIЗЬ де було save_finance — щоб операція
+  // була видима у стрічці незалежно від чату-входу.
   const items = getInbox();
   items.unshift({ id: generateUUID(), text: originalText, category: 'finance', ts, processed: true });
   saveInbox(items);
@@ -636,38 +620,41 @@ export function processFinanceAction(parsed, originalText) {
 
   if (currentTab === 'finance') renderFinance();
 
-  // Фаза 5 (15.04 6v2eR): синк медичних витрат
+  // Фаза 5 (15.04 6v2eR): синк медичних витрат — Health-категорія писатиме
+  // запис у відповідну health-картку (тримання медрозтрат окремо).
   if (type === 'expense') {
     try { syncHealthFinanceToHistory(amount, category, comment); } catch (e) {}
   }
 
-  addInboxChatMsg('agent', `${type === 'expense' ? '-' : '+'}${formatMoney(amount)} · ${category}${parsed.fin_comment ? ' — ' + parsed.fin_comment : ''}`);
+  // Підтвердження у поточний чат (DI).
+  addMsgFn('agent', `${type === 'expense' ? '-' : '+'}${formatMoney(amount)} · ${category}${parsed.fin_comment ? ' — ' + parsed.fin_comment : ''}`);
 
-  // nliW8 13.05: якщо AI вигадав категорію — пропонуємо юзеру створити нову
-  // АБО лишити в «Інше». Chip «Створити нову» → AI робить create_finance_category +
-  // update_transaction (move) одним батчем. Дублю не буде (це update, не save).
-  if (aiSuggestedCategory && aiSuggestedCategory !== 'Інше') {
+  // Chip-діалог при AI-вигаданій категорії/підкатегорії — питаємо юзера
+  // створити нову чи лишити в «Інше». Chip action='chat' → AI робить
+  // batch tool_calls (create_finance_category/add_finance_subcategory +
+  // update_transaction). Один мозок — той самий діалог у всіх 8 чатах.
+  if (aiSuggestedCategory && aiSuggestedCategory !== OTHER_CATEGORY) {
     const newCatName = aiSuggestedCategory.charAt(0).toUpperCase() + aiSuggestedCategory.slice(1);
     const chips = [
       { label: t('finance.cat_clarify.create', 'Створити "{name}"', { name: newCatName }), action: 'chat', text: t('finance.cat_clarify.create_text', 'Створи категорію "{name}" для витрат, потім перенеси транзакцію [ID:{id}] з категорії "Інше" у "{name}"', { name: newCatName, id: tx.id }) },
       { label: t('finance.cat_clarify.keep_other', 'Лишити в Інше'), action: 'chat', text: t('finance.cat_clarify.keep_other_text', 'ок, лишай в Інше') },
     ];
-    addInboxChatMsg('agent', t('finance.cat_clarify.question', 'Категорії "{name}" немає у твоєму списку. Що робимо?', { name: newCatName }), chips);
+    addMsgFn('agent', t('finance.cat_clarify.question', 'Категорії "{name}" немає у твоєму списку. Що робимо?', { name: newCatName }), chips);
   } else if (aiSuggestedSubcategory && !subcategory) {
-    // nliW8 13.05: AI запропонував підкатегорію якої немає у юзера. Категорія
-    // ВАЛІДНА (інакше пішли б у блок вище). Питаємо чи створити нову sub.
     const newSubName = aiSuggestedSubcategory.charAt(0).toUpperCase() + aiSuggestedSubcategory.slice(1);
     const chips = [
       { label: t('finance.subcat_clarify.create', 'Створити "{name}"', { name: newSubName }), action: 'chat', text: t('finance.subcat_clarify.create_text', 'Додай у категорію "{cat}" підкатегорію "{sub}", потім онови транзакцію [ID:{id}] — встанови їй subcategory "{sub}"', { cat: category, sub: newSubName, id: tx.id }) },
       { label: t('finance.subcat_clarify.keep', 'Лишити без'), action: 'chat', text: t('finance.subcat_clarify.keep_text', 'ок, без підкатегорії') },
     ];
-    addInboxChatMsg('agent', t('finance.subcat_clarify.question', 'Записав у "{cat}". Створити підкатегорію "{sub}"?', { cat: category, sub: newSubName }), chips);
+    addMsgFn('agent', t('finance.subcat_clarify.question', 'Записав у "{cat}". Створити підкатегорію "{sub}"?', { cat: category, sub: newSubName }), chips);
   }
 
-  checkFinBudgetWarning(type, category, amount);
+  checkFinBudgetWarning(type, category, amount, addMsgFn);
 }
 
-function checkFinBudgetWarning(type, category, amount) {
+// Параметризовано addMsgFn (Phase 2): budget warning тепер у поточний чат
+// (Tasks/Notes/Health/...), не hardcoded у Inbox.
+export function checkFinBudgetWarning(type, category, amount, addMsgFn = addInboxChatMsg) {
   if (type !== 'expense') return;
   const budget = getFinBudget();
   const from = getFinPeriodRange('month');
@@ -675,15 +662,15 @@ function checkFinBudgetWarning(type, category, amount) {
   const totalSpent = txs.reduce((s, t) => s + t.amount, 0);
   if (budget.total > 0) {
     const pct = totalSpent / budget.total;
-    if (pct >= 1) addInboxChatMsg('agent', t('finance.budget.month_over', '⚠️ Загальний бюджет на місяць перевищено. Витрачено {spent} з {total}.', { spent: formatMoney(totalSpent), total: formatMoney(budget.total) }));
-    else if (pct >= 0.8) addInboxChatMsg('agent', t('finance.budget.month_left', '💡 До ліміту місяця залишилось {left}.', { left: formatMoney(budget.total - totalSpent) }));
+    if (pct >= 1) addMsgFn('agent', t('finance.budget.month_over', '⚠️ Загальний бюджет на місяць перевищено. Витрачено {spent} з {total}.', { spent: formatMoney(totalSpent), total: formatMoney(budget.total) }));
+    else if (pct >= 0.8) addMsgFn('agent', t('finance.budget.month_left', '💡 До ліміту місяця залишилось {left}.', { left: formatMoney(budget.total - totalSpent) }));
   }
   const catLimit = budget.categories?.[category];
   if (catLimit > 0) {
     const catSpent = txs.filter(t => t.category === category).reduce((s, t) => s + t.amount, 0);
     const pct = catSpent / catLimit;
-    if (pct >= 1) addInboxChatMsg('agent', t('finance.budget.cat_over', '⚠️ Ліміт по "{cat}" перевищено: {spent} з {limit}.', { cat: category, spent: formatMoney(catSpent), limit: formatMoney(catLimit) }));
-    else if (pct >= 0.8) addInboxChatMsg('agent', t('finance.budget.cat_left', '💡 По "{cat}" залишилось {left}.', { cat: category, left: formatMoney(catLimit - catSpent) }));
+    if (pct >= 1) addMsgFn('agent', t('finance.budget.cat_over', '⚠️ Ліміт по "{cat}" перевищено: {spent} з {limit}.', { cat: category, spent: formatMoney(catSpent), limit: formatMoney(catLimit) }));
+    else if (pct >= 0.8) addMsgFn('agent', t('finance.budget.cat_left', '💡 По "{cat}" залишилось {left}.', { cat: category, left: formatMoney(catLimit - catSpent) }));
   }
 }
 

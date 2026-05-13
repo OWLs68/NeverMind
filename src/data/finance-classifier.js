@@ -19,6 +19,15 @@
 import { matchSubcategoryFromComment } from './finance-subcat-keywords.js';
 import { resolveDateFromText } from './ua-time-parser.js';
 
+// === Константи ===
+
+/**
+ * Канонічна назва дефолтної категорії-fallback. _migrateFinCats у
+ * finance-cats.js гарантує її присутність як остання у списку expense+income.
+ * Експортована як константа щоб не мати магічного рядка у callerі.
+ */
+export const OTHER_CATEGORY = 'Інше';
+
 // === Утиліти ===
 
 /**
@@ -46,14 +55,14 @@ export function classifyCategory(parsedCategory, catList) {
   const safeList = Array.isArray(catList) ? catList : [];
   const raw = String(parsedCategory || '').trim();
   if (!raw) {
-    return { category: 'Інше', aiSuggested: null };
+    return { category: OTHER_CATEGORY, aiSuggested: null };
   }
   const matched = safeList.find(c => normalizeCategoryName(c.name) === normalizeCategoryName(raw));
   if (matched) {
     return { category: matched.name, aiSuggested: null };
   }
   // AI вигадав категорію — fallback на «Інше», запам'ятовуємо для chip-діалогу.
-  return { category: 'Інше', aiSuggested: raw };
+  return { category: OTHER_CATEGORY, aiSuggested: raw };
 }
 
 /**
