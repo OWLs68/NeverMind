@@ -97,6 +97,7 @@
 | `update_health_card_status` | Точкова зміна статусу ("у ремісії", "тепер хронічна", "закрив") АБО агрегатор AI-інтерв'ю | `card_id`, `status` (acute/treatment/improving/remission/chronic/done), `comment` |
 | `add_medication` | Лікар прописав препарат | `card_id`, `med_name`, `dosage`, `schedule`, `course_duration` |
 | `edit_medication` | Зміна дози/графіку | `card_id`, `med_id`, ... |
+| `delete_medication` | "відміни ліки X" / "більше не приймаю X" — reverse counterpart до add_medication (universal undo) | `card_id`, `med_id`, `comment` |
 | `log_medication_dose` | "прийняв Омез" — перевіри картки | `card_id`, `med_name` (fuzzy) |
 | `add_allergy` | "у мене алергія на X" — перевір дублі | `name`, `notes` |
 | `delete_allergy` | "більше нема алергії на X" | `allergy_id` |
