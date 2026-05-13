@@ -422,7 +422,7 @@ function _toolCallToAction(name, args) {
     case 'complete_task': return { action: 'complete_task', task_ids: args.task_ids, comment: args.comment };
     case 'create_project': return { action: 'create_project', name: args.name, subtitle: args.subtitle || '' };
     case 'add_step': return { action: 'add_step', task_id: args.task_id, steps: args.steps };
-    case 'update_transaction': return { action: 'update_transaction', id: args.id, category: args.category, amount: args.amount, comment: args.comment };
+    case 'update_transaction': return { action: 'update_transaction', id: args.id, category: args.category, subcategory: args.subcategory, amount: args.amount, comment: args.comment };
     case 'restore_deleted': return { action: 'restore_deleted', query: args.query, type: args.type || null };
     case 'save_routine': return { action: 'save_routine', day: args.day, blocks: args.blocks };
     case 'show_monthly_summary': return { action: 'show_monthly_summary', comment: args.comment };
@@ -657,6 +657,10 @@ ${aiContext}`;
           const idx = txs.findIndex(t => t.id === action.id);
           if (idx !== -1) {
             if (action.category) txs[idx].category = action.category;
+            if (action.subcategory !== undefined) {
+              if (action.subcategory) txs[idx].subcategory = action.subcategory;
+              else delete txs[idx].subcategory;
+            }
             if (action.comment !== undefined) txs[idx].comment = action.comment;
             if (action.amount) txs[idx].amount = parseFloat(action.amount);
             saveFinance(txs);

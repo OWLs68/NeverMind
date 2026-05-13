@@ -596,9 +596,16 @@ export function processFinanceAction(parsed, originalText) {
   const cat = catList.find(c => c.name === category);
   const validSubs = cat && Array.isArray(cat.subcategories) ? cat.subcategories : [];
   let subcategory = (parsed.subcategory || '').trim();
+  // nliW8 13.05: aiSuggestedSubcategory — щоб запропонувати юзеру створити нову.
+  let aiSuggestedSubcategory = null;
   if (subcategory) {
     const matchedSub = validSubs.find(s => _normCat(s) === _normCat(subcategory));
-    subcategory = matchedSub || ''; // використовуємо юзерську форму або скидаємо
+    if (matchedSub) {
+      subcategory = matchedSub; // юзерська форма
+    } else {
+      aiSuggestedSubcategory = subcategory; // запам'ятати для chip-діалогу
+      subcategory = '';
+    }
   }
 
   // LfA6w 07.05 v2: code-side fallback — якщо AI не передав subcategory
@@ -646,6 +653,15 @@ export function processFinanceAction(parsed, originalText) {
       { label: t('finance.cat_clarify.keep_other', 'Лишити в Інше'), action: 'chat', text: t('finance.cat_clarify.keep_other_text', 'ок, лишай в Інше') },
     ];
     addInboxChatMsg('agent', t('finance.cat_clarify.question', 'Категорії "{name}" немає у твоєму списку. Що робимо?', { name: newCatName }), chips);
+  } else if (aiSuggestedSubcategory && !subcategory) {
+    // nliW8 13.05: AI запропонував підкатегорію якої немає у юзера. Категорія
+    // ВАЛІДНА (інакше пішли б у блок вище). Питаємо чи створити нову sub.
+    const newSubName = aiSuggestedSubcategory.charAt(0).toUpperCase() + aiSuggestedSubcategory.slice(1);
+    const chips = [
+      { label: t('finance.subcat_clarify.create', 'Створити "{name}"', { name: newSubName }), action: 'chat', text: t('finance.subcat_clarify.create_text', 'Додай у категорію "{cat}" підкатегорію "{sub}", потім онови транзакцію [ID:{id}] — встанови їй subcategory "{sub}"', { cat: category, sub: newSubName, id: tx.id }) },
+      { label: t('finance.subcat_clarify.keep', 'Лишити без'), action: 'chat', text: t('finance.subcat_clarify.keep_text', 'ок, без підкатегорії') },
+    ];
+    addInboxChatMsg('agent', t('finance.subcat_clarify.question', 'Записав у "{cat}". Створити підкатегорію "{sub}"?', { cat: category, sub: newSubName }), chips);
   }
 
   checkFinBudgetWarning(type, category, amount);

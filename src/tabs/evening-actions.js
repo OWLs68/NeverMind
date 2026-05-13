@@ -292,6 +292,10 @@ export function dispatchEveningTool(name, args) {
         const idx = txs.findIndex(t => t.id === args.id);
         if (idx === -1) return { ok: false, err: 'tx not found' };
         if (args.category) txs[idx].category = args.category;
+        if (args.subcategory !== undefined) {
+          if (args.subcategory) txs[idx].subcategory = args.subcategory;
+          else delete txs[idx].subcategory;
+        }
         if (args.amount) txs[idx].amount = parseFloat(args.amount);
         if (args.comment !== undefined) txs[idx].comment = args.comment;
         saveFinance(txs);
