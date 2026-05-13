@@ -60,6 +60,15 @@
 - **Обгортати онклик у одинарні лапки** — `onclick="fn('${item.id}')"`. UUID не містить `'` чи `"` (тільки `[0-9a-f-]+`) — безпечно.
 - **String() обгортка у find/filter** — якщо хендлер працює з мікс типами, використовуй `find(x => String(x.id) === String(id))` (приклад: inbox.js:340, notes.js:596, projects.js:187, habits.js:925). Strict `===` між number і string завжди false.
 - **Tasks/Projects steps + Health 3B-8 — ЗАКРИТО db0YY** — sub-entity steps мігровано на UUID (v17), Health UUID v16, 4-grep чек-ліст пройдено. Залишковий борг: `add_medication` undo (потрібен новий tool `delete_medication`).
+- **⚠️ Урок nliW8 13.05.2026 — grep #1 НЕ покриває string concat у onclick.** Регресія habits.js: db0YY запустив grep `onclick="...\${...id}...` і пройшовся 6 файлами. Але `habits.js` мав ОБИДВА патерни: template literal `${h.id}` (4 точки 454/458/775/779 — мали б спіймати) **АЛЕ ще 7 точок string concat** `' + h.id + ')` (465/467/786/788/865/898×2/901×2 — grep #1 ПРОПУСТИВ). Symptom: 26 SyntaxError у production логах v862 на тапі галочки.
+- **Розширений 7-grep чек-ліст:** додати окремий grep для string concat:
+  ```bash
+  # 7. onclick з string concat ' + obj.id + ' без обгортки в \'...\' (B-170 регресія)
+  grep -rnE "onclick=\"[^\"]*\(' \+ [^+]+\.id \+ '\)" src/ --include="*.js" | grep -v "\\\\'"
+  # Також shadow patten — ontouchend (для button.button з double handler як habits.js Quit):
+  grep -rnE "ontouchend=\"[^\"]*\(' \+ [^+]+\.id \+ '\)" src/ --include="*.js" | grep -v "\\\\'"
+  ```
+- **Конкретний нюанс habits.js:** `renderHabits` (Me-tab), `renderProdHabits` (Прод-tab), `_renderQuitHabitCard` (Quit-челенджі) — **3 окремі render-функції в одному файлі**. Grep по `habits.js` ловить всі, але якщо grep по «onclick" з template literal» — пропускає Quit (string concat). Завжди запускати **ОБИДВА grep'и** (template literal AND string concat) після UUID-міграції.
 
 ### Universal undo через DI — silent fail коли handler НЕ у processUniversalAction (db0YY 12.05.2026, B-174 урок)
 - **Кейс:** після Council аудиту знайшов що undo для `save_finance` ламався з myshu (24+ год у проді). Reverser у `action-reversers.js` будував `{type:'tool_call', tool:'delete_transaction', args:{id}}`. `executeReverse` через DI шле у `processUniversalAction` (habits.js). Але `delete_transaction` живе ТIЛЬКИ у `tool-dispatcher.js` direct handler — не у `processUniversalAction` → return false → AI пише «⚠️ Не зміг відмінити». Я повторив помилку у db0YY коли додав `create_health_card`/`add_allergy` reversers — той самий патерн silent fail.

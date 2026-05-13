@@ -46,7 +46,7 @@
 | `save_habit` | Регулярна дія ("щодня", "кожен ранок", "тричі на тиждень") | `name`, `days[]`, `target_count` |
 | `save_moment` | Факт що вже стався БЕЗ дати в майбутньому | `text`, `mood`, `comment` |
 | `create_event` | Факт що СТАНЕТЬСЯ з датою (приїзд, зустріч) | `title`, `date`, `time`, `priority` |
-| `save_finance` | Сума грошей — витрата або дохід | `fin_type`, `amount`, `category`, `fin_comment` |
+| `save_finance` | Сума грошей — витрата або дохід | `fin_type`, `amount`, `category`, `subcategory` (опц.), `fin_comment`, `date` (опц.) |
 | `create_project` | Масштабна ціль на тижні/місяці | `name`, `subtitle`, `comment` |
 
 ### COMPLETE — виконання (2)

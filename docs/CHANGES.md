@@ -6,6 +6,32 @@
 
 ---
 
+## 2026-05-13 — nliW8: smoke-test v862 + B-170 регресія habits.js + 3 нові класи (B-180/181/182) + 2 нові відкриті (B-178/179) + Council 4 агенти
+
+**Гілка:** `claude/start-session-nliW8` · 3 коміти · CACHE bump pending
+
+iPhone smoke-test v862 виявив що db0YY залишила непокритими 3 рендер-функції у `habits.js` — 26 SyntaxError у production логах (галочка звички не реагує на тап). Запустив Council 4 паралельних агентів Sonnet (code-regression-finder + prompt-engineer-auditor + silent-bug-scout + doc-consistency-checker). Знайдено й виправлено 4 проблеми.
+
+### Закриті
+- **B-170 РЕГРЕСІЯ часткова** (`3547c2c`) — db0YY покрив 17 точок у 6 файлах, але пропустив `habits.js`: `renderHabits` Me-tab (4 точки), `renderProdHabits` Прод-tab (4 точки), `_renderQuitHabitCard` (5 точок — onclick+ontouchend подвійні). Загалом 13 точок onclick UUID без лапок. Корінь: 6-grep чек-ліст з `lessons.md` не покривав string concat `' + h.id + '` (тільки template literal `${h.id}`). 10 Edit'ів з обгорткою.
+- **B-180** (`06efd93`) — save_finance.subcategory mute-fall (регресія від PJi7l `7e9ea7b`). Кава→Кафе пропускалось бо tool description казав «ОПЦІЙНЕ + не питай». Тепер вбудовані fuzzy-підказки у description.
+- **B-181** (`06efd93`) — add_medication без health-картки → AI fallback на save_memory_fact. Tool description оновлено: «БЕЗ карток → НЕ викликай. Спочатку create_health_card, потім add_medication у batch tool_calls». + правило в INBOX_SYSTEM_PROMPT.
+- **B-182** (`14c91c8`) — add_medication пропускав logAction → undo silent skip (дзеркальна діра до B-174). + `logAction('add_medication', args, med.id, null, 'dispatcher');` після успішного `addMedicationToCard`.
+
+### Відкриті (винесено у NEVERMIND_BUGS.md)
+- **B-178** — cross-chat interview handoff Inbox→Health не передає чіпи + FSM. Блокер Шару 5 ROADMAP.
+- **B-179** — UI Кошика відсутній (тільки backend `nm_trash` + 10 типів restore). AI-only restore. Окрема сесія.
+
+### Уроки в lessons.md
+- 6-grep чек-ліст розширено до **7-grep** — додано grep для string concat (`' + obj.id + '`) у onclick + ontouchend. Конкретний нюанс: `habits.js` має 3 окремі render-функції з різними patterns — завжди запускати ОБИДВА grep'и.
+
+### Метрики
+- Council 4 агенти Sonnet (~165k токенів)
+- Зміни: `habits.js` (11 рядків), `prompts.js` (3), `tool-dispatcher.js` (2), документація 4 файли
+- Smoke-test verifield: 6/8 сценаріїв OK, 2 промпт-баги вилікувано, 1 код-баг вилікувано, 2 нові відкриті
+
+---
+
 ## 2026-05-12 — db0YY: UUID-блок 100% + 4 класи регресій myshu (B-170..B-177) + Universal undo coverage + Council аудит
 
 **Гілка:** `claude/start-session-db0YY` · 30+ комітів (v841 → v848+) · CACHE `nm-20260512-1310`

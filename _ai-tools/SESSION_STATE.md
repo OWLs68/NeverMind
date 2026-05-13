@@ -4,11 +4,77 @@
 >
 > Старіші сесії (до 6GoDe 19.04) — в [`_archive/SESSION_STATE_archive.md`](../_archive/SESSION_STATE_archive.md).
 
-**Оновлено:** 2026-05-12 (сесія **db0YY** — Завершення UUID-блоку Architecture Refactor 100% + 4 класи багів регресії myshu (B-170/171/172/173) + Universal undo coverage 8 tools + 10 типів restore + 2 нові класи (B-174/175/176/177) + Council 4-агентний аудит). Раніше: 2026-05-11 (сесія **myshu** — G3 Universal Undo + parser intent-router save_routine + 3 раунди GPT + Council 5 агентів + Architecture Refactor план на 8 сесій).
+**Оновлено:** 2026-05-13 (сесія **nliW8** — Smoke-test v862 + B-170 регресія habits.js (13 точок у 3 рендерах) + 3 нові класи (B-180/181/182) + 2 нові відкриті (B-178/179) + Council 4 агенти Sonnet). Раніше: 2026-05-12 (сесія **db0YY** — UUID-блок 100% + B-170..B-177 + Universal undo coverage + Council аудит).
 
 ---
 
-## 🔧 Поточна сесія db0YY — Завершення UUID-блоку 100% + B-170..B-177 регресії myshu + Council аудит (12.05.2026)
+## 🔧 Поточна сесія nliW8 — Smoke-test v862 + B-170 регресія + 3 нові класи + Council 4 агенти (13.05.2026)
+
+### Зроблено
+
+#### A. Smoke-test 06:10-06:20 (iPhone v862, Роман)
+
+Систематичний 6-сценарний тест db0YY 24 комітів. Підтверджено працює: B-172 UUID-tool-calls, B-171 Date.now→UUID, Health legacy_id, Universal undo create (allergy/лікар). Знайдено 4 нові класи багів + 1 UI gap.
+
+#### B. Council 4 паралельні агенти Sonnet (~165k токенів)
+
+1. **`code-regression-finder`** — знайшов 13 точок B-170 у `habits.js` (3 рендер-функції). Усі HIGH risk. Інші 12 файлів — clean.
+2. **`prompt-engineer-auditor`** — точні old_string/new_string для `save_finance.subcategory` (рядок 511) + `add_medication` tool (рядок 559) + INBOX_SYSTEM_PROMPT (рядок 488). + 3 bonus mute-fall ризики (log_medication_dose fuzzy, create_project clarify chip, save_note(folder=Здоров'я) дубль).
+3. **`silent-bug-scout`** — TOP-5: HIGH `add_medication` без logAction (новий клас, дзеркальна B-174), HIGH onclick UUID (дубль #1), MED `create_project` без reverser, MED finance-cats `Date.now()` ще не мігровані, MED projects sub-entity steps mixed types.
+4. **`doc-consistency-checker`** — 3 CRITICAL doc-gaps (SESSION_STATE 3 блоки активних, B-170 renderProdHabits gap у BUGS, 4 нових багів не зареєстровані) + 4 MED + 1 LOW.
+
+#### C. Фікси — 3 коміти
+
+5. **B-170 РЕГРЕСІЯ часткова** (`3547c2c`) — 13 точок onclick UUID без лапок у `habits.js`: `renderHabits` Me-tab (454/458/465/467), `renderProdHabits` Прод-tab (775/779/786/788), `_renderQuitHabitCard` (865/898/901 — onclick+ontouchend подвійні). 26 SyntaxError у production логах v862. **Фікс:** 10 Edit'ів з обгорткою `'${h.id}'` / `\\'' + h.id + '\\''`. Урок у lessons.md: 6-grep → 7-grep (string concat patten додано).
+6. **B-180 + B-181** (`06efd93`) — промпт-фікси: `save_finance.subcategory` тепер має вбудовані fuzzy-підказки (кава→Кафе, бензин→Паливо); `add_medication` description + INBOX правило для гілки «БЕЗ карток → create_health_card + add_medication у batch».
+7. **B-182** (`14c91c8`) — `add_medication` пропускав `logAction` → undo silent skip (дзеркальна B-174). + `logAction('add_medication', args, med.id, null, 'dispatcher');`. Reverser `delete_medication` поки відсутній (TODO).
+
+#### D. Документація
+
+8. `NEVERMIND_BUGS.md` — додано B-178/179 у відкриті, B-170 РЕГРЕСІЯ + B-180/181/182 у закриті nliW8 секцію.
+9. `lessons.md` — урок «6-grep → 7-grep + habits.js має 3 окремі render-шляхи». Розширений grep для string concat.
+10. `docs/CHANGES.md` — запис nliW8.
+
+### Ключові рішення
+
+- **Council Sonnet 4 паралельні** замість Opus — інвентаризація + точкове знаходження, ~80% якості при 20% ціни.
+- **Принцип «дзеркальна діра»** — silent-bug-scout знайшов B-182 за тим самим патерном що B-174. Перевіряти ВСI early-return cases на `logAction` присутність.
+- **B-178 + B-179 НЕ фіксити сьогодні** — обидва архітектурні (Шар 5 + UI Кошика). Окремі сесії. Записані у BUGS відкритими.
+- **Промпт-фікси subcategory + add_medication — це лоскут** до Embeddings classifier / parser. Тимчасово AI mapping валідне рішення, замінимо коли парсер з'явиться.
+
+### Інциденти
+
+- **Smoke-test чек-ліст склав «на пам'ять»** — обіцяв «зайди у Кошик у Налаштуваннях» якого фізично немає (тільки backend). Порушив правило #6 з HOT_RULES «читай код ПЕРЕД оцінкою». Роман помітив. Записав B-179 як новий баг.
+- **Build fail локально** (`MODULE_NOT_FOUND` esbuild) — це нормально для Claude Code Web без `node_modules`. `node --check` OK для синтаксу, build робить CI на GitHub Actions.
+
+### Метрики
+
+- Гілка: `claude/start-session-nliW8`
+- Коміти: 3 (`3547c2c` → `14c91c8`) + документація pending
+- Версії: v862 → v863+ (CACHE bump pending)
+- Закриті: B-170 регресія + B-180 + B-181 + B-182 (4)
+- Відкриті: B-178 (cross-chat interview) + B-179 (UI Кошика)
+- Council Sonnet агенти: 4 (~165k токенів)
+- Файли змінено: habits.js (11 рядків), prompts.js (3), tool-dispatcher.js (2), 4 docs
+
+### Спостереження Claude
+
+- **Production логи від Романа = золото для діагностики.** 26 SyntaxError підтвердили клас бага точно. Економить 30 хв пошуку.
+- **Pre-edit-read-check hook ловив правильно** — 2 рази в сесії блокував Edit на не-Read файл, я робив Read і продовжував. Без хука пройшов би на пам'ять.
+- **Council 4 агенти знайшли більше ніж я очікував** — silent-bug-scout B-182 був абсолютно несподіваний.
+- **Запис коментарів у комітах — корисно для прискіпливого doc-checker** в наступному раунді. Знає де шукати дзеркальні баги.
+
+### Відкладене
+
+- **B-178 cross-chat interview handoff** — велика сесія (Шар 5 ROADMAP)
+- **B-179 UI Кошика** — окрема фіча/сесія
+- **`delete_medication` tool + reverser** — потрібен для повного circle add_medication undo
+- **Архівувати dyhJu блок** на `/finish` (зараз 3 повних блоки)
+- **Council MED знахідки** — `create_project` reverser, finance-cats Date.now() v17 migration, projects sub-entity (Supabase prep)
+
+---
+
+## 🔧 Сесія db0YY — Завершення UUID-блоку 100% + B-170..B-177 регресії myshu + Council аудит (12.05.2026)
 
 ### Зроблено
 
