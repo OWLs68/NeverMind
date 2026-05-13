@@ -4,7 +4,7 @@
 >
 > Старіші сесії (до 6GoDe 19.04) — в [`_archive/SESSION_STATE_archive.md`](../_archive/SESSION_STATE_archive.md).
 
-**Оновлено:** 2026-05-13 (сесія **nliW8** — Smoke-test v862 + B-170 регресія habits.js (13 точок у 3 рендерах) + 3 нові класи (B-180/181/182) + 2 нові відкриті (B-178/179) + Council 4 агенти Sonnet). Раніше: 2026-05-12 (сесія **db0YY** — UUID-блок 100% + B-170..B-177 + Universal undo coverage + Council аудит).
+**Оновлено:** 2026-05-13 (сесія **nliW8** — 4 фази: B-170 регресія + Phase 2 уніфікація save_finance + Пункт 3 delete_medication повний undo + Пункт 4 B-178 cross-chat + 6 авто-сторожів-хуків. 24 коміти v862→v874+, Council 16 агентів Sonnet). Раніше: 2026-05-12 (сесія **db0YY** — UUID-блок 100% + B-170..B-177 + Universal undo coverage + Council аудит).
 
 ---
 
@@ -88,13 +88,14 @@ Council 3 агенти Sonnet знайшли 2 корені: startHealthIntervie
 ### Метрики
 
 - Гілка: `claude/start-session-nliW8`
-- Коміти: 20+ (`3547c2c` → `d85dde3`)
-- Версії: v862 → v872+ (CACHE bump ~10 разів)
-- Закриті: B-170 регресія + B-178 + B-180 + B-181 + B-182 + finance-unification (Phase 2) + delete_medication circle + UI bubbles (8)
+- Коміти: 24 (`3547c2c` → `a317d4e`)
+- Версії: v862 → v874+ (CACHE bump ~11 разів, фінальний `nm-20260513-1015`)
+- Закриті: B-170 регресія + B-178 + B-180 + B-181 + B-182 + finance-unification (Phase 2) + delete_medication circle + UI bubbles + 6 регресій-класів автоматизовано хуками (9)
 - Відкриті: B-179 (UI Кошика — Блок 6 ROADMAP)
-- Council Sonnet агенти: 13 (4 Фаза 1 + 4 Phase 2 + 3 Пункт 3 + 3 Пункт 4 + 2 аудит)
-- Нові файли: `src/data/finance-classifier.js`
-- Розширені: `src/tabs/finance.js`, `habits.js`, `health.js`, `evening-actions.js`, `finance-chat.js`, `tool-dispatcher.js`, `prompts.js`, `inbox.js`, `trash.js`, `action-reversers.js`
+- Council Sonnet агенти: 16 (4 Фаза 1 + 4 Phase 2 + 3 Пункт 3 + 3 Пункт 4 + 3 хуки + 2 аудити)
+- Нові файли: `src/data/finance-classifier.js`, 5 нових pre-commit хуків (`pre-commit-imports`, `pre-commit-trash-sync`, `pre-commit-schema-check`, `pre-commit-reverser-check`, `pre-commit-uuid-grep`)
+- Розширені: `src/tabs/finance.js`, `habits.js`, `health.js`, `evening-actions.js`, `evening-chat.js`, `finance-chat.js`, `tool-dispatcher.js`, `prompts.js`, `inbox.js`, `trash.js`, `action-reversers.js`, `skill-triggers.sh`, `settings.json`
+- Документація: BUGS + SESSION_STATE + lessons + CHANGES + ROADMAP + AI_TOOLS + INDEX (7 файлів)
 - i18n baseline: оновлено 1 раз (habits.js 24→46 detector artifact)
 
 ### Спостереження Claude
