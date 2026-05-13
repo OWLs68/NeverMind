@@ -916,6 +916,10 @@ ${aiContext}`;
           if (med) {
             if (currentTab === 'health') renderHealth();
             addInboxChatMsg('agent', t('inbox.health.med_added', '💊 Додав {name}{dose}. {comment}', { name: med.name, dose: med.dosage ? ' (' + med.dosage + ')' : '', comment: action.comment || '' }));
+            // nliW8 13.05 audit fix: action-log для universal undo з Inbox-чату.
+            // Dispatcher-handler логує сам (tool-dispatcher.js:176), але Inbox flow
+            // через processSaveAction обходив → silent fail для "скасуй" з Inbox.
+            logAction('add_medication', action, med.id, null, 'inbox');
           } else {
             addInboxChatMsg('agent', t('inbox.health.card_not_found_first', 'Не знайшов картку. Створи її спочатку.'));
           }
