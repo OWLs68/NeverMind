@@ -8,7 +8,7 @@ import { switchTab, showToast } from '../core/nav.js';
 import { escapeHtml, escapeJsArg, parseContentChips, t } from '../core/utils.js';
 import { generateUUID } from '../core/uuid.js';
 import { addToTrash, showUndoToast } from '../core/trash.js';
-import { callAIWithTools, getAIContext, openChatBar, safeAgentReply, saveChatMsg, INBOX_TOOLS, handleChatError } from '../ai/core.js';
+import { callAIWithTools, getAIContext, openChatBar, safeAgentReply, saveChatMsg, addMsgForTab, INBOX_TOOLS, handleChatError } from '../ai/core.js';
 import { dispatchChatToolCalls } from '../ai/tool-dispatcher.js';
 import { shouldClarify } from '../owl/clarify-guard.js';
 import { getHealthChatSystem } from '../ai/prompts.js';
@@ -1882,11 +1882,15 @@ setInterval(() => {
 
 const HEALTH_INTERVIEW_KEY = 'nm_health_interview_pending';
 
-function _interviewChips(step, options) {
+function _interviewChips(step, options, cardId) {
+  // nliW8 B-178 fix: cardId у payload — захист від stale state.
+  // Юзер може мати старі chips старого інтерв'ю у history після того як
+  // створили нову картку → новий state перезаписав. card_id у payload дозволяє
+  // applyHealthInterviewChoice ігнорувати тапи на старі чіпи.
   return options.map(o => ({
     label: o.label,
     action: 'health_interview',
-    payload: { step, value: o.value },
+    payload: { step, value: o.value, card_id: cardId },
   }));
 }
 
@@ -1945,23 +1949,16 @@ export function startHealthInterview(card) {
     }));
   } catch {}
 
-  const chips = _interviewChips(1, STEP1_OPTIONS);
+  const chips = _interviewChips(1, STEP1_OPTIONS, card.id);
   const text = t('health.iv.intro', 'Створив картку "{name}". 3 короткі питання щоб виставити статус.\n\nЩо зараз?', { name: card.name });
 
-  if (currentTab === 'health') {
-    // Юзер у Здоров'ї — рендеримо одразу у DOM (addHealthChatMsg сам викличе
-    // openChatBar, але якщо чат закритий — це теж нормально, повідомлення
-    // лишається у nm_chat_health через saveChatMsg і відобразиться при відкритті).
-    addHealthChatMsg('agent', text, false, chips);
-  } else {
-    // Юзер не у Здоров'ї — DOM Health-чату не існує, addHealthChatMsg верне
-    // без побічних ефектів. Зберігаємо у nm_chat_health напряму через saveChatMsg.
-    saveChatMsg('health', 'agent', text, chips);
-    healthBarHistory.push({ role: 'assistant', content: text });
-    // Червона крапка над кнопкою Send у Health чат-барі (видна коли юзер
-    // переходить на вкладку Здоров'я, до відкриття чату).
-    try { showUnreadBadge('health', 'health-send-btn'); } catch {}
-  }
+  // nliW8 B-178 fix: addMsgForTab — єдиний шлях що robить:
+  // (a) saveChatMsg('health', ...) для persistence у nm_chat_health,
+  // (b) DOM live-append якщо health-chat-messages вже restored (юзер відкривав чат),
+  // (c) showUnreadBadge на health-send-btn для cross-tab сигналу.
+  // Це закриває race condition між currentTab і live-DOM рендером.
+  addMsgForTab('health', 'agent', text, chips);
+  healthBarHistory.push({ role: 'assistant', content: text });
 }
 
 // Обробка кліку чіпа інтерв'ю. Експортується для виклику з chips.js (action='health_interview').
@@ -1970,6 +1967,13 @@ export function applyHealthInterviewChoice(payload) {
   let state = null;
   try { state = JSON.parse(localStorage.getItem(HEALTH_INTERVIEW_KEY) || 'null'); } catch {}
   if (!state || !state.card_id) return;
+
+  // nliW8 B-178 fix R7: захист від stale chips. Юзер може тапнути chip
+  // старого інтерв'ю (від картки A) після того як AI створив картку B
+  // (новий state перезаписав). Без перевірки applyHealthInterviewChoice
+  // застосує відповідь до НОВОЇ картки — баг. card_id у payload додано
+  // у _interviewChips → перевіряємо match.
+  if (payload.card_id && payload.card_id !== state.card_id) return;
 
   // Чіп вже візуально пропадає у chips.js. Тут — рідер user-вибору + наступний крок.
   const labelMap = {
@@ -1985,19 +1989,18 @@ export function applyHealthInterviewChoice(payload) {
     mild:       t('health.iv.s3.mild',     'Майже нема'),
   };
   const userText = labelMap[payload.value] || payload.value;
-  // Записуємо вибір у Health-чат як user-message (видно при відкритті)
-  if (currentTab === 'health') addHealthChatMsg('user', userText);
-  else saveChatMsg('health', 'user', userText);
+  // Записуємо вибір у Health-чат як user-message (видно при відкритті).
+  // nliW8 B-178: addMsgForTab — єдиний шлях для persistence + DOM live-append.
+  addMsgForTab('health', 'user', userText);
 
   if (payload.step === 1) {
     state.answers.stage = payload.value;
     if (payload.value === 'skip') return _finishInterview(state, true);
     state.step = 2;
     try { localStorage.setItem(HEALTH_INTERVIEW_KEY, JSON.stringify(state)); } catch {}
-    const chips = _interviewChips(2, STEP2_OPTIONS);
+    const chips = _interviewChips(2, STEP2_OPTIONS, state.card_id);
     const q = t('health.iv.q2', 'Лікар призначив лікування?');
-    if (currentTab === 'health') addHealthChatMsg('agent', q, false, chips);
-    else saveChatMsg('health', 'agent', q, chips);
+    addMsgForTab('health', 'agent', q, chips);
     return;
   }
   if (payload.step === 2) {
@@ -2005,10 +2008,9 @@ export function applyHealthInterviewChoice(payload) {
     if (payload.value === 'skip') return _finishInterview(state, true);
     state.step = 3;
     try { localStorage.setItem(HEALTH_INTERVIEW_KEY, JSON.stringify(state)); } catch {}
-    const chips = _interviewChips(3, STEP3_OPTIONS);
+    const chips = _interviewChips(3, STEP3_OPTIONS, state.card_id);
     const q = t('health.iv.q3', 'Симптоми зараз?');
-    if (currentTab === 'health') addHealthChatMsg('agent', q, false, chips);
-    else saveChatMsg('health', 'agent', q, chips);
+    addMsgForTab('health', 'agent', q, chips);
     return;
   }
   if (payload.step === 3) {
@@ -2020,10 +2022,11 @@ export function applyHealthInterviewChoice(payload) {
 function _finishInterview(state, skipped) {
   try { localStorage.removeItem(HEALTH_INTERVIEW_KEY); } catch {}
   if (skipped && Object.keys(state.answers).length === 0) {
-    // Юзер повністю пропустив — нічого не змінюємо, статус лишається 'treatment' (default)
+    // Юзер повністю пропустив — нічого не змінюємо, статус лишається 'treatment' (default).
+    // nliW8 B-178: addMsgForTab без chips → R4 mitigation, бо addHealthChatMsg
+    // прибирає попередні .chat-chips-row при кожному agent-меседжі.
     const text = t('health.iv.skipped', 'Гаразд, без опитування. Статус можна змінити з картки.');
-    if (currentTab === 'health') addHealthChatMsg('agent', text);
-    else saveChatMsg('health', 'agent', text);
+    addMsgForTab('health', 'agent', text);
     try { clearUnreadBadge('health'); } catch {}
     return;
   }
@@ -2032,8 +2035,7 @@ function _finishInterview(state, skipped) {
   if (!updated) return;
   const def = HEALTH_STATUS_DEFS[finalStatus] || {};
   const text = t('health.iv.done', 'Записав. Статус "{name}": {icon} {label}.', { name: updated.name, icon: def.icon || '', label: def.label || finalStatus });
-  if (currentTab === 'health') addHealthChatMsg('agent', text);
-  else saveChatMsg('health', 'agent', text);
+  addMsgForTab('health', 'agent', text);
   try { clearUnreadBadge('health'); } catch {}
 }
 
