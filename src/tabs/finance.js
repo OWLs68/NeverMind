@@ -575,17 +575,18 @@ export function processFinanceAction(parsed, originalText) {
   // окрема категорія, кільце показувало 0. Тепер шукаємо нечутливо до апострофа.
   const _normCat = s => String(s || '').replace(/[ʼ’`]/g, "'").toLowerCase().trim();
   const matchedCat = catList.find(c => _normCat(c.name) === _normCat(category));
+  // nliW8 13.05: зберігаємо AI-вигадану назву щоб запропонувати юзеру створити нову.
+  let aiSuggestedCategory = null;
   if (matchedCat) {
     category = matchedCat.name; // використовуємо рівно ту назву що у юзера
   } else {
     // nliW8 13.05: ЖОРСТКО НЕ створюємо нову категорію з AI-вигаданих.
-    // Раніше тут був createFinCategory(type, { name: category }) — це АВТОМАТИЧНО
-    // плодило юзеру вигадані категорії (наприклад «Кафе» якщо у нього її немає).
-    // Тепер fallback на 'Інше' (завжди є). Якщо юзер ХОЧЕ нову — має сказати
-    // «створи категорію X», AI зробить create_finance_category першим.
-    console.warn('[finance] AI вигадав категорію «' + category + '» — fallback на Інше');
+    // Раніше тут був createFinCategory — АВТОМАТИЧНО плодило юзеру вигадані.
+    // Тепер: записуємо в «Інше» + питаємо юзера через чіпи що робити далі
+    // («Створити нову» або «Лишити в Інше»).
+    aiSuggestedCategory = (parsed.category || '').trim() || null;
+    console.warn('[finance] AI вигадав категорію «' + aiSuggestedCategory + '» — fallback на Інше + питаємо юзера');
     category = 'Інше';
-    // Захист на випадок коли «Інше» з якоїсь причини видалили — критичний fallback.
     if (!catList.find(c => c.name === 'Інше')) createFinCategory(type, { name: 'Інше' });
   }
 
@@ -634,6 +635,18 @@ export function processFinanceAction(parsed, originalText) {
   }
 
   addInboxChatMsg('agent', `${type === 'expense' ? '-' : '+'}${formatMoney(amount)} · ${category}${parsed.fin_comment ? ' — ' + parsed.fin_comment : ''}`);
+
+  // nliW8 13.05: якщо AI вигадав категорію — пропонуємо юзеру створити нову
+  // АБО лишити в «Інше». Chip «Створити нову» → AI робить create_finance_category +
+  // update_transaction (move) одним батчем. Дублю не буде (це update, не save).
+  if (aiSuggestedCategory && aiSuggestedCategory !== 'Інше') {
+    const newCatName = aiSuggestedCategory.charAt(0).toUpperCase() + aiSuggestedCategory.slice(1);
+    const chips = [
+      { label: t('finance.cat_clarify.create', 'Створити "{name}"', { name: newCatName }), action: 'chat', text: t('finance.cat_clarify.create_text', 'Створи категорію "{name}" для витрат, потім перенеси транзакцію [ID:{id}] з категорії "Інше" у "{name}"', { name: newCatName, id: tx.id }) },
+      { label: t('finance.cat_clarify.keep_other', 'Лишити в Інше'), action: 'chat', text: t('finance.cat_clarify.keep_other_text', 'ок, лишай в Інше') },
+    ];
+    addInboxChatMsg('agent', t('finance.cat_clarify.question', 'Категорії "{name}" немає у твоєму списку. Що робимо?', { name: newCatName }), chips);
+  }
 
   checkFinBudgetWarning(type, category, amount);
 }
