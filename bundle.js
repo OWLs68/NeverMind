@@ -2674,6 +2674,13 @@ ${lines.join("\n")}`;
     const removed = meds[mIdx];
     cards[idx].medications = meds.filter((m) => m.id !== medId);
     saveHealthCards(cards);
+    try {
+      const tasks = JSON.parse(localStorage.getItem("nm_tasks") || "[]");
+      const filtered = tasks.filter((t2) => t2.sourceMedId !== medId);
+      if (filtered.length !== tasks.length) saveTasks(filtered);
+    } catch (e) {
+      console.warn("[deleteMedicationFromCard] orphan task cleanup failed:", e);
+    }
     addToTrash("medication", { cardId, med: removed });
     return true;
   }
@@ -19225,6 +19232,7 @@ ${aiContext}`;
             if (med) {
               if (currentTab === "health") renderHealth();
               addInboxChatMsg("agent", t("inbox.health.med_added", "\u{1F48A} \u0414\u043E\u0434\u0430\u0432 {name}{dose}. {comment}", { name: med.name, dose: med.dosage ? " (" + med.dosage + ")" : "", comment: action.comment || "" }));
+              logAction("add_medication", action, med.id, null, "inbox");
             } else {
               addInboxChatMsg("agent", t("inbox.health.card_not_found_first", "\u041D\u0435 \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u043A\u0430\u0440\u0442\u043A\u0443. \u0421\u0442\u0432\u043E\u0440\u0438 \u0457\u0457 \u0441\u043F\u043E\u0447\u0430\u0442\u043A\u0443."));
             }
