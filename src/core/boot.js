@@ -1215,6 +1215,10 @@ function bootApp() {
       window.buildProfileIfStale();
     }
   } catch {}
+  // AI-тестер (e9t3N 15.05.2026) — milestone «boot завершено». Тестер у Python
+  // чекає `window.NM_BOOT_DONE === true` (max 5 сек) щоб переконатись що
+  // міграції+init+showApp пройшли без crash. Це Тест 1 з AI_TESTER_INTEGRATION.md.
+  try { window.NM_BOOT_DONE = true; } catch {}
 }
 
 if (document.readyState === 'loading') {
