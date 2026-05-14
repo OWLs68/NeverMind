@@ -22678,6 +22678,10 @@ ${logLines}
       }
     } catch {
     }
+    try {
+      window.NM_BOOT_DONE = true;
+    } catch {
+    }
   }
   var currentTabForAnim, NM_KEYS;
   var init_boot = __esm({
