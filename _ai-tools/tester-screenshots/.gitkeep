@@ -1,0 +1,3 @@
+# AI-тестер скріншоти
+# Тільки на сервері Hetzner. У git заходить тільки цей .gitkeep файл.
+# Скріни фейлів зберігаються base64 у _ai-tools/tester-status.json (max 500KB кожен).

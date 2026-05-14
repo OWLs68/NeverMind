@@ -1,0 +1,44 @@
+{
+  "_comment": "Поточний стан AI-тестера. Тестер на Hetzner оновлює при КОЖНОМУ запуску. NM-Claude читає у /start.",
+
+  "last_run_utc": null,
+  "next_run_eta_utc": null,
+  "_heartbeat_help": "Якщо last_run_utc старше 12 годин — тестер мертвий. NM-Claude у /start кричить Роману: 'перевір сервер'.",
+
+  "tester_version": null,
+  "ai_tester_app_version": null,
+  "_versions_help": "Чим тестував (CACHE_NAME деплою) і яка версія ai-tester.py.",
+
+  "summary": {
+    "total_runs_today": 0,
+    "passed_today": 0,
+    "failed_today": 0,
+    "skipped_today": 0,
+    "openai_spent_today_usd": 0.0,
+    "openai_budget_remaining_usd": 2.0
+  },
+
+  "queue": {
+    "pending_commands": 0,
+    "completed_today": 0,
+    "failed_today": 0
+  },
+
+  "last_failures": [
+    {
+      "_help": "Приклад формату. Реально буде заповнено тестером.",
+      "test_name": "test-1-boot-health",
+      "ts_utc": "2026-05-15T03:00:00Z",
+      "fail_reason": "console.error: Uncaught SyntaxError",
+      "console_errors": [
+        "Uncaught SyntaxError: No identifiers allowed after numeric literal at line 1245"
+      ],
+      "screenshot_b64": null,
+      "_screenshot_help": "Base64 PNG max 500KB. Тільки останній скрін на тест — перезаписується щозапуск, репо не пухне.",
+      "category": "boot"
+    }
+  ],
+
+  "_last_failures_max": 5,
+  "_failures_help": "Тільки останні 5 фейлів. NM-Claude переносить їх у NEVERMIND_BUGS з префіксом AI-T: коли робить /start."
+}
