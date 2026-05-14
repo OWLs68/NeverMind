@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - 'claude/**'
+      - '!claude/ai-tester-**'
 
 concurrency:
   group: auto-merge

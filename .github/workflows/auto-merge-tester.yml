@@ -1,0 +1,59 @@
+name: Auto-merge AI-tester branches (docs-only, no build)
+
+# Окремий workflow для гілок claude/ai-tester-* створених AI-тестувальником
+# на Hetzner. Тестер пише ТIЛЬКИ у _ai-tools/tester-* файли (його звіт),
+# НЕ торкає коду застосунку. Тому НЕ запускаємо npm ci / node build.js /
+# check-i18n.js — інакше кирилиця у звітах могла б зламати збірку основного
+# деплою (раунд 3 BLOCKER #3 з 15.05.2026 Council).
+#
+# Якщо тестер чомусь спробує запушити файли поза _ai-tools/ — merge впаде
+# (whitelist guard нижче). Це додатковий захист на випадок компромету
+# тестерського PAT.
+
+on:
+  push:
+    branches:
+      - 'claude/ai-tester-**'
+
+concurrency:
+  group: auto-merge-tester
+  cancel-in-progress: true
+
+jobs:
+  merge-tester:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify tester pushed only into _ai-tools/
+        run: |
+          # Тестер має писати ТIЛЬКИ у _ai-tools/. Якщо є інші файли —
+          # це або помилка скрипту або компромет токена. Блокуємо merge.
+          CHANGED=$(git diff --name-only origin/main...${{ github.ref_name }})
+          BAD=$(echo "$CHANGED" | grep -v '^_ai-tools/' || true)
+          if [ -n "$BAD" ]; then
+            echo "❌ Тестер спробував змінити файли поза _ai-tools/:"
+            echo "$BAD"
+            echo "Merge заблоковано."
+            exit 1
+          fi
+          echo "✓ Всі зміни у межах _ai-tools/"
+
+      - name: Merge into main (docs-only, no build)
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout main
+          # -X theirs: тестерська версія перемагає для своїх же файлів
+          # (Романа на NEVERMIND_BUGS / SESSION_STATE тестер не торкає,
+          # тому конфлікту не буде)
+          git merge --no-edit -X theirs ${{ github.ref_name }}
+          git push origin main
+          echo "Tester report merged into main"
