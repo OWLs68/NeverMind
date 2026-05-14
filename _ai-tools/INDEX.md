@@ -58,6 +58,19 @@
 | Закриті баги за 2 останні сесії | `NEVERMIND_BUGS.md` → "✅ Закриті" |
 | Старі закриті баги | `_archive/BUGS_HISTORY.md` |
 
+### AI-тестер 24/7 (Hetzner, e9t3N 15.05.2026)
+
+| Питання | Файл / секція |
+|---|---|
+| Контракт NM↔Hetzner, 10 готових сценаріїв, безпека | `_ai-tools/AI_TESTER_INTEGRATION.md` |
+| Налаштування тестера (Claude edit'ить за запитом) | `_ai-tools/tester-config.json` |
+| Черга задач від Романа / Claude → тестеру | `_ai-tools/tester-commands.md` |
+| Поточний стан + heartbeat + останні фейли | `_ai-tools/tester-status.json` |
+| Журнал запусків останніх 7 днів | `_ai-tools/tester-log.md` |
+| Інтеграція з `/start` (читання статусу) | `.claude/commands/start.md` § Крок 1.5 |
+| Інтеграція з `/finish` (додавання регресій) | `.claude/commands/finish.md` § Фаза 3.5 |
+| Workflow auto-merge для гілок `claude/ai-tester-*` | `.github/workflows/auto-merge-tester.yml` |
+
 ### Технічна довідка
 
 | Питання | Файл / секція |
