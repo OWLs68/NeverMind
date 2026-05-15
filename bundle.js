@@ -10668,7 +10668,7 @@ ${recent}`;
   }
   function updateFolderSuggestions() {
     const dl = document.getElementById("folder-suggestions");
-    dl.innerHTML = getFolders().map((f) => `<option value="${f}">`).join("");
+    dl.innerHTML = getFolders().map((f) => `<option value="${escapeHtml(f)}">`).join("");
   }
   function saveNote() {
     const text = document.getElementById("note-input-text").value.trim();
