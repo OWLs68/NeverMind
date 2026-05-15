@@ -174,8 +174,23 @@
 Ключові поля:
 - `last_run_utc` — heartbeat. NM-Claude у `/start` перевіряє: якщо > 12 год → кричить.
 - `summary` — лічильники за день
-- `last_failures` — масив max 5 свіжих фейлів зі скрінами base64 (max 500KB на скрін)
+- `last_failures` — масив max 5 свіжих фейлів з **локальним шляхом** до скріна (НЕ base64)
 - Перезаписується щозапуск — репо не пухне
+
+**🛡️ ВАЖЛИВЕ ПРАВИЛО БЕЗПЕКИ (e9t3N 15.05.2026):**
+
+`screenshot_path` — це **локальний шлях НА СЕРВЕРІ HETZNER** (наприклад `/home/nmtester/screenshots/test-1-2026-05-15-0300.png`). НЕ base64. НЕ потрапляє у git.
+
+**Чому:** скрін Health-картки = PHI (GDPR Article 9 Special Category). Скрін Finance = financial PII. У public GitHub репо ці дані = GDPR порушення.
+
+**Як Роман дивиться скріни при дебагу:** SSH у Hetzner → `ls /home/nmtester/screenshots/` → копіює потрібний через scp/sftp. Або налаштувати окремий захищений endpoint (Basic Auth) у майбутньому.
+
+**Захист:** workflow `auto-merge-tester.yml` має guard який блокує merge якщо знайде `"screenshot_b64": "..."` у JSON (не null). Це другий рівень захисту на випадок помилки тестерського скрипта.
+
+**Чого тестер НЕ робить:**
+- ❌ НЕ зберігає скрін як base64 у JSON
+- ❌ НЕ комітить файли скрінів у `_ai-tools/tester-screenshots/` (вони у `.gitignore`)
+- ❌ НЕ пушить скрін через окремі канали (email, Telegram) — sensitive дані не виходять з сервера
 
 ---
 
