@@ -1,0 +1,70 @@
+# Claude Code Security Review — автомат security сканування на кожен push у main
+# Створено: e9t3N 15.05.2026 Security Council аудит (рекомендація Романа)
+# Документація: docs/SECURITY.md
+#
+# Anthropic Claude Security (Opus 4.7) сканує codebase після кожного merge у main.
+# Reasoning замість regex-based — знаходить уразливості яких статичні сканери пропускають.
+# Самоверифікація: знайдене перевіряється adversarially перш ніж зарепортити.
+# Безкоштовно на public репо.
+#
+# Як отримати API ключ:
+# 1. Settings → Secrets and variables → Actions → New repository secret
+# 2. Name: ANTHROPIC_API_KEY
+# 3. Value: ключ з console.anthropic.com (окремий від основного — з обмеженим бюджетом)
+#
+# Що робить:
+# - Аналізує diff проти base (main) — тільки нові зміни, не весь codebase
+# - Коментує безпосередньо у commit з знайденими ризиками + severity + confidence
+# - НЕ блокує merge (інформаційний режим)
+# - При знаходженні issue — Claude пропонує fix (Роман вирішує приймати чи ні)
+#
+# Якщо ANTHROPIC_API_KEY не налаштований — workflow тихо пропускає (env-guard).
+
+name: Claude Security Review
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  security-review:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+    if: ${{ github.event_name == 'workflow_dispatch' || github.repository_owner == 'OWLs68' }}
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check if ANTHROPIC_API_KEY is set
+        id: check_key
+        run: |
+          if [ -z "${{ secrets.ANTHROPIC_API_KEY }}" ]; then
+            echo "ANTHROPIC_API_KEY не налаштований у Secrets. Пропускаю Claude Security."
+            echo "Щоб увімкнути: Settings → Secrets → Actions → New repository secret"
+            echo "    Name: ANTHROPIC_API_KEY"
+            echo "    Value: ключ з console.anthropic.com з обмеженим $5/міс budget"
+            echo "configured=false" >> $GITHUB_OUTPUT
+          else
+            echo "configured=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Claude Code Security Review
+        if: steps.check_key.outputs.configured == 'true'
+        uses: anthropics/claude-code-security-review@main
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          # Scan тільки змінені файли у останньому коміті — економія токенів.
+          # Для повного скану codebase запустити workflow_dispatch вручну.
+          scan-mode: "incremental"
+          # Severity threshold: тільки HIGH+CRITICAL у коментарі. MEDIUM/LOW у логах.
+          severity-threshold: "high"
+          # Comment on commit з результатами
+          comment-on-commit: true

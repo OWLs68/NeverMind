@@ -102,6 +102,24 @@ jobs:
           npm ci
           node build.js
 
+      - name: Security audit npm dependencies
+        # Security e9t3N 15.05.2026: npm audit з high+critical порогом
+        # блокує деплой при відомих уразливостях у залежностях.
+        # Не блокує на low/moderate (буде шум від transitive deps).
+        # Dependabot окремо створює PR для оновлень — це другий рівень.
+        # Bypass для emergency: SKIP_AUDIT=1 у Actions variables (як SKIP_I18N).
+        env:
+          SKIP_AUDIT: ${{ vars.SKIP_AUDIT }}
+        run: |
+          if [ "$SKIP_AUDIT" = "1" ]; then
+            echo "⚠️ SKIP_AUDIT=1 — npm audit пропущено (emergency override)"
+            exit 0
+          fi
+          npm audit --audit-level=high || {
+            echo "❌ npm audit виявив high/critical уразливості. Виправ або встанови SKIP_AUDIT=1 для emergency деплою."
+            exit 1
+          }
+
       - name: Commit bundle and push
         run: |
           git config user.name "github-actions[bot]"
