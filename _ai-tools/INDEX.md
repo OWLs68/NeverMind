@@ -58,6 +58,17 @@
 | Закриті баги за 2 останні сесії | `NEVERMIND_BUGS.md` → "✅ Закриті" |
 | Старі закриті баги | `_archive/BUGS_HISTORY.md` |
 
+### Безпека (Security, e9t3N 15.05.2026)
+
+| Питання | Файл / секція |
+|---|---|
+| Класифікація даних (PHI/PII/credentials) | `docs/SECURITY.md` § «Класифікація даних» |
+| Поточний стан + критичні дірки | `docs/SECURITY.md` § «Поточний стан» |
+| Системні принципи безпеки (для кожної нової фічі) | `docs/SECURITY.md` § «Системні принципи» |
+| Security Checklist перед `git commit` | `docs/SECURITY.md` § «Security Checklist» |
+| План закриття дірок | `docs/SECURITY.md` § «План закриття» + `ROADMAP.md` § «🛡️ Security Hardening» |
+| Звіт Council аудиту 15.05.2026 | `_ai-tools/SECURITY_AUDIT_e9t3N_2026-05-15.md` |
+
 ### AI-тестер 24/7 (Hetzner, e9t3N 15.05.2026)
 
 | Питання | Файл / секція |

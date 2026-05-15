@@ -16,6 +16,64 @@
 
 ---
 
+**🛡️ Security Hardening — критично перед Supabase** (додано e9t3N 15.05.2026 після Council 5 агентів security аудиту)
+
+> **Повний контекст:** [`docs/SECURITY.md`](docs/SECURITY.md). Звіт аудиту: `_ai-tools/SECURITY_AUDIT_e9t3N_2026-05-15.md`.
+>
+> **Чому Active:** NeverMind зберігає **PHI (медичні дані) і Financial PII**. Один взлом після Supabase з мульти-юзерами = GDPR штраф + втрата довіри + потенційні позови. Закриваємо діри ДО публічного beta.
+
+**4 критичні блокери до Supabase:**
+
+1. **🔴 Event Delegation Refactor + strict CSP** (~6-8 годин, окрема сесія)
+   - 185 inline `onclick` у `index.html` + ~300 динамічних з JS render → один listener на `document.body` через `data-action` + `data-id`
+   - Після цього strict CSP `script-src 'self'` без `unsafe-inline` — блокує 95% XSS
+   - **Бонус:** UUID завжди безпечні у атрибутах, не у виконуваному коді (B-108/B-170 клас багів зникає назавжди)
+
+2. **🔴 OpenAI ключ → Supabase Edge Function** (під час Supabase міграції)
+   - Зараз `nm_gemini_key` у localStorage видно через DevTools
+   - Edge Function `proxy-openai` приймає `{messages, model}` з auth header
+   - Ключ у Supabase Secret `OPENAI_KEY`, юзер ніколи не бачить
+
+3. **🔴 `user_id` колонка + RLS policies** (Architecture Refactor Сесія 8)
+   - Без `user_id` у кожному рядку — Row Level Security неможливий
+   - Дані одного юзера видно іншому через JOIN — катастрофа
+   - SQL RLS policies написати і протестувати ДО міграції юзерських даних
+
+4. **🔴 Backup/rollback механізм** для міграції localStorage→Supabase (3-4 год)
+   - `nm_backup_v*` снапшот ПЕРЕД будь-якою міграцією
+   - Якщо migration script впаде на кроці 3 з 7 — відкат одним кліком
+   - Без цього 4 юзери частково сконвертовані, частково ні = втрата даних
+
+**Дрібні фікси у поточній сесії e9t3N (вже у роботі):**
+
+- ✅ Stored XSS у notes.js:186 — закрито `3aa1569` (escapeHtml у datalist)
+- ⏳ Prompt injection захист у 8 системних промптів (`src/ai/prompts.js`)
+- ⏳ AI-тестер screenshot: base64 → локальний шлях (контракт + workflow guard)
+- ⏳ GitHub Actions SHA pin
+- ⏳ Dependabot config
+- ⏳ `npm audit` у CI
+- ⏳ Claude Security GitHub Action
+
+**Auth flow рішення** (1 сесія обговорення перед Supabase):
+- Magic link (рекомендую — без пароля = неможливо phishing) vs email/password vs OAuth
+- MFA — навіть якщо «після launch», зафіксувати у roadmap
+
+**GDPR compliance** (перед публічним beta):
+- DPA (Data Processing Agreement) з Supabase — підписати
+- Supabase EU регіон (Frankfurt) — обов'язково для ЄС юзерів
+- Explicit consent flow при першому логіні (health/finance окремо)
+- Right to erasure (видалити акаунт) + Right to portability (експорт JSON)
+
+**Hetzner AI-тестер security** (Brain-Claude робить — поза NM-репо):
+- non-root user `nmtester` — BLOCKER перед першим запуском
+- fail2ban, key-only SSH, root login disabled
+- Fine-grained PAT scope `claude/ai-tester-*` only
+- Окремий OpenAI ключ з $5/міс cap
+
+**📚 Системні принципи безпеки** — у [`docs/SECURITY.md`](docs/SECURITY.md) § «Системні принципи». Кожна нова фіча проходить Security Checklist.
+
+---
+
 **🚀 Dynamic AI-driven chips — Jarvis-level interaction** (UvEHE 03.05 → Шар 1 rC4TO 04.05 → Шар 2 + Шар 6 RGisY 04.05 → Шари 3-5 наступні сесії)
 
 **Прогрес RGisY 04.05 — Шар 2 + Шар 6 (5 фаз):**
