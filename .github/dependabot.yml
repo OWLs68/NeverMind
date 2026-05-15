@@ -1,0 +1,39 @@
+# Dependabot config — автомат оновлення залежностей з security патчами
+# Створено: e9t3N 15.05.2026 Security Council аудит
+# Документація: docs/SECURITY.md § "🟢 МIНОР пункт 11"
+
+version: 2
+updates:
+  # === GitHub Actions ===
+  # Автомат перевіряє нові версії actions/checkout, actions/setup-node, тощо.
+  # При новій версії — PR з оновленням. Закриває supply chain ризик "@v4 рухомий тег".
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "github-actions"
+
+  # === npm ===
+  # NeverMind має тільки devDependency esbuild. Dependabot ловить CVE у esbuild
+  # та його transitive deps. Закриває "npm audit не у CI" автоматично через PR.
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "npm"
+    # Security-only updates у окремий PR з vyžšou priority
+    versioning-strategy: "increase"
