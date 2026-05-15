@@ -183,7 +183,10 @@ function closeNoteModal() {
 
 function updateFolderSuggestions() {
   const dl = document.getElementById('folder-suggestions');
-  dl.innerHTML = getFolders().map(f => `<option value="${f}">`).join('');
+  // Security e9t3N 15.05.2026: escapeHtml(f) — інакше юзер може створити папку
+  // з payload `"><img src=x onerror=alert(1)>` і отримати stored XSS при кожному
+  // завантаженні NeverMind. Знайдено XSS-аудитом Council (notes.js:186).
+  dl.innerHTML = getFolders().map(f => `<option value="${escapeHtml(f)}">`).join('');
 }
 
 function saveNote() {
