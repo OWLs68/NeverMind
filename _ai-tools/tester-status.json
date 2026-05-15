@@ -33,12 +33,12 @@
       "console_errors": [
         "Uncaught SyntaxError: No identifiers allowed after numeric literal at line 1245"
       ],
-      "screenshot_b64": null,
-      "_screenshot_help": "Base64 PNG max 500KB. Тільки останній скрін на тест — перезаписується щозапуск, репо не пухне.",
+      "screenshot_path": "/home/nmtester/screenshots/test-1-boot-health-2026-05-15-0300.png",
+      "_screenshot_help": "ЛОКАЛЬНИЙ шлях НА СЕРВЕРІ Hetzner. НЕ base64. PHI/PII НЕ йде у git! Зміна e9t3N 15.05.2026 Security аудит — раніше було screenshot_b64 з ризиком medical/financial даних у public repo.",
       "category": "boot"
     }
   ],
 
   "_last_failures_max": 5,
-  "_failures_help": "Тільки останні 5 фейлів. NM-Claude переносить їх у NEVERMIND_BUGS з префіксом AI-T: коли робить /start."
+  "_failures_help": "Тільки останні 5 фейлів. NM-Claude переносить їх у NEVERMIND_BUGS з префіксом AI-T: коли робить /start. Якщо Роман хоче подивитись скрін — SSH у сервер і дивиться напряму, скрін НЕ у git."
 }

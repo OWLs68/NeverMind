@@ -46,6 +46,23 @@ jobs:
           fi
           echo "✓ Всі зміни у межах _ai-tools/"
 
+      - name: Verify no PHI/PII (screenshot_b64) leaks into git
+        run: |
+          # Security e9t3N 15.05.2026: тестер ОБОВ'ЯЗКОВО зберігає скрін
+          # тільки локально на сервері (screenshot_path). НЕ base64 у JSON.
+          # Якщо знайдемо screenshot_b64 з не-null значенням — блокуємо merge.
+          # Це захист від компромету тестерського скрипта або помилки Brain-Claude.
+          # Без цього guard: скрін health-картки (PHI) міг би потрапити у public repo
+          # → GDPR Article 9 порушення → штраф + втрата довіри.
+          CHANGED_JSON=$(git diff origin/main...${{ github.ref_name }} -- '_ai-tools/*.json' '_ai-tools/**/*.json')
+          if echo "$CHANGED_JSON" | grep -E '"screenshot_b64"\s*:\s*"[^"]+"' > /dev/null; then
+            echo "❌ КРИТИЧНО: тестер записав screenshot_b64 з даними у JSON!"
+            echo "PHI/PII у public repo заблоковано."
+            echo "Виправ: у Python використовувати screenshot_path (локальний шлях)"
+            exit 1
+          fi
+          echo "✓ Жодних PHI/PII у JSON"
+
       - name: Merge into main (docs-only, no build)
         run: |
           git config user.name "github-actions[bot]"
