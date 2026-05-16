@@ -28,7 +28,7 @@
 name: Claude Security Scan
 
 permissions:
-  contents: read
+  contents: write   # write — щоб видаляти trigger-гілки claude/scan/** у кінці
   issues: write
   pull-requests: write
 
@@ -50,15 +50,14 @@ on:
         type: string
         default: ''
 
-  # Авто на push у main — тільки changed
+  # Авто на push у main — тільки changed (paths-filter відсіває документацію)
+  # Авто на push у claude/scan/** — це trigger-гілки від Claude (mode + target
+  # парсяться з назви гілки). У auto-merge.yml виключено `!claude/scan/**` —
+  # ці гілки НЕ зливаються у main, а workflow видаляє їх у кінці.
   push:
     branches:
       - main
-    paths:
-      - 'src/**'
-      - 'index.html'
-      - 'sw.js'
-      - '.github/workflows/**'
+      - 'claude/scan/**'
 
   # Авто щонеділі о 03:00 UTC — full scan
   schedule:
@@ -81,9 +80,14 @@ jobs:
         id: mode
         run: |
           # Визначаємо режим залежно від event:
-          # - workflow_dispatch → беремо input
-          # - push → changed
-          # - schedule → full
+          # - workflow_dispatch (UI) → input
+          # - schedule (cron) → full
+          # - push у claude/scan/** → парсимо MODE/TARGET з назви гілки:
+          #     claude/scan/full              → mode=full
+          #     claude/scan/changed           → mode=changed
+          #     claude/scan/file/{path}       → mode=file, target=path
+          # - push у main → changed (на code-зміни через paths-фільтр у on:)
+          TRIGGER_BRANCH=""
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             MODE="${{ inputs.scan_mode }}"
             TARGET="${{ inputs.target_path }}"
@@ -91,12 +95,34 @@ jobs:
             MODE="full"
             TARGET=""
           else
-            MODE="changed"
-            TARGET=""
+            BRANCH="${GITHUB_REF#refs/heads/}"
+            case "$BRANCH" in
+              claude/scan/full)
+                MODE="full"; TARGET=""; TRIGGER_BRANCH="$BRANCH"
+                ;;
+              claude/scan/changed)
+                MODE="changed"; TARGET=""; TRIGGER_BRANCH="$BRANCH"
+                ;;
+              claude/scan/file/*)
+                MODE="file"
+                TARGET="${BRANCH#claude/scan/file/}"
+                TRIGGER_BRANCH="$BRANCH"
+                ;;
+              claude/scan/*)
+                echo "❌ Невідома команда у назві гілки: $BRANCH"
+                echo "Підтримуються: claude/scan/full, claude/scan/changed, claude/scan/file/{path}"
+                exit 1
+                ;;
+              *)
+                MODE="changed"
+                TARGET=""
+                ;;
+            esac
           fi
           echo "mode=$MODE" >> $GITHUB_OUTPUT
           echo "target=$TARGET" >> $GITHUB_OUTPUT
-          echo "📋 Scan mode: $MODE${TARGET:+ (target: $TARGET)}"
+          echo "trigger_branch=$TRIGGER_BRANCH" >> $GITHUB_OUTPUT
+          echo "📋 Scan mode: $MODE${TARGET:+ (target: $TARGET)}${TRIGGER_BRANCH:+ (from trigger branch: $TRIGGER_BRANCH)}"
 
       - name: Collect files to scan
         id: collect
@@ -409,3 +435,26 @@ jobs:
             });
 
             console.log('✅ Issue створено для critical findings');
+
+      # Самовидалення trigger-гілки claude/scan/** після виконання scan.
+      # always() — видаляємо навіть якщо scan впав (інакше гілка-смітник).
+      # Видалення тільки якщо це справді claude/scan/** push, не workflow_dispatch.
+      - name: Delete trigger branch
+        if: always() && steps.mode.outputs.trigger_branch != ''
+        uses: actions/github-script@v7
+        env:
+          TRIGGER_BRANCH: ${{ steps.mode.outputs.trigger_branch }}
+        with:
+          script: |
+            const branch = process.env.TRIGGER_BRANCH;
+            try {
+              await github.rest.git.deleteRef({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: 'heads/' + branch
+              });
+              console.log('🧹 Trigger-гілка видалена: ' + branch);
+            } catch (err) {
+              console.log('⚠️ Не вдалось видалити trigger-гілку ' + branch + ': ' + err.message);
+              // Не валимо workflow — гілку видалить Claude або юзер вручну
+            }

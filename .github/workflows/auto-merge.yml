@@ -5,6 +5,7 @@ on:
     branches:
       - 'claude/**'
       - '!claude/ai-tester-**'
+      - '!claude/scan/**'
 
 concurrency:
   group: auto-merge
