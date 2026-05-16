@@ -37,7 +37,11 @@ _B-158 закрито у PJi7l 08.05 — див. секцію "✅ Закрит�
 
 ## ✅ Закриті (активні сесії)
 
-_Зберігаються закриті у 2 останніх активних сесіях (nliW8 + db0YY). Старіші (dyhJu + 64CXo + PJi7l + LfA6w day2 + MPVly + QDIGl + rC4TO) перенесено у [`_archive/BUGS_HISTORY.md`](_archive/BUGS_HISTORY.md). Ротація dyhJu+64CXo виконана nliW8 13.05./finish._
+_Зберігаються закриті у 2 останніх активних сесіях (e9t3N + nliW8). Старіші (db0YY + dyhJu + 64CXo + PJi7l + LfA6w day2 + MPVly + QDIGl + rC4TO) перенесено у [`_archive/BUGS_HISTORY.md`](_archive/BUGS_HISTORY.md). Ротація db0YY виконана e9t3N 16.05./finish._
+
+_Сесія **e9t3N** (15-16.05.2026) — AI-тестер інфраструктура (NM-сторона) + Security Hardening Council 5 агентів. Тільки 1 баг закритий у коді (XSS), решта — інфраструктура + документація:_
+
+- **B-183 закрито** (`3aa1569`) — **Stored XSS у `notes.js:186` (Council Security аудит знайшов).** `dl.innerHTML = getFolders().map(f => \`<option value="${f}">\`)` — `f` (назва папки) без `escapeHtml()`. Юзер міг створити папку з payload `"><img src=x onerror=alert(1)>` → виконання при кожному завантаженні NeverMind (stored XSS). Зараз ризик низький (single-user), але після Supabase з multi-device sync — один скомпрометований юзер міг би заразити інших через синхронізовану назву папки. **Фікс:** `escapeHtml(f)` у template literal (escapeHtml helper уже імпортувався). **Знайдено:** XSS/Injection Council-агент Sonnet (1 з 5 паралельних). Інші 4 знайдені у документації: відсутній CSP (HIGH), OpenAI ключ у localStorage (HIGH — план Edge Function під час Supabase), AI-тестер скрін з PHI у public repo (CRITICAL — виправлено контракт), tester як root на Hetzner (CRITICAL — Brain фіксить у Фазі 3).
 
 _Сесія **nliW8** (13.05.2026) — 4 фази: B-170 регресія + B-180/181/182 + UI bubbles + Phase 2 уніфікація save_finance + Пункт 3 delete_medication + Пункт 4 B-178 cross-chat handoff. 20+ комітів. Council 13 агентів Sonnet:_
 
