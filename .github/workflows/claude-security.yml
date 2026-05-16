@@ -1,75 +1,353 @@
-# Claude Code Security Review — автомат security сканування
-# Створено: e9t3N 15.05.2026 Security Council аудит
-# Документація: docs/SECURITY.md
-# Action repo: https://github.com/anthropics/claude-code-security-review
+# Claude Security Scan — універсальний security аудит через Claude API
+# Створено: e9t3N 15.05.2026 · Замінює anthropics/claude-code-security-review
+# (той action був PR-only, наш flow без PR — auto-merge claude/* у main).
 #
-# Anthropic Claude Security (Opus 4.1) сканує код через reasoning замість regex.
-# Знаходить уразливості яких статичні сканери пропускають. Self-verification:
-# знайдене перевіряється adversarially перш ніж зарепортити.
+# 3 режими сканування:
+# 1. FULL — повний codebase. Запускається ВРУЧНУ через Run workflow + cron weekly.
+#    Це наш «головний» режим — Opus 4.1 reasoning через увесь код.
+# 2. CHANGED — тільки змінені файли проти main. Автомат на кожен push у main.
+#    Швидко (~30s) + дешево + ловить регресії одразу.
+# 3. FILE — один конкретний файл. Вручну з input target_path.
+#    Для точкових перевірок коли турбує конкретне місце.
 #
-# ВАЖЛИВЕ: action створений для PR-based flow (тригериться на pull_request).
-# NeverMind використовує push-based auto-merge без PRs, тому:
-# - workflow_dispatch (ручний запуск) — основний спосіб
-# - Якщо у майбутньому з'являться PR'и (для тестерів) — автоматичний запуск
+# Як викликати:
+# - Manual full scan: Actions → Claude Security Scan → Run workflow → mode=full
+# - Manual file scan: Run workflow → mode=file → target_path=src/tabs/notes.js
+# - Авто changed: push у main → запуск
+# - Авто full: щонеділі 03:00 UTC
 #
-# Як запустити вручну:
-# 1. github.com/OWLs68/NeverMind/actions
-# 2. Workflow "Claude Security Review"
-# 3. Run workflow → main → Run
-# 4. Чекати 2-10 хв (повний сканування codebase)
-# 5. Результат у Actions tab + Annotations + artifacts
+# Що сканується:
+# - src/**/*.js (ваш код)
+# - index.html, sw.js (точки входу і Service Worker)
+# - .github/workflows/*.yml (CI скрипти)
+# Не сканується: bundle.js (generated), node_modules, _archive, документація
+#
+# Безпека: ANTHROPIC_API_KEY у GitHub Secrets. Workflow не друкує ключ у логи.
+# Бюджет: один full scan ~$0.10-0.30. Cron weekly = ~$15/рік. Changed scans ~$0.01.
 
-name: Claude Security Review
+name: Claude Security Scan
 
 permissions:
-  pull-requests: write
   contents: read
+  issues: write
+  pull-requests: write
 
 on:
-  # Ручний запуск через GitHub UI
   workflow_dispatch:
-  # Якщо PR'и з'являться у майбутньому — автоматично
-  pull_request:
+    inputs:
+      scan_mode:
+        description: 'Що сканувати'
+        required: true
+        default: 'full'
+        type: choice
+        options:
+          - full
+          - changed
+          - file
+      target_path:
+        description: 'Шлях до файлу (тільки для mode=file)'
+        required: false
+        type: string
+        default: ''
+
+  # Авто на push у main — тільки changed
+  push:
     branches:
       - main
+    paths:
+      - 'src/**'
+      - 'index.html'
+      - 'sw.js'
+      - '.github/workflows/**'
+
+  # Авто щонеділі о 03:00 UTC — full scan
+  schedule:
+    - cron: '0 3 * * 0'
 
 jobs:
-  security-review:
+  security-scan:
     runs-on: ubuntu-latest
-    # Захист — не запускати на форках без секретів
-    if: ${{ github.event_name == 'workflow_dispatch' || github.repository_owner == 'OWLs68' }}
+    timeout-minutes: 15
 
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-          fetch-depth: 2
+          fetch-depth: 50  # для git diff у changed mode
 
-      - name: Check if ANTHROPIC_API_KEY is set
-        id: check_key
+      - name: Determine scan mode
+        id: mode
         run: |
-          if [ -z "${{ secrets.ANTHROPIC_API_KEY }}" ]; then
-            echo "ANTHROPIC_API_KEY не налаштований у Secrets."
-            echo "Settings → Secrets → Actions → ANTHROPIC_API_KEY = sk-ant-..."
-            echo "configured=false" >> $GITHUB_OUTPUT
+          # Визначаємо режим залежно від event:
+          # - workflow_dispatch → беремо input
+          # - push → changed
+          # - schedule → full
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            MODE="${{ inputs.scan_mode }}"
+            TARGET="${{ inputs.target_path }}"
+          elif [ "${{ github.event_name }}" = "schedule" ]; then
+            MODE="full"
+            TARGET=""
           else
-            echo "configured=true" >> $GITHUB_OUTPUT
+            MODE="changed"
+            TARGET=""
+          fi
+          echo "mode=$MODE" >> $GITHUB_OUTPUT
+          echo "target=$TARGET" >> $GITHUB_OUTPUT
+          echo "📋 Scan mode: $MODE${TARGET:+ (target: $TARGET)}"
+
+      - name: Collect files to scan
+        id: collect
+        run: |
+          # Залежно від mode — збираємо файли у /tmp/scan-input.txt
+          # Формат: один файл за іншим з заголовком "=== FILE: path ==="
+          OUTPUT_FILE="/tmp/scan-input.txt"
+          > "$OUTPUT_FILE"
+
+          MODE="${{ steps.mode.outputs.mode }}"
+          TARGET="${{ steps.mode.outputs.target }}"
+
+          collect_file() {
+            local file="$1"
+            if [ -f "$file" ]; then
+              echo "=== FILE: $file ===" >> "$OUTPUT_FILE"
+              cat "$file" >> "$OUTPUT_FILE"
+              echo "" >> "$OUTPUT_FILE"
+              echo "" >> "$OUTPUT_FILE"
+            fi
+          }
+
+          case "$MODE" in
+            full)
+              echo "🔍 Full scan: всі src/ + index.html + sw.js + workflows"
+              # JS код
+              find src -name "*.js" -not -path "*/node_modules/*" | while read f; do
+                collect_file "$f"
+              done
+              # HTML + SW
+              collect_file "index.html"
+              collect_file "sw.js"
+              # Workflows
+              find .github/workflows -name "*.yml" | while read f; do
+                collect_file "$f"
+              done
+              ;;
+
+            changed)
+              echo "🔍 Changed scan: git diff проти попереднього коміту"
+              # На push у main — порівнюємо з попереднім merge у main
+              git diff --name-only HEAD~1 HEAD -- \
+                'src/**/*.js' 'index.html' 'sw.js' '.github/workflows/**/*.yml' \
+                2>/dev/null | while read f; do
+                collect_file "$f"
+              done
+              # Якщо нічого не змінилось — пишемо placeholder
+              if [ ! -s "$OUTPUT_FILE" ]; then
+                echo "Жодного релевантного файлу не змінено у цьому commit." > "$OUTPUT_FILE"
+              fi
+              ;;
+
+            file)
+              echo "🔍 File scan: $TARGET"
+              if [ -z "$TARGET" ]; then
+                echo "❌ target_path порожній для mode=file"
+                exit 1
+              fi
+              if [ ! -f "$TARGET" ]; then
+                echo "❌ Файл не знайдено: $TARGET"
+                exit 1
+              fi
+              collect_file "$TARGET"
+              ;;
+
+            *)
+              echo "❌ Невідомий mode: $MODE"
+              exit 1
+              ;;
+          esac
+
+          # Розмір input файлу
+          SIZE=$(wc -c < "$OUTPUT_FILE")
+          LINES=$(wc -l < "$OUTPUT_FILE")
+          echo "📦 Зібрано: ${SIZE} байт, ${LINES} рядків"
+          echo "size=$SIZE" >> $GITHUB_OUTPUT
+          echo "lines=$LINES" >> $GITHUB_OUTPUT
+
+      - name: Run Claude security audit
+        id: scan
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          # Перевірка ключа
+          if [ -z "$ANTHROPIC_API_KEY" ]; then
+            echo "❌ ANTHROPIC_API_KEY не налаштовано у GitHub Secrets"
+            echo "Settings → Secrets → Actions → ANTHROPIC_API_KEY"
+            exit 1
           fi
 
-      - name: Claude Code Security Review
-        if: steps.check_key.outputs.configured == 'true'
-        uses: anthropics/claude-code-security-review@main
+          # Перевірка що є що сканувати
+          if [ ! -s /tmp/scan-input.txt ]; then
+            echo "ℹ️ Нічого сканувати (changed mode без змін у релевантних файлах)"
+            echo "# Claude Security Scan Report" > /tmp/scan-report.md
+            echo "" >> /tmp/scan-report.md
+            echo "**Дата:** $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> /tmp/scan-report.md
+            echo "**Mode:** ${{ steps.mode.outputs.mode }}" >> /tmp/scan-report.md
+            echo "**Результат:** Нічого сканувати" >> /tmp/scan-report.md
+            echo "has_findings=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # System prompt для security audit
+          # Базується на OWASP Top 10 2026 + LLM Top 10 + наша класифікація даних
+          SYSTEM_PROMPT='Ти — Senior Security Auditor для NeverMind PWA (vanilla JS, localStorage, GitHub Pages, OpenAI integration). Класифікація даних: Health = PHI (GDPR Article 9), Finance = PII, OpenAI key = credentials.
+
+Аналізуй наданий код на OWASP Top 10 + LLM Top 10 + AI Apps Top 10 (2026):
+- XSS (innerHTML без escape, dangerouslySetInnerHTML аналоги)
+- Prompt injection (user data у system prompts без захисту)
+- Sensitive data exposure (PHI/PII у логах, network, storage)
+- Insecure direct object reference
+- Broken access control
+- Insufficient logging
+- Supply chain (dependencies, CDN без SRI)
+- Race conditions
+- Hardcoded secrets
+
+Формат відповіді — СУВОРО Markdown:
+
+## Summary
+- **Total findings:** N
+- **Severity breakdown:** CRITICAL=N, HIGH=N, MEDIUM=N, LOW=N
+
+## Findings
+
+### [CRITICAL/HIGH/MEDIUM/LOW] Назва вразливості
+- **File:** path/to/file.js:LINE
+- **Category:** XSS / Prompt Injection / etc
+- **Description:** що саме небезпечно, як експлуатується
+- **Impact:** PHI leak / Credentials theft / RCE / DOS / etc
+- **Fix:** конкретний фікс (рядок коду або підхід)
+
+(повторити для кожного знайденого)
+
+## False Positives Filter
+Якщо щось здається ризиком але насправді безпечно (наприклад escapeHtml уже застосований) — НЕ ВКЛЮЧАЙ у Findings. Тільки реальні небезпеки.
+
+Якщо НIЧОГО критичного не знайдено — пиши "✅ Жодних критичних або високих ризиків не виявлено" у Summary і Findings лиши порожнім.'
+
+          # Збираємо payload для Claude API
+          # Використовуємо jq для безпечного JSON escape
+          CODE_CONTENT=$(cat /tmp/scan-input.txt)
+          MODE="${{ steps.mode.outputs.mode }}"
+          USER_MESSAGE="Mode: $MODE. Codebase для аудиту нижче. Поверни звіт у Markdown.
+
+$CODE_CONTENT"
+
+          # JSON payload через jq (escape все що треба)
+          jq -n \
+            --arg system "$SYSTEM_PROMPT" \
+            --arg user "$USER_MESSAGE" \
+            '{
+              model: "claude-opus-4-1-20250805",
+              max_tokens: 8000,
+              system: $system,
+              messages: [{role: "user", content: $user}]
+            }' > /tmp/api-payload.json
+
+          # Виклик Claude API
+          echo "🤖 Виклик Claude API..."
+          HTTP_CODE=$(curl -s -o /tmp/api-response.json -w "%{http_code}" \
+            -X POST https://api.anthropic.com/v1/messages \
+            -H "Content-Type: application/json" \
+            -H "x-api-key: $ANTHROPIC_API_KEY" \
+            -H "anthropic-version: 2023-06-01" \
+            -d @/tmp/api-payload.json)
+
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "❌ Claude API повернув $HTTP_CODE"
+            cat /tmp/api-response.json
+            exit 1
+          fi
+
+          # Витягуємо текст відповіді
+          REPORT=$(jq -r '.content[0].text' /tmp/api-response.json)
+
+          # Перевірка що відповідь не порожня
+          if [ -z "$REPORT" ] || [ "$REPORT" = "null" ]; then
+            echo "❌ Claude повернув порожню відповідь"
+            cat /tmp/api-response.json
+            exit 1
+          fi
+
+          # Зберігаємо звіт
+          {
+            echo "# Claude Security Scan Report"
+            echo ""
+            echo "**Дата:** $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo "**Mode:** $MODE"
+            echo "**Commit:** ${{ github.sha }}"
+            echo "**Trigger:** ${{ github.event_name }}"
+            echo "**Codebase size:** ${{ steps.collect.outputs.size }} bytes, ${{ steps.collect.outputs.lines }} lines"
+            echo ""
+            echo "---"
+            echo ""
+            echo "$REPORT"
+          } > /tmp/scan-report.md
+
+          # Перевіряємо чи є CRITICAL або HIGH findings
+          if echo "$REPORT" | grep -qE "\[(CRITICAL|HIGH)\]"; then
+            echo "⚠️ Знайдено CRITICAL або HIGH findings"
+            echo "has_findings=true" >> $GITHUB_OUTPUT
+          else
+            echo "✅ Жодних critical/high findings"
+            echo "has_findings=false" >> $GITHUB_OUTPUT
+          fi
+
+          # Превью звіту у лог (без full text)
+          echo "📄 Звіт згенеровано: $(wc -l < /tmp/scan-report.md) рядків"
+
+      - name: Upload report artifact
+        if: always() && hashFiles('/tmp/scan-report.md') != ''
+        uses: actions/upload-artifact@v4
         with:
-          # Реальні параметри action (перевірені у репо anthropics/claude-code-security-review)
-          claude-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
-          # Коментує у PR з знайденими ризиками (актуально якщо триггер pull_request)
-          comment-pr: true
-          # Зберігає результати як GitHub Actions artifacts (для перегляду після run)
-          upload-results: true
-          # Виключаємо bundle.js (generated), node_modules, архіви, бекапи
-          exclude-directories: "node_modules,_archive,bundle.js"
-          # Модель — найновіший Opus з reasoning
-          claude-model: "claude-opus-4-1-20250805"
-          # Timeout 20 хв — на повний codebase NeverMind вистачить
-          claudecode-timeout: "20"
+          name: claude-security-report-${{ steps.mode.outputs.mode }}-${{ github.run_number }}
+          path: /tmp/scan-report.md
+          retention-days: 30
+
+      - name: Create GitHub issue for critical findings
+        if: steps.scan.outputs.has_findings == 'true'
+        uses: actions/github-script@v7
+        env:
+          REPORT_PATH: /tmp/scan-report.md
+          SCAN_MODE: ${{ steps.mode.outputs.mode }}
+        with:
+          script: |
+            const fs = require('fs');
+            const report = fs.readFileSync(process.env.REPORT_PATH, 'utf8');
+            const mode = process.env.SCAN_MODE;
+            const date = new Date().toISOString().split('T')[0];
+
+            const title = `[Claude-Sec] ${mode} scan ${date} — critical findings`;
+            const body = `Claude Security Scan виявив CRITICAL або HIGH findings.
+
+**Mode:** ${mode}
+**Commit:** ${context.sha.substring(0, 7)}
+**Trigger:** ${context.eventName}
+
+---
+
+${report}
+
+---
+
+📥 Повний звіт також доступний як artifact у Actions tab.
+🔧 Для виправлення: відкрий [/fix Claude-Sec:N] у Claude Code.`;
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: title,
+              body: body,
+              labels: ['security', 'claude-sec']
+            });
+
+            console.log('✅ Issue створено для critical findings');
