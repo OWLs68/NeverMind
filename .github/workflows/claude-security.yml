@@ -67,7 +67,9 @@ on:
 jobs:
   security-scan:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # Full scan: ~32 чанки × 65s rate-limit sleep + ~5s API = ~37 хв
+    # changed/file mode швидкі (<1 хв), але один timeout на всі режими.
+    timeout-minutes: 45
 
     steps:
       - name: Checkout repo
@@ -99,52 +101,99 @@ jobs:
       - name: Collect files to scan
         id: collect
         run: |
-          # Залежно від mode — збираємо файли у /tmp/scan-input.txt
-          # Формат: один файл за іншим з заголовком "=== FILE: path ==="
+          # Збираємо файли у full dump (/tmp/scan-input.txt) ТА у чанки
+          # (/tmp/chunks/chunk-N.txt). Чанки ≈80KB (~25K tokens) — під Tier 1
+          # лімітом Anthropic API 30K ITPM для Sonnet 4.5. Великі файли
+          # (prompts.js 174KB, index.html 227KB, health.js 116KB) ріжуться
+          # за рядками на parts. Один чанк = один API виклик у наступному step.
+          mkdir -p /tmp/chunks
+          rm -f /tmp/chunks/chunk-*.txt
           OUTPUT_FILE="/tmp/scan-input.txt"
           > "$OUTPUT_FILE"
 
           MODE="${{ steps.mode.outputs.mode }}"
           TARGET="${{ steps.mode.outputs.target }}"
+          MAX_CHUNK_BYTES=80000
+          CHUNK_N=1
+          CHUNK_FILE="/tmp/chunks/chunk-1.txt"
+          > "$CHUNK_FILE"
+          CHUNK_SIZE=0
+
+          # Закриває поточний чанк якщо у ньому щось є — створює новий пустий
+          start_new_chunk() {
+            if [ "$CHUNK_SIZE" -gt 0 ]; then
+              CHUNK_N=$((CHUNK_N + 1))
+              CHUNK_FILE="/tmp/chunks/chunk-$CHUNK_N.txt"
+              > "$CHUNK_FILE"
+              CHUNK_SIZE=0
+            fi
+          }
 
           collect_file() {
             local file="$1"
-            if [ -f "$file" ]; then
-              echo "=== FILE: $file ===" >> "$OUTPUT_FILE"
-              cat "$file" >> "$OUTPUT_FILE"
-              echo "" >> "$OUTPUT_FILE"
-              echo "" >> "$OUTPUT_FILE"
+            if [ ! -f "$file" ]; then return; fi
+            # Full dump (для розміру/логів)
+            echo "=== FILE: $file ===" >> "$OUTPUT_FILE"
+            cat "$file" >> "$OUTPUT_FILE"
+            printf "\n\n" >> "$OUTPUT_FILE"
+
+            local size
+            size=$(wc -c < "$file")
+            local hdr_size=$(( ${#file} + 20 ))
+
+            if [ "$size" -gt "$MAX_CHUNK_BYTES" ]; then
+              # Великий файл — закриваємо поточний чанк, ріжемо файл за рядками
+              start_new_chunk
+              local part=1
+              local file_chunk_bytes
+              echo "=== FILE: $file (part $part) ===" >> "$CHUNK_FILE"
+              file_chunk_bytes=$(( ${#file} + 30 ))
+              while IFS= read -r line || [ -n "$line" ]; do
+                local line_size=$(( ${#line} + 1 ))
+                if [ "$((file_chunk_bytes + line_size))" -gt "$MAX_CHUNK_BYTES" ]; then
+                  CHUNK_N=$((CHUNK_N + 1))
+                  CHUNK_FILE="/tmp/chunks/chunk-$CHUNK_N.txt"
+                  > "$CHUNK_FILE"
+                  part=$((part + 1))
+                  echo "=== FILE: $file (part $part, continued) ===" >> "$CHUNK_FILE"
+                  file_chunk_bytes=$(( ${#file} + 45 ))
+                fi
+                echo "$line" >> "$CHUNK_FILE"
+                file_chunk_bytes=$((file_chunk_bytes + line_size))
+              done < "$file"
+              CHUNK_SIZE=$file_chunk_bytes
+            else
+              # Малий файл — додаємо у поточний чанк; якщо не вміщається, flush
+              if [ "$((CHUNK_SIZE + size + hdr_size))" -gt "$MAX_CHUNK_BYTES" ] && [ "$CHUNK_SIZE" -gt 0 ]; then
+                start_new_chunk
+              fi
+              echo "=== FILE: $file ===" >> "$CHUNK_FILE"
+              cat "$file" >> "$CHUNK_FILE"
+              printf "\n\n" >> "$CHUNK_FILE"
+              CHUNK_SIZE=$((CHUNK_SIZE + size + hdr_size))
             fi
           }
+
+          # Збираємо список файлів у /tmp/files-to-scan.txt, потім один while-loop
+          # через redirection (НЕ pipe — pipe створює subshell де CHUNK_N/CHUNK_SIZE
+          # не зберігаються між ітераціями → перезапис chunk-1.txt при наступному while).
+          FILES_LIST="/tmp/files-to-scan.txt"
+          > "$FILES_LIST"
 
           case "$MODE" in
             full)
               echo "🔍 Full scan: всі src/ + index.html + sw.js + workflows"
-              # JS код
-              find src -name "*.js" -not -path "*/node_modules/*" | while read f; do
-                collect_file "$f"
-              done
-              # HTML + SW
-              collect_file "index.html"
-              collect_file "sw.js"
-              # Workflows
-              find .github/workflows -name "*.yml" | while read f; do
-                collect_file "$f"
-              done
+              find src -name "*.js" -not -path "*/node_modules/*" | sort >> "$FILES_LIST"
+              echo "index.html" >> "$FILES_LIST"
+              echo "sw.js" >> "$FILES_LIST"
+              find .github/workflows -name "*.yml" | sort >> "$FILES_LIST"
               ;;
 
             changed)
               echo "🔍 Changed scan: git diff проти попереднього коміту"
-              # На push у main — порівнюємо з попереднім merge у main
               git diff --name-only HEAD~1 HEAD -- \
                 'src/**/*.js' 'index.html' 'sw.js' '.github/workflows/**/*.yml' \
-                2>/dev/null | while read f; do
-                collect_file "$f"
-              done
-              # Якщо нічого не змінилось — пишемо placeholder
-              if [ ! -s "$OUTPUT_FILE" ]; then
-                echo "Жодного релевантного файлу не змінено у цьому commit." > "$OUTPUT_FILE"
-              fi
+                2>/dev/null >> "$FILES_LIST" || true
               ;;
 
             file)
@@ -157,7 +206,7 @@ jobs:
                 echo "❌ Файл не знайдено: $TARGET"
                 exit 1
               fi
-              collect_file "$TARGET"
+              echo "$TARGET" >> "$FILES_LIST"
               ;;
 
             *)
@@ -166,12 +215,24 @@ jobs:
               ;;
           esac
 
-          # Розмір input файлу
+          # Обробка через redirection (state CHUNK_N/CHUNK_SIZE/CHUNK_FILE зберігається)
+          while IFS= read -r f; do
+            collect_file "$f"
+          done < "$FILES_LIST"
+
+          # Якщо для changed нічого не зібралось — placeholder
+          if [ ! -s "$OUTPUT_FILE" ]; then
+            echo "Жодного релевантного файлу не змінено у цьому commit." > "$OUTPUT_FILE"
+          fi
+
+          # Розмір input файлу + скільки чанків
           SIZE=$(wc -c < "$OUTPUT_FILE")
           LINES=$(wc -l < "$OUTPUT_FILE")
-          echo "📦 Зібрано: ${SIZE} байт, ${LINES} рядків"
+          TOTAL_CHUNKS=$(ls -1 /tmp/chunks/chunk-*.txt 2>/dev/null | wc -l)
+          echo "📦 Зібрано: ${SIZE} байт, ${LINES} рядків, ${TOTAL_CHUNKS} чанків"
           echo "size=$SIZE" >> $GITHUB_OUTPUT
           echo "lines=$LINES" >> $GITHUB_OUTPUT
+          echo "chunks=$TOTAL_CHUNKS" >> $GITHUB_OUTPUT
 
       - name: Run Claude security audit
         id: scan
@@ -199,55 +260,76 @@ jobs:
 
           # System prompt — читається з окремого файлу .github/security-prompt.md
           # YAML не любить multi-line strings всередині run: | block — тому винесли.
-          # Промпт можна редагувати окремо без ризику зламати CI.
           SYSTEM_PROMPT=$(cat .github/security-prompt.md)
-
-          # Збираємо payload для Claude API через jq.
-          # Використовуємо --rawfile для codebase щоб уникнути multi-line bash strings
-          # (вони ламають YAML парсинг — урок e9t3N 16.05.2026).
-          # USER_MESSAGE формується всередині jq через string concat.
           MODE="${{ steps.mode.outputs.mode }}"
+          TOTAL_CHUNKS="${{ steps.collect.outputs.chunks }}"
 
-          jq -n \
-            --arg system "$SYSTEM_PROMPT" \
-            --arg mode "$MODE" \
-            --rawfile code /tmp/scan-input.txt \
-            '{
-              model: "claude-sonnet-4-5-20250929",
-              max_tokens: 8000,
-              system: $system,
-              messages: [{role: "user", content: ("Mode: " + $mode + ". Codebase для аудиту нижче. Поверни звіт у Markdown.\n\n" + $code)}]
-            }' > /tmp/api-payload.json
+          # Чанки = окремі API виклики з паузою 65s між ними (запас над
+          # Tier 1 лімітом 30K ITPM для Sonnet 4.5). Без chunking один
+          # повний codebase = 429 rate limit (e9t3N 16.05.2026).
+          # Sonnet 4.5 + 1M context (beta header) — запас по context, не по rate.
+          > /tmp/chunk-reports.md
+          FAILED_CHUNKS=0
 
-          # Виклик Claude API з 1M context window (beta для великих codebase).
-          # NeverMind codebase ~210K tokens у full mode — Opus default 200K limit
-          # не вистачає. Sonnet 4.5 + 1M beta header = 5x запасу.
-          echo "🤖 Виклик Claude API..."
-          HTTP_CODE=$(curl -s -o /tmp/api-response.json -w "%{http_code}" \
-            -X POST https://api.anthropic.com/v1/messages \
-            -H "Content-Type: application/json" \
-            -H "x-api-key: $ANTHROPIC_API_KEY" \
-            -H "anthropic-version: 2023-06-01" \
-            -H "anthropic-beta: context-1m-2025-08-07" \
-            -d @/tmp/api-payload.json)
+          for chunk_file in $(ls -1 /tmp/chunks/chunk-*.txt 2>/dev/null | sort -V); do
+            CHUNK_NUM=$(basename "$chunk_file" .txt | sed 's/chunk-//')
+            CHUNK_SIZE=$(wc -c < "$chunk_file")
+            echo "🤖 Chunk $CHUNK_NUM/$TOTAL_CHUNKS ($CHUNK_SIZE байт) → Claude API..."
 
-          if [ "$HTTP_CODE" != "200" ]; then
-            echo "❌ Claude API повернув $HTTP_CODE"
-            cat /tmp/api-response.json
-            exit 1
-          fi
+            jq -n \
+              --arg system "$SYSTEM_PROMPT" \
+              --arg mode "$MODE" \
+              --arg chunk_num "$CHUNK_NUM" \
+              --arg total "$TOTAL_CHUNKS" \
+              --rawfile code "$chunk_file" \
+              '{
+                model: "claude-sonnet-4-5-20250929",
+                max_tokens: 4000,
+                system: $system,
+                messages: [{role: "user", content: ("Mode: " + $mode + " (chunk " + $chunk_num + "/" + $total + "). Кодова база для аудиту нижче. Поверни звіт у Markdown.\n\n" + $code)}]
+              }' > /tmp/api-payload.json
 
-          # Витягуємо текст відповіді
-          REPORT=$(jq -r '.content[0].text' /tmp/api-response.json)
+            HTTP_CODE=$(curl -s -o /tmp/api-response.json -w "%{http_code}" \
+              -X POST https://api.anthropic.com/v1/messages \
+              -H "Content-Type: application/json" \
+              -H "x-api-key: $ANTHROPIC_API_KEY" \
+              -H "anthropic-version: 2023-06-01" \
+              -H "anthropic-beta: context-1m-2025-08-07" \
+              -d @/tmp/api-payload.json)
 
-          # Перевірка що відповідь не порожня
-          if [ -z "$REPORT" ] || [ "$REPORT" = "null" ]; then
-            echo "❌ Claude повернув порожню відповідь"
-            cat /tmp/api-response.json
-            exit 1
-          fi
+            {
+              echo ""
+              echo "## 📦 Chunk $CHUNK_NUM/$TOTAL_CHUNKS"
+              echo ""
+            } >> /tmp/chunk-reports.md
 
-          # Зберігаємо звіт
+            if [ "$HTTP_CODE" != "200" ]; then
+              echo "❌ Chunk $CHUNK_NUM: HTTP $HTTP_CODE"
+              ERROR_MSG=$(jq -r '.error.message // .error.type // "невідомо"' /tmp/api-response.json 2>/dev/null || cat /tmp/api-response.json)
+              echo "**⚠️ Chunk $CHUNK_NUM — API ERROR $HTTP_CODE:** $ERROR_MSG" >> /tmp/chunk-reports.md
+              FAILED_CHUNKS=$((FAILED_CHUNKS + 1))
+            else
+              CHUNK_REPORT=$(jq -r '.content[0].text' /tmp/api-response.json)
+              if [ -z "$CHUNK_REPORT" ] || [ "$CHUNK_REPORT" = "null" ]; then
+                echo "❌ Chunk $CHUNK_NUM: порожня відповідь"
+                echo "**⚠️ Chunk $CHUNK_NUM — порожня відповідь**" >> /tmp/chunk-reports.md
+                FAILED_CHUNKS=$((FAILED_CHUNKS + 1))
+              else
+                echo "$CHUNK_REPORT" >> /tmp/chunk-reports.md
+              fi
+            fi
+
+            echo "" >> /tmp/chunk-reports.md
+            echo "---" >> /tmp/chunk-reports.md
+
+            # Пауза між викликами — окрім останнього
+            if [ "$CHUNK_NUM" -lt "$TOTAL_CHUNKS" ]; then
+              echo "⏳ Sleep 65s (rate limit guard)..."
+              sleep 65
+            fi
+          done
+
+          # Збираємо фінальний звіт з шапкою
           {
             echo "# Claude Security Scan Report"
             echo ""
@@ -256,14 +338,20 @@ jobs:
             echo "**Commit:** ${{ github.sha }}"
             echo "**Trigger:** ${{ github.event_name }}"
             echo "**Codebase size:** ${{ steps.collect.outputs.size }} bytes, ${{ steps.collect.outputs.lines }} lines"
+            echo "**Chunks:** $TOTAL_CHUNKS (failed: $FAILED_CHUNKS)"
             echo ""
             echo "---"
-            echo ""
-            echo "$REPORT"
+            cat /tmp/chunk-reports.md
           } > /tmp/scan-report.md
 
-          # Перевіряємо чи є CRITICAL або HIGH findings
-          if echo "$REPORT" | grep -qE "\[(CRITICAL|HIGH)\]"; then
+          # Fail step тільки якщо ВСІ чанки впали — частковий звіт лишається корисним
+          if [ "$FAILED_CHUNKS" -ge "$TOTAL_CHUNKS" ] && [ "$TOTAL_CHUNKS" -gt 0 ]; then
+            echo "❌ Усі $TOTAL_CHUNKS чанків впали"
+            exit 1
+          fi
+
+          # Перевіряємо findings
+          if grep -qE "\[(CRITICAL|HIGH)\]" /tmp/scan-report.md; then
             echo "⚠️ Знайдено CRITICAL або HIGH findings"
             echo "has_findings=true" >> $GITHUB_OUTPUT
           else
@@ -271,8 +359,7 @@ jobs:
             echo "has_findings=false" >> $GITHUB_OUTPUT
           fi
 
-          # Превью звіту у лог (без full text)
-          echo "📄 Звіт згенеровано: $(wc -l < /tmp/scan-report.md) рядків"
+          echo "📄 Звіт згенеровано: $(wc -l < /tmp/scan-report.md) рядків, $FAILED_CHUNKS/$TOTAL_CHUNKS чанків з помилками"
 
       - name: Upload report artifact
         if: always() && hashFiles('/tmp/scan-report.md') != ''
