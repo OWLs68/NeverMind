@@ -1,5 +1,55 @@
 # SESSION_STATE — архів попередніх сесій
 
+## 🔧 Сесія db0YY — Завершення UUID-блоку 100% + B-170..B-177 регресії myshu + Council аудит (12.05.2026)
+
+### Зроблено
+
+#### A. Регресії myshu UUID-міграцій — 4 класи багів (4 коміти + docs)
+
+1. **B-170 onclick без лапок навколо UUID** (`f66acfb`) — 17 точок у 6 файлах + 1 parseInt(txId)→NaN. UUID з дефісами у HTML-атрибуті парситься як вираз → ReferenceError. Точки: inbox/evening/notes/projects/calendar/finance. **Фікс:** обгортка `'${id}'` + finance.js:259 без parseInt. Той самий клас що B-108 (xGe1H 27.04).
+
+2. **B-171 Date.now() ID при створенні entities через AI/handler** (`2cf5510`) — 8 точок у evening-actions/habits/utils/owl/inbox/calendar. Мікс типів (старі UUID-string + нові number) → silent fail swipe-delete/undo. **Фікс:** `Date.now()` → `generateUUID()` + імпорти.
+
+3. **B-172 КРИТИЧНА: tool schemas `type: "integer"` для UUID ID** (`506d49f`) — 28+ точок у prompts.js (7 entity типів). OpenAI Strict mode відкидав AI-виклики delete/edit/update silent. Tasks myshu виправила правильно, решту 7 типів забула. **Фікс:** replace_all integer→string + Health undo reversers (create_health_card, add_allergy).
+
+4. **B-173 AI prompts examples з числовими ID + medID inconsistency** (`9b5e25d`) — GLOBAL_TOOLS_RULE приклади `event_id:123/456` з ери Date.now() + health.js:1708 `[medID:` замість `[ID:`. **Фікс:** приклади на UUID + «копіюй точно як є» + medID→ID + НОВИЙ `src/core/action-mapper.js` extraction.
+
+#### B. Architecture Refactor — Сесія 3B-8 Health UUID + sub-entity steps v17
+
+5. **Сесія 3B-8 Health UUID** (`581aad2` + `552aa00`) — health.js: 8 creation Date.now()→generateUUID() + 9 onclick + boot.js v16 міграція з legacy_id Cross-ref.
+
+6. **Sub-entity steps UUID v17** (`1b804cc` + `80e0d21`) — task.steps/project.steps на generateUUID. UUID coverage 100% повний.
+
+#### C. Universal undo — 8 tools + 10 типів trash
+
+7-9. Health reversers + ESM cycle розірвано (action-undo через DI) + 3 нові case у restoreFromTrash (allergy/event/project).
+
+10. **🚨 B-174 КРИТИЧНА: undo silent fail для save_finance/create_health_card/add_allergy** (`bb0c50e`) — Council аудит знайшов reverser шле у processUniversalAction але delete_X жили ТIЛЬКИ у tool-dispatcher → return false. save_finance ламався 24+ год у проді.
+
+11. **B-175 КРИТИЧНА: restoreFromTrash без case 'health_card'** (`bb0c50e`) — Silent data loss при відновленні картки.
+
+12. **B-176 save_routine undo не оновлював Календар** (`b7b9e74`) — DETAIL_TO_KEY не мав 'routine'.
+
+13. **B-177 3 delete_X tools з слабкими descriptions** (`b7b9e74`) — UUID-уточнення додано.
+
+### Ключові рішення db0YY
+
+- **action-undo через DI** — pure модуль, цикл inbox↔habits розірвано.
+- **Universal undo reverser ПОВИНЕН** мати target tool у processUniversalAction (не direct handler) — інакше silent fail.
+- **`addToTrash(type)` ОБОВ'ЯЗКОВО має парний case у `restoreFromTrash`** — інакше silent data loss.
+
+### Метрики db0YY
+
+- Гілка: `claude/start-session-db0YY`
+- Коміти: 30+ (`f66acfb` → ETAP 3 docs)
+- Версії: v841 → v848+ (CACHE_NAME `nm-20260512-1310`)
+- UUID coverage: 100% повний (10/10 entities + sub-entity steps)
+- Council Sonnet агенти: 4
+
+Архівовано e9t3N 16.05.2026.
+
+---
+
 ## 🔧 Сесія dyhJu — Bridge G2+G4 + 5 багів + Calendar/Routine UI (11.05.2026, AM)
 
 ### Зроблено

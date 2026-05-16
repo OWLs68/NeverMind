@@ -4,11 +4,138 @@
 >
 > Старіші сесії (до 6GoDe 19.04) — в [`_archive/SESSION_STATE_archive.md`](../_archive/SESSION_STATE_archive.md).
 
-**Оновлено:** 2026-05-13 (сесія **nliW8** — 4 фази: B-170 регресія + Phase 2 уніфікація save_finance + Пункт 3 delete_medication повний undo + Пункт 4 B-178 cross-chat + 6 авто-сторожів-хуків. 24 коміти v862→v874+, Council 16 агентів Sonnet). Раніше: 2026-05-12 (сесія **db0YY** — UUID-блок 100% + B-170..B-177 + Universal undo coverage + Council аудит).
+**Оновлено:** 2026-05-16 (сесія **e9t3N** — AI-тестер інфраструктура + Security аудит з 8 системними фіксами + Dependabot + Claude Security Action. 15+ комітів, Council 9 агентів Sonnet, ~10 годин). Раніше: 2026-05-13 (сесія **nliW8** — 4 фази: B-170 регресія + Phase 2 уніфікація save_finance + Пункт 3 delete_medication повний undo + Пункт 4 B-178 cross-chat + 6 авто-сторожів-хуків. 24 коміти v862→v874+, Council 16 агентів Sonnet).
 
 ---
 
-## 🔧 Поточна сесія nliW8 — 4 фази (B-170 + Phase 2 + Пункт 3 + Пункт 4) — 20+ комітів (13.05.2026)
+## 🔧 Поточна сесія e9t3N — AI-тестер 24/7 + Security Hardening (15-16.05.2026)
+
+### Зроблено — 2 великі блоки + 6 системних security фіксів
+
+#### A. AI-тестер 24/7 інфраструктура (NM-сторона Фази 1)
+
+Архітектура для AI-помічника тестування на Hetzner сервері. 4 раунди обговорення з brain-Claude + Council 5 агентів Sonnet (Критик / Стратег / Pragmatic MVP / Pre-mortem / NM-integrator) + 3 WebSearch ринку 2026.
+
+**Архітектура:** Hetzner сервер + persistent Chrome profile + Python скрипт + GPT-4o-mini планування. Тестер живе як справжній юзер з накопиченими даними. Config-driven через Claude (Рома міняє розклад/бюджет через NM-сесію).
+
+1. **`8270d87`** — окремий workflow `.github/workflows/auto-merge-tester.yml` для гілок `claude/ai-tester-*` БЕЗ build.js (закриває BLOCKER: тестер кирилицею не ламає основний деплой) + whitelist guard `_ai-tools/` only + exclusion `!claude/ai-tester-**` у основному auto-merge.yml.
+2. **`9dca3ca`** — 5 файлів обміну NM↔Hetzner у `_ai-tools/`:
+   - `AI_TESTER_INTEGRATION.md` (380 рядків) — єдина точка правди контракту
+   - `tester-config.json` — налаштування (3/день, $2 budget, gpt-4o-mini)
+   - `tester-commands.md` — черга задач від Романа/Claude
+   - `tester-status.json` — heartbeat + last_failures
+   - `tester-log.md` — журнал 7 днів
+   - `tester-screenshots/.gitkeep` + `.gitignore` (`*.png|jpg|jpeg` ніколи у git — PHI ризик)
+3. **`5838dbf`** — `window.NM_BOOT_DONE = true` після `bootApp()` у `src/core/boot.js:1218` для Тесту 1 (тестер чекає завершення міграцій). CACHE_NAME bump `nm-20260515-2100`.
+4. **`16c630a`** — інтеграція скілів:
+   - `/start` Крок 1.5 — читає `tester-status.json`, heartbeat >12 год = «тестер мертвий», нові failures у NEVERMIND_BUGS з префіксом `AI-T:`
+   - `/finish` Фаза 3.5 — для кожного закритого бага додає регресію у `tester-commands.md`
+5. **`7ca79fd`** — `_ai-tools/INDEX.md` секція AI-тестер з 8 посиланнями.
+
+**10 готових сценаріїв описано** (Boot health, Navigation 8 tabs, Create task/note/health card, Swipe undo, Delete→Trash→Restore, Toggle done, Inbox AI: «купив каву 50», Inbox AI: «Зустріч 17 травня»).
+
+#### B. Security Hardening — Council 5 агентів + 8 системних фіксів
+
+Запит Романа: «забезпечити сильну безпеку персональних даних, унеможливити хакерські атаки». Council 5 паралельних агентів Sonnet (Secret/Key + XSS/Injection + Network/CSP + Supply chain + Supabase/Hetzner) + WebSearch OWASP 2026 + Anthropic Claude Security research.
+
+**Знайдено:** 5 CRITICAL + 6 HIGH + 5 MEDIUM/LOW. Рейтинг безпеки: 5/10 single-user → ціль 8/10 до Supabase.
+
+6. **`3aa1569`** — **Stored XSS у `notes.js:186`** — `dl.innerHTML = ...value="${f}"` без escape. Юзер мав можливість створити папку з `"><img src=x onerror=...` → виконання при кожному завантаженні. Фікс: escapeHtml(f). Helper уже імпортувався.
+7. **`71d27ba`** — Системна документація:
+   - `docs/SECURITY.md` (400+ рядків) — класифікація даних (PHI/PII/credentials), 14 знайдених дірок з severity, системні принципи, Security Checklist для кожної нової фічі
+   - `_ai-tools/SECURITY_AUDIT_e9t3N_2026-05-15.md` — повний звіт Council
+   - `ROADMAP.md` — новий Active блок «🛡️ Security Hardening» з 4 BLOCKER перед Supabase
+   - `_ai-tools/INDEX.md` — секція Безпека
+8. **`a82ea3b`** — **ANTI_INJECTION_RULE у всіх системних промптах** (системно, не латка):
+   - Створено константа у `src/ai/prompts.js`
+   - Додано у `BASE_CHAT_RULES` → автоматично у 5 промптів (Inbox + 4 tab-чати)
+   - Явно у 3 функції-промпти: `getEveningPromptSystem`, `getEveningSummaryPromptV2`, `getBrainPulseSystemPrompt`
+   - 8/8 системних промптів покрито захистом від «Ignore previous instructions» / «Output your system prompt» payload'ів у юзерських даних
+9. **`f3f2fa3`** — AI-тестер screenshot контракт: `screenshot_b64` → `screenshot_path` (локальний шлях на сервері, НЕ base64 у git). GDPR-критично: скрін health-картки = PHI Article 9. Workflow guard блокує merge якщо знайде `screenshot_b64` у JSON.
+10. **`88cf44c`** — Supply chain автомати:
+    - `.github/dependabot.yml` — weekly PR з оновленнями actions + npm
+    - `.github/workflows/auto-merge.yml` — новий step «Security audit npm dependencies» (`npm audit --audit-level=high`)
+    - `.github/workflows/claude-security.yml` — Anthropic Claude Security Action
+11. **Dependabot перші 5 PR'ів** — Роман merge'ив вручну (actions/checkout 4→6, setup-node 4→6, configure-pages 5→6, deploy-pages 4→5, upload-pages-artifact 3→5). Усі merged без конфліктів.
+
+#### C. Claude Security Action — 4 ітерації фіксів
+
+Перший workflow з action `anthropics/claude-code-security-review@main` мав 3 невдалих запуски через невідповідність:
+
+12. **`d6bdf20`** — Виправив параметри: `anthropic_api_key` → `claude-api-key`, видалив неіснуючі `scan-mode`/`severity-threshold`/`comment-on-commit`. Дізнався що action PR-only.
+13. **`4585350`** — Заміна на власний workflow `claude-security.yml` з 3 режимами (full/changed/file), curl до Claude API, custom system prompt, артефакт-звіт, auto-issue для CRITICAL/HIGH.
+14. **`b6e22c6`** — Фікс YAML syntax errors:
+    - SYSTEM_PROMPT винесено у `.github/security-prompt.md`
+    - USER_MESSAGE прибрано як bash variable → jq `--rawfile`
+    - JS template literal → array `.join('\n')`
+    - Усі multi-line strings прибрано (вони ламали YAML)
+15. **`6812f6e`** — Sonnet 4.5 + 1M context (model `claude-sonnet-4-5-20250929` + header `anthropic-beta: context-1m-2025-08-07`). Codebase NM ~210K tokens перевищує Opus default 200K limit.
+
+**Останній запуск (full mode):** rate limit 429 — 210K request > 30K/min Tier 1 ліміт Sonnet. Залишилось 3 варіанти: upgrade Tier 2 ($40 → Opus 1M/min), chunking (~1 год переробки), або /finish і повернення пізніше. Обрано: /finish.
+
+### Обговорено (без виконання)
+
+- **AI-тестер архітектура** — 4 раунди з brain-Claude. Фінальна модель: Hetzner persistent profile + config-driven + командний канал через `tester-commands.md`. Зміна моєї думки 3 рази (Hetzner→GitHub Actions→Hetzner). Урок процесу.
+- **CSTL NEWS редизайн** — інший проект Романа (PWA для громади Олика, Волинь). Скріни нової вкладки «Громада» з пастельними картками. Пропозиції редизайну Світло/Автобуси/Події/Новини/Контакти/Подати оголошення під новий стиль. Принципи UI для бабусь. **Дамп для іншої сесії CSTL NEWS, у NM-репо не торкали.**
+- **Permissions GitHub App «Claude»** — пояснив що це не я особисто запрошую, а Anthropic інфраструктура. Роман відклав на потім.
+- **Event Delegation Refactor** — 185 inline `onclick` + ~300 динамічних. Без рефакторингу strict CSP неможливий. **Окремий блок ROADMAP перед Supabase.**
+
+### Ключові рішення
+
+- **AI-тестер: Hetzner persistent profile** (не GitHub Actions cron) — бо Рома хоче «тестер з накопиченими даними як справжній юзер», не чистий smoke кожен запуск.
+- **Безпека: системно, не латка** — Рома сказав явно. Замість CSP з `unsafe-inline` (латка для 185 onclick) — відкласти CSP до Event Delegation Refactor (системне рішення).
+- **GitHub App workflow зміни блокує bot push** — manual merge через PR замість auto. Постійне рішення: workflow зміни через manual merge (3 хв роботи 2-3 рази на місяць vs PAT з workflow scope = security ризик).
+- **Sonnet 4.5 + 1M context** замість Opus 4.1 для full scan — бо codebase 210K > Opus 200K limit. Sonnet якісно достатньо для security audit.
+- **Заміна `anthropics/claude-code-security-review` на власний workflow** — той action PR-only, NM використовує push-based flow без PRs.
+
+### Інциденти
+
+- **3 невдалих запуски Claude Security Action** (`#1` дефолти ігнорували параметри, `#9 #8 #7` після Dependabot merge → workflow YAML invalid, `#11 #12` rate limit після виправлень YAML).
+- **Auto-merge.yml впав через GitHub permissions** (`#1351`) — bot не може push workflow зміни. Виправлено через manual merge PR #7 і PR #8.
+- **YAML syntax errors у `claude-security.yml`** на лінії 218 — 3 multi-line strings у `run: |` block ламали парсинг. Виправлено винесенням у окремий файл + jq --rawfile + array.join('\n').
+- **Rate limit 429 на Tier 1** — 30K input tokens/min Sonnet недостатньо для 210K codebase one-shot.
+
+### Конфлікти/суперечності
+
+- **AI-тестер архітектура: моя думка змінилась 3 рази.** Раунд 1: brain запропонував Hetzner — підтримав. Раунд 2: переглянув і запропонував GitHub Actions + Playwright. Раунд 3: Рома відкинув стратегічну частину Council висновку (помилкова інтерпретація «помічник = exploration»). Раунд 4: повернувся до Hetzner. Урок: процес Council давав поверхневі стратегічні висновки без верифікації фактів.
+- **«Латка vs системне»** — Рома кілька разів зупиняв мене з «системно, не латка». CSP-латка з `unsafe-inline` відкладено. Anti-prompt-injection зробили системно (у BASE_CHAT_RULES, не точково).
+
+### Відкладене
+
+- **Full Claude Security Scan** — заблокований rate limit Tier 1. Варіанти: upgrade Tier 2 ($40) або chunking workflow (~1 година). Окрема сесія.
+- **Event Delegation Refactor** — 185 inline onclick → один listener. Передумова strict CSP. Окремий блок ROADMAP перед Supabase, ~6-8 годин.
+- **OpenAI ключ у Edge Function** — під час Supabase міграції. Закриває HIGH ризик «ключ у localStorage».
+- **`user_id` колонка** на всі entities — Architecture Refactor Сесія 8. Передумова RLS.
+- **Backup механізм для Supabase міграції** — окрема сесія перед стартом, ~3-4 години.
+- **Brain-Claude Hetzner серверна частина** — створення `ai-tester.py`, systemd, cron, init-profile через VNC. Чекає окремої сесії на сервері.
+- **CSTL NEWS редизайн** — Роман скопіює дамп пропозицій у іншу сесію цього проекту.
+
+### Спостереження Claude
+
+- **Рома втомлений простирадлами** — кілька «не понімаю», «технічно», «єбать ну шо це за простирадло». Кожен раз визнавав і переписував коротше. Прогрес: останні 30% сесії відповіді стиснутіші.
+- **Швидкість рішень: миттєва.** Майже всі «Роби» — без довгого обмірковування. Виняток: AI-тестер архітектура (4 раунди, бо складна).
+- **Метакомунікація:** Рома прямо назвав свою frustration («хочеться послати тебе нахуй за то шо ти пишеш мені технічною мовою»). Чесно. Потім добав «но ти красава і робиш роботу добре». Сигнал що проблема вирішена тільки коли реально переписаю простіше, не словами «зрозумів».
+- **Рома часто перемикається між проектами:** NeverMind ↔ CSTL NEWS ↔ Claude API console ↔ GitHub merge. Конкретно сьогодні: ~70% NeverMind, ~10% CSTL NEWS (новий проект з'явився посеред сесії), ~20% GitHub UI операції (5 merge PR + Dependabot).
+- **Брайн-сесія паралельна.** Рома постійно копіював блоки коду між brain і NM. Це працює коли блоки в `\`\`\`` форматі. Системний паттерн.
+
+### Метрики
+
+- Гілка: `claude/start-session-e9t3N`
+- Коміти: 15 від `3aa1569` (XSS fix) до `6812f6e` (Sonnet 4.5)
+- Версії: v878 (без змін у бандлі — security/CI infra, не торкає bundle.js)
+- CACHE_NAME: `nm-20260515-2230`
+- Build: чистий (зміни тільки у документації + workflows + 1 рядок boot.js)
+- Council Sonnet агенти: 9 (5 security + 4 AI-тестер)
+- WebSearch запитів: 4 (OWASP 2026 + AI testing comparison + Claude Security desktop + Anthropic action params)
+- Manual merge через GitHub UI: 2 (PR #7 для YAML фіксів, PR #8 для Sonnet 4.5)
+- Dependabot PR'ів merged: 5
+- Anthropic API key створено: 1 (для Claude Security Action, Tier 1)
+- Files created: 8 (auto-merge-tester.yml, AI_TESTER_INTEGRATION.md, tester-config/commands/status/log.md, security-prompt.md, SECURITY.md, SECURITY_AUDIT_e9t3N.md, dependabot.yml, claude-security.yml)
+- Files edited: ~12 (skills /start /finish, INDEX, ROADMAP, .gitignore, sw.js, boot.js, prompts.js, notes.js, auto-merge.yml)
+
+---
+
+## 🔧 Сесія nliW8 (13.05.2026) — попередня
 
 ### Зроблено — 4 фази
 
@@ -116,86 +243,7 @@ Council 3 агенти Sonnet знайшли 2 корені: startHealthIntervie
 
 ---
 
-## 🔧 Сесія db0YY — Завершення UUID-блоку 100% + B-170..B-177 регресії myshu + Council аудит (12.05.2026)
-
-### Зроблено
-
-#### A. Регресії myshu UUID-міграцій — 4 класи багів (4 коміти + docs)
-
-1. **B-170 onclick без лапок навколо UUID** (`f66acfb`) — 17 точок у 6 файлах + 1 parseInt(txId)→NaN. UUID з дефісами у HTML-атрибуті парситься як вираз → ReferenceError. Точки: inbox/evening/notes/projects/calendar/finance. **Фікс:** обгортка `'${id}'` + finance.js:259 без parseInt. Той самий клас що B-108 (xGe1H 27.04).
-
-2. **B-171 Date.now() ID при створенні entities через AI/handler** (`2cf5510`) — 8 точок у evening-actions/habits/utils/owl/inbox/calendar. Мікс типів (старі UUID-string + нові number) → silent fail swipe-delete/undo. **Фікс:** `Date.now()` → `generateUUID()` + імпорти.
-
-3. **B-172 КРИТИЧНА: tool schemas `type: "integer"` для UUID ID** (`506d49f`) — 28+ точок у prompts.js (7 entity типів). OpenAI Strict mode відкидав AI-виклики delete/edit/update silent. Tasks myshu виправила правильно, решту 7 типів забула. **Фікс:** replace_all integer→string + Health undo reversers (create_health_card, add_allergy).
-
-4. **B-173 AI prompts examples з числовими ID + medID inconsistency** (`9b5e25d`) — GLOBAL_TOOLS_RULE приклади `event_id:123/456` з ери Date.now() + health.js:1708 `[medID:` замість `[ID:`. **Фікс:** приклади на UUID + «копіюй точно як є» + medID→ID + НОВИЙ `src/core/action-mapper.js` extraction (Сесія 4-mini Architecture Refactor — підготовка ґрунту).
-
-#### B. Architecture Refactor — Сесія 3B-8 Health UUID + sub-entity steps v17 (2 етапи)
-
-5. **Сесія 3B-8 Health UUID** (`581aad2` + `552aa00`) — health.js: 8 creation Date.now()→generateUUID() (cards/medications/allergies + Класс 2 _syncMedicationToTask task.id + _syncCardAppointmentToEvent event.id) + 9 onclick `'${id}'` + 1 dataset.id Number→string + import generateUUID. boot.js v16 міграція: nm_health_cards[].id + nested medications[].id + nm_allergies[].id з legacy_id. Cross-ref FORWARD (legacy_id ETAP1 → ETAP2 для нових з myshu) + REVERSE (event.sourceCardId) + TASKS (task.sourceMedId). Backup pre-health-uuid-v16.
-
-6. **Sub-entity steps UUID v17** (`1b804cc` + `80e0d21`) — 17 creation-точок task.steps/project.steps на generateUUID + onclick обгортка + handler String() safety (projects:421, tool-dispatcher:432). boot v17: nm_tasks[].steps[].id + nm_projects[].steps[].id з legacy_id. Backup pre-steps-uuid-v17. **UUID coverage 100% повний на всіх рівнях** (10/10 top-level + 100% sub-entity steps).
-
-#### C. Universal undo — 8 tools + 10 типів trash (8 комітів + docs)
-
-7. **Health undo reversers** (`506d49f`) — create_health_card → delete_health_card, add_allergy → delete_allergy у action-reversers.js + logAction у dispatcher case'ах.
-
-8. **Розірвав ESM цикл inbox↔action-undo↔habits** (`fd66c8d`) — action-undo.js став PURE: executeReverse(reverse, dispatchFn) через DI. inbox.js:768 + tool-dispatcher.js:579 передають processUniversalAction. R1 ризик ARCHITECTURE_REFACTOR.md закрито. Підготовка ґрунту для Сесії 4 execute-action.
-
-9. **Universal undo coverage trash 9 типів** (`c72763e` + `f2bd017` + `08940c1`) — deleteAllergy → addToTrash + 3 case у restoreFromTrash: allergy/event/project (раніше silent fail для них).
-
-10. **🚨 B-174 КРИТИЧНА: undo silent fail для save_finance/create_health_card/add_allergy** (`bb0c50e`) — Council аудит знайшов: reverser шле через DI у processUniversalAction, але delete_transaction/delete_health_card/delete_allergy жили ТIЛЬКИ у tool-dispatcher direct handlers → return false → AI пише «⚠️ Не зміг відмінити». save_finance ламався з myshu **24+ год у проді**. **Фікс:** + 3 cases у processUniversalAction (habits.js) + import {deleteHealthCardProgrammatic, deleteAllergy}.
-
-11. **B-175 КРИТИЧНА: restoreFromTrash без case 'health_card'** (`bb0c50e`) — Silent data loss при відновленні картки. **Фікс:** + case 'health_card' з імпортом getHealthCards/saveHealthCards (експортовано).
-
-12. **B-176 save_routine undo не оновлював Календар** (`b7b9e74`) — pre-existing з myshu: DETAIL_TO_KEY не мав 'routine'. **Фікс:** + 'routine': 'nm_routine' + 'allergies': 'nm_health_cards' у DETAIL_TO_KEY; + 2 рендер-точки у KEY_RENDER_MAP; renderCalendar тепер export.
-
-13. **B-177 3 delete_X tools з слабкими descriptions** (`b7b9e74`) — delete_event/delete_health_card/delete_allergy без UUID-уточнення → AI міг вигадати ID за назвою. **Фікс:** «UUID X з контексту (формат [ID:xxxx-xxxx]). НЕ вигадуй — копіюй точно.»
-
-#### D. Council 4 агенти аудит
-
-14. **Council Sonnet (4 паралельні)** — doc-consistency-checker (7 розривів) + prompt-engineer-auditor (4 покращення) + silent-bug-scout (TOP-5 ризиків, знайшов B-174/B-175/B-176) + code-regression-finder (B-174 silent undo фундаментальний).
-
-### Ключові рішення
-
-- **action-undo через DI** (`executeReverse(reverse, dispatchFn)`) — pure модуль, цикл inbox↔habits розірвано.
-- **action-mapper.js extracted** — pure switch у core/, готує ґрунт для Сесії 4 execute-action.js без циклу.
-- **Universal undo reverser ПОВИНЕН** мати target tool у processUniversalAction (не direct handler) — інакше silent fail.
-- **`addToTrash(type)` ОБОВ'ЯЗКОВО має парний case у `restoreFromTrash`** — інакше silent data loss.
-
-### Інциденти
-
-- **Сигнал болю «технічно»** 1× — переписав чек-лист тестів простіше (з прикладом дії юзера, без жаргону DevTools).
-- **Сигнал «копай глибоко»** 2× — після кожного знайшов додаткові класи бугів (B-173 від першого, B-174 від Council другого).
-- **«Не на пам'яті»** Романа — Read'нув кожний файл перед Edit, верифікував Council гіпотези самостійно через Read (правило ГІПОТЕЗА≠ФАКТ).
-
-### Конфлікти/суперечності
-
-- **Council сказав «відкласти Сесію 4 до Сесії 5»** — wrapper без observable value. Прийняв — замість цього зробив Сесію 4-mini (action-mapper extraction) як підготовку + переніс зусилля на universal undo coverage де є справжній value.
-
-### Метрики
-
-- Гілка: `claude/start-session-db0YY`
-- Коміти: 30+ (`f66acfb` → ETAP 3 docs)
-- Версії: v841 → v848+ (CACHE_NAME `nm-20260512-1310`)
-- Закриті ризики: B-170/171/172/173 (myshu регресії), B-174/175/176/177 (нові класи), Health 3B-8 UUID, sub-entity steps v17, ESM cycle inbox-undo-habits
-- Council Sonnet агенти: 4 (doc-consistency + prompt-engineer-auditor + silent-bug-scout + code-regression-finder)
-- Нові модулі: `src/core/action-mapper.js` (Сесія 4-mini)
-- Розширені: boot.js (+v16 Health + v17 steps + DETAIL_TO_KEY/KEY_RENDER_MAP), action-reversers.js (+2 Health), trash.js (+4 cases), processUniversalAction (+3 delete cases)
-- UUID coverage: **100% повний** (10/10 entities + sub-entity steps)
-
-### Спостереження Claude
-
-- **Council ВЖЕ після фіксу знаходить нові баги тих самих класів** — це нормально, бо мій план мав сліпі плями (B-174 silent undo flow, B-175 missed type). Урок: ПЕРЕВIРИТИ ВСI символи що в'яжуться (addToTrash types ↔ restoreFromTrash cases; reverser tools ↔ processUniversalAction cases) перед закриттям сесії.
-- **«Один баг за раз»** Романа — справді працювало. ETAP 1 (критичні) → ETAP 2 (середні) → ETAP 3 (docs) дало чисту історію + контрольовані point-of-failure.
-- **6-grep чек-ліст у lessons.md** — стане канонічною інструкцією для майбутніх UUID/schema-міграцій (B-170/171/172/173/174/175 повторюватись не повинні).
-
-### Відкладене
-
-- **add_medication undo** — потребує новий tool `delete_medication` (поки нема ні у promtps ні в handlers)
-- **Moments не показуються AI з `[ID:]`** (code-regression #3) — обмежує undo/edit моментів точково
-- **save_routine відсутній у evening-actions.js** (code-regression #4) — асиметрія з inbox + tool-dispatcher
-- **Сесії 4-8 Architecture Refactor** — Сесія 4 execute-action.js (відкладено до Сесії 5 canonical), 5 (12 інтентів), 6 (action-log coverage), 7 (nm-data-changed payload), 8 (habit_log2 ISO + user_id)
+## 🔧 Сесія db0YY (12.05.2026) — архівовано e9t3N 16.05 → [archive](../_archive/SESSION_STATE_archive.md#-сесія-db0yy--завершення-uuid-блоку-100--b-170b-177-регресії-myshu--council-аудит-12052026)
 
 ---
 
