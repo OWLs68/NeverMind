@@ -197,60 +197,26 @@ jobs:
             exit 0
           fi
 
-          # System prompt для security audit
-          # Базується на OWASP Top 10 2026 + LLM Top 10 + наша класифікація даних
-          SYSTEM_PROMPT='Ти — Senior Security Auditor для NeverMind PWA (vanilla JS, localStorage, GitHub Pages, OpenAI integration). Класифікація даних: Health = PHI (GDPR Article 9), Finance = PII, OpenAI key = credentials.
+          # System prompt — читається з окремого файлу .github/security-prompt.md
+          # YAML не любить multi-line strings всередині run: | block — тому винесли.
+          # Промпт можна редагувати окремо без ризику зламати CI.
+          SYSTEM_PROMPT=$(cat .github/security-prompt.md)
 
-Аналізуй наданий код на OWASP Top 10 + LLM Top 10 + AI Apps Top 10 (2026):
-- XSS (innerHTML без escape, dangerouslySetInnerHTML аналоги)
-- Prompt injection (user data у system prompts без захисту)
-- Sensitive data exposure (PHI/PII у логах, network, storage)
-- Insecure direct object reference
-- Broken access control
-- Insufficient logging
-- Supply chain (dependencies, CDN без SRI)
-- Race conditions
-- Hardcoded secrets
-
-Формат відповіді — СУВОРО Markdown:
-
-## Summary
-- **Total findings:** N
-- **Severity breakdown:** CRITICAL=N, HIGH=N, MEDIUM=N, LOW=N
-
-## Findings
-
-### [CRITICAL/HIGH/MEDIUM/LOW] Назва вразливості
-- **File:** path/to/file.js:LINE
-- **Category:** XSS / Prompt Injection / etc
-- **Description:** що саме небезпечно, як експлуатується
-- **Impact:** PHI leak / Credentials theft / RCE / DOS / etc
-- **Fix:** конкретний фікс (рядок коду або підхід)
-
-(повторити для кожного знайденого)
-
-## False Positives Filter
-Якщо щось здається ризиком але насправді безпечно (наприклад escapeHtml уже застосований) — НЕ ВКЛЮЧАЙ у Findings. Тільки реальні небезпеки.
-
-Якщо НIЧОГО критичного не знайдено — пиши "✅ Жодних критичних або високих ризиків не виявлено" у Summary і Findings лиши порожнім.'
-
-          # Збираємо payload для Claude API
-          # Використовуємо jq для безпечного JSON escape
-          CODE_CONTENT=$(cat /tmp/scan-input.txt)
+          # Збираємо payload для Claude API через jq.
+          # Використовуємо --rawfile для codebase щоб уникнути multi-line bash strings
+          # (вони ламають YAML парсинг — урок e9t3N 16.05.2026).
+          # USER_MESSAGE формується всередині jq через string concat.
           MODE="${{ steps.mode.outputs.mode }}"
-          USER_MESSAGE="Mode: $MODE. Codebase для аудиту нижче. Поверни звіт у Markdown.
 
-$CODE_CONTENT"
-
-          # JSON payload через jq (escape все що треба)
           jq -n \
             --arg system "$SYSTEM_PROMPT" \
-            --arg user "$USER_MESSAGE" \
+            --arg mode "$MODE" \
+            --rawfile code /tmp/scan-input.txt \
             '{
               model: "claude-opus-4-1-20250805",
               max_tokens: 8000,
               system: $system,
-              messages: [{role: "user", content: $user}]
+              messages: [{role: "user", content: ("Mode: " + $mode + ". Codebase для аудиту нижче. Поверни звіт у Markdown.\n\n" + $code)}]
             }' > /tmp/api-payload.json
 
           # Виклик Claude API
@@ -326,21 +292,23 @@ $CODE_CONTENT"
             const mode = process.env.SCAN_MODE;
             const date = new Date().toISOString().split('T')[0];
 
-            const title = `[Claude-Sec] ${mode} scan ${date} — critical findings`;
-            const body = `Claude Security Scan виявив CRITICAL або HIGH findings.
-
-**Mode:** ${mode}
-**Commit:** ${context.sha.substring(0, 7)}
-**Trigger:** ${context.eventName}
-
----
-
-${report}
-
----
-
-📥 Повний звіт також доступний як artifact у Actions tab.
-🔧 Для виправлення: відкрий [/fix Claude-Sec:N] у Claude Code.`;
+            const title = '[Claude-Sec] ' + mode + ' scan ' + date + ' — critical findings';
+            const body = [
+              'Claude Security Scan виявив CRITICAL або HIGH findings.',
+              '',
+              '**Mode:** ' + mode,
+              '**Commit:** ' + context.sha.substring(0, 7),
+              '**Trigger:** ' + context.eventName,
+              '',
+              '---',
+              '',
+              report,
+              '',
+              '---',
+              '',
+              'Повний звіт також доступний як artifact у Actions tab.',
+              'Для виправлення: відкрий /fix Claude-Sec:N у Claude Code.'
+            ].join('\n');
 
             await github.rest.issues.create({
               owner: context.repo.owner,
