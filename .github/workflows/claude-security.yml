@@ -213,19 +213,22 @@ jobs:
             --arg mode "$MODE" \
             --rawfile code /tmp/scan-input.txt \
             '{
-              model: "claude-opus-4-1-20250805",
+              model: "claude-sonnet-4-5-20250929",
               max_tokens: 8000,
               system: $system,
               messages: [{role: "user", content: ("Mode: " + $mode + ". Codebase для аудиту нижче. Поверни звіт у Markdown.\n\n" + $code)}]
             }' > /tmp/api-payload.json
 
-          # Виклик Claude API
+          # Виклик Claude API з 1M context window (beta для великих codebase).
+          # NeverMind codebase ~210K tokens у full mode — Opus default 200K limit
+          # не вистачає. Sonnet 4.5 + 1M beta header = 5x запасу.
           echo "🤖 Виклик Claude API..."
           HTTP_CODE=$(curl -s -o /tmp/api-response.json -w "%{http_code}" \
             -X POST https://api.anthropic.com/v1/messages \
             -H "Content-Type: application/json" \
             -H "x-api-key: $ANTHROPIC_API_KEY" \
             -H "anthropic-version: 2023-06-01" \
+            -H "anthropic-beta: context-1m-2025-08-07" \
             -d @/tmp/api-payload.json)
 
           if [ "$HTTP_CODE" != "200" ]; then
