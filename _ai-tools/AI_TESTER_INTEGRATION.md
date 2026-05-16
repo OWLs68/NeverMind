@@ -50,81 +50,91 @@
 ## 🧪 10 готових сценаріїв (GROUND_TRUTH)
 
 > Виконуються кожен запуск автоматично, без LLM-планування. Hardcoded у `ai-tester.py`.
+>
+> **Селектори перевірено DGH6F 16.05.2026 проти реального DOM `index.html` v894+.** Якщо щось зламається після refactor — оновити цю секцію.
 
 ### 1. Boot health
 - Відкрити `https://owls68.github.io/NeverMind`
 - Чекати `window.NM_BOOT_DONE === true` (max 5 сек)
-- Перевірити: `.owl-board` елемент видно (OWL-табло)
+- Перевірити: `#owl-board` елемент видно (OWL-табло Inbox, id у `index.html:266`)
 - Pass: видно. Fail: timeout або console.error під час boot.
 
 ### 2. Navigation 8 tabs
-- Натиснути по черзі: Inbox / Tasks / Notes / Health / Finance / Calendar / Evening / Me / Projects
+- Tab-bar контейнер: `#tab-bar` (динамічно будується через `rebuildDrumTabbar()` у `nav.js`)
+- Tab-кнопки мають `data-tab="X"` (X = inbox/tasks/notes/health/finance/calendar/evening/me/projects)
+- Натиснути по черзі: `[data-tab="inbox"]`, `[data-tab="tasks"]`, ...
 - Між кожним: чекати 500 мс, перевіряти `console.error` count
 - Pass: 0 console.error. Fail: будь-яка помилка.
 
 ### 3. Create task → list → reload persistence
-- Перейти Tasks
-- Натиснути «+» (або плаваюча кнопка створення)
-- Ввести «Тестова задача {timestamp}»
-- Натиснути save
-- Перевірити: задача у списку
+- Перейти Tasks: тап на `[data-tab="tasks"]`
+- Натиснути «+»: `#prod-add-btn` (button у `page-tasks`)
+- Заповнити форму задачі (id інпутів дивись у task-modal у `index.html`)
+- Save
+- Перевірити: задача у списку (`#tasks-list .task-item-wrap`)
 - Reload (`page.reload()`)
 - Перевірити: задача ВСЕ ЩЕ у списку
 - Pass: збереглась. Fail: зникла після reload.
 
 ### 4. Create note + folder
-- Перейти Notes
-- Створити папку «Тест {timestamp}»
-- Створити нотатку у папці з текстом «Лорем іпсум»
+- Перейти Notes: тап на `[data-tab="notes"]`
+- Натиснути «+»: `button.icon-btn[onclick*="openAddNote"]` у `#page-notes`
+- Модалка: `#note-modal`
+  - Ввести текст: `#note-input-text` = «Лорем іпсум»
+  - Ввести нову папку: `#note-input-folder` = «Тест {timestamp}»
+  - (Папка створюється автоматично у `saveNote()` якщо такої ще нема — окремої кнопки «створити папку» НЕМАЄ. Це продумано: папки родяться через нотатки.)
+  - Тап save (кнопка у `#note-modal`)
 - Reload
-- Перевірити: і папка, і нотатка на місці
+- Перевірити: і папка, і нотатка на місці (folder rendering у `notes-content`)
 
 ### 5. Create health card + medication
-- Перейти Health
-- «+» → ввести «Тест картка»
-- Зберегти
-- Додати препарат у картку: «Парацетамол 500мг»
+- Перейти Health: тап на `[data-tab="health"]`
+- Натиснути «+»: `button.icon-btn[onclick*="openAddHealthCard"]` у `#page-health`
+- Модалка: `#health-card-modal`
+  - `#health-card-name` = «Тест картка»
+  - `#health-card-subtitle` (опц.) = «Опис»
+  - Save (`saveHealthCardFromModal()`)
+- Додати препарат у картку: відкрити картку, кнопка додавання препарату → модалка → «Парацетамол 500мг»
 - Перевірити: препарат у списку, у timeline запис «Додано»
 - Reload → все на місці
 
 ### 6. Swipe task left + Undo toast + Restore
-- Tasks → знайти першу задачу
-- Touch swipe left (touchstart → touchmove -200px → touchend)
-- Перевірити: жовтий toast «Відновити» з'явився
-- Натиснути «Відновити»
+- Tasks → знайти першу задачу: `#tasks-list .task-item-wrap:first-child`
+- Touch swipe left на `.task-item-wrap` (touchstart → touchmove -200px → touchend)
+- Перевірити: toast з'явився — `#toast.show` (CSS клас `.show`)
+- Текст у `#toast-msg` = «Задачу видалено»
+- Натиснути «Відновити»: `#toast-undo-btn`
 - Перевірити: задача знов у списку
 - Pass: повна петля. Fail: toast не з'явився АБО restore не повернув задачу.
 
 ### 7. Delete health card → Trash → Restore
-- Health → видалити «Тест картка» (свайп або × кнопка)
-- Налаштування → Кошик (Блок 6 ROADMAP — поки backend без UI)
-- TODO: коли B-179 закрито, додати реальний тап у UI Кошика
-- Зараз: через AI-чат «відновити останню видалену картку»
-- Перевірити: картка повернулась у Health
+- Health → видалити «Тест картка» (свайп по картці)
+- **⚠️ UI Кошика у Налаштуваннях НЕ ІСНУЄ (B-179 відкритий)** — `restoreFromTrash` працює тільки через AI-чат.
+- Метод поки що: відкрити Inbox (`[data-tab="inbox"]`) → у `#inbox-input` ввести «відновити останню видалену картку» → send → чекати AI відповідь → перевірити що картка з'явилась у Health.
+- TODO: коли B-179 закрито (UI кошика з'явиться у Налаштуваннях) — переписати на реальний тап у модалці.
 
 ### 8. Toggle task done state
-- Tasks → перша задача → натиснути ✓
-- Перевірити: задача зеленіє + закреслюється
+- Tasks → перша задача → тап на checkbox: `#task-item-{id} [data-task-check]` (атрибут уже існує у `tasks.js:276`)
+- Перевірити: checkbox зеленіє (`background: #16a34a`) + текст закреслюється (`text-decoration: line-through`)
 - Reload
-- Перевірити: збереглась як done
-- Знов натиснути ✓
-- Перевірити: повернулась у not-done state
+- Перевірити: збереглась як done (`task.status === 'done'` у `localStorage.nm_tasks`)
+- Знов тап → повертається у not-done state
 
 ### 9. Inbox AI: «купив каву 50»
-- Inbox → ввести у чат «купив каву 50»
-- Send
-- Чекати AI відповідь (max 10 сек)
-- Перевірити: створено транзакцію у Finance з:
+- Inbox: `[data-tab="inbox"]`
+- `#inbox-input` (textarea) ← ввести «купив каву 50»
+- Натиснути send (кнопка у `inbox` action area)
+- Чекати AI відповідь (max 10 сек) — спостерігати за `#owl-board` (новий повідомлення-bubble)
+- Перевірити у `localStorage.nm_finance` транзакцію з:
   - amount: 50
   - category: «Їжа»
   - subcategory: НЕ вигадана (або «Кафе» з whitelist, або порожнє)
 - Fail: AI вигадав підкатегорію (B-180 регресія)
 
 ### 10. Inbox AI: «Зустріч з Андрієм 17 травня»
-- Inbox → ввести «Зустріч з Андрієм 17 травня»
-- Send
+- Inbox: `[data-tab="inbox"]` → `#inbox-input` ← «Зустріч з Андрієм 17 травня» → send
 - Чекати AI
-- Перевірити: створено event у Calendar (НЕ task, НЕ note)
+- Перевірити у `localStorage.nm_events` (НЕ `nm_tasks`, НЕ `nm_notes`)
 - Fail: AI зробив save_task або save_note (B-115 регресія)
 
 ---
