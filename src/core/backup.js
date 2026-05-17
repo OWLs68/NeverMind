@@ -21,6 +21,22 @@
 
 const BACKUP_PREFIX = 'nm_backup_';
 const MAX_BACKUPS = 3;
+// DGH6F 16.05: при restore ключа потрібно скинути відповідні migration flags,
+// інакше boot.js runMigrations пропустить v9-v17 (флаг каже «вже зроблено») а
+// відновлені дані мають СТАРИЙ формат → mixed state UUID/number → silent fail.
+// Список зібрано з grep `setItem.*_migrated_v|_done|_cleared_v` у boot.js (DGH6F).
+const KEY_MIGRATION_FLAGS = {
+  'nm_tasks':        ['nm_tasks_uuid_migrated_v8'],
+  'nm_habits2':      ['nm_habits_uuid_migrated_v9'],
+  'nm_events':       ['nm_events_uuid_migrated_v10'],
+  'nm_notes':        ['nm_notes_uuid_migrated_v11'],
+  'nm_moments':      ['nm_moments_uuid_migrated_v12'],
+  'nm_finance':      ['nm_finance_uuid_migrated_v13'],
+  'nm_projects':     ['nm_projects_uuid_migrated_v14'],
+  'nm_inbox':        ['nm_inbox_uuid_migrated_v15'],
+  'nm_health_cards': ['nm_health_uuid_migrated_v16', 'nm_health_migrated_v2', 'nm_health_status_v2_done'],
+  'nm_health_log':   ['nm_health_log_cleared_v6'],
+};
 // iPhone Safari ~5 MB, інші ~10 MB. Беремо консервативно 4 MB як «небезпечну зону»
 // для пред-перевірки (DGH6F 16.05). Якщо payload + поточні дані > QUOTA_BUDGET →
 // quota fail передбачуваний → видаємо явну помилку, не тихо null.
@@ -134,6 +150,14 @@ export function restoreBackup(backupKey) {
     try {
       Object.entries(parsed.data).forEach(([k, v]) => {
         try { localStorage.setItem(k, v); } catch {}
+        // DGH6F: скинути migration flags для цього ключа щоб runMigrations
+        // повторно мігрувала відновлений (старий) формат при наступному boot.
+        const flags = KEY_MIGRATION_FLAGS[k];
+        if (flags) {
+          flags.forEach(flag => {
+            try { localStorage.removeItem(flag); } catch {}
+          });
+        }
       });
       return true;
     } finally {
