@@ -342,7 +342,7 @@
       MIGRATION_FLAG = "nm_owl_board_migrated_v2";
       MAX_HISTORY = 50;
       CHIP_PAYLOADS_KEY = "nm_chip_payloads";
-      ALL_TABS = ["inbox", "tasks", "notes", "me", "evening", "finance", "health", "projects"];
+      ALL_TABS = ["inbox", "tasks", "notes", "me", "evening", "finance", "projects"];
     }
   });
 
@@ -2127,7 +2127,7 @@ ${lines.join("\n")}`;
       closeOwlChat();
     } catch (e) {
     }
-    ["inbox", "tasks", "me", "evening", "finance", "health", "projects"].forEach((t2) => {
+    ["inbox", "tasks", "me", "evening", "finance", "projects"].forEach((t2) => {
       if (t2 !== tab) closeChatBar(t2);
     });
     setActiveChatBar(tab);
@@ -2143,7 +2143,7 @@ ${lines.join("\n")}`;
     _tabChatState[tab] = "a";
   }
   function setupChatBarSwipe() {
-    ["inbox", "tasks", "notes", "me", "evening", "finance", "health", "projects"].forEach((tab) => {
+    ["inbox", "tasks", "notes", "me", "evening", "finance", "projects"].forEach((tab) => {
       const bar = document.getElementById(tab + "-ai-bar");
       if (!bar) return;
       const chatWin = bar.querySelector(".ai-bar-chat-window");
@@ -2347,7 +2347,7 @@ ${lines.join("\n")}`;
       if (all.length > 0 && isStale(all[0])) {
         replaceUnified(all.slice(1));
         localStorage.setItem(OWL_BOARD_TS_KEY, "0");
-        ["tasks", "notes", "me", "evening", "finance", "health", "projects"].forEach((tab) => {
+        ["tasks", "notes", "me", "evening", "finance", "projects"].forEach((tab) => {
           localStorage.setItem("nm_owl_tab_ts_" + tab, "0");
         });
       }
@@ -2615,12 +2615,6 @@ ${lines.join("\n")}`;
       reasons.push("week-end");
     }
     if (targetTab) {
-      if (targetTab === "health" && (phase === "evening" || phase === "night")) {
-        if (reasons.includes("streak-risk")) {
-          score += 2;
-          reasons.push("health-evening-boost");
-        }
-      }
       if (targetTab === "finance" && now.getDate() >= 25) {
         if (reasons.includes("budget-warn")) {
           score += 2;
@@ -2724,7 +2718,7 @@ ${lines.join("\n")}`;
       el.innerHTML = "";
       return;
     }
-    const VALID = ["tasks", "notes", "habits", "finance", "health", "projects", "evening", "me", "inbox"];
+    const VALID = ["tasks", "notes", "habits", "finance", "projects", "evening", "me", "inbox", "health"];
     renderChips(el, boardMsg.chips, "inbox", {
       onChipClick: (text, action, target) => {
         if (action === "nav" && VALID.includes(target)) {
@@ -9933,7 +9927,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
       });
       window.addEventListener("nm-data-changed", (e) => {
         if (e.detail !== "silence") return;
-        ["inbox", "tasks", "finance", "notes", "health", "evening", "me", "projects"].forEach((tab) => {
+        ["inbox", "tasks", "finance", "notes", "evening", "me", "projects"].forEach((tab) => {
           const el = document.getElementById(tab === "inbox" ? "owl-board" : "owl-tab-board-" + tab);
           if (el && el._owlReady) _renderSilenceBadge(el, tab);
         });
@@ -15575,7 +15569,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
       me: "me-chat-messages",
       evening: "evening-bar-messages",
       finance: "finance-chat-messages",
-      health: "health-chat-messages",
+      // health-chat-messages REMOVED (EU AI Act JMQuT 17.05.2026).
       projects: "projects-chat-messages"
     };
     const renderMap = {
@@ -15584,7 +15578,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
       me: (r, t2, c) => addMeChatMsg(r, t2, true, "", c),
       evening: (r, t2, c) => addEveningBarMsg(r, t2, true, c),
       finance: (r, t2, c) => addFinanceChatMsg(r, t2, true, c),
-      health: (r, t2, c) => addHealthChatMsg(r, t2, true, c),
+      // health renderer REMOVED (EU AI Act JMQuT 17.05.2026).
       projects: (r, t2, c) => addProjectsChatMsg(r, t2, true, c)
     };
     const el = document.getElementById(containerMap[tab]);
@@ -15606,7 +15600,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
       me: "me-chat-messages",
       evening: "evening-bar-messages",
       finance: "finance-chat-messages",
-      health: "health-chat-messages",
+      // health-chat-messages REMOVED (EU AI Act JMQuT 17.05.2026).
       projects: "projects-chat-messages"
     };
     const addMsgMap = {
@@ -15615,7 +15609,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
       me: (r, t2, c) => addMeChatMsg(r, t2, true, "", c),
       evening: (r, t2, c) => addEveningBarMsg(r, t2, true, c),
       finance: (r, t2, c) => addFinanceChatMsg(r, t2, true, c),
-      health: (r, t2, c) => addHealthChatMsg(r, t2, true, c),
+      // health renderer REMOVED (EU AI Act JMQuT 17.05.2026).
       projects: (r, t2, c) => addProjectsChatMsg(r, t2, true, c)
     };
     const containerId = containerMap[tab];
@@ -15673,7 +15667,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
       closeOwlChat();
     } catch (e) {
     }
-    ["inbox", "tasks", "notes", "me", "evening", "finance", "health", "projects"].forEach((t2) => {
+    ["inbox", "tasks", "notes", "me", "evening", "finance", "projects"].forEach((t2) => {
       if (t2 === tab) return;
       const b = document.getElementById(t2 + "-ai-bar");
       if (!b) return;
@@ -15726,7 +15720,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
     window.dispatchEvent(new CustomEvent("nm-chat-closed", { detail: tab }));
   }
   function closeAllChatBars(resetActive = true) {
-    ["inbox", "tasks", "notes", "me", "evening", "finance", "health", "projects"].forEach((t2) => {
+    ["inbox", "tasks", "notes", "me", "evening", "finance", "projects"].forEach((t2) => {
       const bar = document.getElementById(t2 + "-ai-bar");
       if (!bar) return;
       const chatWin = bar.querySelector(".ai-bar-chat-window");
@@ -15757,7 +15751,6 @@ ${JSON.stringify(contextData, null, 2)}` : "";
       init_evening();
       init_evening_chat();
       init_me();
-      init_health();
       init_projects();
       init_inbox_board();
       init_proactive();
@@ -15796,10 +15789,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
           rx: /\b(подія|подію|зустріч|прийом|приїзд|концерт|рейс|тренуван|відміни|відмін|перенес|завтра|післязавтра|сьогодні о|у (понеділ|вівтор|серед|четвер|пятниц|субот|неділ))/i,
           tools: ["create_event", "edit_event", "delete_event", "open_calendar"]
         },
-        health: {
-          rx: /\b(болить|симптом|лікар|тиск|пігулк|таблетк|шкір|алерг|тренуван|травм|діагно|алерг|висип)/i,
-          tools: ["create_health_card", "edit_health_card", "delete_health_card", "add_health_history_entry", "export_health_card"]
-        },
+        // health category REMOVED (EU AI Act compliance JMQuT 17.05.2026) — AI більше не вгадує health-tools за регексом симптомів.
         note: {
           rx: /\b(нотатк|запиши думк|щоден|рефлекс|папк[уи])/i,
           tools: ["save_note", "edit_note", "move_note", "delete_folder"]
@@ -15837,17 +15827,17 @@ ${JSON.stringify(contextData, null, 2)}` : "";
         me: "nm_chat_me",
         evening: "nm_chat_evening",
         finance: "nm_chat_finance",
-        health: "nm_chat_health",
+        // health REMOVED (EU AI Act compliance JMQuT 17.05.2026) — чат-бару у Health немає.
         projects: "nm_chat_projects"
       };
-      _ALL_CHAT_TABS = ["inbox", "tasks", "notes", "me", "evening", "finance", "health", "projects"];
-      _TAB_LABELS_CHAT = { inbox: "Inbox", tasks: "\u041F\u0440\u043E\u0434\u0443\u043A\u0442\u0438\u0432\u043D\u0456\u0441\u0442\u044C", notes: "\u041D\u043E\u0442\u0430\u0442\u043A\u0438", me: "\u042F", evening: "\u0412\u0435\u0447\u0456\u0440", finance: "\u0424\u0456\u043D\u0430\u043D\u0441\u0438", health: "\u0417\u0434\u043E\u0440\u043E\u0432'\u044F", projects: "\u041F\u0440\u043E\u0435\u043A\u0442\u0438" };
+      _ALL_CHAT_TABS = ["inbox", "tasks", "notes", "me", "evening", "finance", "projects"];
+      _TAB_LABELS_CHAT = { inbox: "Inbox", tasks: "\u041F\u0440\u043E\u0434\u0443\u043A\u0442\u0438\u0432\u043D\u0456\u0441\u0442\u044C", notes: "\u041D\u043E\u0442\u0430\u0442\u043A\u0438", me: "\u042F", evening: "\u0412\u0435\u0447\u0456\u0440", finance: "\u0424\u0456\u043D\u0430\u043D\u0441\u0438", projects: "\u041F\u0440\u043E\u0435\u043A\u0442\u0438" };
       SEND_BTN_MAP = {
         tasks: "tasks-send-btn",
         notes: "notes-send-btn",
         me: "me-send-btn",
         finance: "finance-send-btn",
-        health: "health-send-btn",
+        // health REMOVED (EU AI Act compliance JMQuT 17.05.2026) — чат-бару у Health немає.
         projects: "projects-send-btn"
       };
       Object.assign(window, { openChatBar, closeChatBar });
@@ -21459,6 +21449,34 @@ ${logLines}
         console.error("[boot] v17 steps migration failed:", e);
       }
     }
+    if (!localStorage.getItem("nm_health_ai_isolation_v18")) {
+      try {
+        let cleaned = 0;
+        if (localStorage.getItem("nm_chat_health") !== null) {
+          localStorage.removeItem("nm_chat_health");
+          cleaned++;
+        }
+        if (localStorage.getItem("nm_health_interview_pending") !== null) {
+          localStorage.removeItem("nm_health_interview_pending");
+          cleaned++;
+        }
+        const factsRaw = localStorage.getItem("nm_facts");
+        if (factsRaw) {
+          const facts = JSON.parse(factsRaw);
+          if (Array.isArray(facts)) {
+            const filtered = facts.filter((f) => f && f.category !== "health");
+            if (filtered.length < facts.length) {
+              localStorage.setItem("nm_facts", JSON.stringify(filtered));
+              cleaned += facts.length - filtered.length;
+            }
+          }
+        }
+        localStorage.setItem("nm_health_ai_isolation_v18", "1");
+        if (cleaned > 0) console.log(`[boot] v18 EU AI Act: \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E ${cleaned} health-AI \u043A\u043B\u044E\u0447\u0456\u0432/\u0444\u0430\u043A\u0442\u0456\u0432`);
+      } catch (e) {
+        console.error("[boot] v18 health AI isolation failed:", e);
+      }
+    }
     if (!localStorage.getItem("nm_health_status_v2_done")) {
       try {
         const raw = localStorage.getItem("nm_health_cards");
@@ -21891,7 +21909,7 @@ ${logLines}
           "nm_me_monthly_override",
           "nm_me_monthly_show_until",
           "nm_me_weekly_insights",
-          "nm_health_interview_pending",
+          // nm_health_interview_pending REMOVED (EU AI Act JMQuT) — видаляється через v18 migration.
           "nm_project_interview_name",
           "nm_project_interview_step"
         ],
@@ -21903,8 +21921,9 @@ ${logLines}
           "nm_chat_me",
           "nm_chat_evening",
           "nm_chat_finance",
-          "nm_chat_health",
           "nm_chat_projects",
+          // nm_chat_health REMOVED (EU AI Act compliance JMQuT 17.05.2026) — чату Health немає.
+          // Видаляється одноразово через v18 migration.
           // 64CXo: nm_owl_chat — OWL mini-chat у inbox-board, поза 8 tab-чатами.
           // Раніше не входив у clearAllData → стара розмова після wipe.
           "nm_owl_chat"
@@ -21970,6 +21989,7 @@ ${logLines}
           "nm_inbox_uuid_migrated_v15",
           "nm_health_uuid_migrated_v16",
           "nm_steps_uuid_migrated_v17",
+          "nm_health_ai_isolation_v18",
           "nm_chips_v10_done",
           "nm_chips_v10_done_ts",
           "nm_folders_apostrophe_migrated",

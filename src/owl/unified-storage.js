@@ -39,7 +39,7 @@ function _normalizeChipForStorage(c) {
   return obj;
 }
 
-const ALL_TABS = ['inbox', 'tasks', 'notes', 'me', 'evening', 'finance', 'health', 'projects'];
+const ALL_TABS = ['inbox', 'tasks', 'notes', 'me', 'evening', 'finance', 'projects'];
 
 // === Lazy migration — один раз при першому читанні ===
 function _migrateOnce() {

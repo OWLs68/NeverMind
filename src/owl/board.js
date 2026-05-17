@@ -258,7 +258,7 @@ export function cancelOwlSilenceFromBadge() {
 // Перерендер усіх активних таб-board при зміні тиші (старт/скасування/закінчення)
 window.addEventListener('nm-data-changed', (e) => {
   if (e.detail !== 'silence') return;
-  ['inbox','tasks','finance','notes','health','evening','me','projects'].forEach(tab => {
+  ['inbox','tasks','finance','notes','evening','me','projects'].forEach(tab => {
     const el = document.getElementById(tab === 'inbox' ? 'owl-board' : 'owl-tab-board-' + tab);
     if (el && el._owlReady) _renderSilenceBadge(el, tab);
   });

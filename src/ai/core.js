@@ -15,7 +15,7 @@ import { getEvents, getTodayRoutine, getRoutine } from '../tabs/calendar.js';
 import { getEveningMood, getMomentsContext, getEveningContext } from '../tabs/evening.js';
 import { addEveningBarMsg } from '../tabs/evening-chat.js';
 import { addMeChatMsg } from '../tabs/me.js';
-import { addHealthChatMsg } from '../tabs/health.js'; // getHealthContext removed (EU AI Act JMQuT 17.05.2026)
+// addHealthChatMsg + getHealthContext imports REMOVED (EU AI Act JMQuT 17.05.2026) — health більше не у chat-системі.
 import { getProjectsContext, addProjectsChatMsg } from '../tabs/projects.js';
 import { _getTabChatAHeight, _tabChatState, closeOwlChat } from '../owl/inbox-board.js';
 import { getBoardContext } from '../owl/proactive.js';
@@ -583,10 +583,7 @@ const _TOOL_CATEGORIES = {
     rx: /\b(подія|подію|зустріч|прийом|приїзд|концерт|рейс|тренуван|відміни|відмін|перенес|завтра|післязавтра|сьогодні о|у (понеділ|вівтор|серед|четвер|пятниц|субот|неділ))/i,
     tools: ['create_event', 'edit_event', 'delete_event', 'open_calendar']
   },
-  health: {
-    rx: /\b(болить|симптом|лікар|тиск|пігулк|таблетк|шкір|алерг|тренуван|травм|діагно|алерг|висип)/i,
-    tools: ['create_health_card', 'edit_health_card', 'delete_health_card', 'add_health_history_entry', 'export_health_card']
-  },
+  // health category REMOVED (EU AI Act compliance JMQuT 17.05.2026) — AI більше не вгадує health-tools за регексом симптомів.
   note: {
     rx: /\b(нотатк|запиши думк|щоден|рефлекс|папк[уи])/i,
     tools: ['save_note', 'edit_note', 'move_note', 'delete_folder']
@@ -710,7 +707,7 @@ const CHAT_STORE_KEYS = {
   me:       'nm_chat_me',
   evening:  'nm_chat_evening',
   finance:  'nm_chat_finance',
-  health:   'nm_chat_health',
+  // health REMOVED (EU AI Act compliance JMQuT 17.05.2026) — чат-бару у Health немає.
   projects: 'nm_chat_projects',
 };
 
@@ -755,8 +752,8 @@ export function loadChatMsgs(tab) {
 // Повертає останні N повідомлень з БУДЬ-якого чату (крім excludeTab) за вікно часу.
 // Дає мозку побачити що юзер обговорював на ІНШИХ вкладках — щоб не забувати
 // контекст "ти на Здоровʼї, а в Inbox 5 хв тому було 'болить спина'".
-const _ALL_CHAT_TABS = ['inbox','tasks','notes','me','evening','finance','health','projects'];
-const _TAB_LABELS_CHAT = { inbox:'Inbox', tasks:'Продуктивність', notes:'Нотатки', me:'Я', evening:'Вечір', finance:'Фінанси', health:"Здоров'я", projects:'Проекти' };
+const _ALL_CHAT_TABS = ['inbox','tasks','notes','me','evening','finance','projects'];
+const _TAB_LABELS_CHAT = { inbox:'Inbox', tasks:'Продуктивність', notes:'Нотатки', me:'Я', evening:'Вечір', finance:'Фінанси', projects:'Проекти' }; // health REMOVED (EU AI Act JMQuT)
 export function getRecentChatsAcrossTabs(excludeTab, limit = 5, windowMs = 60 * 60 * 1000) {
   const now = Date.now();
   const all = [];
@@ -786,7 +783,7 @@ const SEND_BTN_MAP = {
   notes:    'notes-send-btn',
   me:       'me-send-btn',
   finance:  'finance-send-btn',
-  health:   'health-send-btn',
+  // health REMOVED (EU AI Act compliance JMQuT 17.05.2026) — чат-бару у Health немає.
   projects: 'projects-send-btn',
 };
 
@@ -808,7 +805,7 @@ export function addMsgForTab(tab, role, text, chips = null) {
     me:       'me-chat-messages',
     evening:  'evening-bar-messages',
     finance:  'finance-chat-messages',
-    health:   'health-chat-messages',
+    // health-chat-messages REMOVED (EU AI Act JMQuT 17.05.2026).
     projects: 'projects-chat-messages',
   };
   // me має сигнатуру (role, text, _noSave, id, chips) — позиція 5; решта (role, text, _noSave, chips) — 4.
@@ -818,7 +815,7 @@ export function addMsgForTab(tab, role, text, chips = null) {
     me:       (r, t, c) => addMeChatMsg(r, t, true, '', c),
     evening:  (r, t, c) => addEveningBarMsg(r, t, true, c),
     finance:  (r, t, c) => addFinanceChatMsg(r, t, true, c),
-    health:   (r, t, c) => addHealthChatMsg(r, t, true, c),
+    // health renderer REMOVED (EU AI Act JMQuT 17.05.2026).
     projects: (r, t, c) => addProjectsChatMsg(r, t, true, c),
   };
   const el = document.getElementById(containerMap[tab]);
@@ -843,10 +840,10 @@ export function restoreChatUI(tab) {
     me:       'me-chat-messages',
     evening:  'evening-bar-messages',
     finance:  'finance-chat-messages',
-    health:   'health-chat-messages',
+    // health-chat-messages REMOVED (EU AI Act JMQuT 17.05.2026).
     projects: 'projects-chat-messages',
   };
-  // chips підтримуються у всіх 7 чатів (Phase 1 Шар 6 04.05 RGisY — Р1 фікс).
+  // chips підтримуються у всіх 6 чатів (Phase 1 Шар 6 04.05 RGisY — Р1 фікс). Health видалено.
   // me має 5-й параметр (id посередині — '' дефолт), решта 4-й.
   const addMsgMap = {
     tasks:    (r,t,c) => addTaskBarMsg(r,t,true,c),
@@ -854,7 +851,7 @@ export function restoreChatUI(tab) {
     me:       (r,t,c) => addMeChatMsg(r,t,true,'',c),
     evening:  (r,t,c) => addEveningBarMsg(r,t,true,c),
     finance:  (r,t,c) => addFinanceChatMsg(r,t,true,c),
-    health:   (r,t,c) => addHealthChatMsg(r,t,true,c),
+    // health renderer REMOVED (EU AI Act JMQuT 17.05.2026).
     projects: (r,t,c) => addProjectsChatMsg(r,t,true,c),
   };
   const containerId = containerMap[tab];
@@ -936,7 +933,7 @@ export function openChatBar(tab) {
   try { closeOwlChat(); } catch(e) {}
 
   // Закриваємо інші бари
-  ['inbox','tasks','notes','me','evening','finance','health','projects'].forEach(t => {
+  ['inbox','tasks','notes','me','evening','finance','projects'].forEach(t => {
     if (t === tab) return;
     const b = document.getElementById(t + '-ai-bar');
     if (!b) return;
@@ -991,7 +988,7 @@ export function closeChatBar(tab) {
 }
 
 export function closeAllChatBars(resetActive = true) {
-  ['inbox','tasks','notes','me','evening','finance','health','projects'].forEach(t => {
+  ['inbox','tasks','notes','me','evening','finance','projects'].forEach(t => {
     const bar = document.getElementById(t + '-ai-bar');
     if (!bar) return;
     const chatWin = bar.querySelector('.ai-bar-chat-window');

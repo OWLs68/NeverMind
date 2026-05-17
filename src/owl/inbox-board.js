@@ -56,7 +56,7 @@ function openChatBarNoKeyboard(tab) {
   // Закриваємо OWL чат якщо відкритий
   try { closeOwlChat(); } catch(e) {}
   // Закриваємо інші бари
-  ['inbox','tasks','me','evening','finance','health','projects'].forEach(t => {
+  ['inbox','tasks','me','evening','finance','projects'].forEach(t => {
     if (t !== tab) closeChatBar(t);
   });
   setActiveChatBar(tab);
@@ -74,7 +74,7 @@ function openChatBarNoKeyboard(tab) {
 
 // Свайп вниз по чат-вікну щоб закрити
 export function setupChatBarSwipe() {
-  ['inbox','tasks','notes','me','evening','finance','health','projects'].forEach(tab => {
+  ['inbox','tasks','notes','me','evening','finance','projects'].forEach(tab => {
     const bar = document.getElementById(tab + '-ai-bar');
     if (!bar) return;
     const chatWin = bar.querySelector('.ai-bar-chat-window');
@@ -333,7 +333,7 @@ export function clearStaleBoards() {
       replaceUnified(all.slice(1));
       localStorage.setItem(OWL_BOARD_TS_KEY, '0');
       // Тab TS keys теж скидаємо щоб Judge Layer знав що новий день
-      ['tasks','notes','me','evening','finance','health','projects'].forEach(tab => {
+      ['tasks','notes','me','evening','finance','projects'].forEach(tab => {
         localStorage.setItem('nm_owl_tab_ts_' + tab, '0');
       });
     }
@@ -759,9 +759,7 @@ function _judgeBoard(trigger, targetTab) {
   //  • На Проектах під час робочого дня — застряглі задачі критичніші.
   //  • На Вечорі після заходу сонця — відсутність підсумку критичніша.
   if (targetTab) {
-    if (targetTab === 'health' && (phase === 'evening' || phase === 'night')) {
-      if (reasons.includes('streak-risk')) { score += 2; reasons.push('health-evening-boost'); }
-    }
+    // health-evening-boost REMOVED (EU AI Act compliance JMQuT 17.05.2026).
     if (targetTab === 'finance' && now.getDate() >= 25) {
       if (reasons.includes('budget-warn')) { score += 2; reasons.push('finance-monthend-boost'); }
     }
@@ -898,7 +896,7 @@ function renderOwlChips(boardMsg) {
     el.innerHTML = '';
     return;
   }
-  const VALID = ['tasks','notes','habits','finance','health','projects','evening','me','inbox'];
+  const VALID = ['tasks','notes','habits','finance','projects','evening','me','inbox','health'];
   renderChips(el, boardMsg.chips, 'inbox', {
     onChipClick: (text, action, target) => {
       // Навігаційні чіпи — переключити вкладку

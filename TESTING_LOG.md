@@ -37,6 +37,13 @@
 
 **Версія:** CACHE_NAME `nm-20260517-2245`, commit `JMQuT Phase 2+3`.
 
+### v930+ Phase 6 — Cross-tab refs + migration v18 cleanup
+
+- [ ] Перший boot після оновлення → у DevTools Application/localStorage `nm_chat_health` ВІДСУТНІЙ + `nm_health_interview_pending` ВІДСУТНІЙ + у `nm_facts` нема записів з `category: 'health'`.
+- [ ] У DevTools `nm_health_ai_isolation_v18` = '1' (флаг міграції).
+- [ ] UI-дані ЗАЛИШИЛИСЬ — `nm_health_cards` + `nm_allergies` цілі, картки видно у Здоров'ї.
+- [ ] При надсиланні повідомлення з Tasks/Notes — у промпт AI більше НЕ йде nm_chat_health з cross-tab памʼяті.
+
 ### v929+ Phase 5 — OWL/brain-signals/proactive/clarify-guard health прибрано
 
 - [ ] Налаштував картку лікаря у Здоров'ї з prox-датою прийому → BRAIN PULSE НЕ показує нагадування про прийом.

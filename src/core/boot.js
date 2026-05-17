@@ -335,11 +335,13 @@ export const NM_KEYS = {
               'nm_device_id','nm_user_patterns','nm_user_patterns_ts',
               'nm_me_monthly_report','nm_me_monthly_override','nm_me_monthly_show_until',
               'nm_me_weekly_insights',
-              'nm_health_interview_pending',
+              // nm_health_interview_pending REMOVED (EU AI Act JMQuT) — видаляється через v18 migration.
               'nm_project_interview_name','nm_project_interview_step'],
   // Чат-историки (→ Supabase chat_messages)
   chat: ['nm_chat_inbox','nm_chat_tasks','nm_chat_notes','nm_chat_me',
-         'nm_chat_evening','nm_chat_finance','nm_chat_health','nm_chat_projects',
+         'nm_chat_evening','nm_chat_finance','nm_chat_projects',
+         // nm_chat_health REMOVED (EU AI Act compliance JMQuT 17.05.2026) — чату Health немає.
+         // Видаляється одноразово через v18 migration.
          // 64CXo: nm_owl_chat — OWL mini-chat у inbox-board, поза 8 tab-чатами.
          // Раніше не входив у clearAllData → стара розмова після wipe.
          'nm_owl_chat'],
@@ -372,6 +374,7 @@ export const NM_KEYS = {
           'nm_moments_uuid_migrated_v12','nm_finance_uuid_migrated_v13',
           'nm_projects_uuid_migrated_v14','nm_inbox_uuid_migrated_v15',
           'nm_health_uuid_migrated_v16','nm_steps_uuid_migrated_v17',
+          'nm_health_ai_isolation_v18',
           'nm_chips_v10_done','nm_chips_v10_done_ts',
           'nm_folders_apostrophe_migrated',
           'nm_board_clean_pji7l_done','nm_board_clean_pji7l_v2_done'],
@@ -1072,6 +1075,38 @@ function runMigrations() {
       localStorage.setItem('nm_steps_uuid_migrated_v17', '1');
     } catch (e) {
       console.error('[boot] v17 steps migration failed:', e);
+    }
+  }
+
+  // v18 (JMQuT 17.05.2026 EU AI Act compliance — Health AI isolation):
+  // Видаляє ключі чату Health (nm_chat_health + nm_health_interview_pending)
+  // + видаляє факти з nm_facts де category='health' (PHI у AI-памʼяті).
+  // UI-дані (nm_health_cards / nm_allergies) НЕ чіпаємо — юзер сам редагує.
+  if (!localStorage.getItem('nm_health_ai_isolation_v18')) {
+    try {
+      let cleaned = 0;
+      if (localStorage.getItem('nm_chat_health') !== null) {
+        localStorage.removeItem('nm_chat_health'); cleaned++;
+      }
+      if (localStorage.getItem('nm_health_interview_pending') !== null) {
+        localStorage.removeItem('nm_health_interview_pending'); cleaned++;
+      }
+      // Видалити health-факти з nm_facts
+      const factsRaw = localStorage.getItem('nm_facts');
+      if (factsRaw) {
+        const facts = JSON.parse(factsRaw);
+        if (Array.isArray(facts)) {
+          const filtered = facts.filter(f => f && f.category !== 'health');
+          if (filtered.length < facts.length) {
+            localStorage.setItem('nm_facts', JSON.stringify(filtered));
+            cleaned += (facts.length - filtered.length);
+          }
+        }
+      }
+      localStorage.setItem('nm_health_ai_isolation_v18', '1');
+      if (cleaned > 0) console.log(`[boot] v18 EU AI Act: видалено ${cleaned} health-AI ключів/фактів`);
+    } catch (e) {
+      console.error('[boot] v18 health AI isolation failed:', e);
     }
   }
 
