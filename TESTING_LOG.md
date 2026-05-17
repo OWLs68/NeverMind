@@ -14,6 +14,16 @@
 
 > Тут живе те що треба перевірити **наступної iPhone-сесії**. Claude додає сюди після кожної міграції / нової фічі / зміни UI. Роман викреслює коли протестив (переносить у архів).
 
+### v901+ (deploy 16.05 — DGH6F Event Delegation Phase 1б1: me.js project card)
+
+**Контекст:** 1 onclick у `me.js:185` (`renderProjects` рендер — картка проєкту з кліком що переходить на Projects-tab) переведено на event delegation. Використано новий універсальний action `switch-tab` у delegation.js (data-tab="X"). Reuse pattern для решти ~30 `switchTab(...)` onclick у проекті.
+
+**🧠 Me — project cards:**
+- [ ] Me-tab → блок «Активні проекти» → бачу свої проекти.
+- [ ] Тап на картку будь-якого проекту → перехід на вкладку Projects, картка відкрита.
+- [ ] DevTools Console → жодних `Uncaught ReferenceError: switchTab is not defined`.
+- [ ] Швидкий тап двічі на ту саму картку → не лагне, не дублює перехід.
+
 ### v900+ (deploy 16.05 — DGH6F Event Delegation Phase 1а: header buttons + freeze hook)
 
 **Контекст:** 16 inline onclick у `<header>` кожної вкладки (8 tabs × `openSettings`+`openHelp`) переведено на event delegation через новий модуль `src/core/delegation.js`. Strangler refactor — перший крок з ~334 onclick → 0 для strict CSP. Решта 318 onclick — наступні сесії. Pre-commit hook `pre-commit-onclick-freeze.js` (новий, 8-й сторож) блокує нові onclick через net-rachet.
