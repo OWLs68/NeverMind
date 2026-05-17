@@ -14,6 +14,33 @@
 
 > Тут живе те що треба перевірити **наступної iPhone-сесії**. Claude додає сюди після кожної міграції / нової фічі / зміни UI. Роман викреслює коли протестив (переносить у архів).
 
+### v903+ (deploy 16.05 — DGH6F Event Delegation Phase 1б3: inbox.js 4 onclick)
+
+**Контекст:** 4 onclick у `src/tabs/inbox.js` переведено на event delegation:
+- (#1+#2) upcoming-картка `switchTab('tasks')` / `openCalendarModal()` (рядок 269-271) → `data-action="switch-tab" data-tab="tasks"` / `data-action="open-calendar"`
+- (#3) inbox-картка `navigateInboxItem('${item.id}')` (317) → `data-action="navigate-inbox-item"` (data-id уже на елементі)
+- (#4) clarify-модалка `selectClarifyOption(${i})` (1104) → `data-action="select-clarify-option" data-idx="${i}"` (Pre-mortem 🔴 захист: `parseInt(data.idx)` у handler)
+
+3 нові actions у delegation.js: `open-calendar`, `navigate-inbox-item`, `select-clarify-option`.
+
+**📥 Inbox — основний потік (КОЖНОДЕННЕ використання):**
+- [ ] Inbox-tab → пишу довільний текст «купив каву 3 євро» → AI створює фінансову транзакцію.
+- [ ] Inbox-стрічка показує картку категорії → ТАП на неї → перехід у відповідну вкладку (Finance → транзакція виділена).
+- [ ] Inbox upcoming-блок (зверху над чатом) → показує найближчі задачі/події.
+- [ ] Тап на upcoming-картку **task** → перехід у Tasks.
+- [ ] Тап на upcoming-картку **event/reminder** → відкривається модалка Календаря.
+
+**🤔 Inbox — clarify модалка (edge case, перевір якщо буде):**
+- [ ] Пишу неоднозначне «Лікар прописав парацетамол» у Inbox (без створеної картки Здоров'я).
+- [ ] AI відкриває clarify-модалку «Що ти маєш на увазі?» з 2-3 опціями-кнопками.
+- [ ] Тап на ПЕРШУ опцію → AI продовжує з вибраним варіантом.
+- [ ] Тап на ДРУГУ опцію → AI йде іншою гілкою.
+- [ ] DevTools Console → НЕ повинно бути `selectClarifyOption is not a function` чи `parseInt` помилок.
+
+**🔧 Регресія-чек (DevTools на iPhone):**
+- [ ] Шукай у Elements `onclick="navigateInboxItem"` → має повертати 0 результатів.
+- [ ] Швидко тапати поспіль 5 inbox-карток → жодних дублікатів переходів / лагів.
+
 ### v902+ (deploy 16.05 — DGH6F Event Delegation Phase 1б2: onboarding fv-tip close)
 
 **Контекст:** 1 onclick у `onboarding.js:616` (`this.closest('#fv-tip').remove()` для першого-візит tip) переведено на event delegation. Новий універсальний action `close-parent` у delegation.js (reuse для будь-якої кнопки `✕` що закриває модалку/tip через CSS selector батька — наприклад `health.js:1333`).
