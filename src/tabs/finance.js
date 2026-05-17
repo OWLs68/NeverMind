@@ -22,7 +22,7 @@ import { setupModalSwipeClose } from './tasks.js';
 // G3 myshu 11.05 — Universal Undo
 import { logAction } from '../data/action-log.js';
 // Фаза 5 (15.04 6v2eR): синк медичних витрат → history картки Здоров'я
-import { syncHealthFinanceToHistory } from './health.js';
+// syncHealthFinanceToHistory REMOVED (EU AI Act JMQuT 17.05.2026) — AI більше не пише у health-картки.
 import { monthNominative } from '../data/months.js';
 
 // Категорії винесено у finance-cats.js (рефакторинг 17.04 gHCOh).
@@ -629,11 +629,8 @@ export function processFinanceAction(parsed, originalText, addMsgFn = addInboxCh
 
   if (currentTab === 'finance') renderFinance();
 
-  // Фаза 5 (15.04 6v2eR): синк медичних витрат — Health-категорія писатиме
-  // запис у відповідну health-картку (тримання медрозтрат окремо).
-  if (type === 'expense') {
-    try { syncHealthFinanceToHistory(amount, category, comment); } catch (e) {}
-  }
+  // syncHealthFinanceToHistory ВИДАЛЕНО (EU AI Act compliance JMQuT 17.05.2026) —
+  // AI більше не пише у health-картки автоматично при медичних витратах.
 
   // Підтвердження у поточний чат (DI).
   addMsgFn('agent', `${type === 'expense' ? '-' : '+'}${formatMoney(amount)} · ${category}${parsed.fin_comment ? ' — ' + parsed.fin_comment : ''}`);

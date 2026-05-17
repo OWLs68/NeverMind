@@ -129,11 +129,8 @@ export function deleteAllergy(id) {
   return true;
 }
 
-// State
+// State (chat-related state видалено JMQuT 17.05.2026 EU AI Act).
 let activeHealthCardId = null; // null = список, id = воркспейс
-let healthBarLoading = false;
-let healthBarHistory = [];
-let _healthTypingEl = null;
 // Фаза 3 (15.04 6v2eR): focus-картка для чат-бару Здоров'я.
 // Коли юзер тапає "Запитати OWL про цей стан" у workspace — id фокусу зберігається тут,
 // і getHealthContext() додає деталі цієї картки на ВЕРХ контексту з префіксом "ФОКУС".
@@ -952,17 +949,7 @@ function renderHealthWorkspace(id) {
       </div>
     </div>
 
-    <!-- "Запитати OWL про цей стан" (Фаза 3 — preloaded контекст у чат-бар) -->
-    <div onclick="askOwlAboutHealthCard('${id}')" style="display:flex;align-items:center;gap:10px;background:linear-gradient(135deg,rgba(26,92,42,0.08),rgba(74,222,128,0.05));border:1.5px solid rgba(26,92,42,0.18);border-radius:14px;padding:11px 14px;margin-bottom:10px;cursor:pointer">
-      <div class="icon-circle" style="width:32px;height:32px;background:rgba(26,92,42,0.12)">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a5c2a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-      </div>
-      <div style="flex:1">
-        <div style="font-size:13px;font-weight:800;color:#1a5c2a">${t('health.card.ask_owl_title', 'Запитати OWL про цей стан')}</div>
-        <div style="font-size:10px;color:rgba(30,16,64,0.45);font-weight:600;margin-top:1px">${t('health.card.ask_owl_hint', 'OWL знає всі деталі картки → пиши питання')}</div>
-      </div>
-      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="rgba(26,92,42,0.4)" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
-    </div>
+    <!-- "Запитати OWL" блок ВИДАЛЕНО (EU AI Act compliance JMQuT 17.05.2026). OWL більше не має доступу до health-даних. -->
 
     <!-- Препарати (Фаза 3: лог прийому + кнопка "Прийняти зараз") -->
     ${meds.length > 0 ? `<div class="card-glass">
@@ -1062,19 +1049,9 @@ function renderHealthWorkspace(id) {
   `;
 }
 
-// Фаза 3 (15.04 6v2eR): "Запитати OWL про цей стан".
-// Встановлює focused-картку, відкриває чат-бар з preloaded повідомленням від OWL.
-// getHealthContext бачить _focusedHealthCardId і додає деталі картки на ВЕРХ контексту.
-function askOwlAboutHealthCard(id) {
-  const card = getHealthCards().find(c => c.id === id);
-  if (!card) return;
-  setFocusedHealthCard(id);
-  try { openChatBar('health'); } catch (e) {}
-  // Pre-loaded повідомлення (без виклику AI) — щоб юзер бачив що OWL "у контексті"
-  setTimeout(() => {
-    addHealthChatMsg('agent', t('health.owl.focus_intro', 'OWL у контексті стану "{name}". Що хочеш дізнатись?', { name: card.name }));
-  }, 200);
-}
+// askOwlAboutHealthCard REMOVED (EU AI Act compliance JMQuT 17.05.2026).
+// OWL більше не має доступу до health-даних. Stub no-op для backward compat onclick (видалю у Фазі 4-UI).
+function askOwlAboutHealthCard(_id) { /* no-op */ }
 
 // Фаза 3: позначити прийом дози ліків з UI (тап на кнопку "+ Прийняти").
 function logHealthMedDose(cardId, medId) {
@@ -1571,10 +1548,9 @@ function saveHealthCardFromModal() {
     newCard.nextAppointment = _syncCardAppointmentToEvent(newCard.id, name, nextAppointment, null);
     cards.unshift(newCard);
     saveHealthCards(cards);
-    // Phase C: запуск AI-інтерв'ю після створення нової картки (тільки create-режим).
+    // AI-інтерв'ю ВИДАЛЕНО (EU AI Act compliance JMQuT 17.05.2026). Юзер сам обирає статус через dropdown.
     closeHealthCardModal();
     renderHealth();
-    setTimeout(() => { try { startHealthInterview(newCard); } catch(e) {} }, 300);
     return;
   }
 
@@ -1748,107 +1724,17 @@ export function getHealthContext() {
   return parts.join('\n');
 }
 
-// === HEALTH AI BAR ===
-export function addHealthChatMsg(role, text, _noSave = false, chips = null) {
-  // MPVly 05.05 — інлайн-парсинг чіпів (один мозок).
-  if (role === 'agent' && (!chips || chips.length === 0) && text) {
-    const _p = parseContentChips(text);
-    if (_p.chips) { text = _p.text; chips = _p.chips; }
-  }
-  const el = document.getElementById('health-chat-messages');
-  if (!el) return;
-  if (_healthTypingEl) { _healthTypingEl.remove(); _healthTypingEl = null; }
-  if (role === 'typing') {
-    const td = document.createElement('div');
-    td.style.cssText = 'display:flex';
-    td.innerHTML = '<div style="background:rgba(255,255,255,0.12);border-radius:4px 12px 12px 12px;padding:5px 10px"><div class="ai-typing"><span></span><span></span><span></span></div></div>';
-    el.appendChild(td);
-    _healthTypingEl = td;
-    el.scrollTop = el.scrollHeight;
-    return;
-  }
-  if (role === 'agent') el.querySelectorAll('.chat-chips-row').forEach(n => n.remove());
-  try { openChatBar('health'); } catch(e) {}
-  const isAgent = role === 'agent';
-  const div = document.createElement('div');
-  div.style.cssText = `display:flex;${isAgent ? '' : 'justify-content:flex-end'}`;
-  div.innerHTML = `<div class="msg-bubble ${isAgent ? 'msg-bubble--agent' : 'msg-bubble--user'}">${escapeHtml(text).replace(/\n/g,'<br>')}</div>`;
-  el.appendChild(div);
-  if (isAgent && Array.isArray(chips) && chips.length > 0) {
-    const chipsRow = document.createElement('div');
-    chipsRow.className = 'chat-chips-row';
-    renderChips(chipsRow, chips, 'health');
-    el.appendChild(chipsRow);
-    // B-119 + UvEHE chips clipping fix: scrollIntoView надійніше за scrollTop+rAF
-    // на iOS Safari — браузер сам рахує реальний layout після append.
-    requestAnimationFrame(() => chipsRow.scrollIntoView({ block: 'end', inline: 'nearest' }));
-  }
-  el.scrollTop = el.scrollHeight;
-  requestAnimationFrame(() => { el.scrollTop = el.scrollHeight; });
-  if (role !== 'agent') healthBarHistory.push({ role: 'user', content: text });
-  else healthBarHistory.push({ role: 'assistant', content: text });
-  // 64CXo: cap 20 — memory leak fix.
-  if (healthBarHistory.length > 20) healthBarHistory = healthBarHistory.slice(-20);
-  if (!_noSave) saveChatMsg('health', role, text, chips);
+// === HEALTH AI BAR REMOVED (EU AI Act compliance JMQuT 17.05.2026) ===
+// Чат-бар видалено з UI (index.html). Експортуємо stub-функції щоб не зламати імпорти
+// у core.js + owl/chips.js (видалятимуться у Фазі 6 cross-tab cleanup).
+export function addHealthChatMsg(_role, _text, _noSave = false, _chips = null) {
+  // no-op: чату немає, нічого писати.
+  return;
 }
-
 export async function sendHealthBarMessage() {
-  if (healthBarLoading) return;
-  const input = document.getElementById('health-bar-input');
-  const text = input.value.trim();
-  if (!text) return;
-  const key = localStorage.getItem('nm_gemini_key');
-  if (!key) { addHealthChatMsg('agent', t('health.chat.no_key', 'Введи OpenAI ключ в налаштуваннях.')); return; }
-  input.value = ''; input.style.height = 'auto';
-  input.focus();
-  addHealthChatMsg('user', text);
-  healthBarLoading = true;
-  addHealthChatMsg('typing', '');
-
-  const cards = getHealthCards();
-  const activeCard = activeHealthCardId ? cards.find(c => c.id === activeHealthCardId) : null;
-  const aiContext = getAIContext();
-
-  // Фаза 2 "Один мозок V2" (20.04 Gg3Fy): Health chat мігровано на INBOX_TOOLS + dispatchChatToolCalls.
-  // Промпт винесено у getHealthChatSystem(). Text-JSON dialect + _processOne прибрано.
-  const systemPrompt = getHealthChatSystem(activeCard) + (aiContext ? '\n\n' + aiContext : '');
-
-  try {
-    const msg = await callAIWithTools(systemPrompt, healthBarHistory.slice(-8), INBOX_TOOLS, 'health-bar');
-
-    if (msg && Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
-      const guard = shouldClarify(text, msg.tool_calls, 'health');
-      if (guard) {
-        addHealthChatMsg('agent', guard.question, false, guard.chips);
-        healthBarLoading = false;
-        return;
-      }
-      dispatchChatToolCalls(msg.tool_calls, addHealthChatMsg, text);
-      if (msg.content) {
-        const { text: replyText, chips } = parseContentChips(msg.content);
-        if (replyText) addHealthChatMsg('agent', replyText, false, chips);
-      }
-      healthBarLoading = false;
-      return;
-    }
-
-    const reply = msg && msg.content ? msg.content.trim() : '';
-    if (!reply) { handleChatError(addHealthChatMsg); healthBarLoading = false; return; }
-    const { text: replyText, chips } = parseContentChips(reply);
-    if (replyText) {
-      const looksLikeJson = (replyText.startsWith('{') && replyText.endsWith('}')) || (replyText.startsWith('[') && replyText.endsWith(']'));
-      if (looksLikeJson) { try { JSON.parse(replyText); addHealthChatMsg('agent', t('health.chat.done', 'Зроблено ✓')); } catch { addHealthChatMsg('agent', replyText, false, chips); } }
-      else addHealthChatMsg('agent', replyText, false, chips);
-    }
-  } catch { addHealthChatMsg('agent', t('health.chat.network_err', 'Мережева помилка.')); }
-  healthBarLoading = false;
+  // no-op: AI ізольовано від health-даних (EU AI Act).
+  return;
 }
-
-// Фаза 3 (15.04 6v2eR): автоскид focused-картки при закритті чат-бару Здоров'я.
-// Інакше OWL продовжить "тримати фокус" на старому стані у наступному відкритті чату.
-window.addEventListener('nm-chat-closed', (e) => {
-  if (e.detail === 'health') clearFocusedHealthCard();
-});
 
 // Фаза 4 (15.04 6v2eR): пасивний тригер missed doses.
 // Раз на 5 хв перевіряємо чи є нові пропущені дози і перерендерюємо вкладку
@@ -1869,195 +1755,23 @@ setInterval(() => {
   } catch (e) {}
 }, 5 * 60 * 1000);
 
-// === HEALTH AI-INTERVIEW (Phase C — детерміноване 3-крокове опитування, MIeXK 03.05) ===
-// Запускається після створення картки. Послідовність:
-// step 1 «Що зараз?»  → recent / treating / chronic / skip
-// step 2 «Лікар?»     → doctor_yes / doctor_no / self / skip
-// step 3 «Симптоми?»  → severe / moderate / mild / skip
-// Агрегація відповідей → один з 6 статусів через updateHealthCardStatusProgrammatic.
-// Стан зберігається у localStorage `nm_health_interview_pending`. Якщо юзер не
-// відповідає — інтерв'ю просто висить у Health-чаті до наступного разу. Чіпи з
-// payload зберігаються у nm_chat_health (saveChatMsg розширено), тож при
-// відкритті чату renderChips видасть їх знову.
-
-const HEALTH_INTERVIEW_KEY = 'nm_health_interview_pending';
-
-function _interviewChips(step, options, cardId) {
-  // nliW8 B-178 fix: cardId у payload — захист від stale state.
-  // Юзер може мати старі chips старого інтерв'ю у history після того як
-  // створили нову картку → новий state перезаписав. card_id у payload дозволяє
-  // applyHealthInterviewChoice ігнорувати тапи на старі чіпи.
-  return options.map(o => ({
-    label: o.label,
-    action: 'health_interview',
-    payload: { step, value: o.value, card_id: cardId },
-  }));
+// === HEALTH AI-INTERVIEW REMOVED (EU AI Act compliance JMQuT 17.05.2026) ===
+// 3-крокове опитування статусу + автостатус через AI — видалено. Юзер сам обирає
+// статус картки через UI dropdown у workspace. Stub-функції для backward compat імпортів.
+const HEALTH_INTERVIEW_KEY = 'nm_health_interview_pending'; // ключ залишається для cleanup migration v18
+export function startHealthInterview(_card) {
+  // no-op: інтерв'ю не запускається.
+  return;
+}
+export function applyHealthInterviewChoice(_payload) {
+  // no-op: чіпи інтерв'ю більше не рендеряться.
+  return;
 }
 
-const STEP1_OPTIONS = [
-  { label: t('health.iv.s1.recent',   '🆕 Щойно з\'явилось'), value: 'recent' },
-  { label: t('health.iv.s1.treating', '💊 Лікую'),             value: 'treating' },
-  { label: t('health.iv.s1.chronic',  '♾️ Хронічна'),         value: 'chronic' },
-  { label: t('health.iv.skip',        'Пропустити'),          value: 'skip' },
-];
-const STEP2_OPTIONS = [
-  { label: t('health.iv.s2.yes',  'Так'),             value: 'doctor_yes' },
-  { label: t('health.iv.s2.no',   'Не був у лікаря'), value: 'doctor_no' },
-  { label: t('health.iv.s2.self', 'Сам лікую'),       value: 'self' },
-  { label: t('health.iv.skip',    'Пропустити'),      value: 'skip' },
-];
-const STEP3_OPTIONS = [
-  { label: t('health.iv.s3.severe',   'Сильні'),       value: 'severe' },
-  { label: t('health.iv.s3.moderate', 'Помірні'),      value: 'moderate' },
-  { label: t('health.iv.s3.mild',     'Майже нема'),   value: 'mild' },
-  { label: t('health.iv.skip',        'Пропустити'),   value: 'skip' },
-];
-
-function _aggregateInterviewStatus(answers) {
-  const stage = answers.stage || 'treating';
-  const symptoms = answers.symptoms;
-  const doctor = answers.doctor;
-  if (stage === 'chronic') {
-    if (symptoms === 'severe') return 'treatment';
-    if (symptoms === 'mild')   return 'remission';
-    return 'chronic';
-  }
-  if (stage === 'recent') {
-    if (symptoms === 'mild') return 'improving';
-    if (doctor === 'doctor_yes') return 'treatment';
-    return 'acute';
-  }
-  // stage === 'treating' (default)
-  if (symptoms === 'mild') return 'improving';
-  return 'treatment';
-}
-
-// Запуск інтерв'ю після створення картки. Викликається з модалки + tool handlers.
-// inCurrentChat=true коли картка створена через AI у чаті відмінному від health —
-// тоді тут НЕ рендеримо у Health-DOM (його може не бути), тільки записуємо state +
-// чіпи у `nm_chat_health` (відобразяться при відкритті чату), і ставимо unread badge.
-export function startHealthInterview(card) {
-  if (!card || !card.id || !card.name) return;
-  // state у localStorage (на випадок reload, або відкриття чату пізніше)
-  try {
-    localStorage.setItem(HEALTH_INTERVIEW_KEY, JSON.stringify({
-      card_id: card.id,
-      card_name: card.name,
-      step: 1,
-      answers: {},
-      ts: Date.now(),
-    }));
-  } catch {}
-
-  const chips = _interviewChips(1, STEP1_OPTIONS, card.id);
-  const text = t('health.iv.intro', 'Створив картку "{name}". 3 короткі питання щоб виставити статус.\n\nЩо зараз?', { name: card.name });
-
-  // nliW8 B-178 fix: addMsgForTab — єдиний шлях що robить:
-  // (a) saveChatMsg('health', ...) для persistence у nm_chat_health,
-  // (b) DOM live-append якщо health-chat-messages вже restored (юзер відкривав чат),
-  // (c) showUnreadBadge на health-send-btn для cross-tab сигналу.
-  // Це закриває race condition між currentTab і live-DOM рендером.
-  addMsgForTab('health', 'agent', text, chips);
-  healthBarHistory.push({ role: 'assistant', content: text });
-}
-
-// Обробка кліку чіпа інтерв'ю. Експортується для виклику з chips.js (action='health_interview').
-export function applyHealthInterviewChoice(payload) {
-  if (!payload || typeof payload.step !== 'number') return;
-  let state = null;
-  try { state = JSON.parse(localStorage.getItem(HEALTH_INTERVIEW_KEY) || 'null'); } catch {}
-  if (!state || !state.card_id) return;
-
-  // nliW8 B-178 fix R7: захист від stale chips. Юзер може тапнути chip
-  // старого інтерв'ю (від картки A) після того як AI створив картку B
-  // (новий state перезаписав). Без перевірки applyHealthInterviewChoice
-  // застосує відповідь до НОВОЇ картки — баг. card_id у payload додано
-  // у _interviewChips → перевіряємо match.
-  if (payload.card_id && payload.card_id !== state.card_id) return;
-
-  // nliW8 B-178 audit fix C5: TTL guard для stale state.
-  // nm_chip_payloads GC видаляє payload через 7 днів (boot.js:1171). Якщо
-  // юзер повернувся пізніше — chip є у DOM, але payload порожній → silent fail.
-  // Додатково: state може жити вічно якщо юзер закрив без вибору. TTL 7 днів
-  // — після цього інтерв'ю «протермінувалось».
-  const TTL_MS = 7 * 24 * 60 * 60 * 1000;
-  if (state.ts && Date.now() - state.ts > TTL_MS) {
-    try { localStorage.removeItem(HEALTH_INTERVIEW_KEY); } catch {}
-    addMsgForTab('health', 'agent', t('health.iv.expired', 'Час опитування минув. Статус можна змінити з картки.'));
-    return;
-  }
-
-  // Чіп вже візуально пропадає у chips.js. Тут — рідер user-вибору + наступний крок.
-  const labelMap = {
-    recent:     t('health.iv.s1.recent',   '🆕 Щойно з\'явилось'),
-    treating:   t('health.iv.s1.treating', '💊 Лікую'),
-    chronic:    t('health.iv.s1.chronic',  '♾️ Хронічна'),
-    skip:       t('health.iv.skip',        'Пропустити'),
-    doctor_yes: t('health.iv.s2.yes_full', 'Так — лікар призначив'),
-    doctor_no:  t('health.iv.s2.no',       'Не був у лікаря'),
-    self:       t('health.iv.s2.self',     'Сам лікую'),
-    severe:     t('health.iv.s3.severe',   'Сильні'),
-    moderate:   t('health.iv.s3.moderate', 'Помірні'),
-    mild:       t('health.iv.s3.mild',     'Майже нема'),
-  };
-  const userText = labelMap[payload.value] || payload.value;
-  // Записуємо вибір у Health-чат як user-message (видно при відкритті).
-  // nliW8 B-178: addMsgForTab — єдиний шлях для persistence + DOM live-append.
-  addMsgForTab('health', 'user', userText);
-
-  if (payload.step === 1) {
-    state.answers.stage = payload.value;
-    if (payload.value === 'skip') return _finishInterview(state, true);
-    state.step = 2;
-    try { localStorage.setItem(HEALTH_INTERVIEW_KEY, JSON.stringify(state)); } catch {}
-    const chips = _interviewChips(2, STEP2_OPTIONS, state.card_id);
-    const q = t('health.iv.q2', 'Лікар призначив лікування?');
-    addMsgForTab('health', 'agent', q, chips);
-    healthBarHistory.push({ role: 'assistant', content: q });
-    return;
-  }
-  if (payload.step === 2) {
-    state.answers.doctor = payload.value;
-    if (payload.value === 'skip') return _finishInterview(state, true);
-    state.step = 3;
-    try { localStorage.setItem(HEALTH_INTERVIEW_KEY, JSON.stringify(state)); } catch {}
-    const chips = _interviewChips(3, STEP3_OPTIONS, state.card_id);
-    const q = t('health.iv.q3', 'Симптоми зараз?');
-    addMsgForTab('health', 'agent', q, chips);
-    healthBarHistory.push({ role: 'assistant', content: q });
-    return;
-  }
-  if (payload.step === 3) {
-    state.answers.symptoms = payload.value;
-    return _finishInterview(state, payload.value === 'skip');
-  }
-}
-
-function _finishInterview(state, skipped) {
-  try { localStorage.removeItem(HEALTH_INTERVIEW_KEY); } catch {}
-  if (skipped && Object.keys(state.answers).length === 0) {
-    // Юзер повністю пропустив — нічого не змінюємо, статус лишається 'treatment' (default).
-    // nliW8 B-178: addMsgForTab без chips → R4 mitigation, бо addHealthChatMsg
-    // прибирає попередні .chat-chips-row при кожному agent-меседжі.
-    const text = t('health.iv.skipped', 'Гаразд, без опитування. Статус можна змінити з картки.');
-    addMsgForTab('health', 'agent', text);
-    healthBarHistory.push({ role: 'assistant', content: text });
-    try { clearUnreadBadge('health'); } catch {}
-    return;
-  }
-  const finalStatus = _aggregateInterviewStatus(state.answers);
-  const updated = updateHealthCardStatusProgrammatic(state.card_id, finalStatus);
-  if (!updated) return;
-  const def = HEALTH_STATUS_DEFS[finalStatus] || {};
-  const text = t('health.iv.done', 'Записав. Статус "{name}": {icon} {label}.', { name: updated.name, icon: def.icon || '', label: def.label || finalStatus });
-  addMsgForTab('health', 'agent', text);
-  healthBarHistory.push({ role: 'assistant', content: text });
-  try { clearUnreadBadge('health'); } catch {}
-}
 
 // === WINDOW EXPORTS (HTML handlers only) ===
 Object.assign(window, {
-  openAddHealthCard, sendHealthBarMessage,
+  openAddHealthCard,
   openHealthCard, closeHealthCard, setHealthCardStatus,
   openAddAllergy, deleteAllergyById,
   openHealthCardNote,
@@ -2066,8 +1780,8 @@ Object.assign(window, {
   deleteHealthCardFromModal, addHealthMedicationRow,
   // Drum-picker для дат/часу у Health-картці (UvEHE 03.05) — заміна native iOS picker
   openHealthDtPicker, closeHealthDtPicker, saveHealthDtPicker,
-  // Фаза 3 (15.04 6v2eR): focused-режим + лог дози з UI
-  askOwlAboutHealthCard, logHealthMedDose,
+  // logHealthMedDose — лог дози з UI. askOwlAboutHealthCard видалено (EU AI Act).
+  logHealthMedDose,
   // Фаза 4 (15.04 6v2eR): пропуск дози
   skipHealthMedDose,
   // Фаза 5 (15.04 6v2eR): експорт медкартки
