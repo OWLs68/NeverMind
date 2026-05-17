@@ -14,6 +14,29 @@
 
 > Тут живе те що треба перевірити **наступної iPhone-сесії**. Claude додає сюди після кожної міграції / нової фічі / зміни UI. Роман викреслює коли протестив (переносить у архів).
 
+### v900+ (deploy 16.05 — DGH6F Event Delegation Phase 1а: header buttons + freeze hook)
+
+**Контекст:** 16 inline onclick у `<header>` кожної вкладки (8 tabs × `openSettings`+`openHelp`) переведено на event delegation через новий модуль `src/core/delegation.js`. Strangler refactor — перший крок з ~334 onclick → 0 для strict CSP. Решта 318 onclick — наступні сесії. Pre-commit hook `pre-commit-onclick-freeze.js` (новий, 8-й сторож) блокує нові onclick через net-rachet.
+
+**⚙️ Header buttons (всі 8 вкладок):**
+- [ ] Inbox → тап на «⚙️» (шестерінка у правому верхньому куті) → модалка «Налаштування» відкривається.
+- [ ] Inbox → тап на «?» → модалка «Допомога» відкривається з контентом для Inbox.
+- [ ] Tasks → ⚙️ і ? — те саме (контент Help відрізняється — для Tasks).
+- [ ] Notes → ⚙️ і ? — те саме.
+- [ ] Me → ⚙️ і ? — те саме (виглядає трохи прозорим колір — це нормально, тема Me).
+- [ ] Evening → ⚙️ і ? — те саме (колір приглушений — тема Evening).
+- [ ] Finance → ⚙️ і ? — те саме.
+- [ ] Health → ⚙️ і ? — те саме.
+- [ ] Projects → ⚙️ і ? — те саме.
+
+**🔧 Регресія-чек:**
+- [ ] DevTools (Safari → Develop → iPhone) → Console → жодних `Uncaught ReferenceError: openSettings/openHelp is not defined` при тапі.
+- [ ] Швидко натиснути ⚙️ потім зразу ? (race) → обидві модалки відкриваються коректно.
+
+**ℹ️ Що НЕ змінилось (sanity-чек):**
+- [ ] Кнопки виглядають візуально ідентично як до фічі (одна іконка, той самий розмір).
+- [ ] Anti-bug: 16 onclick видалено з index.html — пошук `onclick="openSettings"` / `onclick="openHelp` у DevTools Elements має повертати 0.
+
 ### v568+ (deploy 03.05 — MIeXK Phase A: 6-статусна шкала Health + міграція legacy)
 
 **Контекст:** замінили старі 3 статуси (active/controlled/done) на 6 нових (acute/treatment/improving/remission/chronic/done) з іконками. Всі існуючі картки автоматично мігрували: active→treatment, controlled→remission, done→done (одноразово при першому відкритті після деплою). Workspace картки тепер показує 6 кнопок-перемикачів замість 3. Інтерв'ю після створення (Phase C) і новий tool update_health_card_status (Phase B) — окремі коміти.

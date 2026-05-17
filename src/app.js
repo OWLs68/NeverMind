@@ -8,6 +8,7 @@ import './core/trash.js';
 import './core/logger.js';
 import './core/diagnostics.js';
 import './core/usage-meter.js';
+import './core/delegation.js';
 
 // UI (інтерфейс)
 import './ui/keyboard.js';
