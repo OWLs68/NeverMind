@@ -1229,6 +1229,9 @@ function _showInstantReaction(tab) {
 }
 
 window.addEventListener('nm-data-changed', (e) => {
+  // DGH6F 16.05: під час restoreBackup не реагуємо — інакше OWL board генерується
+  // на проміжному стані (частина ключів restored, частина ще ні).
+  if (typeof window !== 'undefined' && window.__nm_restoring) return;
   // 4.40 — Reset ignored counter на будь-яку зміну даних (включно з 'chat').
   // Раніше це був окремий listener — об'єднано щоб не дублювати реєстрацію.
   try {

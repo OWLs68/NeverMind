@@ -131,6 +131,9 @@ export function startBrainPulseCycle() {
   // юзер активний у чаті.
   if (typeof window !== 'undefined') {
     window.addEventListener('nm-data-changed', e => {
+      // DGH6F 16.05: під час restoreBackup не запускаємо brainPulse (OpenAI call!)
+      // на проміжному стані — буде неточний контекст і марна трата токенів.
+      if (typeof window !== 'undefined' && window.__nm_restoring) return;
       const d = e && e.detail;
       if (d === 'chat' || d === 'memory' || d === 'silence') return;
       clearTimeout(_debounceTimer);

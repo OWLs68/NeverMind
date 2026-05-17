@@ -25,17 +25,28 @@ const MAX_BACKUPS = 3;
 // інакше boot.js runMigrations пропустить v9-v17 (флаг каже «вже зроблено») а
 // відновлені дані мають СТАРИЙ формат → mixed state UUID/number → silent fail.
 // Список зібрано з grep `setItem.*_migrated_v|_done|_cleared_v` у boot.js (DGH6F).
+// ⚠️ ВКЛЮЧАТИ ТIЛЬКИ flags типу «UUID conversion» / «field-value remap» — тобто
+// міграції що ІДЕМПОТЕНТНI при повторному виконанні (typeof check guards).
+// 🚫 НЕ включати CLEANUP flags (removeItem / wipe) — повторне виконання знищить
+// restored дані! Приклад анти-патерна: `nm_health_log_cleared_v6` робить
+// `removeItem('nm_health_log')` (boot.js:454-456) — скинути цей flag після
+// restore = повторне видалення відновлених даних.
+//
+// Аудит Council 16.05 (DGH6F): додано v17 steps (зачіпає tasks+projects),
+// v9 habit_log2 cross-ref, v16 allergies cross-ref. Видалено помилковий
+// 'nm_health_log_cleared_v6' (CLEANUP, не conversion).
 const KEY_MIGRATION_FLAGS = {
-  'nm_tasks':        ['nm_tasks_uuid_migrated_v8'],
+  'nm_tasks':        ['nm_tasks_uuid_migrated_v8', 'nm_steps_uuid_migrated_v17'],
   'nm_habits2':      ['nm_habits_uuid_migrated_v9'],
+  'nm_habit_log2':   ['nm_habits_uuid_migrated_v9'],  // v9 cross-ref: log keys = habit.id
   'nm_events':       ['nm_events_uuid_migrated_v10'],
   'nm_notes':        ['nm_notes_uuid_migrated_v11'],
   'nm_moments':      ['nm_moments_uuid_migrated_v12'],
   'nm_finance':      ['nm_finance_uuid_migrated_v13'],
-  'nm_projects':     ['nm_projects_uuid_migrated_v14'],
+  'nm_projects':     ['nm_projects_uuid_migrated_v14', 'nm_steps_uuid_migrated_v17'],
   'nm_inbox':        ['nm_inbox_uuid_migrated_v15'],
   'nm_health_cards': ['nm_health_uuid_migrated_v16', 'nm_health_migrated_v2', 'nm_health_status_v2_done'],
-  'nm_health_log':   ['nm_health_log_cleared_v6'],
+  'nm_allergies':    ['nm_health_uuid_migrated_v16'],  // v16 cross-ref: allergies[].id
 };
 // iPhone Safari ~5 MB, інші ~10 MB. Беремо консервативно 4 MB як «небезпечну зону»
 // для пред-перевірки (DGH6F 16.05). Якщо payload + поточні дані > QUOTA_BUDGET →
@@ -163,6 +174,10 @@ export function restoreBackup(backupKey) {
     } finally {
       try { window.__nm_restoring = false; } catch {}
       try { window.dispatchEvent(new CustomEvent('nm-restore-end', { detail: { backupKey } })); } catch {}
+      // DGH6F 16.05: nm-data-changed dispatch ПIСЛЯ зняття __nm_restoring lock
+      // щоб UI listener'и перерендерили з restored даними (інакше юзер бачить
+      // старі дані до F5). Listener'и з restore-guard'ом тепер дозволять.
+      try { window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'restore' })); } catch {}
     }
   } catch (e) {
     try { window.__nm_restoring = false; } catch {}
