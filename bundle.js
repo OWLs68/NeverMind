@@ -20858,6 +20858,19 @@ ${logLines}
   });
 
   // src/core/backup.js
+  function _estimateUsedBytes() {
+    let bytes = 0;
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (!k) continue;
+        const v = localStorage.getItem(k);
+        bytes += (k.length + (v ? v.length : 0)) * 2;
+      }
+    } catch {
+    }
+    return bytes;
+  }
   function createSelectiveBackup(keys, label) {
     if (!Array.isArray(keys) || keys.length === 0) return null;
     if (!label || typeof label !== "string") return null;
@@ -20878,6 +20891,23 @@ ${logLines}
     }
     if (!hasData) return null;
     const payload = JSON.stringify({ ts, label, data: snapshot });
+    const payloadBytes = (backupKey.length + payload.length) * 2;
+    const estimatedTotal = _estimateUsedBytes() + payloadBytes;
+    if (estimatedTotal > QUOTA_BUDGET_BYTES) {
+      try {
+        cleanupOldBackups(0);
+      } catch {
+      }
+      const afterCleanup = _estimateUsedBytes() + payloadBytes;
+      if (afterCleanup > QUOTA_BUDGET_BYTES) {
+        const usedMB = (_estimateUsedBytes() / 1024 / 1024).toFixed(2);
+        const payloadMB = (payloadBytes / 1024 / 1024).toFixed(2);
+        console.warn(
+          "[backup] QUOTA: skipped \xAB" + label + "\xBB \u2014 payload " + payloadMB + " MB + existing " + usedMB + " MB > 4 MB budget. JSON-export \u0440\u0435\u043A\u043E\u043C\u0435\u043D\u0434\u043E\u0432\u0430\u043D\u0438\u0439 \u0437\u0430\u043C\u0456\u0441\u0442\u044C in-storage backup."
+        );
+        return null;
+      }
+    }
     try {
       localStorage.setItem(backupKey, payload);
       try {
@@ -20891,7 +20921,7 @@ ${logLines}
         localStorage.setItem(backupKey, payload);
         return backupKey;
       } catch {
-        console.warn("[backup] quota exceeded \u2014 backup skipped:", label);
+        console.warn("[backup] quota exceeded \u043F\u0456\u0441\u043B\u044F cleanup \u2014 backup skipped:", label);
         return null;
       }
     }
@@ -20916,11 +20946,12 @@ ${logLines}
     });
     return toRemove.length;
   }
-  var BACKUP_PREFIX, MAX_BACKUPS;
+  var BACKUP_PREFIX, MAX_BACKUPS, QUOTA_BUDGET_BYTES;
   var init_backup = __esm({
     "src/core/backup.js"() {
       BACKUP_PREFIX = "nm_backup_";
       MAX_BACKUPS = 3;
+      QUOTA_BUDGET_BYTES = 4 * 1024 * 1024;
     }
   });
 
