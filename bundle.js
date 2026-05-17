@@ -18651,7 +18651,7 @@ ${userText}
       else when = `${d.getDate()} ${monthGenitive(d.getMonth())}`;
       const icon = item.type === "task" ? "\u{1F4CC}" : item.type === "reminder" ? "\u23F0" : "\u{1F4C5}";
       const timeStr = item.time ? t("inbox.date.at_time", " \u043E {time}", { time: item.time }) : "";
-      const action = item.type === "task" ? `onclick="switchTab('tasks')"` : `onclick="openCalendarModal()"`;
+      const action = item.type === "task" ? `data-action="switch-tab" data-tab="tasks"` : `data-action="open-calendar"`;
       return `<div class="inbox-upcoming-card" ${action}>
       <span class="inbox-upcoming-icon">${icon}</span>
       <span class="inbox-upcoming-text">${escapeHtml(item.title)}</span>
@@ -18688,7 +18688,7 @@ ${userText}
       const tagStyle = CAT_TAG_STYLE[item.category] || CAT_TAG_STYLE.note;
       html += `<div class="inbox-item-wrap" id="wrap-${item.id}" data-id="${item.id}">
       <div class="inbox-item" id="item-${item.id}" data-id="${item.id}" data-cat="${item.category}"
-           onclick="navigateInboxItem('${item.id}')">
+           data-action="navigate-inbox-item">
         <div class="inbox-item-inner">
           <div class="inbox-item-dot" style="${dotBg}"></div>
           <div class="inbox-item-body">
@@ -19426,7 +19426,7 @@ ${aiContext}`;
     const optEl = document.getElementById("clarify-options");
     optEl.innerHTML = (parsed.options || []).map((opt, i) => {
       const isPrimary = i === 0;
-      return `<button onclick="selectClarifyOption(${i})" style="width:100%;display:flex;align-items:center;gap:10px;background:${isPrimary ? "rgba(194,121,10,0.05)" : "rgba(30,16,64,0.03)"};border:1.5px solid ${isPrimary ? "rgba(194,121,10,0.2)" : "rgba(30,16,64,0.08)"};border-radius:13px;padding:12px 14px;font-size:14px;font-weight:600;color:${isPrimary ? "#c2790a" : "#1e1040"};cursor:pointer;text-align:left;font-family:inherit">${escapeHtml(opt.label || "")}</button>`;
+      return `<button data-action="select-clarify-option" data-idx="${i}" style="width:100%;display:flex;align-items:center;gap:10px;background:${isPrimary ? "rgba(194,121,10,0.05)" : "rgba(30,16,64,0.03)"};border:1.5px solid ${isPrimary ? "rgba(194,121,10,0.2)" : "rgba(30,16,64,0.08)"};border-radius:13px;padding:12px 14px;font-size:14px;font-weight:600;color:${isPrimary ? "#c2790a" : "#1e1040"};cursor:pointer;text-align:left;font-family:inherit">${escapeHtml(opt.label || "")}</button>`;
     }).join("");
     document.getElementById("clarify-modal").style.display = "flex";
   }
@@ -21004,6 +21004,22 @@ ${logLines}
         if (!sel || !el || typeof el.closest !== "function") return;
         const parent = el.closest(sel);
         if (parent && typeof parent.remove === "function") parent.remove();
+      });
+      reg("open-calendar", () => {
+        if (typeof window !== "undefined" && typeof window.openCalendarModal === "function") {
+          window.openCalendarModal();
+        }
+      });
+      reg("navigate-inbox-item", (data) => {
+        if (typeof window !== "undefined" && typeof window.navigateInboxItem === "function") {
+          window.navigateInboxItem(data.id);
+        }
+      });
+      reg("select-clarify-option", (data) => {
+        if (typeof window !== "undefined" && typeof window.selectClarifyOption === "function") {
+          const idx = parseInt(data.idx, 10);
+          if (!Number.isNaN(idx)) window.selectClarifyOption(idx);
+        }
       });
     }
   });
