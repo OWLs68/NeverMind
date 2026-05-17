@@ -71,6 +71,10 @@
           {
             "type": "command",
             "command": "node .claude/hooks/pre-commit-uuid-grep.js"
+          },
+          {
+            "type": "command",
+            "command": "node .claude/hooks/pre-commit-screenshot.js"
           }
         ]
       },

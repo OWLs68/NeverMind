@@ -130,6 +130,57 @@
   ```
 - **Підтверджений кейс db0YY:** allergy/event/project/health_card — 4 типи кидались у trash але restoreFromTrash тихо ігнорував до фіксів `c72763e`/`f2bd017`/`08940c1`/`bb0c50e`.
 
+### Workflow з зовнішнім API — спершу локальний міні-тест curl (DGH6F 16.05.2026, brain-спостереження)
+
+**Контекст:** сесія e9t3N 15.05 — 3 невдалих запуски Claude Security Action поспіль. Послідовність провалів:
+1. **Run #1** — використав `anthropics/claude-code-security-review@main` action з документації. Параметри `anthropic_api_key` / `scan-mode` / `severity-threshold` ігнорувались мовчки — action виявився PR-only без явної помилки конфігурації.
+2. **Run #9 #8 #7** — замінив на власний `claude-security.yml` workflow. YAML syntax errors на лінії 218 — 3 multi-line strings у `run: |` block ламали парсинг (виявлено тільки коли GitHub UI показав «Invalid workflow file»).
+3. **Run #11 #12** — після фіксів YAML впав на rate limit 429 (Tier 1 = 30K ITPM, codebase 210K tokens).
+
+**Корінь:** жодного локального тесту перед commit'ом. Я writing YAML за документацією → push → дивлюсь чи GitHub Actions UI зеленить. Це ЦИКЛ через хмарну CI:
+- 1 ітерація = 3 хв (commit → push → wait CI start → fail → читай logs у UI)
+- 3 ітерації = 10+ хв змарнованих + забруднена git history з «fix yaml» комітами
+
+**Що мав робити (правило):** перед commit workflow з зовнішнім API → один локальний `curl` ручний тест → бачу response.status + format → ТIЛЬКИ ТОДI обгортаю у YAML.
+
+**Конкретний приклад для Anthropic API:**
+```bash
+# 1. Локальний тест моделі + headers (5 секунд):
+curl -s -w "\nHTTP %{http_code}\n" -X POST https://api.anthropic.com/v1/messages \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: $ANTHROPIC_API_KEY" \
+  -H "anthropic-version: 2023-06-01" \
+  -d '{"model": "claude-sonnet-4-5-20250929", "max_tokens": 100, "messages": [{"role":"user","content":"ping"}]}'
+
+# 2. Локальний тест rate limit (моделюємо payload розміром):
+echo "{...real payload...}" > /tmp/payload.json
+curl -s -w "%{http_code}\n" -X POST ... -d @/tmp/payload.json
+
+# 3. ТIЛЬКИ якщо #1+#2 повернули 200 з очікуваним JSON — обгортаю у jq + workflow.
+```
+
+**Класи проблем що ловить локальний міні-тест:**
+| Клас | Як ловиться локально |
+|---|---|
+| Неправильні параметри action (як `anthropic_api_key` vs `claude-api-key`) | Прочитати action.yml у repo перед використанням |
+| YAML syntax errors у `run: \|` блок | `python3 -c "import yaml; yaml.safe_load(open('file.yml'))"` |
+| API повертає 4xx/5xx з понятним error.message | `curl -w "%{http_code}"` показує одразу |
+| Rate limit 429 з конкретним payload size | `curl` з realistic payload — одразу видно |
+| Authentication errors (header формат, scope) | `curl` повертає 401/403 з error.type |
+
+**Бонус — `jq` обгортки для payload:** використовувати `jq -n --rawfile` для збору JSON, НЕ multi-line strings у bash (це окремо ламало YAML у e9t3N). Урок:
+```yaml
+# ❌ ЛАМАЄ YAML
+run: |
+  PAYLOAD="{\"model\": \"...\",
+    \"messages\": [...]}"  # ← це теж зламає YAML парсер
+# ✅ ПРАЦЮЄ
+run: |
+  jq -n --arg system "$SYS" --rawfile code /tmp/code.txt '{model: "...", system: $system, ...}' > /tmp/payload.json
+```
+
+**Автоматизація неможлива** (на відміну від 6 класів з блоку вище) — не існує способу хук перевірив «чи зробив curl міні-тест перед commit workflow». Це дисципліна процесу. Сигнал-тригер: будь-який Edit/Write у `.github/workflows/*.yml` що додає новий `curl`/`gh api`/`uses: anthropic/*` → **STOP перед коміт → локальний curl 5 секунд → продовжую**.
+
 ### Bridge-стратегія перед великою міграцією (64CXo 10.05.2026)
 - **Контекст:** через 1-2 місяці перехід на Supabase. Виникло питання — лагодити поточну архітектуру чи мігрувати негайно.
 - **Висновок з 3 раундів Gemini:** **НЕ мігрувати негайно** — 3-4 тижні без видимого прогресу. Замість того — робити Bridge fixes що переїдуть на Supabase БЕЗ переписування (0-10% migration debt).
