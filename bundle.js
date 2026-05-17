@@ -20957,6 +20957,46 @@ ${logLines}
     }
   });
 
+  // src/core/delegation.js
+  function reg(name, fn) {
+    if (typeof name !== "string" || !name) return;
+    if (typeof fn !== "function") return;
+    ACTIONS[name] = fn;
+  }
+  function initDelegation() {
+    if (typeof document === "undefined") return;
+    document.body.addEventListener("click", _handleClick);
+  }
+  function _handleClick(e) {
+    const el = e.target && e.target.closest ? e.target.closest("[data-action]") : null;
+    if (!el) return;
+    const action = el.dataset.action;
+    if (!action) return;
+    const fn = ACTIONS[action];
+    if (!fn) return;
+    try {
+      fn(el.dataset, el, e);
+    } catch (err) {
+      console.error("[delegation] action \xAB" + action + "\xBB handler failed:", err);
+    }
+  }
+  var ACTIONS;
+  var init_delegation = __esm({
+    "src/core/delegation.js"() {
+      ACTIONS = /* @__PURE__ */ Object.create(null);
+      reg("open-settings", () => {
+        if (typeof window !== "undefined" && typeof window.openSettings === "function") {
+          window.openSettings();
+        }
+      });
+      reg("open-help", (data) => {
+        if (typeof window !== "undefined" && typeof window.openHelp === "function") {
+          window.openHelp(data.tab || "inbox");
+        }
+      });
+    }
+  });
+
   // src/owl/followups.js
   async function checkFollowups() {
     if (_checkInFlight) return;
@@ -21563,15 +21603,15 @@ ${logLines}
       if (e.persisted && _swReg) _swReg.update().catch(() => {
       });
     });
-    navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" }).then((reg) => {
-      _swReg = reg;
-      reg.update().catch(() => {
+    navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" }).then((reg2) => {
+      _swReg = reg2;
+      reg2.update().catch(() => {
       });
-      if (reg.waiting && navigator.serviceWorker.controller) {
-        reg.waiting.postMessage({ type: "SKIP_WAITING" });
+      if (reg2.waiting && navigator.serviceWorker.controller) {
+        reg2.waiting.postMessage({ type: "SKIP_WAITING" });
       }
-      reg.addEventListener("updatefound", () => {
-        const sw = reg.installing;
+      reg2.addEventListener("updatefound", () => {
+        const sw = reg2.installing;
         if (!sw) return;
         sw.addEventListener("statechange", () => {
           if (sw.state === "installed" && navigator.serviceWorker.controller) {
@@ -22775,6 +22815,11 @@ ${logLines}
     } catch (e) {
       console.error("init error:", e);
     }
+    try {
+      initDelegation();
+    } catch (e) {
+      console.error("delegation init error:", e);
+    }
     showApp();
     try {
       if (typeof window.buildProfileIfStale === "function") {
@@ -22797,6 +22842,7 @@ ${logLines}
       init_nav();
       init_uuid();
       init_backup();
+      init_delegation();
       init_trash();
       init_core();
       init_board();
@@ -24239,6 +24285,7 @@ ${legacy}`;
   init_logger();
   init_diagnostics();
   init_usage_meter();
+  init_delegation();
   init_keyboard();
   init_swipe_delete();
 
