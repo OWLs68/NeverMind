@@ -5195,7 +5195,7 @@ ${lines.join("\n")}`;
       const silenceWarn = silenceDays !== null && silenceDays >= 3;
       const visibleSteps = steps.slice(0, 4);
       return `<div class="project-card-wrap" data-id="${p.id}" style="position:relative">
-      <div onclick="openProjectWorkspace('${p.id}')" class="card-glass project-card" id="project-card-${p.id}" style="cursor:pointer;position:relative;z-index:2;background:rgba(248,239,224,0.95)">
+      <div data-action="open-project" data-id="${p.id}" class="card-glass project-card" id="project-card-${p.id}" style="cursor:pointer;position:relative;z-index:2;background:rgba(248,239,224,0.95)">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
         <div style="flex:1">
           <div style="font-size:15px;font-weight:900;color:#1e1040;line-height:1.2">${escapeHtml(p.name)}</div>
@@ -5303,7 +5303,7 @@ ${lines.join("\n")}`;
     <!-- \u041D\u0430\u0437\u0430\u0434. B-118 (mUpS8 02.05): position+z-index \u0449\u043E\u0431 OWL board overlay
          \u043D\u0435 \u043F\u0435\u0440\u0435\u0445\u043E\u043F\u043B\u044E\u0432\u0430\u0432 \u043A\u043B\u0456\u043A. Padding 8\xD74 + negative margin = \u0431\u0456\u043B\u044C\u0448\u0430 hit-area
          (44px \u0440\u0435\u043A\u043E\u043C\u0435\u043D\u0434\u043E\u0432\u0430\u043D\u0438\u0439 Apple HIG) \u0431\u0435\u0437 \u0432\u0456\u0437\u0443\u0430\u043B\u044C\u043D\u0438\u0445 \u0437\u0441\u0443\u0432\u0456\u0432. -->
-    <div onclick="closeProjectWorkspace()" style="display:flex;align-items:center;gap:6px;padding:8px 4px;margin:-8px -4px 4px -4px;cursor:pointer;position:relative;z-index:10">
+    <div data-action="close-project-workspace" style="display:flex;align-items:center;gap:6px;padding:8px 4px;margin:-8px -4px 4px -4px;cursor:pointer;position:relative;z-index:10">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3d2e1e" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
       <span style="font-size:13px;font-weight:700;color:#3d2e1e">${t("projects.workspace.back", "\u041F\u0440\u043E\u0435\u043A\u0442\u0438")}</span>
     </div>
@@ -5376,7 +5376,7 @@ ${lines.join("\n")}`;
     ${steps.length > 0 ? `<div class="card-glass" id="proj-timeline-${p.id}">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
         <div class="section-label" style="margin-bottom:0">${t("projects.section.timeline", "\u0425\u0440\u043E\u043D\u043E\u043B\u043E\u0433\u0456\u044F \xB7 \u043F\u043B\u0430\u043D")}</div>
-        <span onclick="toggleProjectTimeline('${p.id}')" style="font-size:10px;font-weight:700;color:#3d2e1e;cursor:pointer" id="proj-timeline-toggle-${p.id}">${t("projects.timeline.expand", "\u0440\u043E\u0437\u0433\u043E\u0440\u043D\u0443\u0442\u0438 \u2193")}</span>
+        <span data-action="toggle-project-timeline" data-id="${p.id}" style="font-size:10px;font-weight:700;color:#3d2e1e;cursor:pointer" id="proj-timeline-toggle-${p.id}">${t("projects.timeline.expand", "\u0440\u043E\u0437\u0433\u043E\u0440\u043D\u0443\u0442\u0438 \u2193")}</span>
       </div>
       <!-- \u0417\u0433\u043E\u0440\u043D\u0443\u0442\u0438\u0439 \u0432\u0438\u0433\u043B\u044F\u0434 -->
       <div id="proj-timeline-collapsed-${p.id}" style="background:rgba(255,255,255,0.5);border-radius:10px;padding:9px 11px">
@@ -5392,7 +5392,7 @@ ${lines.join("\n")}`;
       <!-- \u0420\u043E\u0437\u0433\u043E\u0440\u043D\u0443\u0442\u0438\u0439 \u0432\u0438\u0433\u043B\u044F\u0434 -->
       <div id="proj-timeline-full-${p.id}" style="display:none">
         ${steps.map((s, i) => `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;${i < steps.length - 1 ? "border-bottom:1px solid rgba(30,16,64,0.05)" : ""}">
-          <div onclick="toggleProjectStep('${p.id}','${s.id}')" style="width:18px;height:18px;border-radius:6px;border:1.5px solid ${s.done ? "#3d2e1e" : "rgba(30,16,64,0.18)"};background:${s.done ? "#3d2e1e" : "rgba(255,255,255,0.65)"};display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;font-size:10px;color:white">${s.done ? "\u2713" : ""}</div>
+          <div data-action="toggle-project-step" data-project-id="${p.id}" data-step-id="${s.id}" style="width:18px;height:18px;border-radius:6px;border:1.5px solid ${s.done ? "#3d2e1e" : "rgba(30,16,64,0.18)"};background:${s.done ? "#3d2e1e" : "rgba(255,255,255,0.65)"};display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;font-size:10px;color:white">${s.done ? "\u2713" : ""}</div>
           <div style="flex:1;font-size:13px;font-weight:${!s.done && s === nextStep ? 700 : 500};color:${s.done ? "rgba(30,16,64,0.3)" : "#1e1040"};${s.done ? "text-decoration:line-through" : ""}">${escapeHtml(s.text)}</div>
         </div>`).join("")}
       </div>
@@ -5411,7 +5411,7 @@ ${lines.join("\n")}`;
     </div>` : ""}
 
     <!-- \u041D\u043E\u0442\u0430\u0442\u043A\u0438 \u2192 \u043F\u0430\u043F\u043A\u0430 -->
-    <div onclick="switchTab('notes');setTimeout(()=>openNotesFolder('${escapeJsArg(p.name)}'),150)" style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.55);border:1.5px dashed rgba(30,16,64,0.14);border-radius:12px;padding:10px 12px;margin-bottom:10px;cursor:pointer">
+    <div data-action="open-notes-folder" data-folder="${escapeHtml(p.name)}" style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.55);border:1.5px dashed rgba(30,16,64,0.14);border-radius:12px;padding:10px 12px;margin-bottom:10px;cursor:pointer">
       <div style="width:30px;height:30px;border-radius:9px;background:rgba(61,46,30,0.08);display:flex;align-items:center;justify-content:center;flex-shrink:0">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3d2e1e" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
       </div>
@@ -21088,6 +21088,33 @@ ${logLines}
         if (typeof window === "undefined") return;
         if (typeof window.confirmQuitRelapse === "function") window.confirmQuitRelapse(data.id);
         if (typeof window.renderEvening === "function") setTimeout(window.renderEvening, 50);
+      });
+      reg("open-project", (data) => {
+        if (typeof window !== "undefined" && typeof window.openProjectWorkspace === "function") {
+          window.openProjectWorkspace(data.id);
+        }
+      });
+      reg("close-project-workspace", () => {
+        if (typeof window !== "undefined" && typeof window.closeProjectWorkspace === "function") {
+          window.closeProjectWorkspace();
+        }
+      });
+      reg("toggle-project-timeline", (data) => {
+        if (typeof window !== "undefined" && typeof window.toggleProjectTimeline === "function") {
+          window.toggleProjectTimeline(data.id);
+        }
+      });
+      reg("toggle-project-step", (data) => {
+        if (typeof window !== "undefined" && typeof window.toggleProjectStep === "function") {
+          window.toggleProjectStep(data.projectId, data.stepId);
+        }
+      });
+      reg("open-notes-folder", (data) => {
+        if (typeof window === "undefined") return;
+        if (typeof window.switchTab === "function") window.switchTab("notes");
+        if (typeof window.openNotesFolder === "function") {
+          setTimeout(() => window.openNotesFolder(data.folder), 150);
+        }
       });
     }
   });
