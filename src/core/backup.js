@@ -115,6 +115,13 @@ export function createSelectiveBackup(keys, label) {
 
 // Відновлює бекап за key. Перезаписує ВСI ключі що були у snapshot.
 // Інші ключі (не з snapshot) — не чіпає.
+//
+// DGH6F 16.05: race lock через window.__nm_restoring + custom event'и
+// nm-restore-start / nm-restore-end. Listener'и (OWL scheduler, autosave,
+// nm-data-changed) можуть перевіряти `if (window.__nm_restoring) return` щоб
+// не перезаписати дані що зараз відновлюються. Без lock'а було можливо:
+// restore відновлює nm_inbox → OWL listener тригериться → переписує своєю
+// версією → юзер бачить НЕ restore-стан.
 export function restoreBackup(backupKey) {
   if (!backupKey || !backupKey.startsWith(BACKUP_PREFIX)) return false;
   const raw = localStorage.getItem(backupKey);
@@ -122,11 +129,19 @@ export function restoreBackup(backupKey) {
   try {
     const parsed = JSON.parse(raw);
     if (!parsed || typeof parsed.data !== 'object') return false;
-    Object.entries(parsed.data).forEach(([k, v]) => {
-      try { localStorage.setItem(k, v); } catch {}
-    });
-    return true;
+    try { window.__nm_restoring = true; } catch {}
+    try { window.dispatchEvent(new CustomEvent('nm-restore-start', { detail: { backupKey } })); } catch {}
+    try {
+      Object.entries(parsed.data).forEach(([k, v]) => {
+        try { localStorage.setItem(k, v); } catch {}
+      });
+      return true;
+    } finally {
+      try { window.__nm_restoring = false; } catch {}
+      try { window.dispatchEvent(new CustomEvent('nm-restore-end', { detail: { backupKey } })); } catch {}
+    }
   } catch (e) {
+    try { window.__nm_restoring = false; } catch {}
     console.error('[backup] restore failed:', backupKey, e);
     return false;
   }
