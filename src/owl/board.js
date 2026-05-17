@@ -33,7 +33,7 @@ const _owlTabSwipes = {};
 function _owlTabHTML(tab) {
   const t = tab;
   return `
-    <div id="owl-tab-collapsed-${t}" class="owl-collapsed" style="display:none" onclick="toggleOwlTabChat('${t}')">
+    <div id="owl-tab-collapsed-${t}" class="owl-collapsed" style="display:none" data-action="toggle-owl-collapsed" data-tab="${t}">
       <div class="owl-collapsed-avatar">🦉</div>
       <div class="owl-collapsed-text" id="owl-tab-ctext-${t}"></div>
     </div>
@@ -48,9 +48,9 @@ function _owlTabHTML(tab) {
       </div>
     </div>
     <div class="owl-chips-wrapper" id="owl-tab-chips-wrap-${t}">
-      <button class="owl-chips-arrow owl-chips-arrow-left" id="owl-tab-chips-left-${t}" onclick="scrollOwlTabChips('${t}',-1)">‹</button>
+      <button class="owl-chips-arrow owl-chips-arrow-left" id="owl-tab-chips-left-${t}" data-action="scroll-owl-chips" data-tab="${t}" data-dir="-1">‹</button>
       <div id="owl-tab-chips-${t}" class="owl-speech-chips"></div>
-      <button class="owl-chips-arrow owl-chips-arrow-right" id="owl-tab-chips-right-${t}" onclick="scrollOwlTabChips('${t}',1)">›</button>
+      <button class="owl-chips-arrow owl-chips-arrow-right" id="owl-tab-chips-right-${t}" data-action="scroll-owl-chips" data-tab="${t}" data-dir="1">›</button>
     </div>`;
 }
 
