@@ -4,7 +4,7 @@
 >
 > Старіші сесії (до 6GoDe 19.04) — в [`_archive/SESSION_STATE_archive.md`](../_archive/SESSION_STATE_archive.md).
 
-**Оновлено:** 2026-05-16 (сесія **DGH6F** — pre-Supabase hardening: `NM_KEYS` audit (+44 ключі, з них 5 = юзерські дані що `clearAllData` залишала) + boot-time assertion `_assertAllKeysKnown` + brain pre-commit-screenshot guard + lessons workflow-curl. 3 коміти, Council 5 агентів Sonnet, ~1.5 години). Раніше: 2026-05-16 (сесія **e9t3N** — AI-тестер інфраструктура + Security аудит з 8 системними фіксами + Dependabot + Claude Security Action. 15+ комітів, Council 9 агентів Sonnet, ~10 годин). Раніше: 2026-05-13 (сесія **nliW8** — 4 фази: B-170 регресія + Phase 2 уніфікація save_finance + Пункт 3 delete_medication повний undo + Пункт 4 B-178 cross-chat + 6 авто-сторожів-хуків. 24 коміти v862→v874+, Council 16 агентів Sonnet).
+**Оновлено:** 2026-05-16 (сесія **DGH6F** — pre-Supabase hardening: (A) `NM_KEYS` audit +44 ключі, (B) Backup механізм 4 латентні дірки (quota check / race lock / migration flag reset / runMigrations swallow→log) + boot-time `_assertAllKeysKnown` + brain pre-commit-screenshot guard + lessons workflow-curl. 7 комітів, Council 5 агентів Sonnet, ~3 години). Раніше: 2026-05-16 (сесія **e9t3N** — AI-тестер інфраструктура + Security аудит з 8 системними фіксами + Dependabot + Claude Security Action. 15+ комітів, Council 9 агентів Sonnet, ~10 годин). Раніше: 2026-05-13 (сесія **nliW8** — 4 фази: B-170 регресія + Phase 2 уніфікація save_finance + Пункт 3 delete_medication повний undo + Пункт 4 B-178 cross-chat + 6 авто-сторожів-хуків. 24 коміти v862→v874+, Council 16 агентів Sonnet).
 
 ---
 
@@ -23,26 +23,36 @@ Council 5 паралельних агентів Sonnet (🕵️ Критик / �
 
 1. **`56f4d41`** — `src/core/boot.js` NM_KEYS розширено: data (+5), settings (+14), cache (+24), patterns (+1) → 94 ключі. Boot-time `_assertAllKeysKnown()` сканує localStorage у кінці `bootApp()` і console.warn якщо знайде nm_* поза реєстром. + `docs/DATA_SCHEMA.md` шапка оновлена з посиланням на NM_KEYS як джерело правди. + CACHE_NAME `nm-20260516-1830`.
 
-#### B. Brain-задачі (моніторинг власної інфраструктури)
+#### B. Backup механізм — 4 латентні дірки з Pre-mortem (4 коміти)
 
-1. **`ae96f1a`** — `.claude/hooks/pre-commit-screenshot.js` локальний guard (другий рівень після workflow): блокує commit якщо staged JSON містить `"screenshot_b64": "<base64>"`. Smoke 4/4 (no-commit/no-JSON/base64/null). + lessons урок «Workflow з зовнішнім API — спершу локальний міні-тест curl» з brain-спостереження про 3 невдалих запуски Claude Security Action у e9t3N.
+Усі 4 знахідки Council 💎 Pre-mortem верифіковані Головою (читання реального коду в `backup.js` + `boot.js:1195`). Це **латентні дірки** — не зашкодили активно, але кожна спрацювала б при першому ризикованому Supabase backup. Закриті ДО Supabase сесії.
+
+2. **`bdc3aee`** — Quota check ПЕРЕД `setItem` у `createSelectiveBackup`. `_estimateUsedBytes()` рахує (key+value)×2 (UTF-16). Поріг `QUOTA_BUDGET_BYTES = 4 MB` (нижче iPhone Safari 5 MB ліміту). Якщо >поріг → спроба cleanup, потім якщо все одно >поріг → `console.warn` з конкретикою (MB payload + MB existing) замість тихого `return null`.
+3. **`5d52507`** — Race lock `window.__nm_restoring = true` + CustomEvent'и `nm-restore-start` / `nm-restore-end` у `restoreBackup`. Try/finally гарантує reset навіть при exception. Сигнал-інтерфейс для майбутніх listener'ів (OWL scheduler, restore UI) — `if (window.__nm_restoring) return` щоб не перезаписати restore-стан.
+4. **`91cfccc`** — Migration flag reset при `restoreBackup`. Константа `KEY_MIGRATION_FLAGS` (key → list of flags) зібрана grep'ом по `boot.js`. При restore ключа `nm_events` — видаляється `nm_events_uuid_migrated_v10` → наступний boot повторно мігрує відновлений старий формат → no mixed UUID/number state.
+5. **`9657117`** — `init() runMigrations` swallow → запис у `nm_error_log` + `console.error`. Прямий localStorage запис без import `logger.js` (циклічна залежність logger→nav→boot). Формат сумісний з `logger.saveErrorLog` (ts/type/msg/src/tab/stack/actions). CACHE bump `nm-20260516-1930`. Інші 7 `setupX()` catch залишені порожніми (некритичні + захист від крашу логування саме).
+
+#### C. Brain-задачі (моніторинг власної інфраструктури)
+
+6. **`ae96f1a`** — `.claude/hooks/pre-commit-screenshot.js` локальний guard (другий рівень після workflow): блокує commit якщо staged JSON містить `"screenshot_b64": "<base64>"`. Smoke 4/4 (no-commit/no-JSON/base64/null). + lessons урок «Workflow з зовнішнім API — спершу локальний міні-тест curl» з brain-спостереження про 3 невдалих запуски Claude Security Action у e9t3N.
 
 ### Council висновки (відкладено на наступні сесії)
 
 - **Event Delegation Refactor (BLOCKER #1):** 334 onclick (185 HTML + 149 JS, не 300 як було записано у ROADMAP). Стратегія Strangler (Стратег), не Big Bang. Новий файл `src/core/delegation.js` (не event-bus, не nav.js). Flat контракт `data-action="X" data-id="Y"` — UUID-immune. Order: finance-chat → me → tasks → inbox → ... → finance-modals (35) → index.html (185) останнім. CSP enablement = коли `grep onclick src/` = 0 + Report-Only 24-48 год. Quick win Оптиміст: 16 onclick у `index.html` headers (`openSettings`/`openHelp`) — 30 хв роботи. Існуючі delegation patterns: `chips.js:356`, `nav.js:649`, `habits.js:239`.
-- **Backup механізм (BLOCKER #4):** `src/core/backup.js` ВЖЕ існує з `createSelectiveBackup`/`restoreBackup`/`listBackups`/`cleanupOldBackups`. Pre-mortem знайшов 4 додаткові дірки що треба закрити: (1) quota check перед backup; (2) `__nm_restoring` race lock; (3) migration flag reset у restoreBackup; (4) `init()` ковтає помилки порожнім catch у `boot.js:1113`.
+- **Backup Phase 2 (BLOCKER #4 повний):** ✅ латентні дірки закриті Phase 1 (4 коміти DGH6F). Залишилось для Supabase: full backup (зараз тільки selective) + Restore UI у Налаштуваннях («Відкат до знімка» + список з `listBackups()` + metadata `getBackupInfo()`) + JSON export (download файлом для перенесення поза localStorage перед великою міграцією).
 
 ### Гілка + контекст
 
 - Гілка: `claude/start-session-DGH6F`
-- Council save: знайшов **B-184** (активний баг закритий цією сесією — clearAllData wipe не повний)
-- Розмір сесії: 3 коміти (1 фікс + 1 brain guard + 1 brain урок), ~1.5 години
+- Council save: знайшов **B-184** (активний баг — clearAllData wipe не повний) + **B-185** (4 латентні дірки Backup механізму — Pre-mortem)
+- Розмір сесії: 7 комітів (1 NM_KEYS audit + 1 docs + 4 backup hardening + 1 brain guard), ~3 години
 - Pre-commit hooks залишились усі стабільні (8 хуків — i18n / imports / trash-sync / schema / reverser / uuid-grep / screenshot / testing-log)
 
 ### Що далі (узгоджено з Романом)
 
-1. **Backup hardening (~1.5-2 год)** — 4 фіксі з Council Pre-mortem (quota check / race lock / flag reset / swallow). Кожен окремий коміт.
-2. **Event Delegation Phase 1а (~45-60 хв)** — `delegation.js` + 16 header onclick + pre-commit freeze hook. ВIДКЛАДЕНО.
+1. ✅ **Backup hardening Phase 1** — 4 латентні дірки закрито (B-185).
+2. **Event Delegation Phase 1а (~45-60 хв)** — `delegation.js` + 16 header onclick + pre-commit freeze hook. Наступна задача.
+3. **Backup Phase 2 (~2 год)** — full backup + Restore UI + JSON export. Перед Supabase сесією.
 
 ---
 
