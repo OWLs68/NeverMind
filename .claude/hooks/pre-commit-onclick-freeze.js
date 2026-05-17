@@ -43,7 +43,7 @@ if (!/\bgit\s+commit\b/.test(cmd)) {
 let diff = '';
 try {
   diff = execSync(
-    "git diff --cached -- '*.js' '*.html'",
+    "git diff --cached -- '*.js' '*.html' ':!_archive/**' ':!bundle.js'",
     { encoding: 'utf8', maxBuffer: 50 * 1024 * 1024 }
   );
 } catch {

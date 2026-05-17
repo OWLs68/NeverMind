@@ -44,8 +44,21 @@ const REVERSERS = {
     ? { type: 'tool_call', tool: 'delete_reminder', args: { text: args.text, time: args.time, date: args.date } }
     : null,
 
-  // Health reversers ВИДАЛЕНО (EU AI Act compliance JMQuT 17.05.2026) —
-  // create_health_card / add_allergy / add_medication більше не існують як AI tools.
+  // db0YY 12.05 — Health reversers (Pre-mortem Сесії 3B-8 знайшов як забутий пункт).
+  create_health_card: (args, result) => result?.id != null
+    ? { type: 'tool_call', tool: 'delete_health_card', args: { card_id: result.id, comment: 'undo' } }
+    : null,
+
+  add_allergy: (args, result) => result?.id != null
+    ? { type: 'tool_call', tool: 'delete_allergy', args: { allergy_id: result.id, comment: 'undo' } }
+    : null,
+
+  // nliW8 13.05: add_medication reverser — закриває повний undo circle.
+  // result = новий med object з generateUUID() id (health.js addMedicationToCard).
+  // args.card_id потрібен бо med живе у nm_health_cards[card_id].medications[].
+  add_medication: (args, result) => (result?.id != null && args?.card_id)
+    ? { type: 'tool_call', tool: 'delete_medication', args: { card_id: args.card_id, med_id: result.id, comment: 'undo' } }
+    : null,
 
   // === Type B: snapshot restore (destructive replace tools) ===
 
@@ -108,6 +121,8 @@ export function summarize(tool, args) {
       const total = args?.blocks?.length || 0;
       return `Розпорядок: ${blockDesc}${total > 1 ? ` +${total - 1}` : ''} (${days})`;
     }
+    case 'create_health_card': return `Картка: ${args?.name || '?'}`;
+    case 'add_allergy':        return `Алергія: ${args?.name || '?'}`;
     default: return tool;
   }
 }

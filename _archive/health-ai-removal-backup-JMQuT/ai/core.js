@@ -15,7 +15,7 @@ import { getEvents, getTodayRoutine, getRoutine } from '../tabs/calendar.js';
 import { getEveningMood, getMomentsContext, getEveningContext } from '../tabs/evening.js';
 import { addEveningBarMsg } from '../tabs/evening-chat.js';
 import { addMeChatMsg } from '../tabs/me.js';
-import { addHealthChatMsg } from '../tabs/health.js'; // getHealthContext removed (EU AI Act JMQuT 17.05.2026)
+import { getHealthContext, addHealthChatMsg } from '../tabs/health.js';
 import { getProjectsContext, addProjectsChatMsg } from '../tabs/projects.js';
 import { _getTabChatAHeight, _tabChatState, closeOwlChat } from '../owl/inbox-board.js';
 import { getBoardContext } from '../owl/proactive.js';
@@ -238,9 +238,13 @@ export function getAIContext() {
     if (finCtx) parts.push(finCtx);
   } catch(e) {}
 
-  // === Здоров'я — getHealthContext() ВИДАЛЕНО (EU AI Act compliance JMQuT 17.05.2026) ===
-  // PHI (медкартки/алергії/ліки) НЕ передається у AI-контекст у жодному з 8 чатів.
-  // Health = ізольована вкладка (UI-only). Юзер сам редагує медкартки через UI.
+  // === Здоров'я (Фаза 1, 15.04 jMR6m) — алергії + картки + ліки + прийоми ===
+  // Принцип "один мозок": OWL бачить здоров'я у ВСІХ чатах (Inbox, Нотатки, Фінанси тощо),
+  // а не лише у чат-барі Здоров'я. Алергії всередині — критичні правила попередження.
+  try {
+    const healthCtx = getHealthContext();
+    if (healthCtx) parts.push(healthCtx);
+  } catch(e) {}
 
   // === Проекти (18.04 pvZG1) — принцип "один мозок" для Проектів ===
   // Назва, % готовності, наступний крок, днів тиші. До 5 проектів.

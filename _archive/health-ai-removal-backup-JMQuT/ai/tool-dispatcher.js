@@ -26,8 +26,23 @@ import { UI_TOOL_NAMES, handleUITool } from './ui-tools.js';
 import { addFact } from './memory.js';
 import { applyAllGuards } from '../data/dispatcher-guards.js';
 import { generateUUID } from '../core/uuid.js';
-// === Health imports removed (EU AI Act compliance JMQuT 17.05.2026) ===
-// AI більше не торкається health-даних. UI CRUD у tabs/health.js залишається.
+import {
+  createHealthCardProgrammatic,
+  editHealthCardProgrammatic,
+  deleteHealthCardProgrammatic,
+  updateHealthCardStatusProgrammatic,
+  startHealthInterview,
+  addMedicationToCard,
+  editMedicationInCard,
+  deleteMedicationFromCard,
+  logMedicationDose,
+  addAllergy,
+  deleteAllergy,
+  addHealthHistoryEntry,
+  renderHealth,
+  getHealthCards,
+  HEALTH_STATUS_DEFS,
+} from '../tabs/health.js';
 import { processUniversalAction } from '../tabs/habits.js';
 import { currentTab, switchTab } from '../core/nav.js';
 import {
@@ -64,25 +79,209 @@ import { executeReverse } from '../data/action-undo.js';
 // зовнішні імпорти). Strangler — прибрати при cleanup.
 import { toolCallToAction as _toolCallToUniversalAction } from '../core/action-mapper.js';
 export { _toolCallToUniversalAction };
-// ===== Health handlers REMOVED (EU AI Act compliance JMQuT 17.05.2026) =====
-// 11 tools (create_health_card, edit_health_card, delete_health_card, update_health_card_status,
-//  add_medication, edit_medication, delete_medication, log_medication_dose,
-//  add_allergy, delete_allergy, add_health_history_entry) — AI більше їх не викликає.
-// Заглушка-noop повертає false, тобто dispatcher піде далі по chain.
+
+// ===== Health handlers =====
+// Приймає tool_call name + args, повертає true якщо обробив (і викликав addMsg).
 function _handleHealthTool(name, args, addMsg) {
-  // Health tools видалено з prompts.js — AI їх не повинен викликати.
-  // Якщо все ж викличе (стара conversation history, бажний прозорий fail):
-  const HEALTH_TOOLS = new Set([
-    'create_health_card','edit_health_card','delete_health_card','update_health_card_status',
-    'add_medication','edit_medication','delete_medication','log_medication_dose',
-    'add_allergy','delete_allergy','add_health_history_entry'
-  ]);
-  if (HEALTH_TOOLS.has(name)) {
-    console.warn('[dispatcher] Health tool blocked (EU AI Act):', name);
-    addMsg('agent', '🚫 AI більше не має доступу до медичних даних. Відкрий вкладку Здоровʼя і додай через UI.');
-    return true; // обробили (через блок)
+  switch (name) {
+    case 'create_health_card': {
+      if (!args.name) { addMsg('agent', 'Потрібна назва картки.'); return true; }
+      const created = createHealthCardProgrammatic({
+        name: args.name,
+        subtitle: args.subtitle,
+        doctor: args.doctor,
+        doctorRecommendations: args.doctor_recommendations,
+        doctorConclusion: args.doctor_conclusion,
+        startDate: args.start_date,
+        nextAppointment: args.next_appointment_date
+          ? { date: args.next_appointment_date, time: args.next_appointment_time || '' }
+          : null,
+        status: args.status,
+        initialHistoryEntry: args.initial_history_text,
+      });
+      if (created) {
+        if (currentTab === 'health') renderHealth();
+        if (currentTab === 'health') {
+          // Юзер уже у Здоров'ї — інтерв'ю одразу у Health-чаті, без redirect-повідомлення
+          addMsg('agent', `🏥 Створив картку "${created.name}".`);
+        } else {
+          // Юзер у іншому чаті — повідомлення-вказівник + інтерв'ю чекає у Health-чаті
+          addMsg('agent', `🏥 Створив картку "${created.name}" у Здоровʼї. Пройди коротке опитування там — 3 чіпи виставлять точний статус.`);
+        }
+        // db0YY: action-log запис для universal undo. Реверс — delete_health_card.
+        logAction('create_health_card', args, created.id, null, 'dispatcher');
+        setTimeout(() => { try { startHealthInterview(created); } catch(e) {} }, 300);
+      } else {
+        addMsg('agent', 'Не вдалось створити картку — потрібна назва.');
+      }
+      return true;
+    }
+    case 'edit_health_card': {
+      const updates = {};
+      if (args.name !== undefined) updates.name = args.name;
+      if (args.subtitle !== undefined) updates.subtitle = args.subtitle;
+      if (args.doctor !== undefined) updates.doctor = args.doctor;
+      if (args.doctor_recommendations !== undefined) updates.doctorRecommendations = args.doctor_recommendations;
+      if (args.doctor_conclusion !== undefined) updates.doctorConclusion = args.doctor_conclusion;
+      if (args.start_date !== undefined) updates.startDate = args.start_date;
+      if (args.status !== undefined) updates.status = args.status;
+      if (args.next_appointment_date !== undefined) {
+        updates.nextAppointment = args.next_appointment_date
+          ? { date: args.next_appointment_date, time: args.next_appointment_time || '' }
+          : null;
+      }
+      const updated = editHealthCardProgrammatic(args.card_id, updates);
+      if (updated) {
+        if (currentTab === 'health') renderHealth();
+        addMsg('agent', `✓ Оновив картку "${updated.name}". ${args.comment || ''}`.trim());
+      } else {
+        addMsg('agent', 'Не знайшов картку для оновлення.');
+      }
+      return true;
+    }
+    case 'delete_health_card': {
+      const ok = deleteHealthCardProgrammatic(args.card_id);
+      if (ok) {
+        if (currentTab === 'health') renderHealth();
+        addMsg('agent', `🗑️ Картку видалено (7 днів у кошику). ${args.comment || ''}`.trim());
+      } else {
+        addMsg('agent', 'Не знайшов картку для видалення.');
+      }
+      return true;
+    }
+    case 'update_health_card_status': {
+      const updated = updateHealthCardStatusProgrammatic(args.card_id, args.status);
+      if (updated) {
+        if (currentTab === 'health') renderHealth();
+        const def = HEALTH_STATUS_DEFS[args.status] || {};
+        addMsg('agent', `✓ Статус "${updated.name}": ${def.icon || ''} ${def.label || args.status}. ${args.comment || ''}`.trim());
+      } else {
+        addMsg('agent', 'Не знайшов картку або невірний статус.');
+      }
+      return true;
+    }
+    case 'add_medication': {
+      if (!args.card_id || !args.med_name) { addMsg('agent', 'Потрібні картка і назва препарату.'); return true; }
+      const med = addMedicationToCard(args.card_id, {
+        name: args.med_name,
+        dosage: args.dosage,
+        schedule: args.schedule,
+        courseDuration: args.course_duration,
+      });
+      if (med) {
+        if (currentTab === 'health') renderHealth();
+        addMsg('agent', `💊 Додав "${args.med_name}" до картки. ${args.comment || ''}`.trim());
+        // nliW8 13.05: action-log для universal undo coverage (B-182 + delete_medication tool).
+        // Reverser add_medication → delete_medication додано у action-reversers.js.
+        logAction('add_medication', args, med.id, null, 'dispatcher');
+      } else {
+        addMsg('agent', 'Не знайшов картку для препарату.');
+      }
+      return true;
+    }
+    case 'delete_medication': {
+      // nliW8 13.05: reverse counterpart до add_medication. Direct handler — для AI-виклику
+      // напряму ("видали препарат X"). Дзеркальний case у processUniversalAction (habits.js)
+      // потрібен для DI flow через executeReverse (урок B-174).
+      if (!args.card_id || !args.med_id) { addMsg('agent', 'Потрібні картка і ID препарату.'); return true; }
+      const ok = deleteMedicationFromCard(args.card_id, args.med_id);
+      if (ok) {
+        if (currentTab === 'health') renderHealth();
+        addMsg('agent', `🗑️ Препарат видалено (7 днів у кошику). ${args.comment || ''}`.trim());
+      } else {
+        addMsg('agent', 'Не знайшов препарат для видалення.');
+      }
+      return true;
+    }
+    case 'edit_medication': {
+      const updates = {};
+      if (args.med_name !== undefined) updates.name = args.med_name;
+      if (args.dosage !== undefined) updates.dosage = args.dosage;
+      if (args.schedule !== undefined) updates.schedule = args.schedule;
+      if (args.course_duration !== undefined) updates.courseDuration = args.course_duration;
+      const ok = editMedicationInCard(args.card_id, args.med_id, updates);
+      if (ok) {
+        if (currentTab === 'health') renderHealth();
+        addMsg('agent', `✓ Оновив препарат. ${args.comment || ''}`.trim());
+      } else {
+        addMsg('agent', 'Не знайшов препарат для оновлення.');
+      }
+      return true;
+    }
+    case 'log_medication_dose': {
+      const med = logMedicationDose(args.card_id, args.med_name);
+      if (med) {
+        if (currentTab === 'health') renderHealth();
+        addMsg('agent', `✓ Позначив дозу "${med.name}". ${args.comment || ''}`.trim());
+      } else {
+        addMsg('agent', 'Не знайшов препарат для відмітки.');
+      }
+      return true;
+    }
+    case 'add_allergy': {
+      if (!args.name) { addMsg('agent', 'Потрібна назва алергену.'); return true; }
+      const added = addAllergy(args.name, args.notes || '');
+      if (added) {
+        if (currentTab === 'health') renderHealth();
+        addMsg('agent', `🚨 Додав алергію: ${args.name}. ${args.comment || ''}`.trim());
+        // db0YY: action-log для universal undo. Реверс — delete_allergy.
+        logAction('add_allergy', args, added.id, null, 'dispatcher');
+      } else {
+        addMsg('agent', `Алергія "${args.name}" вже у списку.`);
+      }
+      return true;
+    }
+    case 'delete_allergy': {
+      const ok = deleteAllergy(args.allergy_id);
+      if (currentTab === 'health') renderHealth();
+      addMsg('agent', ok ? '🗑️ Алергію видалено.' : 'Не знайшов алергію для видалення.');
+      return true;
+    }
+    case 'add_health_history_entry': {
+      if (!args.text) { addMsg('agent', 'Потрібен текст запису.'); return true; }
+      // Fallback на загальну "Здоровʼя" якщо card_id відсутній або невалідний.
+      // Виправлено 21.04 Gg3Fy: Роман не хоче "10 нових папок" — все разове у одну картку.
+      // NpBmN audit fix #8: розрізняємо два кейси —
+      //   (a) card_id не передано → AI/юзер хоче загальний журнал → тихий fallback
+      //   (b) card_id передано АЛЕ картки нема (юзер видалив поки тримав чіп) → попередимо юзера
+      let targetCardId = args.card_id;
+      let cards = getHealthCards();
+      const requestedSpecific = targetCardId != null;
+      const cardExists = requestedSpecific && cards.some(c => c.id === targetCardId);
+      const isStale = requestedSpecific && !cardExists;
+      if (!targetCardId || !cardExists) {
+        const general = cards.find(c => c.name === 'Здоровʼя' || c.name === 'Здоровя' || c.name === "Здоров'я");
+        if (general) {
+          targetCardId = general.id;
+        } else {
+          const created = createHealthCardProgrammatic({
+            name: 'Здоровʼя',
+            subtitle: 'Загальний журнал',
+          });
+          if (created) targetCardId = created.id;
+        }
+      }
+      const entry = addHealthHistoryEntry(targetCardId, args.entry_type || 'manual', args.text);
+      if (entry) {
+        // Дубль у Нотатки — НЕ автоматично. Сова вирішує сама через окремий save_note
+        // коли запис значущий (тривалий симптом, діагноз, важлива зміна). Разові дрібниці
+        // → тільки картка, щоб не перетворювати Нотатки на архів кожного чиха.
+        if (currentTab === 'health') renderHealth();
+        cards = getHealthCards();
+        const card = cards.find(c => c.id === targetCardId);
+        const cardName = card ? card.name : 'Здоровʼя';
+        const prefix = isStale
+          ? `⚠️ Картку видалено — записав у "${cardName}":`
+          : `📝 Записав у картку "${cardName}":`;
+        addMsg('agent', `${prefix} ${args.text}`);
+      } else {
+        addMsg('agent', 'Не вдалось зберегти запис.');
+      }
+      return true;
+    }
+    default:
+      return false;
   }
-  return false;
 }
 
 // ===== Memory / Finance-category handlers =====

@@ -1,0 +1,184 @@
+// ============================================================
+// owl/board-utils.js — Pruning Engine helpers (Фаза 2 UVKL1 27.04.2026)
+// ============================================================
+//
+// Призначення: фільтр повідомлень табла від посилань на вже-неактивні
+// сутності. Коли юзер закриває задачу / виконує звичку / видаляє нотатку —
+// усі повідомлення сови які посилались тільки на ці сутності зникають
+// з табла миттєво (через nm-data-changed re-render) і не передаються
+// у boardHistory наступної генерації (сова не може процитувати чого
+// не бачить).
+//
+// Архітектурний план: docs/OWL_SILENCE_PRUNING_PLAN.md → Фаза 2.
+// ============================================================
+
+import { getTasks } from '../tabs/tasks.js';
+import { getHabits, getHabitLog, getQuitStatus } from '../tabs/habits.js';
+import { getEvents } from '../tabs/calendar.js';
+import { getNotes } from '../tabs/notes.js';
+
+const todayISO = () => new Date().toISOString().slice(0, 10);
+
+// Перевіряє чи посилання на сутність ще "актуальне" для табла.
+// ref: рядок типу "task_888", "habit_42", "event_123", "note_55", "project_7", "transaction_xxx".
+// Повертає true якщо сутність ще варта згадки сови; false якщо закрита/видалена/неактуальна.
+// Невідомий тип → true (не блокуємо щоб не втрачати потенційно корисні повідомлення).
+export function isEntityRelevant(ref) {
+  if (typeof ref !== 'string') return false;
+  const idx = ref.indexOf('_');
+  if (idx < 0) return false;
+  const type = ref.slice(0, idx);
+  const idRaw = ref.slice(idx + 1);
+  if (!idRaw) return false;
+  // ID може бути числом (Date.now) або рядком (UUID). Зберігаємо обидва шляхи.
+  const idNum = Number(idRaw);
+  const matchId = (x) => x === idRaw || x === idNum || (idNum && Number(x) === idNum);
+
+  try {
+    if (type === 'task') {
+      const t = getTasks().find(x => matchId(x.id));
+      if (!t) return false; // видалена
+      if (t.status !== 'active') return false; // закрита/архів
+      // Прострочений dueDate з минулого — не релевантний (сова має нагадати один раз
+      // через [ПРОСТРОЧЕНО] контекст, не з історії)
+      if (t.dueDate && t.dueDate < todayISO()) return false;
+      return true;
+    }
+    if (type === 'habit') {
+      const h = getHabits().find(x => matchId(x.id));
+      if (!h) return false;
+      if (h.type === 'quit') {
+        // Quit-челенджі завжди актуальні поки існують (стрік триває кожен день)
+        return true;
+      }
+      const todayKey = new Date().toDateString();
+      const log = getHabitLog();
+      const doneToday = !!log[todayKey]?.[h.id];
+      return !doneToday; // якщо вже виконана сьогодні — не нагадуй
+    }
+    if (type === 'event') {
+      const e = getEvents().find(x => matchId(x.id));
+      if (!e) return false; // видалена
+      // Подія минула — не нагадуй (минулі події закриваються через followups.event-passed)
+      try {
+        const dt = e.time
+          ? new Date(`${e.date}T${e.time}`).getTime()
+          : new Date(`${e.date}T23:59`).getTime();
+        return dt >= Date.now();
+      } catch (err) {
+        return true; // парсинг впав — лишаємо
+      }
+    }
+    if (type === 'note') {
+      return getNotes().some(x => matchId(x.id));
+    }
+    if (type === 'project') {
+      const projects = JSON.parse(localStorage.getItem('nm_projects') || '[]');
+      const p = projects.find(x => matchId(x.id));
+      if (!p) return false;
+      if (p.status && p.status !== 'active') return false;
+      const progress = Number(p.progress || 0);
+      if (progress >= 100) return false;
+      return true;
+    }
+    if (type === 'transaction') {
+      // Транзакції — історичні факти, лишаємо релевантними якщо запис існує
+      const txs = JSON.parse(localStorage.getItem('nm_finance') || '[]');
+      return txs.some(x => matchId(x.id));
+    }
+  } catch (e) {
+    return true; // помилка читання — не блокуємо
+  }
+  return true; // невідомий тип — лишаємо (forward compat)
+}
+
+// Перевіряє чи повідомлення табла ще "живе".
+// msg: запис з unified-storage.
+// Повертає true якщо: немає entityRefs (загальне повідомлення), або хоч одне посилання активне.
+// false → повідомлення можна викидати з історії і UI.
+export function isMessageRelevant(msg) {
+  if (!msg) return false;
+  if (Array.isArray(msg.entityRefs) && msg.entityRefs.length > 0) {
+    return msg.entityRefs.some(isEntityRelevant);
+  }
+  // B-117 fix (QDIGl 04.05): content-based fallback для habit-повідомлень
+  // без entityRefs. Сценарій: AI генерує узагальнення «не виконано жодну
+  // звичку — активізуйся» без конкретного [habit_X] → entityRefs=[] →
+  // Pruning не фільтрує. Юзер виконує всі звички, але stale-нагадування
+  // лишається у табло. Перевіряємо реальний стан habits — якщо всі виконані
+  // сьогодні (включно з quit), це повідомлення вже неактуальне.
+  if (_isStaleHabitGeneralization(msg)) return false;
+  // B-127 fix (MPVly 05.05): аналог для задач. Сценарій: «Три активні задачі:
+  // 'A', 'B', 'C'. Що закриваємо?» — entityRefs порожні. Юзер закриває одну з
+  // цитованих → текст тепер обманливий. Витягуємо назви у лапках і шукаємо у
+  // nm_tasks: якщо хоч одна стала done → повідомлення stale.
+  if (_isStaleTaskGeneralization(msg)) return false;
+  return true;
+}
+
+// Детектор stale task-повідомлень. Шукає назви задач у одинарних/подвійних
+// лапках у тексті і перевіряє проти nm_tasks. Якщо хоч одна цитована задача
+// тепер 'done' — повідомлення з переліком активних застаріло.
+function _isStaleTaskGeneralization(msg) {
+  const topic = (msg.topic || '').toLowerCase();
+  const text = msg.text || '';
+  const lower = text.toLowerCase();
+  const isTaskTopic = /task|задач/.test(topic);
+  const isTaskTextRelevant = /(активн[іе].*задач|чекают.*виконан|що\s+закрива|закрива[єе]мо)/.test(lower);
+  if (!isTaskTopic && !isTaskTextRelevant) return false;
+
+  try {
+    const tasks = getTasks();
+    if (!tasks.length) return false;
+
+    // Витягуємо цитати у лапках: 'X', "X", „X“, «X»
+    const matches = text.match(/['"„«]([^'"„«»\n]{2,80})['"”»]/g) || [];
+    const cited = matches.map(m => m.replace(/^['"„«]|['"”»]$/g, '').trim().toLowerCase()).filter(Boolean);
+    if (cited.length === 0) return false;
+
+    return cited.some(name => {
+      const task = tasks.find(x => (x.title || '').toLowerCase() === name);
+      return task && task.status === 'done';
+    });
+  } catch (e) {
+    return false;
+  }
+}
+
+// Детектор stale habit-повідомлень без entityRefs. true → можна викидати.
+// Ширший за початковий — ловимо ОБИДВА кейси:
+//   1. «всі виконано» (текст «активізуйся / жодну виконано») — стале коли doneCount > 0
+//   2. «жодну не виконано» — стале коли реально хоч одну виконано
+// QDIGl 04.05: розширено бо raw кейс — Notes сова казала «жодну звичку» при 2/4.
+// Свідомо НЕ ловимо позитивні повідомлення (топ-тренд, прогрес, мотивація).
+function _isStaleHabitGeneralization(msg) {
+  const topic = (msg.topic || '').toLowerCase();
+  const text = (msg.text || '').toLowerCase();
+  const isHabitTopic = /habit|звич/.test(topic);
+  const isHabitTextNegative = /не\s+вико|не\s+відміч|жодн[аоу].*звич|активі[зс]уй|нагада[йю].*звич/.test(text);
+  if (!isHabitTopic && !isHabitTextNegative) return false;
+
+  try {
+    const habits = getHabits();
+    const buildHabits = habits.filter(h => h.type !== 'quit');
+    if (buildHabits.length === 0) return false;
+    const todayKey = new Date().toDateString();
+    const log = getHabitLog();
+    const doneCount = buildHabits.filter(h => !!log[todayKey]?.[h.id]).length;
+
+    // Якщо текст негативний («жодну / не виконано / активізуйся») але реально
+    // хоча б одну виконано → стале (повідомлення «жодну» вже неактуальне).
+    if (isHabitTextNegative && doneCount > 0) return true;
+    // Якщо все виконано — стале ТІЛЬКИ якщо текст негативний (нагадує).
+    // QDIGl audit fix: раніше ловило позитивні «3/3 чудово!» — викидало
+    // legitimne похвалу. Тепер позитивні habit_streak/daily_habits з
+    // нейтральним/позитивним текстом залишаються, навіть якщо все done.
+    if (doneCount === buildHabits.length && isHabitTextNegative) return true;
+    return false;
+  } catch (e) {
+    return false;
+  }
+}
+
+// Експорт у window для діагностики/ручного тестування з DevTools
+try { Object.assign(window, { isEntityRelevant, isMessageRelevant }); } catch {}

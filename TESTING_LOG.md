@@ -14,6 +14,31 @@
 
 > Тут живе те що треба перевірити **наступної iPhone-сесії**. Claude додає сюди після кожної міграції / нової фічі / зміни UI. Роман викреслює коли протестив (переносить у архів).
 
+### v926+ (deploy 17.05 — JMQuT Health AI Isolation Фаза 2: видалено 11 AI-tools + getHealthContext)
+
+**Контекст:** EU AI Act compliance. AI більше не торкається health-даних. Видалено 11 AI-tools (create_health_card, add_medication, add_allergy тощо) + `getHealthContext()` з загального промпту (PHI у всіх 8 чатах). UI CRUD Health НЕ змінено (працює як раніше). Чат-бар у Health видалятиметься у Фазі 4.
+
+**📝 Health UI має лишитись робочим (регресія-тест):**
+- [ ] Відкрив вкладку Здоровʼя → видно існуючі картки.
+- [ ] Тап «+» → додав картку «Тест» → збереглась, показана у списку.
+- [ ] Редагування картки руками → працює.
+- [ ] Свайп вліво на картці → видалення + toast «Скасувати» → undo відновлює.
+- [ ] Алергії секція — додати руками алергію → видно у списку.
+
+**🤖 AI-чати НЕ повинні створювати health-картки:**
+- [ ] Inbox: «Болить горло» → AI зберігає у `save_note(folder="Здоровʼя")` (НЕ створює медкартку).
+- [ ] Inbox: «У мене алергія на горіхи» → AI зберігає у Нотатки/Здоровʼя (НЕ викликає add_allergy).
+- [ ] Inbox: «Запамʼятай що у мене алергія на пеніцилін» → AI пише «🚫 AI більше не має доступу до медичних даних» (бо `save_memory_fact(category='health')` видалено з enum).
+- [ ] Інbox: «Експортуй медкартку» → AI скаже «Відкрий Здоровʼя і експортуй через UI» (бо `export_health_card` tool видалено).
+- [ ] Tasks/Notes/Finance чати: запитати «Що з моїми ліками?» → AI відповість «Не маю доступу» (бо `getHealthContext()` прибрано з контексту).
+
+**🚫 Has-to-fail сценарії (захист від регресій):**
+- [ ] Якщо AI випадково викличе старий tool (з conversation history) — dispatcher повертає «🚫 AI більше не має доступу...» (заглушка у `tool-dispatcher.js _handleHealthTool`).
+
+**Версія:** CACHE_NAME `nm-20260517-2230`, commit `JMQuT Phase 2`.
+
+---
+
 ### v906+ (deploy 16.05 — DGH6F Event Delegation Phase 1д: projects.js (5 onclick))
 
 **Контекст:** 5 onclick у `src/tabs/projects.js` мігровано. 5 нових actions у delegation.js (registry 18→23). Council Pre-mortem знайшов 1 pre-existing баг (`_syncProjectStepToTasks` fuzzy match) — НЕ цієї сесії, окремий ticket.

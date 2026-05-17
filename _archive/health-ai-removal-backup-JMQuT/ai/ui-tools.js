@@ -115,8 +115,14 @@ export const UI_TOOLS = [
       }
     }
   },
-  // export_health_card REMOVED (EU AI Act compliance JMQuT 17.05.2026) —
-  // юзер сам відкриває модалку експорту через UI кнопку у Health-вкладці.
+  {
+    type: "function",
+    function: {
+      name: "export_health_card",
+      description: "Відкрити модалку 'Медична картка' — готовий текст з алергіями/станами/ліками для копіювання лікарю. Юзер каже 'експортуй медкартку', 'зроби медичну картку'.",
+      parameters: { type: "object", properties: { _reasoning_log: { type: "string", description: "Внутрішні думки моделі ПЕРЕД дією: чому саме цей tool обрано, які сутності з контексту враховано, які ризики/альтернативи. 1-2 речення українською. ОБОВʼЯЗКОВО заповнюй — це параметр для покращення якості рішення (zero-shot CoT)." } }, required: ["_reasoning_log"], additionalProperties: false }
+    }
+  },
   {
     type: "function",
     function: {
@@ -234,7 +240,13 @@ export function handleUITool(name, args) {
         return { text: `Характер OWL: ${label}.` };
       }
 
-      // export_health_card case REMOVED (EU AI Act compliance JMQuT 17.05.2026).
+      case 'export_health_card':
+        if (typeof window.openHealthExport === 'function') {
+          switchTab('health');
+          setTimeout(() => window.openHealthExport(), 120);
+          return { text: 'Відкрив Медичну картку.' };
+        }
+        return { text: 'Вкладка Здоров\'я ще не готова.' };
 
       case 'request_quiet': {
         const hours = Math.max(1, Math.min(24, Number(args.duration_hours) || 4));

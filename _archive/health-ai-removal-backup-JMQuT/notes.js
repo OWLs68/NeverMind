@@ -1,0 +1,1397 @@
+// ============================================================
+// app-notes.js — Нотатки, папки, note view, note chat, notes AI bar
+// Функції: getNotes, renderNotes, openNoteView, addNoteFromInbox, getFolderIcon, sendNotesBarMessage
+// Залежності: app-core.js, app-ai.js
+// ============================================================
+
+import { currentTab, showToast } from '../core/nav.js';
+import { generateUUID } from '../core/uuid.js';
+import { escapeHtml, escapeJsArg, formatTime, parseContentChips, t } from '../core/utils.js';
+import { logUsage } from '../core/usage-meter.js';
+import { addToTrash, showUndoToast } from '../core/trash.js';
+import { callAI, callAIWithTools, getAIContext, getOWLPersonality, openChatBar, safeAgentReply, saveChatMsg, INBOX_TOOLS, handleChatError } from '../ai/core.js';
+import { renderChips } from '../owl/chips.js';
+import { UI_TOOLS_RULES, BASE_CHAT_RULES } from '../ai/prompts.js';
+import { dispatchChatToolCalls } from '../ai/tool-dispatcher.js';
+import { shouldClarify } from '../owl/clarify-guard.js';
+import { attachSwipeDelete } from '../ui/swipe-delete.js';
+import { findCategoryByFolder } from '../data/notes-categories.js';
+import { processUniversalAction } from './habits.js';
+
+// === NOTES ===
+let editingNoteId = null;
+
+// B-47: нормалізація назв папок — всі варіанти апострофів зводимо до одного.
+// Unicode має 3+ схожих символи: ' (U+0027), ʼ (U+02BC), ' (U+2019), ` (U+0060)
+// AI може повертати будь-який → створювалися "Здоров'я" і "Здоровʼя" як різні папки.
+export function normalizeFolderName(name) {
+  if (!name) return name;
+  return String(name).replace(/[\u02BC\u2019\u0060]/g, "'").trim();
+}
+
+// B-47: одноразова міграція існуючих папок у `nm_notes` — зводимо всі варіанти
+// апострофів і об'єднуємо нотатки з однаковою нормалізованою назвою у першу знайдену.
+function _migrateFoldersApostrophes() {
+  if (localStorage.getItem('nm_folders_apostrophe_migrated')) return;
+  try {
+    const notes = JSON.parse(localStorage.getItem('nm_notes') || '[]');
+    let changed = 0;
+    // Будуємо мапу normalized → canonical (перша зустрічна версія)
+    const canonical = {};
+    notes.forEach(n => {
+      if (!n.folder) return;
+      const norm = normalizeFolderName(n.folder);
+      if (!canonical[norm]) canonical[norm] = n.folder; // перша зустрічна — канонічна
+    });
+    notes.forEach(n => {
+      if (!n.folder) return;
+      const norm = normalizeFolderName(n.folder);
+      const target = canonical[norm];
+      if (n.folder !== target) { n.folder = target; changed++; }
+    });
+    if (changed > 0) localStorage.setItem('nm_notes', JSON.stringify(notes));
+    localStorage.setItem('nm_folders_apostrophe_migrated', '1');
+  } catch(e) {}
+}
+_migrateFoldersApostrophes();
+
+export function getNotes() { try { return JSON.parse(localStorage.getItem('nm_notes') || '[]'); } catch { return []; } }
+export function saveNotes(arr) { localStorage.setItem('nm_notes', JSON.stringify(arr)); window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'notes' })); }
+
+// Контекст нотаток для AI (принцип "один мозок")
+// OWL бачить ЩО у юзера в нотатках — щоб не вигадувати "ти писав нотатку про Х" коли її немає
+// Показує: кількість + розбивка по папках + 5 останніх нотаток з ID і коротким текстом
+export function getNotesContext() {
+  const notes = getNotes();
+  if (notes.length === 0) return '';
+  const folderCount = {};
+  notes.forEach(n => { const f = n.folder || t('notes.default_folder', 'Загальне'); folderCount[f] = (folderCount[f] || 0) + 1; });
+  // 64CXo Фаза D: nested-aware листинг папок. Root показується першим, дочірні
+  // дейлі-папки — з відступом «  └─» під батьком. AI не плутає structure.
+  const meta = getFoldersMeta();
+  const rootCounts = {}; // root → total (direct + nested)
+  const childrenByRoot = {}; // root → [{name, count}]
+  Object.keys(folderCount).forEach(f => {
+    const m = meta[f];
+    if (m && m.parent) {
+      const root = m.parent;
+      rootCounts[root] = (rootCounts[root] || 0) + folderCount[f];
+      if (!childrenByRoot[root]) childrenByRoot[root] = [];
+      childrenByRoot[root].push({ name: f, count: folderCount[f] });
+    } else {
+      rootCounts[f] = (rootCounts[f] || 0) + folderCount[f];
+    }
+  });
+  const foldersStr = Object.entries(rootCounts)
+    .sort((a, b) => b[1] - a[1])
+    .map(([root, total]) => {
+      const children = childrenByRoot[root] || [];
+      if (children.length === 0) return `${root} (${total})`;
+      const childList = children.map(c => `  └─ ${c.name} (${c.count})`).join('\n');
+      return `${root} (${total}, ${children.length} ${t('notes.context.subfolders', 'підпапок')}):\n${childList}`;
+    })
+    .join('\n');
+  const recent = notes.slice(0, 5).map(n => {
+    const txt = (n.text || '').slice(0, 60).replace(/\n/g, ' ');
+    const more = (n.text || '').length > 60 ? '…' : '';
+    return `- [ID:${n.id}] [${n.folder || t('notes.default_folder', 'Загальне')}] "${txt}${more}"`;
+  }).join('\n');
+  return `Нотатки (${notes.length} загалом, папки:\n${foldersStr}):\n${recent}`;
+}
+
+function getFolders() {
+  const notes = getNotes();
+  const set = new Set(notes.map(n => n.folder || t('notes.default_folder', 'Загальне')));
+  return [...set].sort();
+}
+
+export function addNoteFromInbox(text, category, folder = null, source = 'inbox') {
+  // rC4TO 04.05: захист від undefined/empty text — інакше zapys без text ламав
+  // увесь renderNotes (items[0].text.length throws на bundle.js:8661, B-XX 04.05).
+  if (!text || typeof text !== 'string' || !text.trim()) {
+    console.warn('[addNoteFromInbox] skip empty/invalid text:', text);
+    return false;
+  }
+  const notes = getNotes();
+  // B-47: нормалізуємо апострофи + дедуплікуємо проти існуючих папок (case-insensitive fuzzy match)
+  const rawFolder = folder || (category === 'idea' ? t('notes.folder_ideas', 'Ідеї') : t('notes.default_folder', 'Загальне'));
+  const normalized = normalizeFolderName(rawFolder);
+  // Якщо нормалізована назва збігається з існуючою папкою (case-insensitive) — використовуємо існуючу
+  const existingFolders = [...new Set(notes.map(n => n.folder).filter(Boolean))];
+  const match = existingFolders.find(f => normalizeFolderName(f).toLowerCase() === normalized.toLowerCase());
+  const resolvedFolder = match || normalized;
+  notes.unshift({ id: generateUUID(), text: text.trim(), folder: resolvedFolder, source, ts: Date.now(), lastViewed: Date.now() });
+  saveNotes(notes);
+  return true;
+}
+
+// LfA6w 07.05: одна нотатка-журнал на кожну картку Здоров'я у спільній
+// папці «Здоров'я». Прив'язка через linkedHealthCardId. Викликається з
+// картки Здоров'я при тапі «Нотатки» — раніше відкривала окрему папку
+// з іменем картки (legacy лишається у юзерських даних, не чіпаємо).
+export function findOrCreateHealthCardNote(card) {
+  if (!card || card.id == null) return null;
+  const notes = getNotes();
+  const linked = notes.find(n => n.linkedHealthCardId === card.id);
+  if (linked) {
+    linked.lastViewed = Date.now();
+    saveNotes(notes);
+    return linked.id;
+  }
+  const newNote = {
+    id: generateUUID(),
+    text: (card.name || '') + '\n\n',
+    folder: t('notes.folder_health', "Здоров'я"),
+    linkedHealthCardId: card.id,
+    source: 'health-card',
+    ts: Date.now(),
+    lastViewed: Date.now(),
+  };
+  notes.unshift(newNote);
+  saveNotes(notes);
+  return newNote.id;
+}
+
+function openAddNote() {
+  editingNoteId = null;
+  document.getElementById('note-modal-title').textContent = t('notes.modal.new_title', 'Нова нотатка');
+  document.getElementById('note-input-text').value = '';
+  document.getElementById('note-input-folder').value = '';
+  updateFolderSuggestions();
+  document.getElementById('note-modal').style.display = 'flex';
+  setTimeout(() => { const el = document.getElementById('note-input-text'); el.removeAttribute('readonly'); el.focus(); }, 350);
+}
+
+function openEditNote(id) {
+  const notes = getNotes();
+  const n = notes.find(x => x.id === id);
+  if (!n) return;
+  editingNoteId = id;
+  document.getElementById('note-modal-title').textContent = t('notes.modal.edit_title', 'Редагувати нотатку');
+  document.getElementById('note-input-text').value = n.text;
+  document.getElementById('note-input-folder').value = n.folder || '';
+  updateFolderSuggestions();
+  document.getElementById('note-modal').style.display = 'flex';
+  // Оновлюємо час перегляду
+  n.lastViewed = Date.now();
+  saveNotes(notes);
+}
+
+function closeNoteModal() {
+  document.getElementById('note-modal').style.display = 'none';
+}
+
+function updateFolderSuggestions() {
+  const dl = document.getElementById('folder-suggestions');
+  // Security e9t3N 15.05.2026: escapeHtml(f) — інакше юзер може створити папку
+  // з payload `"><img src=x onerror=alert(1)>` і отримати stored XSS при кожному
+  // завантаженні NeverMind. Знайдено XSS-аудитом Council (notes.js:186).
+  dl.innerHTML = getFolders().map(f => `<option value="${escapeHtml(f)}">`).join('');
+}
+
+function saveNote() {
+  const text = document.getElementById('note-input-text').value.trim();
+  if (!text) { showToast(t('notes.toast.enter_text', 'Введіть текст нотатки')); return; }
+  const folder = document.getElementById('note-input-folder').value.trim() || t('notes.default_folder', 'Загальне');
+  const notes = getNotes();
+
+  if (editingNoteId) {
+    const idx = notes.findIndex(x => x.id === editingNoteId);
+    if (idx !== -1) notes[idx] = { ...notes[idx], text, folder, updatedAt: Date.now() };
+  } else {
+    notes.unshift({ id: generateUUID(), text, folder, source: 'manual', ts: Date.now(), lastViewed: Date.now() });
+  }
+  saveNotes(notes);
+  closeNoteModal();
+  renderNotes();
+}
+
+function deleteNote(id) {
+  const notes = getNotes();
+  const noteOrigIdx = notes.findIndex(x => x.id === id);
+  const item = notes.find(x => x.id === id);
+  const predecessorId = noteOrigIdx > 0 ? notes[noteOrigIdx - 1].id : null;
+  if (item) addToTrash('note', item);
+  saveNotes(notes.filter(x => x.id !== id));
+  renderNotes();
+  if (item) showUndoToast(t('notes.toast.deleted', 'Нотатку видалено'), () => {
+    const n = getNotes();
+    let idx;
+    if (predecessorId === null) {
+      idx = 0;
+    } else {
+      const predIdx = n.findIndex(x => x.id === predecessorId);
+      idx = predIdx !== -1 ? predIdx + 1 : n.length;
+    }
+    n.splice(idx, 0, item); saveNotes(n); renderNotes();
+  });
+}
+
+export let currentNotesFolder = null; // null = показуємо папки, string = показуємо записи папки
+export function setCurrentNotesFolder(v) { currentNotesFolder = v; }
+
+export function openNotesFolder(folderName) {
+  currentNotesFolder = folderName;
+  renderNotes();
+}
+
+function closeNotesFolder() {
+  // 64CXo Фаза C: піднятись до parent. Якщо поточна — root, повертаємось до Level 1.
+  if (currentNotesFolder) {
+    const m = getFoldersMeta()[currentNotesFolder];
+    currentNotesFolder = (m && m.parent) ? m.parent : null;
+  } else {
+    currentNotesFolder = null;
+  }
+  renderNotes();
+}
+
+// === КАТАЛОГ ІКОНОК ПАПОК (30 іконок) ===
+const _S = 'stroke="rgba(30,16,64,0.55)"';
+function _ico(path) { return `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.55)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${path}</svg>`; }
+
+const ICON_SVG = {
+  folder:   _ico('<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>'),
+  note:     _ico('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>'),
+  food:     _ico('<path d="M3 2v7c0 1.7 1.3 3 3 3s3-1.3 3-3V2"/><line x1="6" y1="2" x2="6" y2="12"/><path d="M21 2s-2 2-2 7 2 5 2 5"/><path d="M19 14v8"/>'),
+  money:    _ico('<circle cx="12" cy="12" r="9"/><path d="M12 6v2m0 8v2"/><path d="M9.5 9.5A2.5 2.5 0 0 1 12 8h.5a2.5 2.5 0 0 1 0 5h-1a2.5 2.5 0 0 0 0 5H12a2.5 2.5 0 0 0 2.5-1.5"/>'),
+  heart:    _ico('<path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.8 1-1a5.5 5.5 0 0 0 0-7.6z"/>'),
+  work:     _ico('<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="2" y1="13" x2="22" y2="13"/>'),
+  book:     _ico('<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>'),
+  bulb:     _ico('<circle cx="12" cy="9" r="5"/><path d="M12 14v4"/><path d="M9.5 16.5h5"/><path d="M9.5 18.5h5"/>'),
+  person:   _ico('<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>'),
+  plane:    _ico('<path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/>'),
+  star:     _ico('<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>'),
+  home:     _ico('<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>'),
+  car:      _ico('<path d="M5 17H3a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h1l2-4h10l2 4h1a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2h-2"/><circle cx="7.5" cy="17" r="2.5"/><circle cx="16.5" cy="17" r="2.5"/>'),
+  music:    _ico('<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>'),
+  camera:   _ico('<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>'),
+  gift:     _ico('<polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/>'),
+  sport:    _ico('<circle cx="12" cy="12" r="10"/><path d="M4.93 4.93l4.24 4.24"/><path d="M14.83 9.17l4.24-4.24"/><path d="M14.83 14.83l4.24 4.24"/><path d="M9.17 14.83l-4.24 4.24"/><circle cx="12" cy="12" r="4"/>'),
+  phone:    _ico('<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13 19.79 19.79 0 0 1 1.61 4.4 2 2 0 0 1 3.6 2.21h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6 6l.92-.92a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 17z"/>'),
+  lock:     _ico('<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>'),
+  globe:    _ico('<circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>'),
+  map:      _ico('<polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/>'),
+  chart:    _ico('<line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>'),
+  smile:    _ico('<circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/>'),
+  coffee:   _ico('<path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/>'),
+  leaf:     _ico('<path d="M17 8C8 10 5.9 16.17 3.82 21.34L5.71 22l1-2.3A4.49 4.49 0 0 0 8 20C19 20 22 3 22 3c-1 2-8 3-8 3"/>'),
+  zap:      _ico('<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>'),
+  target:   _ico('<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>'),
+  tool:     _ico('<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>'),
+  users:    _ico('<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>'),
+  sun:      _ico('<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>'),
+  shopping: _ico('<path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>'),
+};
+
+// Іконки папок — пошук через канонічний довідник з src/data/notes-categories.js.
+// Назви категорій (Харчування, Робота, Здоров'я тощо) — через t() для локалізації.
+// findCategoryByFolder покриває exact-match + нормалізацію апострофів (legacy
+// 'Здоровя' без апострофа теж знаходиться).
+const FOLDER_ICON_DEFAULT = ICON_SVG.note;
+const ALL_FOLDER_ICONS = Object.keys(ICON_SVG);
+
+function getFolderIcon(folder) {
+  if (!folder) return FOLDER_ICON_DEFAULT;
+  const meta = getFolderMeta(folder);
+  if (meta.iconKey && ICON_SVG[meta.iconKey]) return ICON_SVG[meta.iconKey];
+  const cat = findCategoryByFolder(folder);
+  return cat && ICON_SVG[cat.icon] ? ICON_SVG[cat.icon] : FOLDER_ICON_DEFAULT;
+}
+
+// === FOLDER META — кастомна іконка, колір, закріплення ===
+function getFoldersMeta() {
+  try { return JSON.parse(localStorage.getItem('nm_folders_meta') || '{}'); } catch { return {}; }
+}
+function saveFoldersMeta(obj) {
+  try { localStorage.setItem('nm_folders_meta', JSON.stringify(obj)); } catch {} }
+function getFolderMeta(folder) { return getFoldersMeta()[folder] || {}; }
+function setFolderMeta(folder, data) {
+  const all = getFoldersMeta();
+  all[folder] = { ...(all[folder] || {}), ...data };
+  saveFoldersMeta(all);
+}
+
+// === DAILY FOLDER HELPERS (64CXo Фаза A) ===
+// Дублювання моментів у Нотатки → корінь «Щоденник» з дейлі-підпапками.
+// Lazy-створення: папки з'являються тільки коли є перший момент за день.
+//
+// Schema (parent field, не path-based):
+//   meta["Щоденник"] = { parent: null, ... }       — корінь
+//   meta["Пʼятниця, 9 травня 2026"] = { parent: "Щоденник", ... }   — дейлі
+//   note.folder = "Пʼятниця, 9 травня 2026"        — БЕЗ слеша, звичайна назва
+//
+// Старі плоскі папки без `parent` field = root (treated as parent === undefined).
+// renderNotes/swipe/move-handlers лишаються без змін у Фазі A — UI nesting у Фазі C.
+
+// Форматує назву дейлі-підпапки: «Пʼятниця, 9 травня 2026»
+// Локаль uk-UA через toLocaleDateString. iOS Safari додає « р.» суфікс — strip.
+// normalizeFolderName зводить апостроф U+02BC до U+0027 (узгодженість з B-47 fix).
+export function formatDailyFolderName(date) {
+  const raw = date.toLocaleDateString('uk-UA', {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+  });
+  const cleaned = raw.replace(/\s*р\.\s*$/, '').trim();
+  const cap = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+  return normalizeFolderName(cap);
+}
+
+// findOrCreateDailyFolder — забезпечує наявність папки-кореня (default: t('notes.folder_diary'))
+// + дейлі-підпапки на сьогодні (parent: корінь). Повертає назву дейлі-папки
+// готову для addNoteFromInbox(text, cat, folder).
+//
+// Колізія: якщо юзер вручну створив папку з тією ж дейлі-назвою (без parent) —
+// виставляємо parent. Нотатки залишаються (структура nm_notes не міняється).
+export function findOrCreateDailyFolder(parentName = t('notes.folder_diary', 'Щоденник'), date = new Date()) {
+  const dailyName = formatDailyFolderName(date);
+  const meta = getFoldersMeta();
+  let changed = false;
+  if (!meta[parentName]) {
+    meta[parentName] = { parent: null, pinned: false };
+    changed = true;
+  }
+  if (!meta[dailyName]) {
+    meta[dailyName] = { parent: parentName, pinned: false };
+    changed = true;
+  } else if (meta[dailyName].parent === undefined) {
+    meta[dailyName] = { ...meta[dailyName], parent: parentName };
+    changed = true;
+  }
+  if (changed) saveFoldersMeta(meta);
+  return dailyName;
+}
+
+// 64CXo Фаза C: helpers для UI nested folders.
+// getDirectChildren — повертає назви дочірніх папок (parent === parentName)
+export function getDirectChildren(parentName) {
+  const meta = getFoldersMeta();
+  return Object.entries(meta).filter(([k, v]) => v.parent === parentName).map(([k]) => k);
+}
+// resolveRootFolder — для будь-якої папки знаходить root (рекурсивно через parent).
+// Якщо folder сам root (parent === null/undefined) — повертає folder.
+function resolveRootFolder(folderName) {
+  const meta = getFoldersMeta();
+  let cur = folderName;
+  let depth = 0;
+  while (depth < 5) {
+    const m = meta[cur];
+    if (!m || !m.parent) return cur;
+    cur = m.parent;
+    depth++;
+  }
+  return cur;
+}
+
+// Кольори/емодзі папок — спільний пісковий градієнт для всіх категорій,
+// emoji-крапка береться з канонічного довідника (src/data/notes-categories.js).
+// Якщо категорія не знайдена або без `dot` — дефолтний 📝.
+const FOLDER_BG = 'linear-gradient(135deg,#f5ede0,#ede0cc)';
+const FOLDER_BORDER = 'rgba(255,255,255,0.4)';
+const DEFAULT_NOTE_FOLDER = { bg: FOLDER_BG, border: FOLDER_BORDER, dot: '📝' };
+
+export function renderNotes(searchQuery = '') {
+  let notes = getNotes();
+  const content = document.getElementById('notes-content');
+  const empty = document.getElementById('notes-empty');
+  const header = document.getElementById('notes-folder-header');
+
+  // rC4TO 04.05: фільтр битих записів (text undefined/null/empty/non-string).
+  // Один такий запис ламав весь .map() → render падав → юзер бачив порожньо
+  // попри 30 записів у nm_notes (помилка items[0].text.length у bundle:8661).
+  // One-time cleanup з saveNotes — чистимо localStorage НАЗАВЖДИ для цього юзера.
+  const validNotes = notes.filter(n => n && typeof n.text === 'string' && n.text.trim().length > 0);
+  if (validNotes.length !== notes.length) {
+    console.warn('[renderNotes] cleanup:', notes.length - validNotes.length, 'invalid notes removed');
+    saveNotes(validNotes);
+    notes = validNotes;
+  }
+
+  if (notes.length === 0) {
+    content.innerHTML = '';
+    empty.style.display = 'block';
+    if (header) header.style.display = 'none';
+    return;
+  }
+  empty.style.display = 'none';
+
+  // Якщо пошук — показуємо всі записи без папок
+  if (searchQuery) {
+    if (header) header.style.display = 'none';
+    const q = searchQuery.toLowerCase();
+    notes = notes.filter(n => n.text.toLowerCase().includes(q) || (n.folder || '').toLowerCase().includes(q));
+    if (notes.length === 0) {
+      content.innerHTML = `<div style="text-align:center;padding:40px 32px;color:rgba(30,16,64,0.35);font-size:15px">${t('notes.search.empty', 'Нічого не знайдено')}</div>`;
+      return;
+    }
+    content.innerHTML = renderNotesList(notes);
+    _attachNotesSwipeDelete();
+    return;
+  }
+
+  // Рівень 2/3 — записи в конкретній папці (з можливими дочірніми підпапками)
+  if (currentNotesFolder !== null) {
+    // 64CXo Фаза C: рахуємо всі записи (direct + nested через resolveRootFolder)
+    const folderNotes = notes.filter(n => (n.folder || t('notes.default_folder', 'Загальне')) === currentNotesFolder);
+    const children = getDirectChildren(currentNotesFolder);
+    // Лічильник у хедері: direct + всі notes у дочірніх папках
+    let totalCount = folderNotes.length;
+    for (const c of children) {
+      totalCount += notes.filter(n => (n.folder || t('notes.default_folder', 'Загальне')) === c).length;
+    }
+    if (header) {
+      header.style.display = 'flex';
+      header.innerHTML = `
+        <button onclick="closeNotesFolder()" style="background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:6px;padding:0;font-size:15px;font-weight:700;color:#1e1040">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1e1040" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+          ${t('common.back', 'Назад')}
+        </button>
+        <span style="display:flex;align-items:center;gap:8px;font-size:16px;font-weight:800;color:#1e1040">${getFolderIcon(currentNotesFolder)} ${escapeHtml(currentNotesFolder)}</span>
+        <span style="font-size:13px;font-weight:600;color:rgba(30,16,64,0.4)">${totalCount}</span>
+      `;
+    }
+    let html = '<div style="padding:0 14px 120px">';
+    // Дочірні підпапки — картки зверху
+    if (children.length > 0) {
+      const allMeta = getFoldersMeta();
+      const childCards = children.map(child => {
+        const childCount = notes.filter(n => (n.folder || t('notes.default_folder', 'Загальне')) === child).length;
+        const safeChild = escapeJsArg(child);
+        const meta = allMeta[child] || {};
+        const colorDef = meta.colorKey && FOLDER_COLOR_PALETTE[meta.colorKey] ? FOLDER_COLOR_PALETTE[meta.colorKey] : null;
+        const fc = colorDef ? { bg: colorDef.bg, border: 'rgba(255,255,255,0.5)' } : getFolderColor(child);
+        return `<div class="folder-item-wrap" data-folder="${safeChild}" data-nested="1" style="position:relative;overflow:hidden;border-radius:18px;margin-bottom:var(--card-gap)">
+          <div onclick="openNotesFolder('${safeChild}')" style="cursor:pointer;border-radius:18px;padding:var(--card-pad-y) var(--card-pad-x);background:${fc.bg};border:1.5px solid ${fc.border};box-shadow:0 2px 12px rgba(0,0,0,0.05);display:flex;align-items:center;gap:14px;position:relative;z-index:1">
+            <div style="width:42px;height:42px;border-radius:12px;background:rgba(255,255,255,0.4);display:flex;align-items:center;justify-content:center;flex-shrink:0">${getFolderIcon(child)}</div>
+            <div style="flex:1;min-width:0;font-size:15px;font-weight:700;color:#1e1040;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(child)}</div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex-shrink:0;min-width:36px">
+              <div style="font-size:18px;font-weight:900;color:#1e1040;line-height:1">${childCount}</div>
+              <div style="font-size:9px;font-weight:600;color:rgba(30,16,64,0.4)">${t('notes.folder.entries', 'записів')}</div>
+            </div>
+          </div>
+        </div>`;
+      }).join('');
+      html += childCards;
+    }
+    // Direct notes у поточній папці (якщо є)
+    if (folderNotes.length > 0) {
+      html += renderNotesList(folderNotes);
+    } else if (children.length === 0) {
+      html += `<div style="text-align:center;padding:40px 32px;color:rgba(30,16,64,0.35);font-size:15px">${t('notes.folder.empty', 'Папка порожня')}</div>`;
+    }
+    html += '</div>';
+    content.innerHTML = html;
+    _attachNotesSwipeDelete();
+    return;
+  }
+
+  // Рівень 1 — список папок (тільки root, дочірні згорнуті у root-counter)
+  if (header) header.style.display = 'none';
+  // 64CXo Фаза C: групуємо нотатки під ROOT (resolveRootFolder йде по parent chain).
+  // Папки з parent НЕ показуються на Level 1 — їх counts додаються до батька.
+  const allMeta = getFoldersMeta();
+  const byFolder = {};
+  const previewMap = {};
+  notes.forEach(n => {
+    const noteFolder = n.folder || t('notes.default_folder', 'Загальне');
+    const root = resolveRootFolder(noteFolder);
+    if (!byFolder[root]) byFolder[root] = [];
+    byFolder[root].push(n);
+    if (!previewMap[root]) previewMap[root] = n.text;
+  });
+  // Додатково: root папки з meta що мають дочірніх АЛЕ без direct нотаток
+  // (наприклад «Щоденник» порожній але має дейлі-підпапки) — показуємо їх теж.
+  Object.entries(allMeta).forEach(([k, v]) => {
+    const isRoot = !v.parent;
+    if (!isRoot) return;
+    if (byFolder[k]) return; // вже є з нотатками
+    const hasChild = Object.values(allMeta).some(m => m.parent === k);
+    if (hasChild) byFolder[k] = []; // показати з 0 direct, але дочірні рахуватимуться у Level 2
+  });
+
+  const folders = Object.entries(byFolder).sort((a, b) => {
+    const pinA = allMeta[a[0]]?.pinned ? 1 : 0;
+    const pinB = allMeta[b[0]]?.pinned ? 1 : 0;
+    if (pinB !== pinA) return pinB - pinA;
+    return b[1].length - a[1].length;
+  });
+
+  content.innerHTML = '<div style="padding:0 14px 120px;display:flex;flex-direction:column;gap:var(--card-gap)">' +
+    folders.map(([folder, items]) => {
+      const meta = getFolderMeta(folder);
+      // Колір — з мета або дефолт
+      const colorDef = meta.colorKey && FOLDER_COLOR_PALETTE[meta.colorKey]
+        ? FOLDER_COLOR_PALETTE[meta.colorKey]
+        : null;
+      const fc = colorDef ? { bg: colorDef.bg, border: 'rgba(255,255,255,0.5)' } : getFolderColor(folder);
+      // rC4TO 04.05: захист від items[0] === undefined або items[0].text === undefined
+      // (хоча validNotes filter вже відсіює — друга лінія оборони).
+      const firstText = (items[0] && typeof items[0].text === 'string') ? items[0].text : '';
+      const preview = firstText.length > 60 ? firstText.substring(0,60) + '…' : firstText;
+      const safeFolder = escapeJsArg(folder);
+      const key = btoa(unescape(encodeURIComponent(folder))).replace(/[^a-zA-Z0-9]/g, '_');
+      const pinBadge = meta.pinned ? '<div style="position:absolute;top:8px;right:8px;font-size:10px;opacity:0.4">📌</div>' : '';
+      const desc = meta.desc ? `<div style="font-size:11px;color:rgba(30,16,64,0.38);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(meta.desc)}</div>` : `<div style="font-size:12px;color:rgba(30,16,64,0.45);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(preview)}</div>`;
+      return `<div class="folder-item-wrap" data-folder="${safeFolder}" style="position:relative;overflow:hidden;border-radius:18px">
+        <div id="folder-item-${key}" onclick="openNotesFolder('${safeFolder}')"
+          style="cursor:pointer;border-radius:18px;padding:var(--card-pad-y) var(--card-pad-x);background:${fc.bg};border:1.5px solid ${fc.border};box-shadow:0 2px 12px rgba(0,0,0,0.05);display:flex;align-items:center;gap:14px;position:relative;z-index:1">
+          ${pinBadge}
+          <div style="width:48px;height:48px;border-radius:14px;background:rgba(255,255,255,0.4);display:flex;align-items:center;justify-content:center;flex-shrink:0">${getFolderIcon(folder)}</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:16px;font-weight:800;color:#1e1040;margin-bottom:2px">${escapeHtml(folder)}</div>
+            ${desc}
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex-shrink:0;min-width:44px">
+            <div style="font-size:20px;font-weight:900;color:#1e1040;line-height:1">${items.length}</div>
+            <div style="font-size:10px;font-weight:600;color:rgba(30,16,64,0.4)">${t('notes.folder.entries', 'записів')}</div>
+          </div>
+          <div onclick="event.stopPropagation();openFolderEditModal('${safeFolder}')" style="position:absolute;top:8px;right:8px;padding:6px 8px;cursor:pointer;color:rgba(30,16,64,0.35);font-size:18px;line-height:1;border-radius:8px;-webkit-tap-highlight-color:transparent;min-width:32px;text-align:center">···</div>
+        </div>
+      </div>`;
+    }).join('') + '</div>';
+  _attachNotesSwipeDelete();
+}
+
+function renderNotesList(notes) {
+  const now = Date.now();
+  return notes.map(n => {
+    const fc = getFolderColor(n.folder || t('notes.default_folder', 'Загальне'));
+    const preview = n.text.length > 80 ? n.text.substring(0, 80) + '…' : n.text;
+    return `
+      <div class="note-item-wrap" id="note-wrap-${n.id}" data-id="${n.id}" style="position:relative;overflow:hidden;border-radius:var(--card-radius);margin-bottom:var(--card-gap)">
+        <div id="note-item-${n.id}" class="inbox-item"
+          style="cursor:default;padding:var(--card-pad-y) var(--card-pad-x);width:100%;box-sizing:border-box;background:${fc.bg};border-color:${fc.border};">
+          <div onclick="openNoteView('${n.id}')" style="cursor:pointer">
+            <div style="font-size:15px;line-height:1.55;color:#1e1040;font-weight:500;margin-bottom:5px">${escapeHtml(preview)}</div>
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <div style="font-size:12px;color:rgba(30,16,64,0.3)">${formatTime(n.ts)}${n.source === 'inbox' ? t('notes.source.from_inbox', ' · з Inbox') : n.source === 'agent' ? t('notes.source.from_owl', ' · через OWL') : ''}</div>
+              <div onclick="event.stopPropagation();openNoteMenu('${n.id}')" style="padding:4px 8px;cursor:pointer;color:rgba(30,16,64,0.4);font-size:22px;line-height:1;min-width:32px;text-align:center">···</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+
+// === NOTES SWIPE TO DELETE (нотатки + папки) ===
+// Підключається після кожного renderNotes — обробляє і .note-item-wrap, і .folder-item-wrap.
+//
+// B-80 fix Aps79 27.04: перед save+render — анімація схлопу wrapEl (max-height→0).
+// Інакше DOM перерисовується миттєво поки swipe-transform ще активний → перша папка на
+// 50-250мс перекривається чіпами OWL-баблу зверху. Дзеркало task-completing.
+function _animateSwipeRemoval(wrap, doRemove) {
+  if (!wrap) { doRemove(); return; }
+  // Фіксуємо поточну висоту inline — інакше CSS transition від `auto` не спрацює.
+  wrap.style.maxHeight = wrap.offsetHeight + 'px';
+  // 30мс щоб браузер встиг застосувати inline-стиль перед класом
+  setTimeout(() => wrap.classList.add('swipe-deleting'), 30);
+  setTimeout(doRemove, 310);
+}
+function _attachNotesSwipeDelete() {
+  // Нотатки
+  document.querySelectorAll('.note-item-wrap').forEach(wrap => {
+    const card = wrap.querySelector('[id^="note-item-"]');
+    if (!card) return;
+    const id = wrap.dataset.id;
+    attachSwipeDelete(wrap, card, () => {
+      const allNotes = getNotes();
+      const noteSwipeIdx = allNotes.findIndex(x => String(x.id) === id);
+      const swipePredecessorId = noteSwipeIdx > 0 ? allNotes[noteSwipeIdx - 1].id : null;
+      const item = allNotes.find(x => String(x.id) === id);
+      _animateSwipeRemoval(wrap, () => {
+        if (item) addToTrash('note', item);
+        saveNotes(allNotes.filter(x => String(x.id) !== id));
+        renderNotes();
+        if (item) showUndoToast(t('notes.toast.deleted', 'Нотатку видалено'), () => {
+          const notes = getNotes();
+          let idx;
+          if (swipePredecessorId === null) idx = 0;
+          else {
+            const predIdx = notes.findIndex(x => x.id === swipePredecessorId);
+            idx = predIdx !== -1 ? predIdx + 1 : notes.length;
+          }
+          notes.splice(idx, 0, item);
+          saveNotes(notes);
+          renderNotes();
+        });
+      });
+    });
+  });
+  // Папки
+  document.querySelectorAll('.folder-item-wrap').forEach(wrap => {
+    const card = wrap.querySelector('[id^="folder-item-"]');
+    if (!card) return;
+    const folder = wrap.dataset.folder;
+    attachSwipeDelete(wrap, card, () => {
+      const notes = getNotes();
+      // 64CXo Фаза C: recursive delete. Якщо folder root з дочірніми — видаляємо
+      // всі notes де resolveRootFolder === folder + meta дочірніх + meta самого folder.
+      const meta = getFoldersMeta();
+      const isRoot = !meta[folder] || !meta[folder].parent;
+      const childNames = isRoot ? Object.entries(meta).filter(([k, v]) => v.parent === folder).map(([k]) => k) : [];
+      const toDelete = new Set([folder, ...childNames]);
+      const folderNotes = notes.filter(n => toDelete.has(n.folder || t('notes.default_folder', 'Загальне')));
+      const remaining = notes.filter(n => !toDelete.has(n.folder || t('notes.default_folder', 'Загальне')));
+      // Backup meta для undo
+      const removedMeta = {};
+      toDelete.forEach(name => { if (meta[name]) removedMeta[name] = meta[name]; });
+      _animateSwipeRemoval(wrap, () => {
+        if (folderNotes.length > 0) addToTrash('folder', { folder, removedMeta }, folderNotes);
+        saveNotes(remaining);
+        // Видаляємо meta для root + всіх дочірніх
+        const newMeta = {};
+        Object.entries(meta).forEach(([k, v]) => { if (!toDelete.has(k)) newMeta[k] = v; });
+        saveFoldersMeta(newMeta);
+        renderNotes();
+        if (folderNotes.length > 0) showUndoToast(t('notes.toast.folder_deleted', 'Папку "{folder}" видалено ({n})', { folder, n: folderNotes.length }), () => {
+          const n = getNotes();
+          folderNotes.forEach(note => n.push(note));
+          saveNotes(n);
+          // Restore meta
+          const curMeta = getFoldersMeta();
+          Object.entries(removedMeta).forEach(([k, v]) => { curMeta[k] = v; });
+          saveFoldersMeta(curMeta);
+          renderNotes();
+        });
+      });
+    });
+  });
+}
+
+// === NOTE CONTEXT MENU ===
+let activeNoteMenuId = null;
+
+function openNoteMenu(id) {
+  activeNoteMenuId = id;
+  document.getElementById('note-menu').style.display = 'flex';
+}
+function closeNoteMenu() {
+  document.getElementById('note-menu').style.display = 'none';
+  activeNoteMenuId = null;
+}
+function noteMenuEdit() {
+  const id = activeNoteMenuId;
+  closeNoteMenu();
+  // Відкриваємо нотатку і фокусуємо текст для редагування
+  if (activeNoteViewId !== id) openNoteView(id);
+  setTimeout(() => {
+    const textEl = document.getElementById('note-view-text');
+    if (textEl) {
+      textEl.focus();
+      // Переміщуємо курсор в кінець тексту
+      const range = document.createRange();
+      range.selectNodeContents(textEl);
+      range.collapse(false);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
+  }, 100);
+}
+function noteMenuDelete() {
+  const id = activeNoteMenuId;
+  const fromView = activeNoteViewId === id;
+  closeNoteMenu();
+  if (fromView) closeNoteView();
+  deleteNote(id);
+}
+function noteMenuCopy() {
+  const notes = getNotes();
+  const n = notes.find(x => x.id === activeNoteMenuId);
+  if (!n) return;
+  closeNoteMenu();
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(n.text);
+  } else {
+    showToast(t('notes.toast.copy_unavailable', 'Копіювання недоступне'));
+  }
+}
+function noteMenuMove() {
+  const id = activeNoteMenuId;
+  closeNoteMenu();
+  const notes = getNotes();
+  const n = notes.find(x => x.id === id);
+  if (!n) return;
+  const folders = getFolders();
+  const current = n.folder || t('notes.default_folder', 'Загальне');
+  const folderList = folders.filter(f => f !== current);
+  if (folderList.length === 0) {
+    showToast(t('notes.toast.no_other_folders', 'Немає інших папок'));
+    return;
+  }
+  // Simple prompt for now
+  const newFolder = prompt(t('notes.prompt.move_to_folder', 'Перемістити в папку:\n{list}\n\nПоточна: {current}\nВведіть назву:', { list: folderList.join(', '), current }), current);
+  if (newFolder && newFolder.trim() && newFolder.trim() !== current) {
+    const idx = notes.findIndex(x => x.id === id);
+    if (idx !== -1) notes[idx].folder = newFolder.trim();
+    saveNotes(notes);
+    renderNotes();
+  }
+}
+// 15.04 jMR6m: фічу "OWL пропонує структуру папок" прибрано —
+// banner notes-ai-banner у index.html видалений, функції checkAndSuggestFolders/
+// suggestNoteFolders/applyFolderSuggestion та змінна pendingFolderSuggestion
+// видалені, виклик з core/nav.js прибрано, ключ nm_notes_folders_ts більше
+// не використовується. Причина: AI повертав ту саму структуру день у день
+// (нотатки не сильно змінюються між днями), auto-assignment по includes()
+// був примітивним, юзери частіше створювали папки самі. Якщо у майбутньому
+// потрібно — можна повернути як on-demand кнопку у налаштуваннях.
+
+// === NOTE VIEW MODAL (F2) ===
+let activeNoteViewId = null;
+let noteChatHistory = [];
+let noteChatLoading = false;
+
+function getFolderColor(folder) {
+  if (!folder) return DEFAULT_NOTE_FOLDER;
+  const cat = findCategoryByFolder(folder);
+  if (cat && cat.dot) return { bg: FOLDER_BG, border: FOLDER_BORDER, dot: cat.dot };
+  return DEFAULT_NOTE_FOLDER;
+}
+
+export function openNoteView(id) {
+  const notes = getNotes();
+  const n = notes.find(x => x.id === id);
+  if (!n) return;
+  activeNoteViewId = id;
+  noteChatHistory = [];
+  noteChatLoading = false;
+
+  // Колір фону = колір картки нотатки
+  const fc = getFolderColor(n.folder);
+  const modal = document.getElementById('note-view-modal');
+  if (modal) modal.style.background = fc.bg;
+
+  document.getElementById('note-view-folder').textContent = n.folder || t('notes.default_folder', 'Загальне');
+  const preview = n.text.length > 50 ? n.text.substring(0, 50) + '…' : n.text;
+  document.getElementById('note-view-preview').textContent = preview;
+
+  // contenteditable — встановлюємо текст
+  const textEl = document.getElementById('note-view-text');
+  if (textEl) textEl.textContent = n.text;
+
+  document.getElementById('note-chat-messages').innerHTML = '';
+
+  // Update lastViewed
+  const allNotes = getNotes();
+  const idx = allNotes.findIndex(x => x.id === id);
+  if (idx !== -1) { allNotes[idx].lastViewed = Date.now(); saveNotes(allNotes); }
+
+  switchNoteViewTab('note');
+  modal.style.display = 'flex';
+  // Скролимо до початку тексту
+  requestAnimationFrame(() => {
+    const panel = document.getElementById('note-view-panel-note');
+    if (panel) panel.scrollTop = 0;
+    const textEl2 = document.getElementById('note-view-text');
+    if (textEl2) textEl2.scrollTop = 0;
+  });
+}
+
+export function closeNoteView() {
+  // Зберігаємо перед закриттям
+  if (activeNoteViewId) {
+    const textEl = document.getElementById('note-view-text');
+    if (textEl) {
+      const notes = getNotes();
+      const idx = notes.findIndex(x => x.id === activeNoteViewId);
+      if (idx !== -1 && textEl.textContent !== notes[idx].text) {
+        notes[idx].text = textEl.textContent;
+        notes[idx].updatedAt = Date.now();
+        saveNotes(notes);
+        if (currentTab === 'notes') renderNotes();
+      }
+    }
+  }
+  document.getElementById('note-view-modal').style.display = 'none';
+  activeNoteViewId = null;
+  noteChatHistory = [];
+}
+
+let _autoSaveNoteTimer = null;
+function autoSaveNoteView() {
+  if (!activeNoteViewId) return;
+  if (_autoSaveNoteTimer) clearTimeout(_autoSaveNoteTimer);
+  _autoSaveNoteTimer = setTimeout(() => {
+    const textEl = document.getElementById('note-view-text');
+    if (!textEl) return;
+    const notes = getNotes();
+    const idx = notes.findIndex(x => x.id === activeNoteViewId);
+    if (idx !== -1) {
+      notes[idx].text = textEl.textContent;
+      notes[idx].updatedAt = Date.now();
+      saveNotes(notes);
+      // Оновлюємо preview в хедері
+      const preview = notes[idx].text.length > 50 ? notes[idx].text.substring(0, 50) + '…' : notes[idx].text;
+      const prevEl = document.getElementById('note-view-preview');
+      if (prevEl) prevEl.textContent = preview;
+    }
+  }, 800); // зберігаємо через 800мс після зупинки друку
+}
+
+function openNoteViewMenu() {
+  if (!activeNoteViewId) return;
+  const notes = getNotes();
+  const n = notes.find(x => x.id === activeNoteViewId);
+  if (!n) return;
+  // Використовуємо існуюче меню нотаток
+  activeNoteMenuId = activeNoteViewId;
+  document.getElementById('note-menu').style.display = 'flex';
+}
+
+function openEditNoteFromView() {
+  const id = activeNoteViewId;
+  closeNoteView();
+  openEditNote(id);
+}
+
+function switchNoteViewTab(tab) {
+  const notePanel = document.getElementById('note-view-panel-note');
+  const chatPanel = document.getElementById('note-view-panel-chat');
+  const inputArea = document.getElementById('note-chat-input-area');
+  const tabNote = document.getElementById('note-view-tab-note');
+  const tabChat = document.getElementById('note-view-tab-chat');
+
+  if (tab === 'note') {
+    notePanel.style.display = 'block';
+    chatPanel.style.display = 'none';
+    inputArea.style.display = 'none';
+    tabNote.style.color = '#c2620a';
+    tabNote.style.borderBottomColor = '#c2620a';
+    tabChat.style.color = 'rgba(30,16,64,0.4)';
+    tabChat.style.borderBottomColor = 'transparent';
+  } else {
+    notePanel.style.display = 'none';
+    chatPanel.style.display = 'flex';
+    chatPanel.style.flexDirection = 'column';
+    inputArea.style.display = 'flex';
+    tabNote.style.color = 'rgba(30,16,64,0.4)';
+    tabNote.style.borderBottomColor = 'transparent';
+    tabChat.style.color = '#c2620a';
+    tabChat.style.borderBottomColor = '#c2620a';
+
+    // Auto-greet if first open
+    if (noteChatHistory.length === 0) {
+      const notes = getNotes();
+      const n = notes.find(x => x.id === activeNoteViewId);
+      if (n) initNoteChatGreeting(n);
+    }
+  }
+}
+
+async function initNoteChatGreeting(note) {
+  const key = localStorage.getItem('nm_gemini_key');
+  if (!key) {
+    addNoteChatMsg('agent', t('notes.chat.no_key_greeting', 'Введи OpenAI ключ в налаштуваннях щоб спілкуватись з агентом.'));
+    return;
+  }
+  const aiContext = getAIContext();
+  const systemPrompt = `${getOWLPersonality()} Тебе попросили поговорити про конкретну нотатку. Прочитай її і скажи коротко (1-2 речення): що це за нотатка і як ти можеш допомогти з нею. Відповідай українською.${aiContext ? '\n\n' + aiContext : ''}`;
+  const greeting = await callAI(systemPrompt, `Нотатка: ${note.text}`, {}, 'notes-greeting');
+  if (greeting) addNoteChatMsg('agent', greeting);
+}
+
+function addNoteChatMsg(role, text, chips = null) {
+  // MPVly 05.05 — інлайн-парсинг чіпів (один мозок).
+  if (role === 'agent' && (!chips || chips.length === 0) && text) {
+    const _p = parseContentChips(text);
+    if (_p.chips) { text = _p.text; chips = _p.chips; }
+  }
+  const el = document.getElementById('note-chat-messages');
+  const isAgent = role === 'agent';
+  if (isAgent) el.querySelectorAll('.chat-chips-row').forEach(n => n.remove());
+  const div = document.createElement('div');
+  div.style.cssText = `display:flex;${isAgent ? '' : 'justify-content:flex-end'}`;
+  div.innerHTML = `<div style="max-width:82%;background:${isAgent ? 'rgba(255,255,255,0.9)' : '#4f46e5'};color:${isAgent ? '#1e1040' : 'white'};border-radius:${isAgent ? '4px 14px 14px 14px' : '14px 4px 14px 14px'};padding:12px 16px;font-size:18px;line-height:1.7;font-weight:${isAgent ? '400' : '500'}">${escapeHtml(text).replace(/\n/g,'<br>')}</div>`;
+  el.appendChild(div);
+  if (isAgent && Array.isArray(chips) && chips.length > 0) {
+    const chipsRow = document.createElement('div');
+    chipsRow.className = 'chat-chips-row';
+    renderChips(chipsRow, chips, 'notes');
+    el.appendChild(chipsRow);
+  }
+  el.scrollTop = el.scrollHeight;
+  if (role !== 'agent') noteChatHistory.push({ role: 'user', content: text });
+}
+
+async function sendNoteChatMessage() {
+  if (noteChatLoading) return;
+  const input = document.getElementById('note-chat-input');
+  const text = input.value.trim();
+  if (!text) return;
+  const key = localStorage.getItem('nm_gemini_key');
+  if (!key) { addNoteChatMsg('agent', t('notes.chat.no_key', 'Введи OpenAI ключ в налаштуваннях.')); return; }
+
+  input.value = '';
+  input.style.height = 'auto';
+  addNoteChatMsg('user', text);
+  noteChatLoading = true;
+
+  const btn = document.getElementById('note-chat-send');
+  btn.disabled = true;
+
+  const notes = getNotes();
+  const n = notes.find(x => x.id === activeNoteViewId);
+  const aiContext = getAIContext();
+  const currentText = n?.text || '';
+
+  const systemPrompt = `${getOWLPersonality()} Ти асистент для роботи з нотаткою користувача.
+
+Поточний текст нотатки:
+---
+${currentText}
+---
+
+Ти можеш:
+1. Відповідати на питання про нотатку — звичайний текст
+2. Оновлювати нотатку — якщо просять написати, доповнити, змінити, структурувати, додати список тощо
+
+Якщо потрібно ОНОВИТИ нотатку — відповідай ТІЛЬКИ JSON:
+{"action":"update_note","text":"повний новий текст нотатки"}
+
+Якщо просто відповідаєш — відповідай звичайним текстом (2-4 речення).
+НЕ використовуй JSON якщо тільки обговорюєш або пояснюєш.
+${aiContext ? '\n\n' + aiContext : ''}`;
+
+  try {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          ...noteChatHistory.slice(-10),
+          { role: 'user', content: text }
+        ],
+        max_tokens: 800,
+        temperature: 0.7
+      })
+    });
+    const data = await res.json();
+    if (data?.usage) logUsage('notes-ai', data.usage, data.model);
+    const rawReply = data.choices?.[0]?.message?.content;
+    const { text: reply, chips: extractedChips } = parseContentChips(rawReply || '');
+    if (reply) {
+      noteChatHistory.push({ role: 'user', content: text });
+      noteChatHistory.push({ role: 'assistant', content: reply });
+      // Перевіряємо чи це JSON з update_note
+      try {
+        const clean = reply.replace(/^```json\s*|```\s*$/g, '').trim();
+        const parsed = JSON.parse(clean);
+        if (parsed.action === 'update_note' && parsed.text) {
+          // Оновлюємо нотатку
+          const allNotes = getNotes();
+          const idx = allNotes.findIndex(x => x.id === activeNoteViewId);
+          if (idx !== -1) {
+            allNotes[idx].text = parsed.text;
+            allNotes[idx].updatedAt = Date.now();
+            saveNotes(allNotes);
+            // Оновлюємо відображення в редакторі
+            const textEl = document.getElementById('note-view-text');
+            if (textEl) textEl.textContent = parsed.text;
+            renderNotes();
+            addNoteChatMsg('agent', t('notes.chat.updated', '✓ Нотатку оновлено.'));
+          } else {
+            addNoteChatMsg('agent', t('notes.chat.not_found', 'Не вдалося знайти нотатку.'));
+          }
+        } else {
+          addNoteChatMsg('agent', reply, extractedChips);
+          showSaveAsNoteBtn(reply);
+        }
+      } catch {
+        addNoteChatMsg('agent', reply, extractedChips);
+        showSaveAsNoteBtn(reply);
+      }
+    } else {
+      handleChatError(addNoteChatMsg);
+    }
+  } catch {
+    addNoteChatMsg('agent', t('common.network_error', 'Мережева помилка.'));
+  }
+  noteChatLoading = false;
+  btn.disabled = false;
+}
+
+// Зберігаємо текст у closure — безпечно для будь-яких символів
+let _pendingAgentNote = '';
+
+function showSaveAsNoteBtn(replyText) {
+  const el = document.getElementById('note-chat-messages');
+  const old = document.getElementById('note-chat-save-btn');
+  if (old) old.remove();
+  _pendingAgentNote = replyText;
+  const btn = document.createElement('div');
+  btn.id = 'note-chat-save-btn';
+  btn.style.cssText = 'display:flex;justify-content:flex-end;margin-top:-4px';
+  const button = document.createElement('button');
+  button.textContent = t('notes.chat.save_as_note', '+ Зберегти як нотатку');
+  button.style.cssText = 'background:rgba(79,70,229,0.1);border:1px solid rgba(79,70,229,0.2);border-radius:8px;padding:5px 12px;font-size:13px;font-weight:700;color:#4f46e5;cursor:pointer';
+  button.addEventListener('click', () => saveAgentResponseAsNote(_pendingAgentNote));
+  btn.appendChild(button);
+  el.appendChild(btn);
+  el.scrollTop = el.scrollHeight;
+}
+
+function saveAgentResponseAsNote(text) {
+  const notes = getNotes();
+  const originalNote = notes.find(x => x.id === activeNoteViewId);
+  const folder = originalNote?.folder || t('notes.default_folder', 'Загальне');
+  notes.unshift({ id: generateUUID(), text: text, folder, source: 'ai', ts: Date.now(), lastViewed: Date.now() });
+  saveNotes(notes);
+  renderNotes();
+  document.getElementById('note-chat-save-btn')?.remove();
+  _pendingAgentNote = '';
+}
+
+
+// === FOLDER UTILITIES ===
+function _folderKey(folder) {
+  return btoa(unescape(encodeURIComponent(folder))).replace(/[^a-zA-Z0-9]/g, '_');
+}
+// Свайп-видалення папок підключено через _attachNotesSwipeDelete (B-54 механізм).
+// Тап на папку → onclick="openNotesFolder(...)" inline.
+
+// === FOLDER EDIT MODAL (#20) ===
+let _editingFolder = null;
+
+function openFolderEditModal(folder) {
+  _editingFolder = folder;
+  const meta = getFolderMeta(folder);
+
+  // Встановлюємо поточні значення
+  const nameEl = document.getElementById('folder-edit-name');
+  const descEl = document.getElementById('folder-edit-desc');
+  const pinEl = document.getElementById('folder-edit-pin');
+  if (nameEl) nameEl.value = folder;
+  if (descEl) descEl.value = meta.desc || '';
+  if (pinEl) pinEl.checked = !!meta.pinned;
+
+  // Рендеримо сітку іконок
+  renderFolderIconGrid(meta.iconKey || _autoIconKey(folder));
+
+  // Рендеримо кольори
+  renderFolderColorGrid(meta.colorKey || 'default');
+
+  const modal = document.getElementById('folder-edit-modal');
+  if (modal) modal.style.display = 'flex';
+}
+
+function closeFolderEditModal() {
+  const modal = document.getElementById('folder-edit-modal');
+  if (modal) modal.style.display = 'none';
+  _editingFolder = null;
+}
+
+function _autoIconKey(folder) {
+  return findCategoryByFolder(folder)?.icon || 'folder';
+}
+
+let _selectedIconKey = 'folder';
+let _selectedColorKey = 'default';
+
+function renderFolderIconGrid(activeKey) {
+  _selectedIconKey = activeKey;
+  const grid = document.getElementById('folder-icon-grid');
+  if (!grid) return;
+  grid.innerHTML = ALL_FOLDER_ICONS.map(key => {
+    const isActive = key === activeKey;
+    return `<div onclick="selectFolderIcon('${key}')" id="ficon-${key}" style="width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;cursor:pointer;background:${isActive ? 'rgba(30,16,64,0.1)' : 'rgba(30,16,64,0.03)'};border:1.5px solid ${isActive ? 'rgba(30,16,64,0.25)' : 'transparent'};transition:all 0.15s">
+      ${ICON_SVG[key]}
+    </div>`;
+  }).join('');
+}
+
+function selectFolderIcon(key) {
+  _selectedIconKey = key;
+  document.querySelectorAll('[id^="ficon-"]').forEach(el => {
+    const k = el.id.replace('ficon-', '');
+    const isActive = k === key;
+    el.style.background = isActive ? 'rgba(30,16,64,0.1)' : 'rgba(30,16,64,0.03)';
+    el.style.border = `1.5px solid ${isActive ? 'rgba(30,16,64,0.25)' : 'transparent'}`;
+  });
+}
+
+const FOLDER_COLOR_PALETTE = {
+  default: { bg: 'linear-gradient(135deg,#f5ede0,#ede0cc)', label: t('notes.color.sand', 'Пісок') },
+  blue:    { bg: 'linear-gradient(135deg,#dbeafe,#bfdbfe)', label: t('notes.color.blue', 'Блакитний') },
+  green:   { bg: 'linear-gradient(135deg,#d1fae5,#a7f3d0)', label: t('notes.color.green', 'Зелений') },
+  yellow:  { bg: 'linear-gradient(135deg,#fef9c3,#fef08a)', label: t('notes.color.yellow', 'Жовтий') },
+  pink:    { bg: 'linear-gradient(135deg,#fce7f3,#fbcfe8)', label: t('notes.color.pink', 'Рожевий') },
+  purple:  { bg: 'linear-gradient(135deg,#ede9fe,#ddd6fe)', label: t('notes.color.purple', 'Фіолетовий') },
+  orange:  { bg: 'linear-gradient(135deg,#ffedd5,#fed7aa)', label: t('notes.color.orange', 'Оранжевий') },
+  gray:    { bg: 'linear-gradient(135deg,#f3f4f6,#e5e7eb)', label: t('notes.color.gray', 'Сірий') },
+};
+
+function renderFolderColorGrid(activeKey) {
+  _selectedColorKey = activeKey;
+  const grid = document.getElementById('folder-color-grid');
+  if (!grid) return;
+  grid.innerHTML = Object.entries(FOLDER_COLOR_PALETTE).map(([key, val]) => {
+    const isActive = key === activeKey;
+    return `<div onclick="selectFolderColor('${key}')" id="fcolor-${key}" title="${val.label}" style="width:36px;height:36px;border-radius:10px;cursor:pointer;background:${val.bg};border:2.5px solid ${isActive ? 'rgba(30,16,64,0.4)' : 'transparent'};transition:all 0.15s"></div>`;
+  }).join('');
+}
+
+function selectFolderColor(key) {
+  _selectedColorKey = key;
+  document.querySelectorAll('[id^="fcolor-"]').forEach(el => {
+    const k = el.id.replace('fcolor-', '');
+    el.style.border = `2.5px solid ${k === key ? 'rgba(30,16,64,0.4)' : 'transparent'}`;
+  });
+}
+
+function saveFolderEdit() {
+  if (!_editingFolder) return;
+  const nameEl = document.getElementById('folder-edit-name');
+  const descEl = document.getElementById('folder-edit-desc');
+  const pinEl = document.getElementById('folder-edit-pin');
+  const newName = (nameEl?.value || '').trim() || _editingFolder;
+  const desc = descEl?.value || '';
+  const pinned = !!pinEl?.checked;
+
+  // Перевіряємо ліміт закріплених (макс 5)
+  if (pinned) {
+    const meta = getFoldersMeta();
+    const pinnedCount = Object.values(meta).filter(m => m.pinned).length;
+    const wasAlreadyPinned = getFolderMeta(_editingFolder).pinned;
+    if (!wasAlreadyPinned && pinnedCount >= 5) {
+      showToast(t('notes.toast.max_pinned', 'Максимум 5 закріплених папок'));
+      return;
+    }
+  }
+
+  // Перейменування — оновлюємо всі нотатки
+  if (newName !== _editingFolder) {
+    const notes = getNotes();
+    notes.forEach(n => { if ((n.folder || t('notes.default_folder', 'Загальне')) === _editingFolder) n.folder = newName; });
+    saveNotes(notes);
+    // Переносимо мету
+    const allMeta = getFoldersMeta();
+    if (allMeta[_editingFolder]) {
+      allMeta[newName] = allMeta[_editingFolder];
+      delete allMeta[_editingFolder];
+      saveFoldersMeta(allMeta);
+    }
+  }
+
+  setFolderMeta(newName, { iconKey: _selectedIconKey, colorKey: _selectedColorKey, desc, pinned });
+  closeFolderEditModal();
+  renderNotes();
+}
+
+// === NOTES AI BAR ===
+let _notesTypingEl = null;
+let notesBarHistory = [];
+let notesBarLoading = false;
+
+export function addNotesChatMsg(role, text, _noSave = false, chips = null) {
+  // MPVly 05.05 — інлайн-парсинг чіпів (один мозок).
+  if (role === 'agent' && (!chips || chips.length === 0) && text) {
+    const _p = parseContentChips(text);
+    if (_p.chips) { text = _p.text; chips = _p.chips; }
+  }
+  const el = document.getElementById('notes-chat-messages');
+  if (!el) return;
+  if (_notesTypingEl) { _notesTypingEl.remove(); _notesTypingEl = null; }
+  if (role === 'typing') {
+    const td = document.createElement('div');
+    td.style.cssText = 'display:flex';
+    td.innerHTML = '<div style="background:rgba(255,255,255,0.12);border-radius:4px 12px 12px 12px;padding:5px 10px"><div class=\"ai-typing\"><span></span><span></span><span></span></div></div>';
+    el.appendChild(td);
+    _notesTypingEl = td;
+    el.scrollTop = el.scrollHeight;
+    return;
+  }
+  if (role === 'agent') el.querySelectorAll('.chat-chips-row').forEach(n => n.remove());
+  if (!_noSave) { try { openChatBar('notes'); } catch(e) {} }
+  const isAgent = role === 'agent';
+  const div = document.createElement('div');
+  div.style.cssText = `display:flex;${isAgent ? '' : 'justify-content:flex-end'}`;
+  div.innerHTML = `<div class="msg-bubble ${isAgent ? 'msg-bubble--agent' : 'msg-bubble--user'}">${escapeHtml(text).replace(/\n/g,'<br>')}</div>`;
+  el.appendChild(div);
+  if (isAgent && Array.isArray(chips) && chips.length > 0) {
+    const chipsRow = document.createElement('div');
+    chipsRow.className = 'chat-chips-row';
+    renderChips(chipsRow, chips, 'notes');
+    el.appendChild(chipsRow);
+    // B-119 + UvEHE chips clipping fix: scrollIntoView надійніше за scrollTop+rAF
+    // на iOS Safari — браузер сам рахує реальний layout після append.
+    requestAnimationFrame(() => chipsRow.scrollIntoView({ block: 'end', inline: 'nearest' }));
+  }
+  el.scrollTop = el.scrollHeight;
+  requestAnimationFrame(() => { el.scrollTop = el.scrollHeight; });
+  if (role !== 'agent') notesBarHistory.push({ role: 'user', content: text });
+  else notesBarHistory.push({ role: 'assistant', content: text });
+  // 64CXo: cap 20 — memory leak fix.
+  if (notesBarHistory.length > 20) notesBarHistory = notesBarHistory.slice(-20);
+  if (!_noSave) saveChatMsg('notes', role, text, chips);
+}
+
+export async function sendNotesBarMessage() {
+  if (notesBarLoading) return;
+  const input = document.getElementById('notes-bar-input');
+  const text = input.value.trim();
+  if (!text) return;
+  const key = localStorage.getItem('nm_gemini_key');
+  if (!key) { addNotesChatMsg('agent', t('notes.chat.no_key', 'Введи OpenAI ключ в налаштуваннях.')); return; }
+  input.value = ''; input.style.height = 'auto';
+  input.focus();
+  addNotesChatMsg('user', text);
+  notesBarLoading = true;
+  addNotesChatMsg('typing', '');
+
+  const notes = getNotes().slice(0, 20).map(n => `[${n.folder||'Загальне'}] ${n.text.substring(0,60)}`).join('; ');
+  const aiContext = getAIContext();
+  const systemPrompt = getOWLPersonality() + ` Ти допомагаєш у вкладці Нотатки. Відповідай JSON для дій:
+- Створити нотатку: {"action":"create_note","text":"текст","folder":"папка або null"}
+- Видалити папку: {"action":"delete_folder","folder":"назва папки"}
+- Перемістити нотатку: {"action":"move_note","query":"частина тексту нотатки","folder":"нова папка"}
+- Знайти нотатки по запиту: {"action":"search_notes","query":"ключові слова"}
+- Відкрити папку: {"action":"open_folder","folder":"назва папки"}
+- Відкрити нотатку: {"action":"open_note","query":"частина тексту нотатки"}
+- Створити задачу: {"action":"create_task","title":"назва","steps":[]}
+- Створити звичку: {"action":"create_habit","name":"назва","days":[0,1,2,3,4,5,6]}
+- Редагувати звичку: {"action":"edit_habit","habit_id":ID,"name":"нова назва","days":[0,1,2,3,4,5,6]} — якщо юзер каже змінити існуючу звичку
+- Закрити задачу: {"action":"complete_task","task_id":ID}
+- Відмітити звичку: {"action":"complete_habit","habit_name":"назва"}
+- Редагувати задачу: {"action":"edit_task","task_id":ID,"title":"нова назва","dueDate":"YYYY-MM-DD","priority":"normal|important|critical"}
+- Видалити задачу: {"action":"delete_task","task_id":ID}
+- Видалити звичку: {"action":"delete_habit","habit_id":ID}
+- Перевідкрити задачу: {"action":"reopen_task","task_id":ID}
+- Записати момент дня: {"action":"add_moment","text":"що сталося"}
+- Зберегти фінанси: {"action":"save_finance","fin_type":"expense або income","amount":число,"category":"категорія","comment":"коментар"}
+- Запланована подія: {"action":"create_event","title":"назва","date":"YYYY-MM-DD","time":null,"priority":"normal"}
+- Змінити подію: {"action":"edit_event","event_id":ID,"date":"YYYY-MM-DD"}
+- Видалити подію: {"action":"delete_event","event_id":ID}
+- Змінити нотатку: {"action":"edit_note","note_id":ID,"text":"новий текст","folder":"папка"}
+- Розпорядок: {"action":"save_routine","day":"mon" або ["mon","tue","wed","thu","fri"],"blocks":[{"time":"07:00","activity":"Підйом"}]}
+- Нагадування: {"action":"set_reminder","time":"HH:MM","text":"що нагадати","date":"YYYY-MM-DD"} (date за замовч.=сьогодні). Деталі нижче у ПРАВИЛО НАГАДУВАНЬ.
+ЗАДАЧА = дія яку ТИ маєш ЗРОБИТИ. ПОДІЯ = факт що СТАНЕТЬСЯ. "Перенеси подію на 24" = edit_event.
+- Просто відповісти: текст (1-3 речення)
+
+${BASE_CHAT_RULES}
+ВАЖЛИВО: для open_folder — fuzzy match назви, для search_notes — шукай по тексту нотаток.
+Наявні папки: ${[...new Set(getNotes().map(n => n.folder || t('notes.default_folder', 'Загальне')))].join(', ') || 'немає'}
+НЕ вигадуй дані яких немає в контексті.
+
+${UI_TOOLS_RULES}` + (aiContext ? ('\n\n' + aiContext) : '');
+
+  try {
+    // "Один мозок #2 A": INBOX_TOOLS — повний CRUD + UI.
+    const msg = await callAIWithTools(systemPrompt, notesBarHistory.slice(-8), INBOX_TOOLS, 'notes-bar');
+
+    if (msg && Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
+      // Clarify guard (mUpS8 02.05) — інлайн-чіпи замість галюцинації типу B-115
+      const guard = shouldClarify(text, msg.tool_calls, 'notes');
+      if (guard) {
+        addNotesChatMsg('agent', guard.question, false, guard.chips);
+        notesBarLoading = false;
+        return;
+      }
+      dispatchChatToolCalls(msg.tool_calls, addNotesChatMsg, text);
+      if (msg.content) {
+        const { text: rt, chips } = parseContentChips(msg.content);
+        if (rt) addNotesChatMsg('agent', rt, false, chips);
+      }
+      notesBarLoading = false;
+      return;
+    }
+
+    const rawReply = msg && msg.content ? msg.content.trim() : '';
+    if (!rawReply) { handleChatError(addNotesChatMsg); notesBarLoading = false; return; }
+    // Виділяємо {chips:[...]} окремо щоб не ламати розбір action-JSON
+    const { text: reply, chips: extractedChips } = parseContentChips(rawReply);
+
+    try {
+      const parsed = JSON.parse(reply.replace(/```json|```/g, '').trim());
+
+      // Дії специфічні для нотаток
+      if (parsed.action === 'search_notes') {
+        const q = (parsed.query || '').toLowerCase();
+        const results = getNotes().filter(n =>
+          n.text.toLowerCase().includes(q) ||
+          (n.folder || '').toLowerCase().includes(q)
+        ).slice(0, 5);
+        if (results.length === 0) {
+          addNotesChatMsg('agent', t('notes.chat.nothing_found_query', 'Нічого не знайдено по запиту "{query}".', { query: parsed.query }));
+        } else {
+          addNotesChatMsg('agent', t('notes.chat.found_n', 'Знайдено {n}:', { n: results.length }));
+          results.forEach(n => {
+            const preview = n.text.length > 60 ? n.text.substring(0, 60) + '…' : n.text;
+            const el = document.getElementById('notes-chat-messages');
+            if (!el) return;
+            const div = document.createElement('div');
+            div.style.cssText = 'display:flex';
+            div.innerHTML = `<div onclick="addNotesChatMsg('user','');openNoteView('${n.id}')" style="max-width:85%;background:rgba(255,255,255,0.12);color:white;border-radius:4px 12px 12px 12px;padding:8px 11px;font-size:14px;line-height:1.5;font-weight:500;cursor:pointer;border:1px solid rgba(255,255,255,0.15)">
+              <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.45);margin-bottom:3px">${escapeHtml(n.folder || t('notes.default_folder', 'Загальне'))}</div>
+              ${escapeHtml(preview)}
+            </div>`;
+            el.appendChild(div);
+            el.scrollTop = el.scrollHeight;
+          });
+        }
+        notesBarLoading = false;
+        return;
+      }
+
+      if (parsed.action === 'open_folder') {
+        const target = (parsed.folder || '').toLowerCase().replace(/[ʼ']/g, '');
+        const folders = [...new Set(getNotes().map(n => n.folder || t('notes.default_folder', 'Загальне')))];
+        const match = folders.find(f =>
+          f.toLowerCase().replace(/[ʼ']/g, '').includes(target) ||
+          target.includes(f.toLowerCase().replace(/[ʼ']/g, ''))
+        );
+        if (match) {
+          openNotesFolder(match);
+          addNotesChatMsg('agent', t('notes.chat.opened_folder', 'Відкрив папку "{folder}".', { folder: match }));
+        } else {
+          addNotesChatMsg('agent', t('notes.chat.folder_not_found', 'Папку "{folder}" не знайдено. Доступні: {available}.', { folder: parsed.folder, available: folders.join(', ') }));
+        }
+        notesBarLoading = false;
+        return;
+      }
+
+      if (parsed.action === 'open_note') {
+        const q = (parsed.query || '').toLowerCase();
+        const note = getNotes().find(n => n.text.toLowerCase().includes(q));
+        if (note) {
+          // Відкриваємо папку і потім нотатку
+          currentNotesFolder = note.folder || t('notes.default_folder', 'Загальне');
+          renderNotes();
+          setTimeout(() => openNoteView(note.id), 100);
+          addNotesChatMsg('agent', t('notes.chat.opened_note', 'Відкрив нотатку.'));
+        } else {
+          addNotesChatMsg('agent', t('notes.chat.note_not_found', 'Нотатку не знайдено.'));
+        }
+        notesBarLoading = false;
+        return;
+      }
+
+      if (!processUniversalAction(parsed, text, addNotesChatMsg)) {
+        const looksLikeJson = (reply.startsWith('{') && reply.endsWith('}')) || (reply.startsWith('[') && reply.endsWith(']'));
+        if (looksLikeJson) { try { JSON.parse(reply); addNotesChatMsg('agent', t('notes.chat.done', 'Зроблено ✓')); } catch { addNotesChatMsg('agent', reply, false, extractedChips); } }
+        else addNotesChatMsg('agent', reply, false, extractedChips);
+      }
+    } catch {
+      const looksLikeJson = (reply.startsWith('{') && reply.endsWith('}')) || (reply.startsWith('[') && reply.endsWith(']'));
+      if (looksLikeJson) { try { JSON.parse(reply); addNotesChatMsg('agent', t('notes.chat.done', 'Зроблено ✓')); } catch { addNotesChatMsg('agent', reply, false, extractedChips); } }
+      else addNotesChatMsg('agent', reply, false, extractedChips);
+    }
+  } catch { addNotesChatMsg('agent', t('common.network_error', 'Мережева помилка.')); }
+  notesBarLoading = false;
+}
+
+
+// === WINDOW EXPORTS (HTML handlers only) ===
+Object.assign(window, {
+  openAddNote, saveNote, closeNoteModal, openNoteView, closeNoteView,
+  switchNoteViewTab, openNoteViewMenu, closeNoteMenu,
+  noteMenuCopy, noteMenuEdit, noteMenuDelete, noteMenuMove,
+  saveFolderEdit, closeFolderEditModal,
+  sendNoteChatMessage, sendNotesBarMessage,
+  openNotesFolder, closeNotesFolder, openFolderEditModal,
+  selectFolderIcon, selectFolderColor,
+  addNotesChatMsg, autoSaveNoteView, openNoteMenu,
+});

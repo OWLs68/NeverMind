@@ -10,7 +10,7 @@
 //   {
 //     id:        'fct_<ts>_<rnd>',
 //     text:      'Має дочку Марію',
-//     category:  'preferences'|'work'|'relationships'|'context'|'goals',  // 'health' removed (EU AI Act JMQuT 17.05.2026)
+//     category:  'preferences'|'health'|'work'|'relationships'|'context'|'goals',
 //     ts:        1728642000000,   // коли створено
 //     lastSeen:  1728742000000,   // коли востаннє підтверджено
 //     source:    'inbox'|'auto'|'manual'|'migration'|'onboarding',
@@ -34,18 +34,18 @@ const NM_FACTS_MIGRATED_KEY = 'nm_facts_migrated';
 // Ліміт щоб не розпухало (після Supabase буде pgvector — лімітів не буде)
 const MAX_FACTS = 100;
 
-// Категорії з метаданими (label/emoji/color для UI).
-// 'health' видалено — EU AI Act compliance JMQuT 17.05.2026 (AI більше не запам'ятовує медичні факти).
+// Категорії з метаданими (label/emoji/color для UI)
 export const FACT_CATEGORIES = {
   preferences:   { label: 'Вподобання', emoji: '💭', color: '#c2790a' },
+  health:        { label: "Здоров'я",    emoji: '❤️', color: '#dc2626' },
   work:          { label: 'Робота',     emoji: '💼', color: '#2563eb' },
   relationships: { label: 'Стосунки',   emoji: '👥', color: '#7c3aed' },
   context:       { label: 'Контекст',   emoji: '📍', color: '#16a34a' },
   goals:         { label: 'Цілі',       emoji: '🎯', color: '#ea580c' },
 };
 
-// Порядок показу у контексті AI.
-const CATEGORY_ORDER = ['relationships', 'work', 'goals', 'preferences', 'context'];
+// Порядок показу у контексті AI (здоров'я зверху бо критичне)
+const CATEGORY_ORDER = ['health', 'relationships', 'work', 'goals', 'preferences', 'context'];
 
 // ============================================================
 // CRUD
