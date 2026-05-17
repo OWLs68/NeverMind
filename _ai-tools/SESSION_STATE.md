@@ -4,7 +4,7 @@
 >
 > Старіші сесії (до 6GoDe 19.04) — в [`_archive/SESSION_STATE_archive.md`](../_archive/SESSION_STATE_archive.md).
 
-**Оновлено:** 2026-05-16 (сесія **DGH6F** — pre-Supabase hardening + Event Delegation Phase 1а: (A) `NM_KEYS` audit +44 ключі, (B) Backup 4 латентні дірки + 7 проблем самореалізації (Council), (C) Event Delegation модуль `src/core/delegation.js` + 16 header onclick + pre-commit-onclick-freeze hook. 12 комітів, Council 8 агентів Sonnet, ~4 години). Раніше: 2026-05-16 (сесія **e9t3N** — AI-тестер інфраструктура + Security аудит з 8 системними фіксами + Dependabot + Claude Security Action. 15+ комітів, Council 9 агентів Sonnet, ~10 годин). Раніше: 2026-05-13 (сесія **nliW8** — 4 фази: B-170 регресія + Phase 2 уніфікація save_finance + Пункт 3 delete_medication повний undo + Пункт 4 B-178 cross-chat + 6 авто-сторожів-хуків. 24 коміти v862→v874+, Council 16 агентів Sonnet).
+**Оновлено:** 2026-05-16 (сесія **DGH6F** — pre-Supabase hardening + Event Delegation Phase 1: (A) `NM_KEYS` audit +44 ключі, (B) Backup 4 латентні дірки + 7 проблем самореалізації (Council), (C) Event Delegation модуль `delegation.js` + Phase 1а 16 header onclick + Phase 1б me/onboarding/inbox 6 onclick + pre-commit-onclick-freeze hook (8 actions у registry). 17 комітів, Council 11 агентів Sonnet, ~5 годин). Раніше: 2026-05-16 (сесія **e9t3N** — AI-тестер інфраструктура + Security аудит з 8 системними фіксами + Dependabot + Claude Security Action. 15+ комітів, Council 9 агентів Sonnet, ~10 годин). Раніше: 2026-05-13 (сесія **nliW8** — 4 фази: B-170 регресія + Phase 2 уніфікація save_finance + Пункт 3 delete_medication повний undo + Пункт 4 B-178 cross-chat + 6 авто-сторожів-хуків. 24 коміти v862→v874+, Council 16 агентів Sonnet).
 
 ---
 
@@ -53,13 +53,20 @@ Council 5 паралельних агентів Sonnet (🕵️ Критик / �
 
 ROADMAP Security Hardening BLOCKER #1 (Event Delegation Refactor) перший крок з Strangler стратегії (Council Стратег: НЕ Big Bang, поступово файл-за-файлом). Static HTML headers — найпростіший підмножина (нема `stopPropagation` / `this.closest()` / template literal UUID). Council аудит підтвердив що 16 onclick у `index.html` headers (8 tabs × `openSettings`+`openHelp`) — оптимальний quick win.
 
-8. **`62183fc`** —
-   - `src/core/delegation.js` (новий, 71 рядок): ACTIONS registry через `Object.create(null)` (без prototype pollution), `reg(name, fn)` + `initDelegation()` один listener на `document.body`. `closest('[data-action]')` → handler `(dataset, el, ev)`. UUID-immune через `el.dataset.id` (string, не eval) — клас B-108/B-170 неможливий. Silent skip для невідомих actions. 2 базові actions з самого boot: `open-settings` / `open-help` (виклик `window.X` глобалів).
+8. **`62183fc`** Phase 1а — header buttons (16 onclick):
+   - `src/core/delegation.js` (новий, ~71 рядок): ACTIONS registry через `Object.create(null)` (без prototype pollution), `reg(name, fn)` + `initDelegation()` один listener на `document.body`. `closest('[data-action]')` → handler `(dataset, el, ev)`. UUID-immune через `el.dataset.id` (string, не eval) — клас B-108/B-170 неможливий. Silent skip для невідомих actions. 2 базові actions: `open-settings` / `open-help`.
    - `src/app.js` + `src/core/boot.js`: import + `initDelegation()` у `bootApp()` ПЕРЕД `showApp()` (Inversion: без цього перший клік до showApp був би mute).
-   - `index.html` — 16 onclick → data-action: 334→319 (−16 у HTML + 1 у delegation.js коментарі).
+   - `index.html` — 16 onclick → data-action: 334→319.
    - `.claude/hooks/pre-commit-onclick-freeze.js` (новий, 8-й сторож) + settings.json: net-rachet `+onclick= не > -onclick=` у diff. Дозволяє refactor, блокує regression. Smoke 3/3.
-   - `TESTING_LOG.md` секція v900+ DGH6F: 9 iPhone checkbox'ів (8 tabs × ⚙️+? + регресія-чек DevTools + sanity «жодних візуальних змін»).
    - CACHE bump `nm-20260516-2100`.
+
+**Phase 1б — JS файли (3 sub-комміти).** Council 3 паралельних агентів Sonnet (Onclick Mapper + Strangler Verifier + Pre-mortem) ПЕРЕД першим Edit (виконано урок DGH6F «Pre-mortem ≠ implementation verification»). Knock 1: Verifier коректував Strategist order — me.js простіший (1 onclick, складність 1) ніж inbox.js (4 onclick, daily flow), тому **me.js першим JS, не inbox.js**.
+
+9. **`cb97845`** Phase 1б1 — `me.js:185` `switchTab('projects')` → `data-action="switch-tab" data-tab="projects"`. + новий універсальний action `switch-tab` у delegation.js (reuse для ~30 інших `switchTab(...)` onclick у проекті). Onclick 319→318. CACHE 2130.
+10. **`cb5385d`** Phase 1б2 — `onboarding.js:616` `this.closest('#fv-tip').remove()` → `data-action="close-parent" data-parent="#fv-tip"`. + новий універсальний action `close-parent` (reuse для аналогічного `health.js:1333` коли мігруємо). Onclick 318→317. CACHE 2145.
+11. **`3bd2796`** Phase 1б3 — `inbox.js` 4 onclick: upcoming-картка (#1+#2 `switchTab('tasks')`/`openCalendarModal()`), inbox-картка (#3 `navigateInboxItem('${id}')`), clarify-модалка (#4 `selectClarifyOption(${i})`). + 3 нові actions: `open-calendar`, `navigate-inbox-item`, `select-clarify-option` (з `parseInt(data.idx, 10)` захистом — Pre-mortem 🔴 закрито). Onclick 317→313. CACHE 2200.
+
+**Загалом Phase 1б: 3 файли × 6 onclick → 0 у файлах + 6 нових actions у delegation.js registry (8 actions total). 0 регресій (Pre-mortem передбачив усі).**
 
 #### C. Brain-задачі (моніторинг власної інфраструктури)
 
@@ -73,8 +80,8 @@ ROADMAP Security Hardening BLOCKER #1 (Event Delegation Refactor) перший �
 ### Гілка + контекст
 
 - Гілка: `claude/start-session-DGH6F`
-- Council save: знайшов **B-184** (активний баг — clearAllData wipe не повний) + **B-185** (4 латентні дірки Backup механізму — Pre-mortem) + **Council self-аудит** знайшов 7 проблем у моїх же фіксах
-- Розмір сесії: 13 комітів (1 NM_KEYS audit + 4 backup hardening + 2 Council self-аудит fix + 1 Event Delegation Phase 1а + 4 docs + 1 brain), ~4 години
+- Council save: знайшов **B-184** (активний баг — clearAllData wipe не повний) + **B-185** (4 латентні дірки Backup механізму — Pre-mortem) + **Council self-аудит** знайшов 7 проблем у моїх же фіксах + Phase 1б Council 3 агенти коректували order (me.js перший, не inbox.js)
+- Розмір сесії: 17 комітів (1 NM_KEYS audit + 4 backup hardening + 2 Council self-аудит fix + 1 Event Delegation Phase 1а + 3 Phase 1б + 5 docs + 1 brain), ~5 годин
 - Pre-commit hooks тепер 9 (додано `pre-commit-onclick-freeze.js` — net-rachet для inline onclick)
 
 ### Що далі (узгоджено з Романом)
@@ -82,8 +89,9 @@ ROADMAP Security Hardening BLOCKER #1 (Event Delegation Refactor) перший �
 1. ✅ **NM_KEYS audit** (B-184).
 2. ✅ **Backup hardening Phase 1** — 4 латентні дірки закрито (B-185) + 7 self-аудит проблем виправлено.
 3. ✅ **Event Delegation Phase 1а** — `delegation.js` + 16 header onclick + freeze hook.
-4. **Event Delegation Phase 1б+ (~6 год розпорошено на кілька сесій)** — мігрувати решту 318 onclick по 1-2 файли за коміт. Order Стратега: inbox.js (4) → board.js (3) → tasks.js (3) → me.js (1) → onboarding.js (1) → projects.js (5) → evening.js (6) → notes.js (10) → habits.js (12) → health.js (14) → calendar.js (15) → finance-analytics.js (9) → finance.js (16) → finance-modals.js (35) → index.html залишки (169). CSP Report-Only коли grep=0.
-5. **Backup Phase 2 (~3 год)** — `createFullBackup()` + JSON export + Restore UI у Налаштуваннях. Перед Supabase сесією.
+4. ✅ **Event Delegation Phase 1б** — me.js + onboarding.js + inbox.js (6 onclick → delegation, 313 залишилось).
+5. **Event Delegation Phase 1в+ (~5 год розпорошено на кілька сесій)** — мігрувати решту 313 onclick. Скоригований order (Council Verifier): tasks.js (3 onclick, складність 4 через stopProp+ontouchend+closest) → board.js (3) → projects.js (5) → evening.js (6) → notes.js (10) → nav.js (9, ПРОПУЩЕНО Стратегом — додано Verifier) → habits.js (12) → health.js (14) → calendar.js (15) → finance-analytics.js (9) → finance.js (16) → finance-modals.js (35) → index.html залишки (169). CSP Report-Only коли grep=0.
+6. **Backup Phase 2 (~3 год)** — `createFullBackup()` + JSON export + Restore UI у Налаштуваннях. Перед Supabase сесією.
 
 ---
 
