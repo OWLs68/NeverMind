@@ -67,3 +67,10 @@ reg('open-help', (data) => {
     window.openHelp(data.tab || 'inbox');
   }
 });
+// switch-tab — універсальний для будь-якої навігації між 8 вкладками.
+// data-tab="projects" / "tasks" / "inbox" etc.
+reg('switch-tab', (data) => {
+  if (typeof window !== 'undefined' && typeof window.switchTab === 'function') {
+    window.switchTab(data.tab);
+  }
+});
