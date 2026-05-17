@@ -24,10 +24,10 @@
 
 **4 критичні блокери до Supabase:**
 
-1. **🔴 Event Delegation Refactor + strict CSP** (~6-8 годин, окрема сесія)
-   - 185 inline `onclick` у `index.html` + ~300 динамічних з JS render → один listener на `document.body` через `data-action` + `data-id`
-   - Після цього strict CSP `script-src 'self'` без `unsafe-inline` — блокує 95% XSS
-   - **Бонус:** UUID завжди безпечні у атрибутах, не у виконуваному коді (B-108/B-170 клас багів зникає назавжди)
+1. **🟡 Event Delegation Refactor + strict CSP** (Phase 1а-1д ✅ DGH6F 16.05; ~3-4 год залишку)
+   - **Прогрес DGH6F:** 40 handler'ів → delegation, 334→296 onclick. Новий модуль `src/core/delegation.js` (23 actions). Файли мігровано: header buttons + me + onboarding + inbox + tasks (4/5) + board + evening + projects. Pre-commit-onclick-freeze hook (9-й сторож, net-rachet).
+   - **Залишок (~5 год):** notes.js (10) → nav.js (9, ПРОПУЩЕНО Стратегом раніше) → habits.js (12, reuse `toggle-entity-done` universal) → health.js (14, але див. Health AI isolation нижче) → calendar.js (15) → finance-analytics.js (9) → finance.js (16) → finance-modals.js (35) → index.html залишки (169). Phase 1в-b: окремий `src/ui/touch-detect.js` для tasks step-check координат swipe-vs-tap.
+   - Після цього strict CSP `script-src 'self'` без `unsafe-inline` — блокує 95% XSS. Bonus: UUID завжди безпечні у атрибутах (B-108/B-170 клас зникає).
 
 2. **🔴 OpenAI ключ → Supabase Edge Function** (під час Supabase міграції)
    - Зараз `nm_gemini_key` у localStorage видно через DevTools
@@ -39,10 +39,9 @@
    - Дані одного юзера видно іншому через JOIN — катастрофа
    - SQL RLS policies написати і протестувати ДО міграції юзерських даних
 
-4. **🔴 Backup/rollback механізм** для міграції localStorage→Supabase (3-4 год)
-   - `nm_backup_v*` снапшот ПЕРЕД будь-якою міграцією
-   - Якщо migration script впаде на кроці 3 з 7 — відкат одним кліком
-   - Без цього 4 юзери частково сконвертовані, частково ні = втрата даних
+4. **🟡 Backup/rollback механізм** для міграції localStorage→Supabase (Phase 1 ✅ DGH6F; Phase 2 ~3 год)
+   - **Прогрес DGH6F:** Phase 1 — 4 латентні дірки Pre-mortem + 7 Council post-аудит фіксів (B-185). `createSelectiveBackup` має quota check (4 MB budget) + `restoreBackup` має `__nm_restoring` lock + 4 listener guards + migration flag reset + nm-data-changed dispatch. `NM_KEYS` audit +44 ключі (B-184 — `clearAllData` залишав events/reminders/routine/allergies/action_log). Boot-time `_assertAllKeysKnown()` сторож.
+   - **Залишок Phase 2:** `createFullBackup()` (зараз тільки selective) + JSON export (для пере-storage перенесення) + Restore UI у Налаштуваннях («Відкат до знімка» + список з `listBackups()` + `getBackupInfo()`).
 
 **Дрібні фікси у поточній сесії e9t3N (вже у роботі):**
 
@@ -71,6 +70,34 @@
 - Окремий OpenAI ключ з $5/міс cap
 
 **📚 Системні принципи безпеки** — у [`docs/SECURITY.md`](docs/SECURITY.md) § «Системні принципи». Кожна нова фіча проходить Security Checklist.
+
+---
+
+**🚨 Health AI isolation — EU AI Act compliance** (СТРАТЕГІЧНЕ РIШЕННЯ Романа, передано з brain 15.05.2026)
+
+> **Контекст:** EU AI Act review (15.05) показав AI-обробка health-даних = High-risk категорія (найжорсткіші вимоги — conformity assessment, EU реєстр, CE marking). Тиждень+ додаткової роботи + ризик штрафів €35M. **Рішення Романа: best-of-both-worlds** — UI залишається (95% коду цінно), AI-доступ ВИДАЛЯЄТЬСЯ повністю. Health стає Limited risk як інші вкладки.
+>
+> **Принцип:** AI НЕ читає і НЕ пише у Health-структури. Health = ізольована вкладка. Юзер сам редагує медкартку вручну.
+
+**Що видаляється** (закриває High-risk):
+- AI-tools з `src/ai/prompts.js` + `ui-tools.js`: `create_medication`, `delete_medication`, `update_medication`, `add_allergy`, `delete_allergy`, `create_health_event`, `add_health_record`, інші health-tools
+- `export_health_card` → переробити на пряму UI-кнопку (без AI)
+- Inbox-класифікація: видалити Health як категорію. Fallback (треба узгодити з Ромою): **A** «болить горло» → Нотатки (рекомендую) / **B** → Inbox без класифікації
+- OWL Board prompts: видалити всі згадки health («як здоров'я?», «не забудь ліки»). Я-вкладка не дивиться на health (тільки mood/activity/sleep)
+- Чат-бар у Health-вкладці — повністю
+- Pattern Detection (post-Supabase плановано) — позначити «НЕ торкається health-даних»
+
+**Що НЕ міняється:** UI Health (CRUD-екрани алергії/ліки/симптоми/медкартка), localStorage/Supabase зберігання, експорт PDF/JSON, всі стилі. AI у Tasks/Habits/Notes/Finance/Projects/Calendar/Evening/Я — як було.
+
+**Перед стартом сесії:**
+1. **Аудит:** grep `medication|allergy|health|medkartka` у `src/` — список AI-точок-дотику (brain попередив про неочевидні у boot.js міграціях + Кошик)
+2. **План:** які AI-tools повністю видаляються, які переробляються на UI-кнопки
+3. **Inbox fallback** — обговорити з Ромою варіант A vs B
+4. **CHANGES.md** позначити як «AI Act Compliance: Health isolated from AI» (первый compliance milestone)
+5. **docs/SECURITY.md** оновити PHI-розділ (раніше Health був великий PHI-сурс)
+6. **Створити `docs/AI_ACT_COMPLIANCE.md`** — «Health = Limited risk через ізоляцію від AI»
+
+**Перевірка після:** iPhone smoke — UI Health працює (додати алергію, побачити список). Inbox «болить горло» НЕ потрапляє у Health. OWL Board не згадує health. Деталі рішення — brain `ideas/eu-ai-act-impact.md` § «Наслідки спрощення Health (15.05)».
 
 ---
 
