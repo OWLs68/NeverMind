@@ -87,21 +87,13 @@
 | `save_routine` | Зберегти розпорядок дня для днів тижня |
 | `clarify` | Запитати уточнення (тільки коли 2+ типів неоднозначно) |
 
-### ЗДОРОВ'Я — Фаза 2 (10)
+### ЗДОРОВ'Я — ВИДАЛЕНО (EU AI Act compliance JMQuT 17.05.2026)
 
-| Tool | Коли | Параметри |
-|------|------|-----------|
-| `create_health_card` | Симптом 3+ днів АБО діагноз. Перевір дублі перед викликом | `name`, `subtitle`, `doctor`, `doctor_recommendations`, `status` (6-шкала), `initial_history_text` |
-| `edit_health_card` | Оновлення існуючої | `card_id`, ... |
-| `delete_health_card` | Видалення | `card_id` |
-| `update_health_card_status` | Точкова зміна статусу ("у ремісії", "тепер хронічна", "закрив") АБО агрегатор AI-інтерв'ю | `card_id`, `status` (acute/treatment/improving/remission/chronic/done), `comment` |
-| `add_medication` | Лікар прописав препарат | `card_id`, `med_name`, `dosage`, `schedule`, `course_duration` |
-| `edit_medication` | Зміна дози/графіку | `card_id`, `med_id`, ... |
-| `delete_medication` | "відміни ліки X" / "більше не приймаю X" — reverse counterpart до add_medication (universal undo) | `card_id`, `med_id`, `comment` |
-| `log_medication_dose` | "прийняв Омез" — перевіри картки | `card_id`, `med_name` (fuzzy) |
-| `add_allergy` | "у мене алергія на X" — перевір дублі | `name`, `notes` |
-| `delete_allergy` | "більше нема алергії на X" | `allergy_id` |
-| `add_health_history_entry` | Оновлення стану ("менше свербить"), status_change, dose_log | `card_id`, `entry_type`, `text` |
+🚫 **11 AI-tools видалено** з prompts.js: `create_health_card`, `edit_health_card`, `delete_health_card`, `update_health_card_status`, `add_medication`, `edit_medication`, `delete_medication`, `log_medication_dose`, `add_allergy`, `delete_allergy`, `add_health_history_entry`.
+
+**Чому:** EU AI Act (Annex III) + GDPR Article 9 — AI не повинен приймати рішення про health-стан. Деталі: `docs/AI_ACT_COMPLIANCE.md`.
+
+**Що AI робить тепер з health-фразами:** `save_note(folder='Здоровʼя')` з оригінальним текстом юзера, без створення карток/ліків/алергій. UI CRUD Health-вкладки залишається — юзер сам редагує.
 
 ### ПАМ'ЯТЬ (1)
 
@@ -157,7 +149,7 @@
 
 | Tool | Статус |
 |------|--------|
-| `export_health_card` | ✅ Відкриває модалку з готовим текстом |
+| ~~`export_health_card`~~ | 🚫 ВИДАЛЕНО JMQuT 17.05.2026 (EU AI Act). Експорт тільки через UI кнопку у Health-вкладці. |
 | `clear_chat` | 🚧 блок (per-chat storage кожного бару) |
 | `toggle_owl_board` | 🚧 блок (нема toggle логіки) |
 
@@ -195,6 +187,7 @@
 
 | Дата | Сесія | Зміна |
 |------|-------|-------|
+| 17.05.2026 | JMQuT | 🚨 **EU AI Act Health Isolation — видалено 11 health AI-tools + 1 UI tool (`export_health_card`).** Загалом: -12 tools. AI більше НЕ створює медкартки/ліки/алергії. UI Health-вкладка повністю функціональна (юзер сам редагує). Деталі: `docs/AI_ACT_COMPLIANCE.md`. |
 | 18.04.2026 | VJF2M | Створено документ. 39 готових tools + 14 у планах (4.17). |
 | 18.04.2026 | VJF2M | Реалізовано 8 з 14 UI Tools (`src/ai/ui-tools.js`): switch_tab, open_memory, open_settings, set_finance_period, open_finance_analytics, set_theme, set_owl_mode, export_health_card. 6 заблокованих (open_record/open_trash/calendar_jump_to/filter_tasks/clear_chat/toggle_owl_board) — винесено у підпункти 4.17.B (потребують нової інфраструктури). **Загалом 47 tools живих.** |
 | 19.04.2026 | JvzDi | **Видалено `set_theme`** — плацебо tool без реальної темної теми у застосунку. UI tools: 8 → **7 живих.** Загалом: 47 → **46 tools.** Також посилено правило `switch_tab` у промпті (ЖОРСТКЕ правило "відкрий X → switch_tab, НЕ save_task") і додано загальне правило ФОРМАТ ЧІПІВ для Inbox chat (чіпи як JSON блок у content, парсер `_parseContentChips` портовано з evening-chat). |

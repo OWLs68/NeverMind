@@ -37,6 +37,13 @@
 
 **Версія:** CACHE_NAME `nm-20260517-2245`, commit `JMQuT Phase 2+3`.
 
+### v931+ Phase 7 — Docs + AI_ACT_COMPLIANCE.md
+
+- [ ] `docs/AI_ACT_COMPLIANCE.md` створено — повна документація рішення.
+- [ ] `docs/SECURITY.md` — оновлено PHI розділ (Health = Limited risk).
+- [ ] `docs/AI_TOOLS.md` — секція Здоров'я переписана як «ВИДАЛЕНО».
+- [ ] `ROADMAP.md` — Health AI isolation позначено ✅ ЗАВЕРШЕНО.
+
 ### v930+ Phase 6 — Cross-tab refs + migration v18 cleanup
 
 - [ ] Перший boot після оновлення → у DevTools Application/localStorage `nm_chat_health` ВІДСУТНІЙ + `nm_health_interview_pending` ВІДСУТНІЙ + у `nm_facts` нема записів з `category: 'health'`.

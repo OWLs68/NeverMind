@@ -73,7 +73,17 @@
 
 ---
 
-**🚨 Health AI isolation — EU AI Act compliance** (СТРАТЕГІЧНЕ РIШЕННЯ Романа, передано з brain 15.05.2026)
+**✅ Health AI isolation — EU AI Act compliance — ЗАВЕРШЕНО JMQuT 17.05.2026** (6 фаз, 6 комітів, ~6 годин)
+
+Повний звіт: `docs/AI_ACT_COMPLIANCE.md`. Видалено: 11 AI-tools + `export_health_card` UI tool + `getHealthContext()` з загального промпту + чат-бар у Health + brain-signals appointment + clarify-guard doctor profiling + cross-tab refs (CHAT_STORE_KEYS, _ALL_CHAT_TABS, SEND_BTN_MAP, addMsgForTab/restoreChatUI maps) + migration v18 (cleanup nm_chat_health + nm_health_interview_pending + health-facts з nm_facts). Залишено: UI CRUD Health-вкладки повністю функціональний — юзер сам редагує медкартки/алергії/ліки через UI.
+
+**Council:** 6 паралельних агентів Sonnet (Critic + Pre-mortem + Strategist + UI-Map + OWL-Map + Inbox-classifier) + 4 WebSearch (EU AI Act Annex III + GDPR Art.9 + Article 6 + productivity apps classification).
+
+**Bundle:** 25742 → 24903 рядків (-839 рядків, -3%).
+
+---
+
+**🚨 Health AI isolation — EU AI Act compliance** (СТРАТЕГІЧНЕ РIШЕННЯ Романа, передано з brain 15.05.2026 — ⬇️ ОРИГІНАЛЬНИЙ ПЛАН ДЛЯ ICHIVI)
 
 > **Контекст:** EU AI Act review (15.05) показав AI-обробка health-даних = High-risk категорія (найжорсткіші вимоги — conformity assessment, EU реєстр, CE marking). Тиждень+ додаткової роботи + ризик штрафів €35M. **Рішення Романа: best-of-both-worlds** — UI залишається (95% коду цінно), AI-доступ ВИДАЛЯЄТЬСЯ повністю. Health стає Limited risk як інші вкладки.
 >

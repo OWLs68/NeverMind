@@ -1,5 +1,7 @@
 # SECURITY.md — Безпека NeverMind
 
+> **🚨 Оновлено JMQuT 17.05.2026:** Health AI Isolation реалізовано (EU AI Act compliance). AI більше НЕ обробляє health-дані. Деталі → `docs/AI_ACT_COMPLIANCE.md`.
+>
 > **Чому це важливо:** NeverMind зберігає **чутливі персональні дані** одного юзера (Романа) сьогодні і кількох тестерів незабаром. Після Supabase міграції — потенційно сотні юзерів з health, finance, personal даними. Один взлом = регуляторний штраф GDPR, втрата довіри, потенційні судові позови.
 >
 > **Створено:** 15.05.2026 (сесія e9t3N) після Council 5 агентів security аудиту.
@@ -14,7 +16,7 @@
 
 | Тип даних | Sensitivity | Регуляція |
 |-----------|-------------|-----------|
-| **Health картки, медікаменти, алергії** (`nm_health_cards`, `nm_allergies`) | 🔴 PHI (Protected Health Information) | GDPR Article 9 — Special Category, потребує explicit consent |
+| **Health картки, медікаменти, алергії** (`nm_health_cards`, `nm_allergies`) | 🟡 Особисті дані (PHI ізольовано від AI з JMQuT 17.05.2026 — `docs/AI_ACT_COMPLIANCE.md`) | GDPR Article 9 — Special Category, але AI НЕ обробляє → no profiling |
 | **Фінансові транзакції** (`nm_finance`) | 🔴 Financial PII | GDPR, PCI-DSS-adjacent |
 | **OpenAI API ключ** (`nm_gemini_key`) | 🔴 Credential | Втрата = чужі витрати на твоєму рахунку |
 | **Психологічні нотатки, моменти дня** (`nm_notes`, `nm_evening_moments`) | 🟡 Personal — приватне життя | GDPR Personal Data |
