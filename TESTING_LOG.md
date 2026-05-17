@@ -37,6 +37,12 @@
 
 **Версія:** CACHE_NAME `nm-20260517-2245`, commit `JMQuT Phase 2+3`.
 
+### v932+ Phase 8 — Council post-audit hardening
+
+- [ ] Видалено мертві функції з health.js (-138 рядків).
+- [ ] Migration v18 розширено: видаляє ще й старі health tool_calls з усіх 8 чат-історій (запобігає AI намагатись повторити старі виклики).
+- [ ] Тест: написати у Tasks-чат щось → перевір console — НЕ повинно бути «Health tool blocked» (бо стара історія очищена).
+
 ### v931+ Phase 7 — Docs + AI_ACT_COMPLIANCE.md
 
 - [ ] `docs/AI_ACT_COMPLIANCE.md` створено — повна документація рішення.

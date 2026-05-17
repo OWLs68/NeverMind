@@ -21471,8 +21471,53 @@ ${logLines}
             }
           }
         }
+        const HEALTH_TOOL_NAMES = /* @__PURE__ */ new Set([
+          "create_health_card",
+          "edit_health_card",
+          "delete_health_card",
+          "update_health_card_status",
+          "add_medication",
+          "edit_medication",
+          "delete_medication",
+          "log_medication_dose",
+          "add_allergy",
+          "delete_allergy",
+          "add_health_history_entry",
+          "export_health_card"
+        ]);
+        const CHAT_KEYS_TO_FILTER = [
+          "nm_chat_inbox",
+          "nm_chat_tasks",
+          "nm_chat_notes",
+          "nm_chat_me",
+          "nm_chat_evening",
+          "nm_chat_finance",
+          "nm_chat_projects",
+          "nm_owl_chat"
+        ];
+        for (const k of CHAT_KEYS_TO_FILTER) {
+          const raw = localStorage.getItem(k);
+          if (!raw) continue;
+          try {
+            const msgs = JSON.parse(raw);
+            if (!Array.isArray(msgs)) continue;
+            const filtered = msgs.filter((m) => {
+              if (!m) return false;
+              if (m.role === "tool" && m.name && HEALTH_TOOL_NAMES.has(m.name)) return false;
+              if (Array.isArray(m.tool_calls) && m.tool_calls.some((tc) => HEALTH_TOOL_NAMES.has(tc?.function?.name))) {
+                return false;
+              }
+              return true;
+            });
+            if (filtered.length < msgs.length) {
+              localStorage.setItem(k, JSON.stringify(filtered));
+              cleaned += msgs.length - filtered.length;
+            }
+          } catch {
+          }
+        }
         localStorage.setItem("nm_health_ai_isolation_v18", "1");
-        if (cleaned > 0) console.log(`[boot] v18 EU AI Act: \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E ${cleaned} health-AI \u043A\u043B\u044E\u0447\u0456\u0432/\u0444\u0430\u043A\u0442\u0456\u0432`);
+        if (cleaned > 0) console.log(`[boot] v18 EU AI Act: \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E ${cleaned} health-AI \u043A\u043B\u044E\u0447\u0456\u0432/\u0444\u0430\u043A\u0442\u0456\u0432/tool_calls`);
       } catch (e) {
         console.error("[boot] v18 health AI isolation failed:", e);
       }

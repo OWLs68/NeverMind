@@ -1103,8 +1103,39 @@ function runMigrations() {
           }
         }
       }
+      // Council JMQuT post-audit fix: видалити старі health tool_calls з історії всіх чатів.
+      // Інакше AI бачить їх як приклади у промпті і може намагатись повторити (хоч guard блокує).
+      const HEALTH_TOOL_NAMES = new Set([
+        'create_health_card','edit_health_card','delete_health_card','update_health_card_status',
+        'add_medication','edit_medication','delete_medication','log_medication_dose',
+        'add_allergy','delete_allergy','add_health_history_entry','export_health_card'
+      ]);
+      const CHAT_KEYS_TO_FILTER = ['nm_chat_inbox','nm_chat_tasks','nm_chat_notes','nm_chat_me',
+                                  'nm_chat_evening','nm_chat_finance','nm_chat_projects','nm_owl_chat'];
+      for (const k of CHAT_KEYS_TO_FILTER) {
+        const raw = localStorage.getItem(k);
+        if (!raw) continue;
+        try {
+          const msgs = JSON.parse(raw);
+          if (!Array.isArray(msgs)) continue;
+          const filtered = msgs.filter(m => {
+            if (!m) return false;
+            // Видалити tool-result повідомлення з health tools
+            if (m.role === 'tool' && m.name && HEALTH_TOOL_NAMES.has(m.name)) return false;
+            // Видалити assistant tool_calls з health
+            if (Array.isArray(m.tool_calls) && m.tool_calls.some(tc => HEALTH_TOOL_NAMES.has(tc?.function?.name))) {
+              return false;
+            }
+            return true;
+          });
+          if (filtered.length < msgs.length) {
+            localStorage.setItem(k, JSON.stringify(filtered));
+            cleaned += (msgs.length - filtered.length);
+          }
+        } catch {}
+      }
       localStorage.setItem('nm_health_ai_isolation_v18', '1');
-      if (cleaned > 0) console.log(`[boot] v18 EU AI Act: видалено ${cleaned} health-AI ключів/фактів`);
+      if (cleaned > 0) console.log(`[boot] v18 EU AI Act: видалено ${cleaned} health-AI ключів/фактів/tool_calls`);
     } catch (e) {
       console.error('[boot] v18 health AI isolation failed:', e);
     }
