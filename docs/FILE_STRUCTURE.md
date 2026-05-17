@@ -31,6 +31,7 @@
 | `src/core/logger.js` | Error logging, console override, UI панель логу, ring buffer юзер-дій (trackUserAction), автолистенер nm-data-changed, stack trace у записах |
 | `src/core/diagnostics.js` | **Діагностична система (B-67 acZEu):** Health Check (9 перевірок стану систем), Smoke Tests (9 авто-тестів), Performance monitor (startup/longtask/fetch monkey-patch). Рендерить 3 блоки у панелі логу. Експорти: runHealthCheck, runSmokeTests, getPerformanceData |
 | `src/core/usage-meter.js` | **V3 Фаза 0 (ywA44 28.04):** лічильник витрат OpenAI. PRICING table, `logUsage(module, usageObj)` записує у `nm_usage_log`, `getUsageStats()` агрегує today/thisMonth/projection/byModule, `exportUsageJSON()` копіює у буфер обміну, `renderUsageMeter()` малює блок у Налаштуваннях. Ротація 31 день. Hook у 12 fetch-сайтах (центральний `_fetchAI` + 11 прямих) |
+| `src/core/delegation.js` | **Event Delegation registry (DGH6F 16.05)** — один listener на `document.body` через `closest('[data-action]')` + handler з registry. Експорт: `reg(name, fn)`, `initDelegation()`. 23 actions після Phase 1а-1д. Підготовка до strict CSP `script-src 'self'` без `unsafe-inline`. UUID-immune через `el.dataset.id` (string, не eval) — B-108/B-170 клас неможливий. |
 
 ### AI модулі
 
