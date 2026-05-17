@@ -5891,13 +5891,13 @@ ${lines.join("\n\n")}`;
           const dot = m.isNote ? "#818cf8" : moodDots[m.mood] || "#888";
           const timeStr = m.ts ? new Date(m.ts).toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" }) : "";
           const clickable = !m.isNote;
-          return `<div style="display:flex;gap:8px;align-items:flex-start;padding:7px 0;border-bottom:1px solid rgba(30,16,64,0.06)${clickable ? ";cursor:pointer" : ""}"${clickable ? ` onclick="openMomentView('${m.id}')"` : ""}>
+          return `<div style="display:flex;gap:8px;align-items:flex-start;padding:7px 0;border-bottom:1px solid rgba(30,16,64,0.06)${clickable ? ";cursor:pointer" : ""}"${clickable ? ` data-action="open-moment-view" data-id="${m.id}"` : ""}>
           <div style="width:7px;height:7px;border-radius:50%;background:${dot};flex-shrink:0;margin-top:5px"></div>
           <div style="flex:1">
             <div style="font-size:13px;color:#1e1040;font-weight:500;line-height:1.45">${escapeHtml(m.summary || m.text)}</div>
             ${timeStr ? `<div style="font-size:10px;color:rgba(30,16,64,0.3);font-weight:600;margin-top:2px">${timeStr}</div>` : ""}
           </div>
-          ${!m.isNote ? `<div onclick="event.stopPropagation();deleteMoment('${m.id}')" style="font-size:18px;color:rgba(30,16,64,0.2);cursor:pointer;padding:0 2px">\xD7</div>` : ""}
+          ${!m.isNote ? `<div data-action="delete-moment" data-id="${m.id}" style="font-size:18px;color:rgba(30,16,64,0.2);cursor:pointer;padding:0 2px">\xD7</div>` : ""}
         </div>`;
         }).join("");
       }
@@ -5924,8 +5924,8 @@ ${lines.join("\n\n")}`;
     container.innerHTML = top.map((task) => `
     <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid rgba(30,16,64,0.06)">
       <div style="flex:1;font-size:14px;color:#1e1040;font-weight:500;line-height:1.4">${escapeHtml(task.title)}</div>
-      <button onclick="rescheduleTaskTomorrow('${task.id}')" style="background:rgba(194,121,10,0.12);color:#5b3d12;border:1px solid rgba(194,121,10,0.35);border-radius:999px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">${lblTomorrow}</button>
-      <button onclick="rescheduleTaskWeek('${task.id}')" style="background:rgba(30,16,64,0.06);color:rgba(30,16,64,0.7);border:1px solid rgba(30,16,64,0.12);border-radius:999px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">${lblWeek}</button>
+      <button data-action="reschedule-task" data-id="${task.id}" data-days="1" style="background:rgba(194,121,10,0.12);color:#5b3d12;border:1px solid rgba(194,121,10,0.35);border-radius:999px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">${lblTomorrow}</button>
+      <button data-action="reschedule-task" data-id="${task.id}" data-days="7" style="background:rgba(30,16,64,0.06);color:rgba(30,16,64,0.7);border:1px solid rgba(30,16,64,0.12);border-radius:999px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">${lblWeek}</button>
     </div>
   `).join("") + (more > 0 ? `<div style="font-size:11px;color:rgba(30,16,64,0.4);text-align:center;padding:6px 0 0 0">${lblMore}</div>` : "");
   }
@@ -5980,8 +5980,8 @@ ${lines.join("\n\n")}`;
           <div style="font-size:14px;color:#1e1040;font-weight:600">${escapeHtml(h.name)}</div>
           <div style="font-size:11px;color:rgba(30,16,64,0.5);font-weight:600;margin-top:2px">${streakText}</div>
         </div>
-        <button onclick="holdQuitHabit('${h.id}');renderEvening()" style="background:rgba(22,163,74,0.12);color:#15803d;border:1px solid rgba(22,163,74,0.35);border-radius:999px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">${lblHold}</button>
-        <button onclick="confirmQuitRelapse('${h.id}');setTimeout(renderEvening,50)" style="background:rgba(30,16,64,0.06);color:rgba(30,16,64,0.7);border:1px solid rgba(30,16,64,0.12);border-radius:999px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">${lblRelapse}</button>
+        <button data-action="hold-quit-habit" data-id="${h.id}" style="background:rgba(22,163,74,0.12);color:#15803d;border:1px solid rgba(22,163,74,0.35);border-radius:999px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">${lblHold}</button>
+        <button data-action="confirm-quit-relapse" data-id="${h.id}" style="background:rgba(30,16,64,0.06);color:rgba(30,16,64,0.7);border:1px solid rgba(30,16,64,0.12);border-radius:999px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">${lblRelapse}</button>
       </div>`;
     }).join("");
   }
@@ -11913,7 +11913,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
   function _owlTabHTML(tab) {
     const t2 = tab;
     return `
-    <div id="owl-tab-collapsed-${t2}" class="owl-collapsed" style="display:none" onclick="toggleOwlTabChat('${t2}')">
+    <div id="owl-tab-collapsed-${t2}" class="owl-collapsed" style="display:none" data-action="toggle-owl-collapsed" data-tab="${t2}">
       <div class="owl-collapsed-avatar">\u{1F989}</div>
       <div class="owl-collapsed-text" id="owl-tab-ctext-${t2}"></div>
     </div>
@@ -11928,9 +11928,9 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
       </div>
     </div>
     <div class="owl-chips-wrapper" id="owl-tab-chips-wrap-${t2}">
-      <button class="owl-chips-arrow owl-chips-arrow-left" id="owl-tab-chips-left-${t2}" onclick="scrollOwlTabChips('${t2}',-1)">\u2039</button>
+      <button class="owl-chips-arrow owl-chips-arrow-left" id="owl-tab-chips-left-${t2}" data-action="scroll-owl-chips" data-tab="${t2}" data-dir="-1">\u2039</button>
       <div id="owl-tab-chips-${t2}" class="owl-speech-chips"></div>
-      <button class="owl-chips-arrow owl-chips-arrow-right" id="owl-tab-chips-right-${t2}" onclick="scrollOwlTabChips('${t2}',1)">\u203A</button>
+      <button class="owl-chips-arrow owl-chips-arrow-right" id="owl-tab-chips-right-${t2}" data-action="scroll-owl-chips" data-tab="${t2}" data-dir="1">\u203A</button>
     </div>`;
   }
   function _owlTabApplyState(tab) {
@@ -21048,6 +21048,46 @@ ${logLines}
         };
         const fn = fnMap[entity];
         if (typeof fn === "function") fn(id);
+      });
+      reg("toggle-owl-collapsed", (data) => {
+        if (typeof window !== "undefined" && typeof window.toggleOwlTabChat === "function") {
+          window.toggleOwlTabChat(data.tab);
+        }
+      });
+      reg("scroll-owl-chips", (data) => {
+        if (typeof window !== "undefined" && typeof window.scrollOwlTabChips === "function") {
+          const dir = parseInt(data.dir, 10);
+          if (!Number.isNaN(dir)) window.scrollOwlTabChips(data.tab, dir);
+        }
+      });
+      reg("open-moment-view", (data) => {
+        if (typeof window !== "undefined" && typeof window.openMomentView === "function") {
+          window.openMomentView(data.id);
+        }
+      });
+      reg("delete-moment", (data) => {
+        if (typeof window !== "undefined" && typeof window.deleteMoment === "function") {
+          window.deleteMoment(data.id);
+        }
+      });
+      reg("reschedule-task", (data) => {
+        if (typeof window === "undefined") return;
+        const days = parseInt(data.days, 10);
+        if (days === 1 && typeof window.rescheduleTaskTomorrow === "function") {
+          window.rescheduleTaskTomorrow(data.id);
+        } else if (days === 7 && typeof window.rescheduleTaskWeek === "function") {
+          window.rescheduleTaskWeek(data.id);
+        }
+      });
+      reg("hold-quit-habit", (data) => {
+        if (typeof window === "undefined") return;
+        if (typeof window.holdQuitHabit === "function") window.holdQuitHabit(data.id);
+        if (typeof window.renderEvening === "function") window.renderEvening();
+      });
+      reg("confirm-quit-relapse", (data) => {
+        if (typeof window === "undefined") return;
+        if (typeof window.confirmQuitRelapse === "function") window.confirmQuitRelapse(data.id);
+        if (typeof window.renderEvening === "function") setTimeout(window.renderEvening, 50);
       });
     }
   });
