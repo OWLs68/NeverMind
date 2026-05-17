@@ -267,8 +267,8 @@ function _renderUpcoming() {
     const icon = item.type === 'task' ? '📌' : item.type === 'reminder' ? '⏰' : '📅';
     const timeStr = item.time ? t('inbox.date.at_time', ' о {time}', { time: item.time }) : '';
     const action = item.type === 'task'
-      ? `onclick="switchTab('tasks')"`
-      : `onclick="openCalendarModal()"`;
+      ? `data-action="switch-tab" data-tab="tasks"`
+      : `data-action="open-calendar"`;
 
     return `<div class="inbox-upcoming-card" ${action}>
       <span class="inbox-upcoming-icon">${icon}</span>
@@ -314,7 +314,7 @@ export function renderInbox() {
 
     html += `<div class="inbox-item-wrap" id="wrap-${item.id}" data-id="${item.id}">
       <div class="inbox-item" id="item-${item.id}" data-id="${item.id}" data-cat="${item.category}"
-           onclick="navigateInboxItem('${item.id}')">
+           data-action="navigate-inbox-item">
         <div class="inbox-item-inner">
           <div class="inbox-item-dot" style="${dotBg}"></div>
           <div class="inbox-item-body">
@@ -1101,7 +1101,7 @@ function showClarify(parsed, originalText) {
   const optEl = document.getElementById('clarify-options');
   optEl.innerHTML = (parsed.options || []).map((opt, i) => {
     const isPrimary = i === 0;
-    return `<button onclick="selectClarifyOption(${i})" style="width:100%;display:flex;align-items:center;gap:10px;background:${isPrimary ? 'rgba(194,121,10,0.05)' : 'rgba(30,16,64,0.03)'};border:1.5px solid ${isPrimary ? 'rgba(194,121,10,0.2)' : 'rgba(30,16,64,0.08)'};border-radius:13px;padding:12px 14px;font-size:14px;font-weight:600;color:${isPrimary ? '#c2790a' : '#1e1040'};cursor:pointer;text-align:left;font-family:inherit">${escapeHtml(opt.label || '')}</button>`;
+    return `<button data-action="select-clarify-option" data-idx="${i}" style="width:100%;display:flex;align-items:center;gap:10px;background:${isPrimary ? 'rgba(194,121,10,0.05)' : 'rgba(30,16,64,0.03)'};border:1.5px solid ${isPrimary ? 'rgba(194,121,10,0.2)' : 'rgba(30,16,64,0.08)'};border-radius:13px;padding:12px 14px;font-size:14px;font-weight:600;color:${isPrimary ? '#c2790a' : '#1e1040'};cursor:pointer;text-align:left;font-family:inherit">${escapeHtml(opt.label || '')}</button>`;
   }).join('');
 
   document.getElementById('clarify-modal').style.display = 'flex';

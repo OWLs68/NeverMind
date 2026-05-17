@@ -84,3 +84,26 @@ reg('close-parent', (data, el) => {
   const parent = el.closest(sel);
   if (parent && typeof parent.remove === 'function') parent.remove();
 });
+// open-calendar — обгортка для window.openCalendarModal() (calendar.js export).
+reg('open-calendar', () => {
+  if (typeof window !== 'undefined' && typeof window.openCalendarModal === 'function') {
+    window.openCalendarModal();
+  }
+});
+// navigate-inbox-item — клік на картку у Inbox-стрічці. data-id уже на
+// .inbox-item елементі (rendering inbox.js:316). Функція сама читає
+// data-cat через getElementById всередині — нам тут тільки передати id.
+reg('navigate-inbox-item', (data) => {
+  if (typeof window !== 'undefined' && typeof window.navigateInboxItem === 'function') {
+    window.navigateInboxItem(data.id);
+  }
+});
+// select-clarify-option — клік на опцію у clarify-модалці. data.idx —
+// рядок ('0','1',...), треба явний parseInt (Pre-mortem 🔴 захист — без
+// нього `clarifyParsed.options[idx]` могло б повести себе ненадійно).
+reg('select-clarify-option', (data) => {
+  if (typeof window !== 'undefined' && typeof window.selectClarifyOption === 'function') {
+    const idx = parseInt(data.idx, 10);
+    if (!Number.isNaN(idx)) window.selectClarifyOption(idx);
+  }
+});
