@@ -4,7 +4,7 @@
 >
 > Старіші сесії (до 6GoDe 19.04) — в [`_archive/SESSION_STATE_archive.md`](../_archive/SESSION_STATE_archive.md).
 
-**Оновлено:** 2026-05-16 (сесія **DGH6F** — pre-Supabase hardening + Event Delegation Phase 1: (A) `NM_KEYS` audit +44 ключі, (B) Backup 4 латентні дірки + 7 проблем самореалізації (Council), (C) Event Delegation модуль `delegation.js` + Phase 1а 16 header onclick + Phase 1б me/onboarding/inbox 6 onclick + pre-commit-onclick-freeze hook (8 actions у registry). 17 комітів, Council 11 агентів Sonnet, ~5 годин). Раніше: 2026-05-16 (сесія **e9t3N** — AI-тестер інфраструктура + Security аудит з 8 системними фіксами + Dependabot + Claude Security Action. 15+ комітів, Council 9 агентів Sonnet, ~10 годин). Раніше: 2026-05-13 (сесія **nliW8** — 4 фази: B-170 регресія + Phase 2 уніфікація save_finance + Пункт 3 delete_medication повний undo + Пункт 4 B-178 cross-chat + 6 авто-сторожів-хуків. 24 коміти v862→v874+, Council 16 агентів Sonnet).
+**Оновлено:** 2026-05-16 (сесія **DGH6F** — pre-Supabase hardening + Event Delegation Phase 1а→1д + Council аудит власних фіксів: (A) `NM_KEYS` audit +44 ключі (B-184), (B) Backup 4 латентні дірки + 7 проблем самореалізації (B-185), (C) Event Delegation 40 inline handler'ів → delegation registry з 23 actions (header + me + onboarding + inbox + tasks + board + evening + projects). 26 комітів, Council 13 агентів Sonnet, ~7 годин).
 
 ---
 
@@ -79,9 +79,28 @@ ROADMAP Security Hardening BLOCKER #1 (Event Delegation Refactor) перший �
     - Phase 1в-b ВIДКЛАДЕНО: 5-й handler (step-check рядок 290) з координатною swipe-vs-tap логікою — потребує окремий `src/ui/touch-detect.js` helper.
     - CACHE 2230.
 
-#### C. Brain-задачі (моніторинг власної інфраструктури)
+**Phase 1г — board.js + evening.js (1 коміт).** Council 3 паралельні агенти Sonnet (по файлу). 9 handler'ів мігровано одним коммітом.
 
-6. **`ae96f1a`** — `.claude/hooks/pre-commit-screenshot.js` локальний guard (другий рівень після workflow): блокує commit якщо staged JSON містить `"screenshot_b64": "<base64>"`. Smoke 4/4 (no-commit/no-JSON/base64/null). + lessons урок «Workflow з зовнішнім API — спершу локальний міні-тест curl» з brain-спостереження про 3 невдалих запуски Claude Security Action у e9t3N.
+14. **`39224b4`** — board.js 3 onclick (toggle-owl-collapsed + scroll-owl-chips з parseInt захистом) + evening.js 6 onclick (open-moment-view, delete-moment, reschedule-task UNIVERSAL з data-days, hold-quit-habit, confirm-quit-relapse — cross-file: функції у habits.js). ⚠️ ontouchstart/move/end swipe (board.js:41) НЕ мігровано — Pre-mortem 🔴: triple-event state chain, окрема задача `src/ui/touch-detect.js` helper. Registry 13→18. CACHE 2300.
+
+**Phase 1д — projects.js (1 коміт).** Council Pre-mortem знайшов pre-existing fuzzy-match баг (`_syncProjectStepToTasks` substring 15 без project.id filter — може закрити чужу задачу). НЕ моя задача, окремий ticket.
+
+15. **`cd97c94`** — projects.js 5 onclick → 5 actions (open-project, close-project-workspace, toggle-project-timeline, toggle-project-step, open-notes-folder з інкапсульованим switchTab+setTimeout(150)). Cleanup: видалено unused escapeJsArg import. Registry 18→23. CACHE 2315.
+
+**Phase 1+ Council аудит власних фіксів (2 коміти hardening).** 2 паралельні агенти Sonnet (Regression Hunter + Cross-file Consistency) ПIСЛЯ всіх 5 фаз знайшли 4 неочевидні проблеми. Усі закриті:
+
+16. **`a42cb9a`** + **`85eb0e8`** — 4 hardening:
+    - 🟡 КРИТИЧНА UX: `[onclick]:active scale(0.87)` не працював для 26 мігрованих елементів (delegation замінив onclick → CSS selector не матчить → тап БЕЗ тактильного feedback). Додано `[data-action]` поруч у обох правилах style.css.
+    - 🟡 PRE-EXISTING: `renderEvening` НЕ був у `Object.assign(window)` у evening.js — старий `onclick="...renderEvening()"` теж не працював у IIFE bundle. Мій handler викликав window.renderEvening що undefined → typeof guard saved from crash але re-render не виконувався. Додано у window.
+    - 🟢 Pattern consistency: `if (!data.id) return` guards у navigate-inbox-item + open-project + toggle-project-timeline.
+    - 🟢 Документація: 3 projects.js actions коментар-тригери + warning у toggle-entity-done про прибирання inline stopPropagation при habits міграції.
+    - CACHE 2345.
+
+**Загалом Event Delegation у DGH6F: 40 inline handler'ів → 23 actions у delegation registry. Onclick total 334 → 296 (-38). 9-й pre-commit сторож (onclick-freeze net-rachet). 0 невиправлених регресій. 0 silent fails у проді (verified self-check).**
+
+#### D. Brain-задачі (моніторинг власної інфраструктури)
+
+17. **`ae96f1a`** — `.claude/hooks/pre-commit-screenshot.js` локальний guard (другий рівень після workflow): блокує commit якщо staged JSON містить `"screenshot_b64": "<base64>"`. Smoke 4/4 (no-commit/no-JSON/base64/null). + lessons урок «Workflow з зовнішнім API — спершу локальний міні-тест curl» з brain-спостереження про 3 невдалих запуски Claude Security Action у e9t3N.
 
 ### Council висновки (відкладено на наступні сесії)
 
@@ -91,8 +110,8 @@ ROADMAP Security Hardening BLOCKER #1 (Event Delegation Refactor) перший �
 ### Гілка + контекст
 
 - Гілка: `claude/start-session-DGH6F`
-- Council save: B-184 + B-185 + Council self-аудит 7 проблем + Phase 1б Council 3 агенти коректували order + Phase 1в Council 3 агенти знайшли «5 handler'ів а не 3» + 2 🔴 закрито ДО першого Edit
-- Розмір сесії: 20 комітів (1 NM_KEYS audit + 4 backup hardening + 2 self-аудит + 1 Phase 1а + 3 Phase 1б + 1 Phase 1в-prep + 1 Phase 1в-a + 6 docs + 1 brain), ~6 годин
+- Council save: B-184 + B-185 + Council self-аудит 7 проблем у backup + Phase 1б+1в+1г+1д Council по 3 агенти на блок + ПIСЛЯ-Phase Council аудит 4 нові проблеми (CSS active, renderEvening, guards, docs) — усі закриті
+- Розмір сесії: 26 комітів (1 NM_KEYS + 4 backup hardening + 2 backup self-аудит fix + 1 Phase 1а + 3 Phase 1б + 1 Phase 1в-prep + 1 Phase 1в-a + 1 Phase 1г + 1 Phase 1д + 2 Phase 1+ hardening + 7 docs + 1 brain + 1 i18n baseline), ~7 годин
 - Pre-commit hooks тепер 9 (додано `pre-commit-onclick-freeze.js` — net-rachet для inline onclick)
 
 ### Що далі (узгоджено з Романом)
@@ -100,11 +119,12 @@ ROADMAP Security Hardening BLOCKER #1 (Event Delegation Refactor) перший �
 1. ✅ **NM_KEYS audit** (B-184).
 2. ✅ **Backup hardening Phase 1** — 4 латентні дірки закрито (B-185) + 7 self-аудит проблем виправлено.
 3. ✅ **Event Delegation Phase 1а** — `delegation.js` + 16 header onclick + freeze hook.
-4. ✅ **Event Delegation Phase 1б** — me.js + onboarding.js + inbox.js (6 onclick → delegation).
-5. ✅ **Event Delegation Phase 1в-prep + 1в-a** — CSS fast-tap + tasks.js 4/5 handler'ів (universal `toggle-entity-done` для майбутніх habits). 310 onclick залишилось.
-6. **Event Delegation Phase 1в-b** — `src/ui/touch-detect.js` helper для step-check координат swipe-vs-tap. Окрема задача (Pre-mortem рекомендував не мігрувати через delegation).
-7. **Event Delegation Phase 1+ (~5 год розпорошено)** — board.js (3) → projects.js (5) → evening.js (6) → notes.js (10) → nav.js (9, ПРОПУЩЕНО Стратегом) → habits.js (12, — використати universal `toggle-entity-done` reuse) → health.js (14, reuse `close-parent` для med-row) → calendar.js (15) → finance-analytics.js (9) → finance.js (16) → finance-modals.js (35) → index.html залишки (169). Universal `open-detail` (DRY Scanner ідея) теж кандидат у 7 файлах одразу. CSP Report-Only коли grep=0.
-8. **Backup Phase 2 (~3 год)** — `createFullBackup()` + JSON export + Restore UI у Налаштуваннях. Перед Supabase сесією.
+4. ✅ **Event Delegation Phase 1а-1д** — header (16) + me (1) + onboarding (1) + inbox (4) + tasks (4/5) + board (3) + evening (6) + projects (5) = 40 handler'ів → delegation. 296 onclick залишилось.
+5. ✅ **Council hardening post-Phase** — 4 неочевидні проблеми закриті (CSS :active feedback, renderEvening window export, pattern guards, docs).
+6. 🚨 **СТРАТЕГІЧНЕ РIШЕННЯ Романа (передано з brain 15.05)** — спростити Health-вкладку: UI лишається, AI-доступ ПОВНIСТЮ видаляється (EU AI Act compliance — Health-AI = High-risk). Окрема велика сесія: видалити AI tools (create_medication/delete_medication/add_allergy etc) + Inbox-класифікація без Health + OWL prompts без health + чат-бар у Health + cross-tab links. **Перед стартом:** grep аудит + план + Inbox fallback варіант (A: Нотатки, B: Inbox без класифікації — рекомендую A). Деталі — інструкція у транскрипті DGH6F кінець.
+7. **Event Delegation Phase 1в-b** — `src/ui/touch-detect.js` helper для step-check координат swipe-vs-tap (Pre-mortem рекомендував окремий helper). Можна після Health.
+8. **Event Delegation Phase 1+ решта (~5 год)** — notes.js (10) → nav.js (9, ПРОПУЩЕНО Стратегом) → habits.js (12, reuse `toggle-entity-done`) → health.js (14, reuse `close-parent` для med-row) → calendar.js (15) → finance-analytics.js (9) → finance.js (16) → finance-modals.js (35) → index.html залишки (169). CSP Report-Only коли grep=0.
+9. **Backup Phase 2 (~3 год)** — `createFullBackup()` + JSON export + Restore UI. Перед Supabase сесією.
 
 ---
 
