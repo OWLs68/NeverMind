@@ -1196,11 +1196,13 @@ function init() {
   // схема-міграцій (юзер бачить порожні поля, AI ламається на старому форматі)
   // БЕЗ слідів у логах. Тепер пишемо у nm_error_log + console.error.
   // Прямий запис без import logger.js (циклічна залежність — logger→nav→boot).
+  // Council аудит 16.05: захист від recursive quota fail — якщо setItem
+  // нового логу падає (квота переповнена), пробуємо обмежити log до 5 записів.
   try { runMigrations(); } catch(e) {
     console.error('[boot] runMigrations failed:', e);
     try {
       const log = JSON.parse(localStorage.getItem('nm_error_log') || '[]');
-      log.push({
+      const entry = {
         ts: Date.now(),
         type: 'boot-migration-fail',
         msg: String(e?.message || e).slice(0, 500),
@@ -1208,8 +1210,14 @@ function init() {
         tab: '?',
         stack: e?.stack ? String(e.stack).slice(0, 1500) : null,
         actions: [],
-      });
-      localStorage.setItem('nm_error_log', JSON.stringify(log.slice(-200)));
+      };
+      log.push(entry);
+      try {
+        localStorage.setItem('nm_error_log', JSON.stringify(log.slice(-200)));
+      } catch {
+        // Quota recursive fail — пробуємо мінімальний log (тільки цей запис)
+        try { localStorage.setItem('nm_error_log', JSON.stringify([entry])); } catch {}
+      }
     } catch {}
   }
   try { setupPWA(); } catch(e) {}

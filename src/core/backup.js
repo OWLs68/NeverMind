@@ -104,13 +104,16 @@ export function createSelectiveBackup(keys, label) {
   // Якщо > QUOTA_BUDGET — спершу пробуємо cleanup, потім якщо ще не вмістимось —
   // warn з конкретикою і return null. Без цього юзер бачить тільки тиху відсутність
   // backup'у (createSelectiveBackup → null) і не розуміє чому.
+  // Council аудит 16.05: кеш _estimateUsedBytes (1 O(n) виклик початковий + 1
+  // після cleanup, замість 3) щоб не блокувати boot на iPhone Safari з повним
+  // сховищем.
   const payloadBytes = (backupKey.length + payload.length) * 2;
-  const estimatedTotal = _estimateUsedBytes() + payloadBytes;
-  if (estimatedTotal > QUOTA_BUDGET_BYTES) {
+  const initialUsed = _estimateUsedBytes();
+  if (initialUsed + payloadBytes > QUOTA_BUDGET_BYTES) {
     try { cleanupOldBackups(0); } catch {}
-    const afterCleanup = _estimateUsedBytes() + payloadBytes;
-    if (afterCleanup > QUOTA_BUDGET_BYTES) {
-      const usedMB = (_estimateUsedBytes() / 1024 / 1024).toFixed(2);
+    const afterCleanup = _estimateUsedBytes();
+    if (afterCleanup + payloadBytes > QUOTA_BUDGET_BYTES) {
+      const usedMB = (afterCleanup / 1024 / 1024).toFixed(2);
       const payloadMB = (payloadBytes / 1024 / 1024).toFixed(2);
       console.warn(
         '[backup] QUOTA: skipped «' + label + '» — payload ' + payloadMB + ' MB + ' +
