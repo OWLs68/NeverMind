@@ -1685,3 +1685,12 @@ button:active,
 .chat-chips-row .owl-chip:active {
   background: rgba(255, 221, 164, 1);
 }
+
+/* DGH6F 16.05.2026: fast-tap для checkbox'ів задач/кроків — захист від
+   iOS 300ms delay коли мігруємо ontouchend onclick → delegation `click`
+   (Phase 1в-prep). Без цього юзер тапає галочку → 300ms лаг → жахливий UX.
+   `manipulation` дозволяє pinch-zoom, але прибирає double-tap zoom delay. */
+[data-task-check],
+[data-step-check] {
+  touch-action: manipulation;
+}
