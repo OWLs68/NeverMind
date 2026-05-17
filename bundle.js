@@ -9334,7 +9334,7 @@ ${UI_TOOLS_RULES}${context ? "\n\n" + context : ""}${stats ? "\n\n" + stats : ""
           } else if (daysSince === null) {
             trendChip = `<span style="font-size:10px;font-weight:700;color:rgba(30,16,64,0.4);margin-top:2px;display:block">${t("me.proj.just_created", "\u0449\u043E\u0439\u043D\u043E \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u0438\u0439")}</span>`;
           }
-          return `<div style="margin-bottom:10px;cursor:pointer" onclick="switchTab('projects')">
+          return `<div style="margin-bottom:10px;cursor:pointer" data-action="switch-tab" data-tab="projects">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">
             <div style="flex:1">
               <div style="font-size:13px;font-weight:700;color:#1e1040">${escapeHtml(p.name)}</div>
@@ -20992,6 +20992,11 @@ ${logLines}
       reg("open-help", (data) => {
         if (typeof window !== "undefined" && typeof window.openHelp === "function") {
           window.openHelp(data.tab || "inbox");
+        }
+      });
+      reg("switch-tab", (data) => {
+        if (typeof window !== "undefined" && typeof window.switchTab === "function") {
+          window.switchTab(data.tab);
         }
       });
     }
