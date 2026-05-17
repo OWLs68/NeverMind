@@ -1192,7 +1192,26 @@ function runMigrations() {
 
 // === INIT ===
 function init() {
-  try { runMigrations(); } catch(e) {}
+  // DGH6F 16.05: runMigrations критичний — silent fail призводив до пропуску
+  // схема-міграцій (юзер бачить порожні поля, AI ламається на старому форматі)
+  // БЕЗ слідів у логах. Тепер пишемо у nm_error_log + console.error.
+  // Прямий запис без import logger.js (циклічна залежність — logger→nav→boot).
+  try { runMigrations(); } catch(e) {
+    console.error('[boot] runMigrations failed:', e);
+    try {
+      const log = JSON.parse(localStorage.getItem('nm_error_log') || '[]');
+      log.push({
+        ts: Date.now(),
+        type: 'boot-migration-fail',
+        msg: String(e?.message || e).slice(0, 500),
+        src: 'boot.js:runMigrations',
+        tab: '?',
+        stack: e?.stack ? String(e.stack).slice(0, 1500) : null,
+        actions: [],
+      });
+      localStorage.setItem('nm_error_log', JSON.stringify(log.slice(-200)));
+    } catch {}
+  }
   try { setupPWA(); } catch(e) {}
   try { setupSW(); } catch(e) {}
   try { setupSync(); } catch(e) {}
