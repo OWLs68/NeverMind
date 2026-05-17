@@ -14,6 +14,29 @@
 
 > Тут живе те що треба перевірити **наступної iPhone-сесії**. Claude додає сюди після кожної міграції / нової фічі / зміни UI. Роман викреслює коли протестив (переносить у архів).
 
+### v906+ (deploy 16.05 — DGH6F Event Delegation Phase 1д: projects.js (5 onclick))
+
+**Контекст:** 5 onclick у `src/tabs/projects.js` мігровано. 5 нових actions у delegation.js (registry 18→23). Council Pre-mortem знайшов 1 pre-existing баг (`_syncProjectStepToTasks` fuzzy match) — НЕ цієї сесії, окремий ticket.
+
+**Зміни:**
+- Картка проекту → `data-action="open-project"`
+- «← Назад» з workspace → `data-action="close-project-workspace"`
+- «Розгорнути ↓» timeline → `data-action="toggle-project-timeline"`
+- Чекбокс крока (всередині workspace) → `data-action="toggle-project-step"`
+- «📝 Нотатки» (cross-tab з папкою) → `data-action="open-notes-folder"` data-folder (handler інкапсулює `switchTab('notes') + setTimeout(150, openNotesFolder)`).
+
+**📁 Projects — workspace flow:**
+- [ ] Projects-tab → бачу картки проектів.
+- [ ] Тап на картку → відкривається workspace проекту з steps + Notes-блоком.
+- [ ] У workspace «← Назад» → повертаємось до списку.
+- [ ] «Розгорнути ↓» timeline → timeline expands.
+- [ ] У workspace чекбокс крока → крок toggleиться (галочка). ⚠️ Перевір що не закрилася ЧУЖА задача через fuzzy match (`_syncProjectStepToTasks` — pre-existing баг ще до delegation, окремий ticket).
+- [ ] Кнопка «📝 Нотатки» (cross-tab) → перехід на Notes-tab → через 150ms відкривається папка з ім'ям проекту.
+
+**🔧 Регресія-чек:**
+- [ ] DevTools Console → жодних `escapeJsArg is not defined` (видалив unused import).
+- [ ] DevTools Console → жодних `Cannot read properties of undefined (reading 'id')`.
+
 ### v905+ (deploy 16.05 — DGH6F Event Delegation Phase 1г: board.js + evening.js (9 handler'ів))
 
 **Контекст:** 2 файли мігровано одним коммітом (обидва без cross-file race). Council паралельно 3 агенти Sonnet (по файлу). 5 нових universal+specific actions у delegation.js (registry 13→18).
