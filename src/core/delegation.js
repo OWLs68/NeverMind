@@ -211,3 +211,39 @@ reg('confirm-quit-relapse', (data) => {
   if (typeof window.confirmQuitRelapse === 'function') window.confirmQuitRelapse(data.id);
   if (typeof window.renderEvening === 'function') setTimeout(window.renderEvening, 50);
 });
+// === Phase 1д projects.js actions ===
+reg('open-project', (data) => {
+  if (typeof window !== 'undefined' && typeof window.openProjectWorkspace === 'function') {
+    window.openProjectWorkspace(data.id);
+  }
+});
+reg('close-project-workspace', () => {
+  if (typeof window !== 'undefined' && typeof window.closeProjectWorkspace === 'function') {
+    window.closeProjectWorkspace();
+  }
+});
+reg('toggle-project-timeline', (data) => {
+  if (typeof window !== 'undefined' && typeof window.toggleProjectTimeline === 'function') {
+    window.toggleProjectTimeline(data.id);
+  }
+});
+// toggle-project-step — checkbox крока проєкту. Council Pre-mortem 🔴:
+// _syncProjectStepToTasks (projects.js:436) має fuzzy match (substring 15
+// chars) що може закрити ЧУЖУ задачу — це pre-existing баг ДО delegation,
+// не блокує цей рефакторинг.
+reg('toggle-project-step', (data) => {
+  if (typeof window !== 'undefined' && typeof window.toggleProjectStep === 'function') {
+    window.toggleProjectStep(data.projectId, data.stepId);
+  }
+});
+// open-notes-folder — cross-tab navigation з projects → notes з папкою.
+// Інкапсулює switchTab + setTimeout(150) для openNotesFolder. 150ms потрібен
+// щоб Notes-вкладка зрендерилась перед спробою відкрити папку (notes.js:233
+// має `if (!listEl) return` — без затримки фолдер не знайдеться).
+reg('open-notes-folder', (data) => {
+  if (typeof window === 'undefined') return;
+  if (typeof window.switchTab === 'function') window.switchTab('notes');
+  if (typeof window.openNotesFolder === 'function') {
+    setTimeout(() => window.openNotesFolder(data.folder), 150);
+  }
+});
