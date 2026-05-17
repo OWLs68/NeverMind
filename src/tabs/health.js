@@ -701,43 +701,7 @@ function _syncMedicationToTask(cardName, med) {
 // Викликається з inbox.js / finance.js після save_finance якщо category === "Здоров'я"
 // АБО comment/коментар містить маркери (аптека/ліки/лікар/тест/аналіз).
 // Fuzzy match (нечіткий пошук): шукає активну картку у назві якої є слово з comment.
-export function syncHealthFinanceToHistory(amount, category, comment) {
-  try {
-    const commentLower = (comment || '').toLowerCase();
-    const hasHealthMarker = category === "Здоров'я" || /аптек|ліки|препарат|лікар|аналіз|тест|рецепт/i.test(commentLower);
-    if (!hasHealthMarker) return false;
-    const cards = getHealthCards();
-    const active = cards.filter(c => _isActiveHealthStatus(c.status));
-    if (active.length === 0) return false;
-    // Fuzzy match: шукаємо картку чия назва або назви ліків згадуються у comment
-    let target = null;
-    for (const card of active) {
-      const cardNameLower = (card.name || '').toLowerCase();
-      if (cardNameLower && commentLower.includes(cardNameLower)) { target = card; break; }
-      // перевіряємо назви препаратів
-      const meds = card.medications || [];
-      const medMatch = meds.find(m => {
-        const mn = (m.name || '').toLowerCase();
-        return mn && commentLower.includes(mn);
-      });
-      if (medMatch) { target = card; break; }
-    }
-    // Якщо не знайшли match по тексту і у юзера лише 1 активна — зв'язуємо з нею
-    if (!target && active.length === 1) target = active[0];
-    if (!target) return false;
-    if (!Array.isArray(target.history)) target.history = [];
-    target.history.unshift({
-      ts: Date.now(),
-      type: 'auto',
-      text: t('health.history.expense', 'Витрата: {amount}€ — {comment}', { amount, comment: comment || t('health.history.expense_default', 'ліки') }),
-    });
-    saveHealthCards(cards);
-    return true;
-  } catch (e) {
-    console.warn('[health] syncHealthFinanceToHistory failed:', e);
-    return false;
-  }
-}
+// syncHealthFinanceToHistory REMOVED (EU AI Act compliance JMQuT 17.05.2026) — dead code cleanup.
 
 // === ФАЗА 4 (15.04 6v2eR): ПАСИВНІ НАГАДУВАННЯ ЛІКІВ ===
 //
@@ -1643,86 +1607,7 @@ function _buildAllergiesCardHtml() {
 // Контекст здоров'я для AI (Фаза 1 переписано 15.04 jMR6m — експортується і підключається у getAIContext)
 // Включає: алергії (завжди зверху, УВАГА-попередження), активні/контрольовані картки з усіма полями,
 // ліки з графіком, наступні прийоми, legacy-шкали (fallback до Фази 3).
-export function getHealthContext() {
-  const parts = [];
-
-  // Фаза 3 (15.04 6v2eR): focused-картка на ВЕРХ контексту.
-  // Коли юзер тапнув "Запитати OWL про цей стан" — OWL у відповіді концентрується на цій картці.
-  if (_focusedHealthCardId) {
-    const focused = getHealthCards().find(c => c.id === _focusedHealthCardId);
-    if (focused) {
-      const lines = [`🎯 ФОКУС РОЗМОВИ — стан "${focused.name}"${focused.subtitle ? ' (' + focused.subtitle + ')' : ''}`];
-      lines.push(`  Статус: ${focused.status}, прогрес: ${focused.progress || 0}%`);
-      if (focused.startDate) lines.push(`  Початок курсу: ${focused.startDate}`);
-      if (focused.doctor) lines.push(`  Лікар: ${focused.doctor}`);
-      if (focused.doctorRecommendations) lines.push(`  Рекомендації: ${focused.doctorRecommendations}`);
-      if (focused.doctorConclusion) lines.push(`  Висновок: ${focused.doctorConclusion}`);
-      if (focused.nextAppointment && focused.nextAppointment.date) {
-        lines.push(`  Наступний прийом: ${focused.nextAppointment.date}${focused.nextAppointment.time ? ' ' + focused.nextAppointment.time : ''}`);
-      }
-      if (Array.isArray(focused.medications) && focused.medications.length > 0) {
-        const meds = focused.medications.map(m => `${m.name}${m.dosage ? ' ' + m.dosage : ''}`).join('; ');
-        lines.push(`  Препарати: ${meds}`);
-      }
-      // Останні 5 записів історії — щоб OWL знав контекст
-      const recentHistory = (focused.history || []).slice(0, 5);
-      if (recentHistory.length > 0) {
-        lines.push(`  Останні записи історії:`);
-        recentHistory.forEach(h => {
-          const d = new Date(h.ts);
-          const dateStr = isNaN(d) ? '' : d.toLocaleDateString('uk-UA');
-          lines.push(`    - [${h.type}, ${dateStr}] ${h.text}`);
-        });
-      }
-      lines.push(`  ВАЖЛИВО: відповідай ПРО ЦЕЙ СТАН. Якщо юзер питає загальне — повертай тему до цього стану. Якщо новий запис стосується цієї картки — використай add_health_history_entry з card_id:${focused.id}.`);
-      parts.push(lines.join('\n'));
-    }
-  }
-
-  // Алергії — ЗАВЖДИ зверху. Активні правила для OWL у всіх чатах.
-  // Фаза 2 (15.04 6v2eR): id видно у контексті — для tools delete_allergy + 4.12 антидублювання.
-  const allergies = getAllergies();
-  if (allergies.length > 0) {
-    const list = allergies.map(a => `[ID:${a.id}] ${a.name}${a.notes ? ' (' + a.notes + ')' : ''}`).join(', ');
-    parts.push(`🚨 АЛЕРГІЇ (УВАГА — попереджай юзера при будь-якій згадці цих алергенів у записах Inbox/Фінансів/Нотаток: ${list})`);
-  }
-
-  // Картки стану
-  const cards = getHealthCards();
-  const active = cards.filter(c => _isActiveHealthStatus(c.status));
-  if (active.length > 0) {
-    parts.push(`Активні стани здоров'я (${active.length}):`);
-    active.slice(0, 5).forEach(card => {
-      const lines = [`- [ID:${card.id}] "${card.name}"${card.subtitle ? ' — ' + card.subtitle : ''} [${_statusDef(card.status).label}, прогрес: ${card.progress || 0}%]`];
-      if (card.startDate) {
-        const d = new Date(card.startDate);
-        if (!isNaN(d)) {
-          const daysSince = Math.round((Date.now() - d.getTime()) / 86400000);
-          if (daysSince >= 0) lines.push(`  курс: ${daysSince} дн від ${card.startDate}`);
-        }
-      }
-      if (card.doctor) lines.push(`  лікар: ${card.doctor}`);
-      if (card.doctorRecommendations) lines.push(`  рекомендації: ${card.doctorRecommendations}`);
-      if (card.nextAppointment && card.nextAppointment.date) {
-        const tm = card.nextAppointment.time ? ' ' + card.nextAppointment.time : '';
-        lines.push(`  наступний прийом: ${card.nextAppointment.date}${tm}`);
-      }
-      if (Array.isArray(card.medications) && card.medications.length > 0) {
-        const meds = card.medications.map(m => {
-          const sched = Array.isArray(m.schedule) && m.schedule.length ? ' (' + m.schedule.join(', ') + ')' : '';
-          const course = m.courseDuration ? ' · курс ' + m.courseDuration : '';
-          // Фаза 2: med id у контексті — для tools edit_medication + log_medication_dose
-          return `[ID:${m.id}] ${m.name}${m.dosage ? ' ' + m.dosage : ''}${sched}${course}`;
-        }).join('; ');
-        lines.push(`  ліки: ${meds}`);
-      }
-      if (card.nextStep) lines.push(`  наступний крок: ${card.nextStep}`);
-      parts.push(lines.join('\n'));
-    });
-  }
-
-  return parts.join('\n');
-}
+// getHealthContext REMOVED (EU AI Act compliance JMQuT 17.05.2026) — dead code cleanup.
 
 // === HEALTH AI BAR REMOVED (EU AI Act compliance JMQuT 17.05.2026) ===
 // Чат-бар видалено з UI (index.html). Експортуємо stub-функції щоб не зламати імпорти

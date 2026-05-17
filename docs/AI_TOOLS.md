@@ -171,7 +171,7 @@
 ## 🔗 Зв'язки і диспетчеризація
 
 ### Inbox (готово):
-- AI повертає `msg.tool_calls[]` → `sendToAI()` у `src/tabs/inbox.js` → `_toolCallToAction()` → handlers (`processSaveAction`, `processFinanceAction`, `processCompleteHabit/Task`, `clarify`, `restore_deleted`, 9 health handlers, 1 memory handler, 5 finance-cat handlers).
+- AI повертає `msg.tool_calls[]` → `sendToAI()` у `src/tabs/inbox.js` → `_toolCallToAction()` → handlers (`processSaveAction`, `processFinanceAction`, `processCompleteHabit/Task`, `clarify`, `restore_deleted`, 1 memory handler, 5 finance-cat handlers). Health handlers ВИДАЛЕНО JMQuT 17.05.2026 (EU AI Act).
 
 ### Tab chat bars (готово, через текстовий JSON):
 - `callAI()` / `callAIWithHistory()` → повертає JSON з полем `action` → `processUniversalAction()` у `src/tabs/habits.js` → диспатч по action name.
