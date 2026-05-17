@@ -7255,6 +7255,7 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
         ]
       };
       window.addEventListener("nm-data-changed", (e) => {
+        if (typeof window !== "undefined" && window.__nm_restoring) return;
         try {
           localStorage.setItem("nm_owl_ignored_msgs", "0");
           localStorage.setItem("nm_owl_last_chip_click_ts", String(Date.now()));
@@ -9856,6 +9857,7 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
       _insightsGenerating = false;
       _insightsRegenTimer = null;
       window.addEventListener("nm-data-changed", (e) => {
+        if (typeof window !== "undefined" && window.__nm_restoring) return;
         if (e.detail === "insights") return;
         const isMeActive = currentTab === "me";
         if (isMeActive) {
@@ -20997,6 +20999,7 @@ ${logLines}
     setTimeout(checkFollowups, 30 * 1e3);
     setInterval(checkFollowups, FOLLOWUP_CHECK_INTERVAL);
     window.addEventListener("nm-data-changed", (e) => {
+      if (typeof window !== "undefined" && window.__nm_restoring) return;
       const d = e && e.detail;
       if (d === "chat" || d === "memory" || d === "silence") return;
       clearTimeout(_debounceTimer);
@@ -21350,6 +21353,7 @@ ${logLines}
     setInterval(brainPulse, BRAIN_PULSE_INTERVAL);
     if (typeof window !== "undefined") {
       window.addEventListener("nm-data-changed", (e) => {
+        if (typeof window !== "undefined" && window.__nm_restoring) return;
         const d = e && e.detail;
         if (d === "chat" || d === "memory" || d === "silence") return;
         clearTimeout(_debounceTimer2);
