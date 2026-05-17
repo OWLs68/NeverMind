@@ -20894,15 +20894,15 @@ ${logLines}
     if (!hasData) return null;
     const payload = JSON.stringify({ ts, label, data: snapshot });
     const payloadBytes = (backupKey.length + payload.length) * 2;
-    const estimatedTotal = _estimateUsedBytes() + payloadBytes;
-    if (estimatedTotal > QUOTA_BUDGET_BYTES) {
+    const initialUsed = _estimateUsedBytes();
+    if (initialUsed + payloadBytes > QUOTA_BUDGET_BYTES) {
       try {
         cleanupOldBackups(0);
       } catch {
       }
-      const afterCleanup = _estimateUsedBytes() + payloadBytes;
-      if (afterCleanup > QUOTA_BUDGET_BYTES) {
-        const usedMB = (_estimateUsedBytes() / 1024 / 1024).toFixed(2);
+      const afterCleanup = _estimateUsedBytes();
+      if (afterCleanup + payloadBytes > QUOTA_BUDGET_BYTES) {
+        const usedMB = (afterCleanup / 1024 / 1024).toFixed(2);
         const payloadMB = (payloadBytes / 1024 / 1024).toFixed(2);
         console.warn(
           "[backup] QUOTA: skipped \xAB" + label + "\xBB \u2014 payload " + payloadMB + " MB + existing " + usedMB + " MB > 4 MB budget. JSON-export \u0440\u0435\u043A\u043E\u043C\u0435\u043D\u0434\u043E\u0432\u0430\u043D\u0438\u0439 \u0437\u0430\u043C\u0456\u0441\u0442\u044C in-storage backup."
@@ -22604,7 +22604,7 @@ ${logLines}
       console.error("[boot] runMigrations failed:", e);
       try {
         const log = JSON.parse(localStorage.getItem("nm_error_log") || "[]");
-        log.push({
+        const entry = {
           ts: Date.now(),
           type: "boot-migration-fail",
           msg: String(e?.message || e).slice(0, 500),
@@ -22612,8 +22612,16 @@ ${logLines}
           tab: "?",
           stack: e?.stack ? String(e.stack).slice(0, 1500) : null,
           actions: []
-        });
-        localStorage.setItem("nm_error_log", JSON.stringify(log.slice(-200)));
+        };
+        log.push(entry);
+        try {
+          localStorage.setItem("nm_error_log", JSON.stringify(log.slice(-200)));
+        } catch {
+          try {
+            localStorage.setItem("nm_error_log", JSON.stringify([entry]));
+          } catch {
+          }
+        }
       } catch {
       }
     }
