@@ -21799,6 +21799,31 @@ ${logLines}
       scroll.style.paddingTop = h + 14 + "px";
     });
   }
+  function _assertAllKeysKnown() {
+    try {
+      const known = /* @__PURE__ */ new Set([
+        ...NM_KEYS.data,
+        ...NM_KEYS.settings,
+        ...NM_KEYS.chat,
+        ...NM_KEYS.cache
+      ]);
+      const patterns = NM_KEYS.patterns;
+      const unknown = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (!k || !k.startsWith("nm_")) continue;
+        if (known.has(k)) continue;
+        if (patterns.some((p) => k.startsWith(p))) continue;
+        unknown.push(k);
+      }
+      if (unknown.length > 0) {
+        console.warn(
+          "[NM_KEYS] \u0417\u043D\u0430\u0439\u0434\u0435\u043D\u043E " + unknown.length + " nm_* \u043A\u043B\u044E\u0447(\u0456\u0432) \u043F\u043E\u0437\u0430 \u0440\u0435\u0454\u0441\u0442\u0440\u043E\u043C.\n\u0414\u043E\u0434\u0430\u0439 \u0443 NM_KEYS \u0443 boot.js (data/settings/chat/cache/patterns):\n" + unknown.map((k) => "  - " + k).join("\n") + "\n\u0406\u043D\u0430\u043A\u0448\u0435 clearAllData() \u0457\u0445 \u043D\u0435 \u0432\u0438\u0434\u0430\u043B\u0438\u0442\u044C + Supabase backup \u043F\u0440\u043E\u043F\u0443\u0441\u0442\u0438\u0442\u044C."
+        );
+      }
+    } catch (e) {
+    }
+  }
   function runMigrations() {
     const tasks = JSON.parse(localStorage.getItem("nm_tasks") || "[]");
     let changed = false;
@@ -22700,6 +22725,10 @@ ${logLines}
     } catch {
     }
     try {
+      _assertAllKeysKnown();
+    } catch {
+    }
+    try {
       window.NM_BOOT_DONE = true;
     } catch {
     }
@@ -22746,7 +22775,16 @@ ${logLines}
           "nm_health_cards",
           "nm_health_log",
           "nm_projects",
-          "nm_trash"
+          "nm_trash",
+          // DGH6F 16.05.2026: пропущені у попередньому реєстрі — clearAllData
+          // залишала їх після wipe, Supabase backup їх би НЕ включив. Все —
+          // юзерські дані: події календаря, нагадування, розпорядок дня,
+          // алергії у health-картках, лог дій для undo (7 днів TTL).
+          "nm_events",
+          "nm_reminders",
+          "nm_routine",
+          "nm_allergies",
+          "nm_action_log"
         ],
         // Налаштування (→ Supabase user_settings)
         settings: [
@@ -22759,7 +22797,25 @@ ${logLines}
           "nm_active_tabs",
           "nm_onboarding_done",
           "nm_evening_mood",
-          "nm_evening_summary"
+          "nm_evening_summary",
+          // DGH6F 16.05: стан UI / Me-інсайти / interview state / patterns
+          "nm_evening_closed",
+          "nm_evening_topic_started",
+          "nm_tab_first_visit",
+          "nm_last_active",
+          "nm_last_active_day",
+          "nm_survey_done",
+          "nm_seen_update",
+          "nm_device_id",
+          "nm_user_patterns",
+          "nm_user_patterns_ts",
+          "nm_me_monthly_report",
+          "nm_me_monthly_override",
+          "nm_me_monthly_show_until",
+          "nm_me_weekly_insights",
+          "nm_health_interview_pending",
+          "nm_project_interview_name",
+          "nm_project_interview_step"
         ],
         // Чат-историки (→ Supabase chat_messages)
         chat: [
@@ -22775,7 +22831,7 @@ ${logLines}
           // Раніше не входив у clearAllData → стара розмова після wipe.
           "nm_owl_chat"
         ],
-        // Кеш/тимчасове (не потребує Supabase)
+        // Кеш/тимчасове (не потребує Supabase) + migration flags
         cache: [
           "nm_owl_board",
           "nm_owl_board_ts",
@@ -22789,10 +22845,68 @@ ${logLines}
           "nm_owl_board_unified_ts",
           "nm_owl_board_migrated_v2",
           "nm_chip_payloads",
-          "nm_owl_board_seen"
+          "nm_owl_board_seen",
+          // DGH6F 16.05: OWL runtime cache (questions, silence, errors, timestamps)
+          "nm_owl_api_error",
+          "nm_owl_questions",
+          "nm_owl_q_ts",
+          "nm_owl_ignored_msgs",
+          "nm_owl_silence_until",
+          "nm_owl_last_board_ts",
+          "nm_owl_last_chip_click_ts",
+          // Finance insights cache (3 horizons × 1 user)
+          "nm_fin_benchmark",
+          "nm_fin_insight_week_0",
+          "nm_fin_insight_month_0",
+          "nm_fin_insight_3months_0",
+          // Debug logs (TTL обмежений, не для Supabase)
+          "nm_intent_router_log",
+          "nm_tool_filter_log",
+          "nm_reasoning_log",
+          "nm_usage_log",
+          // Chip GC + stats + interactive guide cache
+          "nm_chip_payloads_lastGC",
+          "nm_chip_stats",
+          "nm_recent_actions",
+          "nm_sync",
+          "nm_guide_last_ts",
+          "nm_guide_shown_tips",
+          "nm_guide_shown_topics",
+          "nm_guide_step",
+          "nm_guide_waiting_topic",
+          // Migration flags (boot.js runMigrations) — у cache щоб clearAllData
+          // міг скинути для тестування міграцій з чистого стану.
+          "nm_pruning_wipe_v1_done",
+          "nm_owl_cache_cleared_v3",
+          "nm_owl_silence_reset_v5",
+          "nm_health_migrated_v2",
+          "nm_health_log_cleared_v6",
+          "nm_health_status_v2_done",
+          "nm_tasks_uuid_migrated_v8",
+          "nm_habits_uuid_migrated_v9",
+          "nm_events_uuid_migrated_v10",
+          "nm_notes_uuid_migrated_v11",
+          "nm_moments_uuid_migrated_v12",
+          "nm_finance_uuid_migrated_v13",
+          "nm_projects_uuid_migrated_v14",
+          "nm_inbox_uuid_migrated_v15",
+          "nm_health_uuid_migrated_v16",
+          "nm_steps_uuid_migrated_v17",
+          "nm_chips_v10_done",
+          "nm_chips_v10_done_ts",
+          "nm_folders_apostrophe_migrated",
+          "nm_board_clean_pji7l_done",
+          "nm_board_clean_pji7l_v2_done"
         ],
         // Динамічні патерни (видаляти через startsWith)
-        patterns: ["nm_task_chat_", "nm_visited_", "nm_owl_tab_"]
+        patterns: [
+          "nm_task_chat_",
+          "nm_visited_",
+          "nm_owl_tab_",
+          // DGH6F 16.05: backup snapshots (backup.js createSelectiveBackup
+          // створює ключі типу nm_backup_v{N}_{label}_{timestamp}).
+          "nm_backup_"
+        ]
       };
       if (document.readyState === "loading") {
         document.addEventListener("DOMContentLoaded", bootApp);
