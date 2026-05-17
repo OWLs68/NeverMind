@@ -304,33 +304,115 @@ export function applyBoardOverlays() {
 }
 
 // === CENTRAL KEY REGISTRY (єдине джерело правди для localStorage) ===
+//
+// ⚠️ ДОДАВАЄШ НОВИЙ `nm_*` ключ → одразу впиши сюди. Інакше:
+//   1. `clearAllData()` у nav.js залишить його після wipe (стара інформація)
+//   2. Перед-Supabase backup (`createSelectiveBackup` у backup.js) пропустить
+//   3. Boot-time assertion `_assertAllKeysKnown()` у консолі warn'не
+//
+// Аудит DGH6F 16.05.2026 (Council Pre-mortem знайшов 5 пропущених у data) —
+// розширено на 44 ключі через широкий grep констант + literal'ів.
 export const NM_KEYS = {
   // Основні дані (→ Supabase таблиці в майбутньому)
   data: ['nm_inbox','nm_tasks','nm_notes','nm_folders_meta','nm_moments',
          'nm_habits2','nm_habit_log2','nm_quit_log','nm_finance',
          'nm_finance_budget','nm_finance_cats','nm_health_cards',
-         'nm_health_log','nm_projects','nm_trash'],
+         'nm_health_log','nm_projects','nm_trash',
+         // DGH6F 16.05.2026: пропущені у попередньому реєстрі — clearAllData
+         // залишала їх після wipe, Supabase backup їх би НЕ включив. Все —
+         // юзерські дані: події календаря, нагадування, розпорядок дня,
+         // алергії у health-картках, лог дій для undo (7 днів TTL).
+         'nm_events','nm_reminders','nm_routine','nm_allergies','nm_action_log'],
   // Налаштування (→ Supabase user_settings)
   settings: ['nm_settings','nm_gemini_key','nm_memory','nm_memory_ts',
               'nm_facts','nm_facts_migrated',
               'nm_active_tabs','nm_onboarding_done','nm_evening_mood',
-              'nm_evening_summary'],
+              'nm_evening_summary',
+              // DGH6F 16.05: стан UI / Me-інсайти / interview state / patterns
+              'nm_evening_closed','nm_evening_topic_started','nm_tab_first_visit',
+              'nm_last_active','nm_last_active_day','nm_survey_done','nm_seen_update',
+              'nm_device_id','nm_user_patterns','nm_user_patterns_ts',
+              'nm_me_monthly_report','nm_me_monthly_override','nm_me_monthly_show_until',
+              'nm_me_weekly_insights',
+              'nm_health_interview_pending',
+              'nm_project_interview_name','nm_project_interview_step'],
   // Чат-историки (→ Supabase chat_messages)
   chat: ['nm_chat_inbox','nm_chat_tasks','nm_chat_notes','nm_chat_me',
          'nm_chat_evening','nm_chat_finance','nm_chat_health','nm_chat_projects',
          // 64CXo: nm_owl_chat — OWL mini-chat у inbox-board, поза 8 tab-чатами.
          // Раніше не входив у clearAllData → стара розмова після wipe.
          'nm_owl_chat'],
-  // Кеш/тимчасове (не потребує Supabase)
+  // Кеш/тимчасове (не потребує Supabase) + migration flags
   cache: ['nm_owl_board','nm_owl_board_ts','nm_owl_cooldowns','nm_owl_schedule_asked',
           'nm_owl_schedule_pending','nm_error_log',
           // PJi7l 08.05: unified board storage + chip payloads + seen-IDs
           // Без них після clearAllData табло Inbox/Notes показувало стару інформацію.
           'nm_owl_board_unified','nm_owl_board_unified_ts',
-          'nm_owl_board_migrated_v2','nm_chip_payloads','nm_owl_board_seen'],
+          'nm_owl_board_migrated_v2','nm_chip_payloads','nm_owl_board_seen',
+          // DGH6F 16.05: OWL runtime cache (questions, silence, errors, timestamps)
+          'nm_owl_api_error','nm_owl_questions','nm_owl_q_ts',
+          'nm_owl_ignored_msgs','nm_owl_silence_until',
+          'nm_owl_last_board_ts','nm_owl_last_chip_click_ts',
+          // Finance insights cache (3 horizons × 1 user)
+          'nm_fin_benchmark','nm_fin_insight_week_0','nm_fin_insight_month_0','nm_fin_insight_3months_0',
+          // Debug logs (TTL обмежений, не для Supabase)
+          'nm_intent_router_log','nm_tool_filter_log','nm_reasoning_log','nm_usage_log',
+          // Chip GC + stats + interactive guide cache
+          'nm_chip_payloads_lastGC','nm_chip_stats',
+          'nm_recent_actions','nm_sync',
+          'nm_guide_last_ts','nm_guide_shown_tips','nm_guide_shown_topics',
+          'nm_guide_step','nm_guide_waiting_topic',
+          // Migration flags (boot.js runMigrations) — у cache щоб clearAllData
+          // міг скинути для тестування міграцій з чистого стану.
+          'nm_pruning_wipe_v1_done','nm_owl_cache_cleared_v3','nm_owl_silence_reset_v5',
+          'nm_health_migrated_v2','nm_health_log_cleared_v6','nm_health_status_v2_done',
+          'nm_tasks_uuid_migrated_v8','nm_habits_uuid_migrated_v9',
+          'nm_events_uuid_migrated_v10','nm_notes_uuid_migrated_v11',
+          'nm_moments_uuid_migrated_v12','nm_finance_uuid_migrated_v13',
+          'nm_projects_uuid_migrated_v14','nm_inbox_uuid_migrated_v15',
+          'nm_health_uuid_migrated_v16','nm_steps_uuid_migrated_v17',
+          'nm_chips_v10_done','nm_chips_v10_done_ts',
+          'nm_folders_apostrophe_migrated',
+          'nm_board_clean_pji7l_done','nm_board_clean_pji7l_v2_done'],
   // Динамічні патерни (видаляти через startsWith)
-  patterns: ['nm_task_chat_', 'nm_visited_', 'nm_owl_tab_'],
+  patterns: ['nm_task_chat_', 'nm_visited_', 'nm_owl_tab_',
+             // DGH6F 16.05: backup snapshots (backup.js createSelectiveBackup
+             // створює ключі типу nm_backup_v{N}_{label}_{timestamp}).
+             'nm_backup_'],
 };
+
+// Boot-time assertion (DGH6F 16.05.2026): сканує localStorage і console.warn
+// якщо знайде `nm_*` ключ що не входить у NM_KEYS. Це профілактика регресії —
+// додав новий ключ у код, забув у реєстр → побачу одразу при boot, не через
+// тиждень коли почнеться Supabase backup і дані зникнуть.
+//
+// Не блокує boot. Не падає. Тільки попереджає.
+export function _assertAllKeysKnown() {
+  try {
+    const known = new Set([
+      ...NM_KEYS.data, ...NM_KEYS.settings, ...NM_KEYS.chat, ...NM_KEYS.cache,
+    ]);
+    const patterns = NM_KEYS.patterns;
+    const unknown = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (!k || !k.startsWith('nm_')) continue;
+      if (known.has(k)) continue;
+      if (patterns.some(p => k.startsWith(p))) continue;
+      unknown.push(k);
+    }
+    if (unknown.length > 0) {
+      console.warn(
+        '[NM_KEYS] Знайдено ' + unknown.length + ' nm_* ключ(ів) поза реєстром.\n' +
+        'Додай у NM_KEYS у boot.js (data/settings/chat/cache/patterns):\n' +
+        unknown.map(k => '  - ' + k).join('\n') + '\n' +
+        'Інакше clearAllData() їх не видалить + Supabase backup пропустить.'
+      );
+    }
+  } catch (e) {
+    // не блокуємо boot при крашу assertion'а
+  }
+}
 
 // === SCHEMA MIGRATIONS — "добиває" відсутні поля в старих даних ===
 function runMigrations() {
@@ -1215,6 +1297,9 @@ function bootApp() {
       window.buildProfileIfStale();
     }
   } catch {}
+  // DGH6F 16.05.2026: попередження якщо у localStorage є nm_* ключі що не
+  // у NM_KEYS реєстрі. Профілактика регресії перед Supabase backup.
+  try { _assertAllKeysKnown(); } catch {}
   // AI-тестер (e9t3N 15.05.2026) — milestone «boot завершено». Тестер у Python
   // чекає `window.NM_BOOT_DONE === true` (max 5 сек) щоб переконатись що
   // міграції+init+showApp пройшли без crash. Це Тест 1 з AI_TESTER_INTEGRATION.md.

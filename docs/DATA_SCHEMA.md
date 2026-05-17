@@ -1,10 +1,12 @@
 # NeverMind — DATA_SCHEMA
 
-> ⚠️ **СТАТУС (myshu 11.05.2026):** документ ЧАСТКОВО ЗАСТАРIЛИЙ після v8 UUID-міграції Tasks + appearance of `nm_action_log`/`nm_chip_payloads`/`nm_device_id`. **Актуальне джерело плану рефактору:** [`docs/ARCHITECTURE_REFACTOR.md`](ARCHITECTURE_REFACTOR.md). Цей файл оновлюється у Сесії 8 (UUID міграція решти 9 entity types + nm_habit_log2 ISO + user_id placeholder).
+> ⚠️ **СТАТУС (myshu 11.05.2026, оновлено DGH6F 16.05.2026):** документ ЧАСТКОВО ЗАСТАРIЛИЙ. **Актуальне джерело плану рефактору:** [`docs/ARCHITECTURE_REFACTOR.md`](ARCHITECTURE_REFACTOR.md).
 >
-> **Зокрема застаріло:**
-> - `Task.id` — вже UUID (v8 migration, не `Date.now()`)
-> - Список ключів пропускає: `nm_action_log`, `nm_chip_payloads`, `nm_chip_stats`, `nm_device_id`, `nm_reasoning_log`, `nm_tool_filter_log`, `nm_intent_router_log`
+> 🔑 **ДЖЕРЕЛО ПРАВДИ ПРО СПИСОК КЛЮЧIВ:** `src/core/boot.js` константа `NM_KEYS` (data/settings/chat/cache/patterns). DGH6F 16.05.2026 розширено з 50 до ~94 ключів після Council Pre-mortem знайшов 5 пропущених у data (`nm_events`/`nm_reminders`/`nm_routine`/`nm_allergies`/`nm_action_log`) + 14 у settings + 24 у cache + 1 pattern (`nm_backup_`). Boot-time `_assertAllKeysKnown()` тепер попереджає у консолі якщо знайде нові `nm_*` ключі поза реєстром — додати у NM_KEYS обов'язково для `clearAllData` + Supabase backup.
+>
+> **Зокрема застаріло у цьому документі:**
+> - `Task.id` — вже UUID (v8 migration, не `Date.now()`); решта 9 типів теж UUID (v9-v17, myshu/db0YY/nliW8)
+> - Список ключів нижче неповний — дивись `NM_KEYS` у boot.js
 > - Розділи «Що робимо ЗАРАЗ» / «Робимо вранці разом з Романом» описують вже завершені кроки
 >
 > **Створено:** нічна сесія qG4fj 25.04.2026 (Підсесія 1 стандартизацій перед Supabase, Фаза 1 — інвентаризація без коду).
