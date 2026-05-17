@@ -287,6 +287,8 @@ let _insightsGenerating = false;
 // If Me tab not active, mark cache stale; regen on next open.
 let _insightsRegenTimer = null;
 window.addEventListener('nm-data-changed', (e) => {
+  // DGH6F 16.05: під час restoreBackup не регенеруємо weekly insights.
+  if (typeof window !== 'undefined' && window.__nm_restoring) return;
   // Skip own dispatches (insights save) — would loop.
   if (e.detail === 'insights') return;
   const isMeActive = currentTab === 'me';

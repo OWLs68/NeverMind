@@ -79,6 +79,8 @@ export function startFollowupsCycle() {
   // не повинні reset'ити debounce, інакше followups ніколи не спрацьовує
   // у активній чат-сесії.
   window.addEventListener('nm-data-changed', e => {
+    // DGH6F 16.05: під час restoreBackup не плануємо followups — проміжний стан.
+    if (typeof window !== 'undefined' && window.__nm_restoring) return;
     const d = e && e.detail;
     if (d === 'chat' || d === 'memory' || d === 'silence') return;
     clearTimeout(_debounceTimer);
