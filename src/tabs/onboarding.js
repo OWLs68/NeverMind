@@ -613,7 +613,7 @@ export function showFirstVisitTip(tab) {
       <div class="fv-tip-title">${tip.title}</div>
       <div class="fv-tip-text">${tip.text}</div>
     </div>
-    <div class="fv-tip-close" onclick="this.closest('#fv-tip').remove()">✕</div>
+    <div class="fv-tip-close" data-action="close-parent" data-parent="#fv-tip">✕</div>
   `;
   document.body.appendChild(tipEl);
 
