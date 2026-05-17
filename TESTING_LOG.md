@@ -14,6 +14,42 @@
 
 > Тут живе те що треба перевірити **наступної iPhone-сесії**. Claude додає сюди після кожної міграції / нової фічі / зміни UI. Роман викреслює коли протестив (переносить у архів).
 
+### v905+ (deploy 16.05 — DGH6F Event Delegation Phase 1г: board.js + evening.js (9 handler'ів))
+
+**Контекст:** 2 файли мігровано одним коммітом (обидва без cross-file race). Council паралельно 3 агенти Sonnet (по файлу). 5 нових universal+specific actions у delegation.js (registry 13→18).
+
+**board.js (3 onclick → 0):**
+- `toggleOwlTabChat('${t}')` → `data-action="toggle-owl-collapsed"`
+- `scrollOwlTabChips('${t}',-1)` → `data-action="scroll-owl-chips" data-dir="-1"`
+- `scrollOwlTabChips('${t}',1)` → `data-action="scroll-owl-chips" data-dir="1"`
+- ⚠️ `ontouchstart/move/end owlTabSwipe*` (3 події з координатами) — НЕ мігровано (Pre-mortem 🔴: triple-event state chain, потребує окремого swipe-helper. Phase 1+v окрема задача).
+
+**evening.js (6 onclick → 0):**
+- `openMomentView('${m.id}')` → `data-action="open-moment-view"`
+- `event.stopPropagation();deleteMoment('${m.id}')` → `data-action="delete-moment"` (stopPropagation НЕ потрібен у delegation — closest повертає найближчий).
+- `rescheduleTaskTomorrow/Week` → universal `data-action="reschedule-task" data-days="1|7"`
+- `holdQuitHabit('${h.id}');renderEvening()` → `data-action="hold-quit-habit"` (handler сам викликає renderEvening)
+- `confirmQuitRelapse('${h.id}');setTimeout(renderEvening,50)` → `data-action="confirm-quit-relapse"` (setTimeout збережено)
+
+**🦉 OWL Board (всі 8 вкладок):**
+- [ ] Inbox-tab → бачу OWL у згорнутому стані → тап на 🦉 (collapsed) → розгортається у speech bubble.
+- [ ] OWL у tab-чаті → chips під ним → стрілки ‹ і › для прокрутки → працюють.
+- [ ] Swipe сvгору на OWL avatar → згортає (не зачіпали — має працювати як раніше).
+
+**🌙 Evening — moments:**
+- [ ] Evening-tab → блок «Моменти дня» → ТАП на moment-картку → відкривається view-модалка з деталями.
+- [ ] Тап на «✕» moment-картки → момент видаляється, view-модалка НЕ відкривається (стара проблема залишилась пофікшеною).
+- [ ] Evening → блок «Завтра / На тиждень» → тап «Завтра» / «На тиждень» → задача перепланована.
+
+**🚭 Evening — quit habits:**
+- [ ] Якщо є quit-habit (звичка яку кидаю) → блок з кнопками «Тримаюсь» / «Зірвався».
+- [ ] Тап «Тримаюсь» → стрік збільшується, картка перерендериться.
+- [ ] Тап «Зірвався» → дзвонить confirmQuitRelapse → стрік скидається, через 50ms перерендериться.
+
+**🔧 Регресія-чек:**
+- [ ] DevTools Console на iPhone → жодних `Uncaught ReferenceError` чи `is not a function`.
+- [ ] OWL chips arrows → клік не «провалюється» крізь до батьківського OWL bubble.
+
 ### v904+ (deploy 16.05 — DGH6F Event Delegation Phase 1в-a: tasks.js 4/5 handler'ів)
 
 **Контекст:** Phase 1в-prep (комміт c8803c2) додав `touch-action: manipulation` у `style.css` для `[data-task-check]` + `[data-step-check]` — fast-tap забезпечує CSS, не JS preventDefault. Phase 1в-a мігрує 4 inline handler'и tasks.js на delegation:

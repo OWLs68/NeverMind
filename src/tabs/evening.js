@@ -185,13 +185,13 @@ export function renderEvening() {
         const dot = m.isNote ? '#818cf8' : (moodDots[m.mood] || '#888');
         const timeStr = m.ts ? new Date(m.ts).toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' }) : '';
         const clickable = !m.isNote;
-        return `<div style="display:flex;gap:8px;align-items:flex-start;padding:7px 0;border-bottom:1px solid rgba(30,16,64,0.06)${clickable ? ';cursor:pointer' : ''}"${clickable ? ` onclick="openMomentView('${m.id}')"` : ''}>
+        return `<div style="display:flex;gap:8px;align-items:flex-start;padding:7px 0;border-bottom:1px solid rgba(30,16,64,0.06)${clickable ? ';cursor:pointer' : ''}"${clickable ? ` data-action="open-moment-view" data-id="${m.id}"` : ''}>
           <div style="width:7px;height:7px;border-radius:50%;background:${dot};flex-shrink:0;margin-top:5px"></div>
           <div style="flex:1">
             <div style="font-size:13px;color:#1e1040;font-weight:500;line-height:1.45">${escapeHtml(m.summary || m.text)}</div>
             ${timeStr ? `<div style="font-size:10px;color:rgba(30,16,64,0.3);font-weight:600;margin-top:2px">${timeStr}</div>` : ''}
           </div>
-          ${!m.isNote ? `<div onclick="event.stopPropagation();deleteMoment('${m.id}')" style="font-size:18px;color:rgba(30,16,64,0.2);cursor:pointer;padding:0 2px">×</div>` : ''}
+          ${!m.isNote ? `<div data-action="delete-moment" data-id="${m.id}" style="font-size:18px;color:rgba(30,16,64,0.2);cursor:pointer;padding:0 2px">×</div>` : ''}
         </div>`;
       }).join('');
     }
@@ -224,8 +224,8 @@ function renderEveningUndoneTasks() {
   container.innerHTML = top.map(task => `
     <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid rgba(30,16,64,0.06)">
       <div style="flex:1;font-size:14px;color:#1e1040;font-weight:500;line-height:1.4">${escapeHtml(task.title)}</div>
-      <button onclick="rescheduleTaskTomorrow('${task.id}')" style="background:rgba(194,121,10,0.12);color:#5b3d12;border:1px solid rgba(194,121,10,0.35);border-radius:999px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">${lblTomorrow}</button>
-      <button onclick="rescheduleTaskWeek('${task.id}')" style="background:rgba(30,16,64,0.06);color:rgba(30,16,64,0.7);border:1px solid rgba(30,16,64,0.12);border-radius:999px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">${lblWeek}</button>
+      <button data-action="reschedule-task" data-id="${task.id}" data-days="1" style="background:rgba(194,121,10,0.12);color:#5b3d12;border:1px solid rgba(194,121,10,0.35);border-radius:999px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">${lblTomorrow}</button>
+      <button data-action="reschedule-task" data-id="${task.id}" data-days="7" style="background:rgba(30,16,64,0.06);color:rgba(30,16,64,0.7);border:1px solid rgba(30,16,64,0.12);border-radius:999px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">${lblWeek}</button>
     </div>
   `).join('') + (more > 0 ? `<div style="font-size:11px;color:rgba(30,16,64,0.4);text-align:center;padding:6px 0 0 0">${lblMore}</div>` : '');
 }
@@ -282,8 +282,8 @@ function renderEveningQuitHabits() {
           <div style="font-size:14px;color:#1e1040;font-weight:600">${escapeHtml(h.name)}</div>
           <div style="font-size:11px;color:rgba(30,16,64,0.5);font-weight:600;margin-top:2px">${streakText}</div>
         </div>
-        <button onclick="holdQuitHabit('${h.id}');renderEvening()" style="background:rgba(22,163,74,0.12);color:#15803d;border:1px solid rgba(22,163,74,0.35);border-radius:999px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">${lblHold}</button>
-        <button onclick="confirmQuitRelapse('${h.id}');setTimeout(renderEvening,50)" style="background:rgba(30,16,64,0.06);color:rgba(30,16,64,0.7);border:1px solid rgba(30,16,64,0.12);border-radius:999px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">${lblRelapse}</button>
+        <button data-action="hold-quit-habit" data-id="${h.id}" style="background:rgba(22,163,74,0.12);color:#15803d;border:1px solid rgba(22,163,74,0.35);border-radius:999px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">${lblHold}</button>
+        <button data-action="confirm-quit-relapse" data-id="${h.id}" style="background:rgba(30,16,64,0.06);color:rgba(30,16,64,0.7);border:1px solid rgba(30,16,64,0.12);border-radius:999px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">${lblRelapse}</button>
       </div>`;
   }).join('');
 }

@@ -154,3 +154,60 @@ reg('toggle-entity-done', (data) => {
   const fn = fnMap[entity];
   if (typeof fn === 'function') fn(id);
 });
+// === Phase 1+ board.js actions ===
+// toggle-owl-collapsed — клік на згорнутий OWL у tab-чаті щоб розгорнути.
+reg('toggle-owl-collapsed', (data) => {
+  if (typeof window !== 'undefined' && typeof window.toggleOwlTabChat === 'function') {
+    window.toggleOwlTabChat(data.tab);
+  }
+});
+// scroll-owl-chips — стрілки ‹/› для прокрутки горизонтальних chips у board.
+// data-dir = '-1' (left) або '1' (right). parseInt захист бо рядок.
+reg('scroll-owl-chips', (data) => {
+  if (typeof window !== 'undefined' && typeof window.scrollOwlTabChips === 'function') {
+    const dir = parseInt(data.dir, 10);
+    if (!Number.isNaN(dir)) window.scrollOwlTabChips(data.tab, dir);
+  }
+});
+// === Phase 1+ evening.js actions ===
+// open-moment-view — тап на moment-картку (відкриває view модалку).
+reg('open-moment-view', (data) => {
+  if (typeof window !== 'undefined' && typeof window.openMomentView === 'function') {
+    window.openMomentView(data.id);
+  }
+});
+// delete-moment — × кнопка на moment-картці. Раніше було inline stopPropagation
+// щоб не тригерити батьківський openMomentView. У delegation НЕ потрібно:
+// closest('[data-action]') повертає найближчий = ×, open-moment-view на
+// батьківському НЕ triggered (delegation один listener на body).
+reg('delete-moment', (data) => {
+  if (typeof window !== 'undefined' && typeof window.deleteMoment === 'function') {
+    window.deleteMoment(data.id);
+  }
+});
+// reschedule-task — UNIVERSAL для двох кнопок «На завтра» / «На тиждень».
+// data-days="1" → tomorrow, data-days="7" → week. parseInt захист.
+reg('reschedule-task', (data) => {
+  if (typeof window === 'undefined') return;
+  const days = parseInt(data.days, 10);
+  if (days === 1 && typeof window.rescheduleTaskTomorrow === 'function') {
+    window.rescheduleTaskTomorrow(data.id);
+  } else if (days === 7 && typeof window.rescheduleTaskWeek === 'function') {
+    window.rescheduleTaskWeek(data.id);
+  }
+});
+// hold-quit-habit — «утримався» кнопка у quit-habit картці evening. Функція
+// у habits.js (cross-file), доступна через window.X. renderEvening() викликали
+// інлайн після — переносимо у handler.
+reg('hold-quit-habit', (data) => {
+  if (typeof window === 'undefined') return;
+  if (typeof window.holdQuitHabit === 'function') window.holdQuitHabit(data.id);
+  if (typeof window.renderEvening === 'function') window.renderEvening();
+});
+// confirm-quit-relapse — «зірвався» кнопка. setTimeout 50ms перед renderEvening
+// зберігаємо (можливо потрібен для UI-flush стану confirmQuitRelapse).
+reg('confirm-quit-relapse', (data) => {
+  if (typeof window === 'undefined') return;
+  if (typeof window.confirmQuitRelapse === 'function') window.confirmQuitRelapse(data.id);
+  if (typeof window.renderEvening === 'function') setTimeout(window.renderEvening, 50);
+});
