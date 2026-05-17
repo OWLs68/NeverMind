@@ -68,6 +68,17 @@ ROADMAP Security Hardening BLOCKER #1 (Event Delegation Refactor) перший �
 
 **Загалом Phase 1б: 3 файли × 6 onclick → 0 у файлах + 6 нових actions у delegation.js registry (8 actions total). 0 регресій (Pre-mortem передбачив усі).**
 
+**Phase 1в — tasks.js (2 sub-комміти).** Council 3 паралельні агенти Sonnet (Handler Mapper + Pre-mortem + DRY Scanner). Знахідки: **5 inline handler'ів, не 3** (3 onclick + 1 ontouchend + 1 ontouchstart+ontouchend з координатами). **2 🔴:** iOS 300ms delay return + swipe-vs-tap координатна логіка.
+
+12. **`c8803c2`** Phase 1в-prep — `style.css` + `touch-action: manipulation` для `[data-task-check]` + `[data-step-check]`. Окремий коміт ПЕРЕД delegation refactor: fast-tap забезпечує CSS, не JS preventDefault. Закриває 🔴 #1 ДО будь-якої JS-зміни. CACHE 2215.
+13. **`36619be`** Phase 1в-a — 4 з 5 handler'ів tasks.js → delegation:
+    - `toggleTempStep` / `removeTempStep` (specific — edit-модалка контекст)
+    - `taskCardClick` (specific — передає event для guard `closest [data-task-check]`)
+    - `toggleTaskStatus` ontouchend → **UNIVERSAL `toggle-entity-done`** з `data-entity="task"`. DRY Scanner: при майбутній міграції habits.js (6 onclick) — НЕ створюємо нові actions, використовуємо цей з `data-entity="habit"`/`"habit-prod"` (fnMap у delegation.js).
+    - delegation.js registry зріс з 8 до 13 actions
+    - Phase 1в-b ВIДКЛАДЕНО: 5-й handler (step-check рядок 290) з координатною swipe-vs-tap логікою — потребує окремий `src/ui/touch-detect.js` helper.
+    - CACHE 2230.
+
 #### C. Brain-задачі (моніторинг власної інфраструктури)
 
 6. **`ae96f1a`** — `.claude/hooks/pre-commit-screenshot.js` локальний guard (другий рівень після workflow): блокує commit якщо staged JSON містить `"screenshot_b64": "<base64>"`. Smoke 4/4 (no-commit/no-JSON/base64/null). + lessons урок «Workflow з зовнішнім API — спершу локальний міні-тест curl» з brain-спостереження про 3 невдалих запуски Claude Security Action у e9t3N.
@@ -80,8 +91,8 @@ ROADMAP Security Hardening BLOCKER #1 (Event Delegation Refactor) перший �
 ### Гілка + контекст
 
 - Гілка: `claude/start-session-DGH6F`
-- Council save: знайшов **B-184** (активний баг — clearAllData wipe не повний) + **B-185** (4 латентні дірки Backup механізму — Pre-mortem) + **Council self-аудит** знайшов 7 проблем у моїх же фіксах + Phase 1б Council 3 агенти коректували order (me.js перший, не inbox.js)
-- Розмір сесії: 17 комітів (1 NM_KEYS audit + 4 backup hardening + 2 Council self-аудит fix + 1 Event Delegation Phase 1а + 3 Phase 1б + 5 docs + 1 brain), ~5 годин
+- Council save: B-184 + B-185 + Council self-аудит 7 проблем + Phase 1б Council 3 агенти коректували order + Phase 1в Council 3 агенти знайшли «5 handler'ів а не 3» + 2 🔴 закрито ДО першого Edit
+- Розмір сесії: 20 комітів (1 NM_KEYS audit + 4 backup hardening + 2 self-аудит + 1 Phase 1а + 3 Phase 1б + 1 Phase 1в-prep + 1 Phase 1в-a + 6 docs + 1 brain), ~6 годин
 - Pre-commit hooks тепер 9 (додано `pre-commit-onclick-freeze.js` — net-rachet для inline onclick)
 
 ### Що далі (узгоджено з Романом)
@@ -89,9 +100,11 @@ ROADMAP Security Hardening BLOCKER #1 (Event Delegation Refactor) перший �
 1. ✅ **NM_KEYS audit** (B-184).
 2. ✅ **Backup hardening Phase 1** — 4 латентні дірки закрито (B-185) + 7 self-аудит проблем виправлено.
 3. ✅ **Event Delegation Phase 1а** — `delegation.js` + 16 header onclick + freeze hook.
-4. ✅ **Event Delegation Phase 1б** — me.js + onboarding.js + inbox.js (6 onclick → delegation, 313 залишилось).
-5. **Event Delegation Phase 1в+ (~5 год розпорошено на кілька сесій)** — мігрувати решту 313 onclick. Скоригований order (Council Verifier): tasks.js (3 onclick, складність 4 через stopProp+ontouchend+closest) → board.js (3) → projects.js (5) → evening.js (6) → notes.js (10) → nav.js (9, ПРОПУЩЕНО Стратегом — додано Verifier) → habits.js (12) → health.js (14) → calendar.js (15) → finance-analytics.js (9) → finance.js (16) → finance-modals.js (35) → index.html залишки (169). CSP Report-Only коли grep=0.
-6. **Backup Phase 2 (~3 год)** — `createFullBackup()` + JSON export + Restore UI у Налаштуваннях. Перед Supabase сесією.
+4. ✅ **Event Delegation Phase 1б** — me.js + onboarding.js + inbox.js (6 onclick → delegation).
+5. ✅ **Event Delegation Phase 1в-prep + 1в-a** — CSS fast-tap + tasks.js 4/5 handler'ів (universal `toggle-entity-done` для майбутніх habits). 310 onclick залишилось.
+6. **Event Delegation Phase 1в-b** — `src/ui/touch-detect.js` helper для step-check координат swipe-vs-tap. Окрема задача (Pre-mortem рекомендував не мігрувати через delegation).
+7. **Event Delegation Phase 1+ (~5 год розпорошено)** — board.js (3) → projects.js (5) → evening.js (6) → notes.js (10) → nav.js (9, ПРОПУЩЕНО Стратегом) → habits.js (12, — використати universal `toggle-entity-done` reuse) → health.js (14, reuse `close-parent` для med-row) → calendar.js (15) → finance-analytics.js (9) → finance.js (16) → finance-modals.js (35) → index.html залишки (169). Universal `open-detail` (DRY Scanner ідея) теж кандидат у 7 файлах одразу. CSP Report-Only коли grep=0.
+8. **Backup Phase 2 (~3 год)** — `createFullBackup()` + JSON export + Restore UI у Налаштуваннях. Перед Supabase сесією.
 
 ---
 
