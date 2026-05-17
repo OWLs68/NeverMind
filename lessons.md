@@ -181,6 +181,43 @@ run: |
 
 **Автоматизація неможлива** (на відміну від 6 класів з блоку вище) — не існує способу хук перевірив «чи зробив curl міні-тест перед commit workflow». Це дисципліна процесу. Сигнал-тригер: будь-який Edit/Write у `.github/workflows/*.yml` що додає новий `curl`/`gh api`/`uses: anthropic/*` → **STOP перед коміт → локальний curl 5 секунд → продовжую**.
 
+### Реєстр localStorage ключів — широкий grep констант + literal'ів (DGH6F 16.05.2026, B-184 урок)
+
+**Контекст:** Council Pre-mortem знайшов що `NM_KEYS` у `boot.js:307` (єдине джерело правди для `clearAllData()` + майбутнього Supabase backup) **пропускав 5 юзерських ключів** (`nm_events`/`nm_reminders`/`nm_routine`/`nm_allergies`/`nm_action_log`). За 4 тижні після qG4fj 25.04 реєстр відстав на 44 ключі (50→94). Активний баг: «Видалити все» залишала Календар-розпорядок, події, нагадування, алергії, action-log.
+
+**Корінь:** агент перший раз грепав вузько — тільки `localStorage.(setItem|getItem)\('nm_*'\)`. Пропустив:
+- **Константи:** `const KEY = 'nm_action_log'` у `action-log.js:26` → `localStorage.getItem(KEY)` (grep не бачить що це nm_*)
+- **Per-tab константи:** `const NM_ROUTINE_KEY = 'nm_routine'` у `calendar.js:537` — той самий патерн
+- **Module-level: `const KEY` + `localStorage.X(KEY)`** — поширений патерн у `src/data/` модулях
+- **Динамічні префікси:** `nm_backup_${N}_${label}` — створюються `backup.js` але без статичного literal'у у grep
+
+**ОБОВ'ЯЗКОВИЙ 4-grep чек-ліст ПЕРЕД додаванням нового ключа у `NM_KEYS`:**
+
+```bash
+# 1. Всі string literal'и 'nm_*' у src/ (НЕ тільки localStorage):
+grep -rhE "['\\\`]nm_[a-zA-Z0-9_]+['\\\`]" src/ --include="*.js" \
+  | grep -oE "['\\\`]nm_[a-zA-Z0-9_]+['\\\`]" | tr -d "'\\\`" | sort -u
+
+# 2. localStorage виклики (вузький — для перевірки що жоден активний ключ не загубився):
+grep -rE "localStorage\\.(setItem|getItem|removeItem)" src/ --include="*.js" \
+  | grep -oE "'nm_[a-zA-Z0-9_]+'" | sort -u
+
+# 3. Константи у патерні KEY = 'nm_*' (НАЙВАЖЛИВІШЕ — це грегаp #1 пропускає у частині кейсів):
+grep -rnE "const\\s+[A-Z_]+\\s*=\\s*['\\\`]nm_" src/ --include="*.js"
+
+# 4. Динамічні префікси (треба у NM_KEYS.patterns):
+grep -rE "['\\\`]nm_[a-zA-Z0-9_]+_\\\$\\{" src/ --include="*.js" | head
+```
+
+Різниця між #1 і #2 = ключі через константи. Різниця між #1 і `NM_KEYS` = пропущене. **Boot-time `_assertAllKeysKnown()` тепер автоматично попереджає у консолі** — після додавання нового ключа без оновлення `NM_KEYS` побачиш warn одразу при F5.
+
+**Більш загальне правило:** **будь-який реєстр що людина підтримує вручну** (NM_KEYS, ALLOWED_TYPES, REVERSIBLE_ACTIONS, MIGRATION_FLAGS) — потенційне джерело silent regression. Через 4+ тижні гарантовано відстає від реальності. Лікування:
+1. **Широкий grep на старті аудиту** (не вузький — пропускає константи)
+2. **Boot-time assertion** що порівнює реєстр з реальністю при init (як `_assertAllKeysKnown`)
+3. **Pre-commit hook** який блокує commit коли в diff є новий `nm_*`/новий `addToTrash('X')`/новий tool без оновлення реєстру
+
+Цей патерн повторюється: B-175 (addToTrash без restore case → pre-commit-trash-sync.js), B-172 (schema без `_v{N}_done` reset → pre-commit-schema-check.js), B-184 (NM_KEYS неповний → `_assertAllKeysKnown` runtime warn). **Кожен реєстр потребує сторожа — або pre-commit hook, або runtime assertion.**
+
 ### Bridge-стратегія перед великою міграцією (64CXo 10.05.2026)
 - **Контекст:** через 1-2 місяці перехід на Supabase. Виникло питання — лагодити поточну архітектуру чи мігрувати негайно.
 - **Висновок з 3 раундів Gemini:** **НЕ мігрувати негайно** — 3-4 тижні без видимого прогресу. Замість того — робити Bridge fixes що переїдуть на Supabase БЕЗ переписування (0-10% migration debt).
