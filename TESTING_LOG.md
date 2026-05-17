@@ -14,6 +14,33 @@
 
 > Тут живе те що треба перевірити **наступної iPhone-сесії**. Claude додає сюди після кожної міграції / нової фічі / зміни UI. Роман викреслює коли протестив (переносить у архів).
 
+### v904+ (deploy 16.05 — DGH6F Event Delegation Phase 1в-a: tasks.js 4/5 handler'ів)
+
+**Контекст:** Phase 1в-prep (комміт c8803c2) додав `touch-action: manipulation` у `style.css` для `[data-task-check]` + `[data-step-check]` — fast-tap забезпечує CSS, не JS preventDefault. Phase 1в-a мігрує 4 inline handler'и tasks.js на delegation:
+
+- `toggleTempStep('${s.id}')` (рядок 150) → `data-action="toggle-temp-step"` (специфічний — edit-модалка)
+- `removeTempStep('${s.id}')` (152) → `data-action="remove-temp-step"` (специфічний — edit-модалка)
+- `taskCardClick('${task.id}', event)` (273) → `data-action="task-card-click"` (специфічний — передає event для guard)
+- `ontouchend toggleTaskStatus` (276) → `data-action="toggle-entity-done" data-entity="task"` (UNIVERSAL — DRY Scanner: заміняє 8 onclick у habits.js + tasks.js при майбутній міграції)
+
+Phase 1в-b ВIДКЛАДЕНО: 5-й handler (`[data-step-check]` рядок 290 з ontouchstart+ontouchend + координатна swipe-vs-tap) потребує окремий `src/ui/touch-detect.js` helper — окрема задача.
+
+**📋 Tasks — core daily flow (ОБОВ'ЯЗКОВО на iPhone):**
+- [ ] Tasks-tab → бачу список задач.
+- [ ] Тап на ГАЛОЧКУ задачі (квадратик біля назви) → задача стає completed (зелена), БЕЗ затримки 300ms (fast-tap працює через `touch-action: manipulation`).
+- [ ] Тап на ТIЛО задачі (не галочку) → відкривається edit-модалка.
+- [ ] Натиснути «+» додати задачу → ввести текст + крок «зробити Х» → крок з'являється у списку (`renderTempSteps`).
+- [ ] У edit-формі: тап на checkbox крока → крок toggleиться (done/not-done).
+- [ ] У edit-формі: тап на «×» крока → крок видаляється з форми.
+
+**🔧 Регресія-чек:**
+- [ ] DevTools (Safari → iPhone) Console → жодних `Uncaught ReferenceError`.
+- [ ] Швидко тапати галочку 5 разів поспіль → стан правильно змінюється кожен раз (без race).
+- [ ] Тап на галочку НЕ повинен відкривати edit-модалку (guard у taskCardClick працює).
+
+**ℹ️ Що ще ЗАЛИШИЛОСЬ як inline handler у tasks.js (Phase 1в-b, не зараз):**
+- `[data-step-check]` рядок 290 — координатна swipe-vs-tap логіка (toggleTaskStep). Працює як раніше через ontouchstart+ontouchend.
+
 ### v903+ (deploy 16.05 — DGH6F Event Delegation Phase 1б3: inbox.js 4 onclick)
 
 **Контекст:** 4 onclick у `src/tabs/inbox.js` переведено на event delegation:

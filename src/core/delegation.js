@@ -107,3 +107,50 @@ reg('select-clarify-option', (data) => {
     if (!Number.isNaN(idx)) window.selectClarifyOption(idx);
   }
 });
+// === Phase 1в-a (tasks.js) actions ===
+// toggle-temp-step — checkbox для тимчасового крока у edit-модалці задачі.
+reg('toggle-temp-step', (data) => {
+  if (typeof window !== 'undefined' && typeof window.toggleTempStep === 'function') {
+    window.toggleTempStep(data.id);
+  }
+});
+// remove-temp-step — × кнопка для видалення тимчасового крока.
+reg('remove-temp-step', (data) => {
+  if (typeof window !== 'undefined' && typeof window.removeTempStep === 'function') {
+    window.removeTempStep(data.id);
+  }
+});
+// task-card-click — тап на картку задачі (відкриває edit). Передаємо event
+// бо taskCardClick використовує event.target.closest для guard'а — не
+// відкриває edit якщо клік був на checkbox задачі/крока.
+reg('task-card-click', (data, el, ev) => {
+  if (typeof window !== 'undefined' && typeof window.taskCardClick === 'function') {
+    window.taskCardClick(data.id, ev);
+  }
+});
+// toggle-entity-done — UNIVERSAL action для checkbox'ів «зроблено/не зроблено»
+// на різних entity (task, habit, prod-habit). DRY Scanner пораду: ця action
+// заміняє 8 inline handler'ів (2 у tasks.js + 6 у habits.js). Майбутній
+// rollout: коли мігруємо habits.js — НЕ створюємо ще actions, використовуємо
+// цей з data-entity="habit" / "habit-prod".
+//
+// Phase 1в-prep CSS `touch-action: manipulation` на [data-task-check] +
+// [data-step-check] забезпечує fast-tap БЕЗ JS preventDefault — тому не
+// потрібно дублювати preventDefault/stopPropagation у handler.
+//
+// stopPropagation теж не потрібен: delegation listener читає
+// `closest('[data-action]')` ОДИН раз — task-card-click на батьківському НЕ
+// triggered (closest повертає найближчий checkbox).
+reg('toggle-entity-done', (data) => {
+  if (typeof window === 'undefined') return;
+  const entity = data.entity;
+  const id = data.id;
+  if (!entity || !id) return;
+  const fnMap = {
+    'task':       window.toggleTaskStatus,
+    'habit':      window.toggleHabitToday,
+    'habit-prod': window.toggleProdHabitToday,
+  };
+  const fn = fnMap[entity];
+  if (typeof fn === 'function') fn(id);
+});

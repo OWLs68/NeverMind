@@ -147,9 +147,9 @@ function renderTempSteps() {
   if (tempSteps.length === 0) { el.innerHTML = ''; return; }
   el.innerHTML = tempSteps.map(s => `
     <div style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.7);border:1.5px solid rgba(30,16,64,0.12);border-radius:10px;padding:8px 10px">
-      <div onclick="toggleTempStep('${s.id}')" style="width:18px;height:18px;border-radius:5px;border:1.5px solid ${s.done ? '#ea580c' : 'rgba(30,16,64,0.2)'};background:rgba(255,255,255,0.6);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;font-size:12px;color:#ea580c">${s.done ? '✓' : ''}</div>
+      <div data-action="toggle-temp-step" data-id="${s.id}" style="width:18px;height:18px;border-radius:5px;border:1.5px solid ${s.done ? '#ea580c' : 'rgba(30,16,64,0.2)'};background:rgba(255,255,255,0.6);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;font-size:12px;color:#ea580c">${s.done ? '✓' : ''}</div>
       <div style="flex:1;font-size:15px;color:#1e1040;${s.done ? 'text-decoration:line-through;opacity:0.4' : ''}">${escapeHtml(s.text)}</div>
-      <div onclick="removeTempStep('${s.id}')" style="font-size:18px;color:rgba(30,16,64,0.25);cursor:pointer;padding:0 2px">×</div>
+      <div data-action="remove-temp-step" data-id="${s.id}" style="font-size:18px;color:rgba(30,16,64,0.25);cursor:pointer;padding:0 2px">×</div>
     </div>
   `).join('');
 }
@@ -270,10 +270,10 @@ export function renderTasks() {
     const isDone = task.status === 'done';
 
     return `<div class="task-item-wrap" id="task-wrap-${task.id}" style="position:relative;margin:0 14px var(--card-gap);border-radius:16px">
-      <div id="task-item-${task.id}" onclick="taskCardClick('${task.id}', event)"
+      <div id="task-item-${task.id}" data-action="task-card-click" data-id="${task.id}"
         style="background:linear-gradient(135deg,#c6f3fd,#a8ecfb);border:1.5px solid rgba(255,255,255,0.4);border-radius:16px;padding:var(--card-pad-y) var(--card-pad-x);box-shadow:0 2px 12px rgba(0,0,0,0.04);opacity:${isDone ? '0.5' : '1'};cursor:pointer;-webkit-tap-highlight-color:transparent;position:relative;z-index:1;touch-action:pan-y">
       <div style="display:flex;align-items:flex-start;gap:6px;margin-bottom:${steps.length ? '8px' : '0'}">
-        <div data-task-check="1" ontouchend="event.preventDefault();event.stopPropagation();toggleTaskStatus('${task.id}')" style="padding:8px;margin:-8px -4px -8px -8px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;-webkit-tap-highlight-color:transparent">
+        <div data-task-check="1" data-action="toggle-entity-done" data-entity="task" data-id="${task.id}" style="padding:8px;margin:-8px -4px -8px -8px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;-webkit-tap-highlight-color:transparent">
           <div style="width:28px;height:28px;border-radius:8px;border:2px solid ${isDone ? '#16a34a' : 'rgba(234,88,12,0.3)'};background:${isDone ? '#16a34a' : 'rgba(255,255,255,0.78)'};display:flex;align-items:center;justify-content:center;font-size:15px;color:white;transition:all 0.2s">${isDone ? '✓' : ''}</div>
         </div>
         <div style="flex:1">
