@@ -6199,7 +6199,12 @@ ${lines.join("\n\n")}`;
         openMomentView,
         closeMomentView,
         rescheduleTaskTomorrow,
-        rescheduleTaskWeek
+        rescheduleTaskWeek,
+        // DGH6F 16.05: pre-existing bug — старий inline `onclick="renderEvening()"`
+        // у quit-habit кнопках теж не працював у IIFE bundle (renderEvening
+        // exported as ESM, не у window). Тепер delegation handlers викликають
+        // window.renderEvening — додаємо щоб реально перерендерилось.
+        renderEvening
       });
       _startEveningLockTicker();
     }
@@ -21011,6 +21016,7 @@ ${logLines}
         }
       });
       reg("navigate-inbox-item", (data) => {
+        if (!data.id) return;
         if (typeof window !== "undefined" && typeof window.navigateInboxItem === "function") {
           window.navigateInboxItem(data.id);
         }
@@ -21090,6 +21096,7 @@ ${logLines}
         if (typeof window.renderEvening === "function") setTimeout(window.renderEvening, 50);
       });
       reg("open-project", (data) => {
+        if (!data.id) return;
         if (typeof window !== "undefined" && typeof window.openProjectWorkspace === "function") {
           window.openProjectWorkspace(data.id);
         }
@@ -21100,6 +21107,7 @@ ${logLines}
         }
       });
       reg("toggle-project-timeline", (data) => {
+        if (!data.id) return;
         if (typeof window !== "undefined" && typeof window.toggleProjectTimeline === "function") {
           window.toggleProjectTimeline(data.id);
         }
