@@ -510,6 +510,11 @@ Object.assign(window, {
   setEveningMood,
   deleteMoment, openMomentView, closeMomentView,
   rescheduleTaskTomorrow, rescheduleTaskWeek,
+  // DGH6F 16.05: pre-existing bug — старий inline `onclick="renderEvening()"`
+  // у quit-habit кнопках теж не працював у IIFE bundle (renderEvening
+  // exported as ESM, не у window). Тепер delegation handlers викликають
+  // window.renderEvening — додаємо щоб реально перерендерилось.
+  renderEvening,
 });
 
 _startEveningLockTicker();

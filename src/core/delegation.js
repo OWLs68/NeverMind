@@ -94,6 +94,7 @@ reg('open-calendar', () => {
 // .inbox-item елементі (rendering inbox.js:316). Функція сама читає
 // data-cat через getElementById всередині — нам тут тільки передати id.
 reg('navigate-inbox-item', (data) => {
+  if (!data.id) return;
   if (typeof window !== 'undefined' && typeof window.navigateInboxItem === 'function') {
     window.navigateInboxItem(data.id);
   }
@@ -141,6 +142,10 @@ reg('task-card-click', (data, el, ev) => {
 // stopPropagation теж не потрібен: delegation listener читає
 // `closest('[data-action]')` ОДИН раз — task-card-click на батьківському НЕ
 // triggered (closest повертає найближчий checkbox).
+//
+// ⚠️ ПРИ МIГРАЦIЇ habits.js: прибрати inline `event.stopPropagation()` зі
+// старих onclick — у delegation він не потрібен і викликає подвійне
+// спрацювання при змішаному стані (inline + data-action).
 reg('toggle-entity-done', (data) => {
   if (typeof window === 'undefined') return;
   const entity = data.entity;
@@ -212,17 +217,23 @@ reg('confirm-quit-relapse', (data) => {
   if (typeof window.renderEvening === 'function') setTimeout(window.renderEvening, 50);
 });
 // === Phase 1д projects.js actions ===
+// open-project — тап на картку проєкту (відкриває workspace з steps + notes).
 reg('open-project', (data) => {
+  if (!data.id) return;
   if (typeof window !== 'undefined' && typeof window.openProjectWorkspace === 'function') {
     window.openProjectWorkspace(data.id);
   }
 });
+// close-project-workspace — кнопка «← Назад» у workspace. JS state reset
+// (activeProjectId=null), не DOM-remove — тому не reuse close-parent.
 reg('close-project-workspace', () => {
   if (typeof window !== 'undefined' && typeof window.closeProjectWorkspace === 'function') {
     window.closeProjectWorkspace();
   }
 });
+// toggle-project-timeline — «розгорнути ↓» / «згорнути ↑» історія проєкту.
 reg('toggle-project-timeline', (data) => {
+  if (!data.id) return;
   if (typeof window !== 'undefined' && typeof window.toggleProjectTimeline === 'function') {
     window.toggleProjectTimeline(data.id);
   }
