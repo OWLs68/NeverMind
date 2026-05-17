@@ -23,7 +23,11 @@ Council 5 паралельних агентів Sonnet (🕵️ Критик / �
 
 1. **`56f4d41`** — `src/core/boot.js` NM_KEYS розширено: data (+5), settings (+14), cache (+24), patterns (+1) → 94 ключі. Boot-time `_assertAllKeysKnown()` сканує localStorage у кінці `bootApp()` і console.warn якщо знайде nm_* поза реєстром. + `docs/DATA_SCHEMA.md` шапка оновлена з посиланням на NM_KEYS як джерело правди. + CACHE_NAME `nm-20260516-1830`.
 
-#### B. Backup механізм — 4 латентні дірки з Pre-mortem (4 коміти)
+#### B. Backup механізм — 4 латентні дірки з Pre-mortem + 7 проблем самореалізації знайдено Council (6 комітів)
+
+⚠️ Сам процес став двоетапним: Pre-mortem знайшов корінь (4 дірки), Council аудит **МОЇХ власних фіксів** виявив 7 неочевидних проблем (5 критичних + 2 латентних). Корінь — я не верифікував список migration flags проти типу кожної міграції + сигнал window.__nm_restoring створив без listener-guards (мертвий lock). Council 3 паралельних агентів Sonnet (Verifier / Regression Hunter / Supabase Prep Auditor) — кожен підтвердив незалежно.
+
+
 
 Усі 4 знахідки Council 💎 Pre-mortem верифіковані Головою (читання реального коду в `backup.js` + `boot.js:1195`). Це **латентні дірки** — не зашкодили активно, але кожна спрацювала б при першому ризикованому Supabase backup. Закриті ДО Supabase сесії.
 
@@ -31,6 +35,19 @@ Council 5 паралельних агентів Sonnet (🕵️ Критик / �
 3. **`5d52507`** — Race lock `window.__nm_restoring = true` + CustomEvent'и `nm-restore-start` / `nm-restore-end` у `restoreBackup`. Try/finally гарантує reset навіть при exception. Сигнал-інтерфейс для майбутніх listener'ів (OWL scheduler, restore UI) — `if (window.__nm_restoring) return` щоб не перезаписати restore-стан.
 4. **`91cfccc`** — Migration flag reset при `restoreBackup`. Константа `KEY_MIGRATION_FLAGS` (key → list of flags) зібрана grep'ом по `boot.js`. При restore ключа `nm_events` — видаляється `nm_events_uuid_migrated_v10` → наступний boot повторно мігрує відновлений старий формат → no mixed UUID/number state.
 5. **`9657117`** — `init() runMigrations` swallow → запис у `nm_error_log` + `console.error`. Прямий localStorage запис без import `logger.js` (циклічна залежність logger→nav→boot). Формат сумісний з `logger.saveErrorLog` (ts/type/msg/src/tab/stack/actions). CACHE bump `nm-20260516-1930`. Інші 7 `setupX()` catch залишені порожніми (некритичні + захист від крашу логування саме).
+
+6. **`727a5bb`** (Council self-аудит критичні фікси) — 5 критичних:
+   - `KEY_MIGRATION_FLAGS` ВИДАЛЕНО `nm_health_log_cleared_v6` (CLEANUP flag, не conversion — скидання = повторне видалення restored даних, анти-патерн)
+   - ДОДАНО v17 steps до tasks + projects (boot.js:1014-1075 мігрує `nm_tasks[].steps[].id` + `nm_projects[].steps[].id`)
+   - ДОДАНО `nm_habit_log2` (v9 cross-ref log keys = habit.id, boot.js:555,597)
+   - ДОДАНО `nm_allergies` (v16 мігрує allergies[].id, boot.js:852,994)
+   - 4 listener guards `if (window.__nm_restoring) return` у `proactive.js:1231`, `followups.js:81`, `brain-pulse.js:133`, `me.js:289` — сигнал з 5d52507 був мертвим без них
+   - `nm-data-changed` dispatch у `restoreBackup` finally → UI перерендериться після restore без F5
+   - CACHE bump `nm-20260516-2000`
+
+7. **`a031563`** (Council self-аудит latентні фікси) — 2 perf/safety:
+   - `_estimateUsedBytes` кеш (3×→2× O(n)) — на iPhone Safari з повним сховищем це до ~33% швидше у hot path
+   - Recursive quota fail guard у boot.js error logger — якщо `setItem(log.slice(-200))` падає через quota, fallback на мінімальний log (тільки поточний запис) → діагностика збережена саме у тій ситуації де log найпотрібніший
 
 #### C. Brain-задачі (моніторинг власної інфраструктури)
 
