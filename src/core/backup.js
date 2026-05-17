@@ -21,10 +21,34 @@
 
 const BACKUP_PREFIX = 'nm_backup_';
 const MAX_BACKUPS = 3;
+// iPhone Safari ~5 MB, інші ~10 MB. Беремо консервативно 4 MB як «небезпечну зону»
+// для пред-перевірки (DGH6F 16.05). Якщо payload + поточні дані > QUOTA_BUDGET →
+// quota fail передбачуваний → видаємо явну помилку, не тихо null.
+const QUOTA_BUDGET_BYTES = 4 * 1024 * 1024;
+
+// Оцінка займаного місця у localStorage (всі ключі, не тільки nm_*). Розмір
+// key+value у chars; UTF-16 = 2 байти/char у Safari, але це апроксимація — точна
+// квота специфічна для браузера. Використовується для передперевірки backup quota.
+function _estimateUsedBytes() {
+  let bytes = 0;
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (!k) continue;
+      const v = localStorage.getItem(k);
+      bytes += (k.length + (v ? v.length : 0)) * 2;
+    }
+  } catch {}
+  return bytes;
+}
 
 // Створює селективний бекап вказаних ключів. label — короткий ідентифікатор
 // причини бекапу (напр. 'pre-habit-uuid-v9'). Ts додається у key.
 // Повертає key створеного бекапу або null при quota error / порожньому snapshot.
+//
+// DGH6F 16.05: додано передперевірку quota — якщо payload + existing > 4 MB,
+// console.warn з конкретними цифрами замість тихого QuotaExceededError. Це
+// блокує silent fail коли user-data займає 4+ MB і backup просто не запишеться.
 export function createSelectiveBackup(keys, label) {
   if (!Array.isArray(keys) || keys.length === 0) return null;
   if (!label || typeof label !== 'string') return null;
@@ -49,19 +73,41 @@ export function createSelectiveBackup(keys, label) {
   if (!hasData) return null; // нічого бекапити
 
   const payload = JSON.stringify({ ts, label, data: snapshot });
+  // Передперевірка quota (DGH6F 16.05): payload+existing у байтах × 2 (UTF-16).
+  // Якщо > QUOTA_BUDGET — спершу пробуємо cleanup, потім якщо ще не вмістимось —
+  // warn з конкретикою і return null. Без цього юзер бачить тільки тиху відсутність
+  // backup'у (createSelectiveBackup → null) і не розуміє чому.
+  const payloadBytes = (backupKey.length + payload.length) * 2;
+  const estimatedTotal = _estimateUsedBytes() + payloadBytes;
+  if (estimatedTotal > QUOTA_BUDGET_BYTES) {
+    try { cleanupOldBackups(0); } catch {}
+    const afterCleanup = _estimateUsedBytes() + payloadBytes;
+    if (afterCleanup > QUOTA_BUDGET_BYTES) {
+      const usedMB = (_estimateUsedBytes() / 1024 / 1024).toFixed(2);
+      const payloadMB = (payloadBytes / 1024 / 1024).toFixed(2);
+      console.warn(
+        '[backup] QUOTA: skipped «' + label + '» — payload ' + payloadMB + ' MB + ' +
+        'existing ' + usedMB + ' MB > 4 MB budget. ' +
+        'JSON-export рекомендований замість in-storage backup.'
+      );
+      return null;
+    }
+  }
+
   try {
     localStorage.setItem(backupKey, payload);
     // Cleanup старих backups (тримаємо тільки MAX_BACKUPS)
     try { cleanupOldBackups(MAX_BACKUPS); } catch {}
     return backupKey;
   } catch (e) {
-    // QuotaExceededError — спробувати скоротити старі і повторити
+    // QuotaExceededError що проскочив передперевірку (race з іншим write або
+    // браузер з меншою квотою) — finальна спроба cleanup + retry.
     try {
       cleanupOldBackups(0); // прибрати всі старі
       localStorage.setItem(backupKey, payload);
       return backupKey;
     } catch {
-      console.warn('[backup] quota exceeded — backup skipped:', label);
+      console.warn('[backup] quota exceeded після cleanup — backup skipped:', label);
       return null;
     }
   }
