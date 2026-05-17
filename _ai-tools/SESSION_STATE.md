@@ -4,7 +4,7 @@
 >
 > Старіші сесії (до 6GoDe 19.04) — в [`_archive/SESSION_STATE_archive.md`](../_archive/SESSION_STATE_archive.md).
 
-**Оновлено:** 2026-05-16 (сесія **DGH6F** — pre-Supabase hardening: (A) `NM_KEYS` audit +44 ключі, (B) Backup механізм 4 латентні дірки (quota check / race lock / migration flag reset / runMigrations swallow→log) + boot-time `_assertAllKeysKnown` + brain pre-commit-screenshot guard + lessons workflow-curl. 7 комітів, Council 5 агентів Sonnet, ~3 години). Раніше: 2026-05-16 (сесія **e9t3N** — AI-тестер інфраструктура + Security аудит з 8 системними фіксами + Dependabot + Claude Security Action. 15+ комітів, Council 9 агентів Sonnet, ~10 годин). Раніше: 2026-05-13 (сесія **nliW8** — 4 фази: B-170 регресія + Phase 2 уніфікація save_finance + Пункт 3 delete_medication повний undo + Пункт 4 B-178 cross-chat + 6 авто-сторожів-хуків. 24 коміти v862→v874+, Council 16 агентів Sonnet).
+**Оновлено:** 2026-05-16 (сесія **DGH6F** — pre-Supabase hardening + Event Delegation Phase 1а: (A) `NM_KEYS` audit +44 ключі, (B) Backup 4 латентні дірки + 7 проблем самореалізації (Council), (C) Event Delegation модуль `src/core/delegation.js` + 16 header onclick + pre-commit-onclick-freeze hook. 12 комітів, Council 8 агентів Sonnet, ~4 години). Раніше: 2026-05-16 (сесія **e9t3N** — AI-тестер інфраструктура + Security аудит з 8 системними фіксами + Dependabot + Claude Security Action. 15+ комітів, Council 9 агентів Sonnet, ~10 годин). Раніше: 2026-05-13 (сесія **nliW8** — 4 фази: B-170 регресія + Phase 2 уніфікація save_finance + Пункт 3 delete_medication повний undo + Пункт 4 B-178 cross-chat + 6 авто-сторожів-хуків. 24 коміти v862→v874+, Council 16 агентів Sonnet).
 
 ---
 
@@ -49,6 +49,18 @@ Council 5 паралельних агентів Sonnet (🕵️ Критик / �
    - `_estimateUsedBytes` кеш (3×→2× O(n)) — на iPhone Safari з повним сховищем це до ~33% швидше у hot path
    - Recursive quota fail guard у boot.js error logger — якщо `setItem(log.slice(-200))` падає через quota, fallback на мінімальний log (тільки поточний запис) → діагностика збережена саме у тій ситуації де log найпотрібніший
 
+#### C. Event Delegation Phase 1а — 16 header onclick + freeze hook (1 коміт)
+
+ROADMAP Security Hardening BLOCKER #1 (Event Delegation Refactor) перший крок з Strangler стратегії (Council Стратег: НЕ Big Bang, поступово файл-за-файлом). Static HTML headers — найпростіший підмножина (нема `stopPropagation` / `this.closest()` / template literal UUID). Council аудит підтвердив що 16 onclick у `index.html` headers (8 tabs × `openSettings`+`openHelp`) — оптимальний quick win.
+
+8. **`62183fc`** —
+   - `src/core/delegation.js` (новий, 71 рядок): ACTIONS registry через `Object.create(null)` (без prototype pollution), `reg(name, fn)` + `initDelegation()` один listener на `document.body`. `closest('[data-action]')` → handler `(dataset, el, ev)`. UUID-immune через `el.dataset.id` (string, не eval) — клас B-108/B-170 неможливий. Silent skip для невідомих actions. 2 базові actions з самого boot: `open-settings` / `open-help` (виклик `window.X` глобалів).
+   - `src/app.js` + `src/core/boot.js`: import + `initDelegation()` у `bootApp()` ПЕРЕД `showApp()` (Inversion: без цього перший клік до showApp був би mute).
+   - `index.html` — 16 onclick → data-action: 334→319 (−16 у HTML + 1 у delegation.js коментарі).
+   - `.claude/hooks/pre-commit-onclick-freeze.js` (новий, 8-й сторож) + settings.json: net-rachet `+onclick= не > -onclick=` у diff. Дозволяє refactor, блокує regression. Smoke 3/3.
+   - `TESTING_LOG.md` секція v900+ DGH6F: 9 iPhone checkbox'ів (8 tabs × ⚙️+? + регресія-чек DevTools + sanity «жодних візуальних змін»).
+   - CACHE bump `nm-20260516-2100`.
+
 #### C. Brain-задачі (моніторинг власної інфраструктури)
 
 6. **`ae96f1a`** — `.claude/hooks/pre-commit-screenshot.js` локальний guard (другий рівень після workflow): блокує commit якщо staged JSON містить `"screenshot_b64": "<base64>"`. Smoke 4/4 (no-commit/no-JSON/base64/null). + lessons урок «Workflow з зовнішнім API — спершу локальний міні-тест curl» з brain-спостереження про 3 невдалих запуски Claude Security Action у e9t3N.
@@ -61,15 +73,17 @@ Council 5 паралельних агентів Sonnet (🕵️ Критик / �
 ### Гілка + контекст
 
 - Гілка: `claude/start-session-DGH6F`
-- Council save: знайшов **B-184** (активний баг — clearAllData wipe не повний) + **B-185** (4 латентні дірки Backup механізму — Pre-mortem)
-- Розмір сесії: 7 комітів (1 NM_KEYS audit + 1 docs + 4 backup hardening + 1 brain guard), ~3 години
-- Pre-commit hooks залишились усі стабільні (8 хуків — i18n / imports / trash-sync / schema / reverser / uuid-grep / screenshot / testing-log)
+- Council save: знайшов **B-184** (активний баг — clearAllData wipe не повний) + **B-185** (4 латентні дірки Backup механізму — Pre-mortem) + **Council self-аудит** знайшов 7 проблем у моїх же фіксах
+- Розмір сесії: 13 комітів (1 NM_KEYS audit + 4 backup hardening + 2 Council self-аудит fix + 1 Event Delegation Phase 1а + 4 docs + 1 brain), ~4 години
+- Pre-commit hooks тепер 9 (додано `pre-commit-onclick-freeze.js` — net-rachet для inline onclick)
 
 ### Що далі (узгоджено з Романом)
 
-1. ✅ **Backup hardening Phase 1** — 4 латентні дірки закрито (B-185).
-2. **Event Delegation Phase 1а (~45-60 хв)** — `delegation.js` + 16 header onclick + pre-commit freeze hook. Наступна задача.
-3. **Backup Phase 2 (~2 год)** — full backup + Restore UI + JSON export. Перед Supabase сесією.
+1. ✅ **NM_KEYS audit** (B-184).
+2. ✅ **Backup hardening Phase 1** — 4 латентні дірки закрито (B-185) + 7 self-аудит проблем виправлено.
+3. ✅ **Event Delegation Phase 1а** — `delegation.js` + 16 header onclick + freeze hook.
+4. **Event Delegation Phase 1б+ (~6 год розпорошено на кілька сесій)** — мігрувати решту 318 onclick по 1-2 файли за коміт. Order Стратега: inbox.js (4) → board.js (3) → tasks.js (3) → me.js (1) → onboarding.js (1) → projects.js (5) → evening.js (6) → notes.js (10) → habits.js (12) → health.js (14) → calendar.js (15) → finance-analytics.js (9) → finance.js (16) → finance-modals.js (35) → index.html залишки (169). CSP Report-Only коли grep=0.
+5. **Backup Phase 2 (~3 год)** — `createFullBackup()` + JSON export + Restore UI у Налаштуваннях. Перед Supabase сесією.
 
 ---
 
