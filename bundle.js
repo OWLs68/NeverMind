@@ -3062,10 +3062,6 @@ ${lines.join("\n")}`;
     if (!hasSuspicious) return null;
     if (COMMAND_RE.test(trimmed)) return null;
     if (HAS_NUMBER_RE.test(trimmed)) return null;
-    if (DOCTOR_MENTION_RE.test(trimmed)) {
-      const doctorChips = _buildDoctorChips(trimmed);
-      if (doctorChips) return doctorChips;
-    }
     const isPastTense = PAST_VERBS_RE.test(trimmed);
     const isBareNoun = BARE_NOUN_RE.test(trimmed) && !PAST_VERBS_RE.test(trimmed);
     if (!isPastTense && !isBareNoun) return null;
@@ -3103,43 +3099,6 @@ ${lines.join("\n")}`;
     ];
     return { question, chips: chips.map((c) => ({ ...c, id: generateUUID() })) };
   }
-  function _buildDoctorChips(text) {
-    let cards = [];
-    try {
-      cards = JSON.parse(localStorage.getItem("nm_health_cards") || "[]");
-    } catch (e) {
-      return null;
-    }
-    if (!Array.isArray(cards) || cards.length === 0) return null;
-    const seen = /* @__PURE__ */ new Set();
-    const doctors = [];
-    for (const c of cards) {
-      const d = (c.doctor || "").trim();
-      if (!d || seen.has(d.toLowerCase())) continue;
-      seen.add(d.toLowerCase());
-      doctors.push({ name: d, cardId: c.id, cardName: c.name });
-      if (doctors.length >= 3) break;
-    }
-    if (doctors.length === 0) return null;
-    const question = t("clarify.where_save_doctor", '"{text}" \u2014 \u0434\u043E \u044F\u043A\u043E\u0433\u043E \u043B\u0456\u043A\u0430\u0440\u044F \u0437\u0430\u043F\u0438\u0441\u0430\u0442\u0438?', { text });
-    const chips = doctors.map((d) => ({
-      label: d.name.length > 24 ? d.name.slice(0, 24) + "\u2026" : d.name,
-      action: "clarify_save",
-      target: "add_health_history_entry",
-      payload: {
-        card_id: d.cardId,
-        entry_type: "doctor_visit",
-        text
-      }
-    }));
-    chips.push({
-      label: t("clarify.chip.other_doctor", "\u0406\u043D\u0448\u0438\u0439 \u043B\u0456\u043A\u0430\u0440"),
-      action: "clarify_save",
-      target: "save_moment",
-      payload: { text }
-    });
-    return { question, chips: chips.map((c) => ({ ...c, id: generateUUID() })) };
-  }
   function applyClarifyChoice(target, payload, tab, addMsg) {
     if (target === "none" || !target) {
       addMsg("agent", t("clarify.skipped", "\u041D\u0435 \u0437\u0431\u0435\u0440\u0456\u0433\u0430\u044E."));
@@ -3157,7 +3116,7 @@ ${lines.join("\n")}`;
     }
     return ok;
   }
-  var PAST_VERBS_RE, BARE_NOUN_RE, BUSINESS_NOUN_RE, DOCTOR_MENTION_RE, COMMAND_RE, HAS_NUMBER_RE, SUSPICIOUS_TOOLS;
+  var PAST_VERBS_RE, BARE_NOUN_RE, BUSINESS_NOUN_RE, COMMAND_RE, HAS_NUMBER_RE, SUSPICIOUS_TOOLS;
   var init_clarify_guard = __esm({
     "src/owl/clarify-guard.js"() {
       init_utils();
@@ -3166,7 +3125,6 @@ ${lines.join("\n")}`;
       PAST_VERBS_RE = /\b(відкрив|купив|зробив|написав|зателефонував|з[’']їв|сходив|помив|поправ|виправ|запустив|створив|закінчив|почав|поставив|віддав|отримав|продав|замовив|скачав|встановив|подивився|прочитав|випив|забув|знайшов|вивчив|відремонтував|посадив|зустрів|приготував|зварив|спік|закрив|відкупив|оновив|вилікував)\b/i;
       BARE_NOUN_RE = /^[А-ЯҐЄІЇа-яґєії'’\-]{2,30}$/;
       BUSINESS_NOUN_RE = /(автомий\w*|салон\w*|сайт\w*|магазин\w*|студі\w*|курс\w*|школ\w*|кав['’]ярн\w*|майстерн\w*|бар|ресторан\w*|клуб\w*|спортзал\w*|атель\w*|пекарн\w*|хімчистк\w*|агентств\w*|компані\w*|стартап\w*|бізнес\w*|проект\w*)/i;
-      DOCTOR_MENTION_RE = /(лікар\w*|стомат\w*|дантист\w*|дерматолог\w*|кардіолог\w*|терапевт\w*|хірург\w*|невролог\w*|невропатолог\w*|окуліст\w*|офтальмолог\w*|гінеколог\w*|уролог\w*|ортопед\w*|ендокринолог\w*|психіатр\w*|психотерапевт\w*|педіатр\w*|алерголог\w*|онколог\w*|гастроентеролог\w*|лор|клінік\w*|лікарн\w*|поліклінік\w*|медцентр\w*|шпиталь\w*)/i;
       COMMAND_RE = /(створи|додай|запиши|нагада|постав|зроби|куп(и|ити)\b|зателефонуй|видали|перенеси|зміни|поміняй|онови)/i;
       HAS_NUMBER_RE = /\d/;
       SUSPICIOUS_TOOLS = /* @__PURE__ */ new Set([
@@ -3175,11 +3133,10 @@ ${lines.join("\n")}`;
         "save_task",
         "save_moment",
         "save_note",
-        "add_health_history_entry",
-        "create_health_card",
         "save_finance",
         "set_reminder",
         "complete_task"
+        // add_health_history_entry + create_health_card REMOVED (EU AI Act JMQuT 17.05.2026).
       ]);
     }
   });
@@ -4411,13 +4368,6 @@ ${lines.join("\n\n")}`;
       } catch (e) {
       }
     }
-    if (tab === "health") {
-      try {
-        const cards = JSON.parse(localStorage.getItem("nm_health_cards") || "[]");
-        parts.push(`\u041A\u0430\u0440\u0442\u043E\u0447\u043E\u043A \u0437\u0434\u043E\u0440\u043E\u0432'\u044F: ${cards.length}.`);
-      } catch (e) {
-      }
-    }
     if (tab === "projects") {
       try {
         const projects = JSON.parse(localStorage.getItem("nm_projects") || "[]");
@@ -4680,10 +4630,6 @@ ${pulseParts.join("\n")}
     } catch (e) {
     }
     try {
-      if (JSON.parse(localStorage.getItem("nm_health_cards") || "[]").length > 0) activeTabs.push("\u0417\u0434\u043E\u0440\u043E\u0432'\u044F");
-    } catch (e) {
-    }
-    try {
       if (JSON.parse(localStorage.getItem("nm_projects") || "[]").length > 0) activeTabs.push("\u041F\u0440\u043E\u0435\u043A\u0442\u0438");
     } catch (e) {
     }
@@ -4706,7 +4652,7 @@ ${pulseParts.join("\n")}
       { id: "values", q: "\u0429\u043E \u0434\u043B\u044F \u0442\u0435\u0431\u0435 \u043D\u0430\u0439\u0432\u0430\u0436\u043B\u0438\u0432\u0456\u0448\u0435 \u0432 \u0436\u0438\u0442\u0442\u0456 \u2014 \u0449\u043E \u0442\u0438 \u043D\u0456\u043A\u043E\u043B\u0438 \u043D\u0435 \u043F\u043E\u0436\u0435\u0440\u0442\u0432\u0443\u0454\u0448?" },
       { id: "relax", q: "\u042F\u043A \u0442\u0438 \u0432\u0456\u0434\u043F\u043E\u0447\u0438\u0432\u0430\u0454\u0448? \u0429\u043E \u0434\u043E\u043F\u043E\u043C\u0430\u0433\u0430\u0454 \u043F\u0435\u0440\u0435\u0437\u0430\u0440\u044F\u0434\u0438\u0442\u0438\u0441\u044C?" },
       { id: "people", q: "\u0425\u0442\u043E \u043D\u0430\u0439\u0432\u0430\u0436\u043B\u0438\u0432\u0456\u0448\u0456 \u043B\u044E\u0434\u0438 \u043D\u0430\u0432\u043A\u043E\u043B\u043E \u0442\u0435\u0431\u0435? \u0420\u043E\u0434\u0438\u043D\u0430, \u0434\u0440\u0443\u0437\u0456, \u043F\u0430\u0440\u0442\u043D\u0435\u0440?" },
-      { id: "health", q: "\u042F\u043A \u0443 \u0442\u0435\u0431\u0435 \u0437\u0456 \u0437\u0434\u043E\u0440\u043E\u0432'\u044F\u043C? \u0404 \u0449\u043E\u0441\u044C \u0449\u043E \u0445\u0432\u0438\u043B\u044E\u0454 \u0430\u0431\u043E \u043D\u0430\u0434 \u0447\u0438\u043C \u043F\u0440\u0430\u0446\u044E\u0454\u0448?" },
+      // health onboarding question REMOVED (EU AI Act compliance JMQuT 17.05.2026) — AI не питає про здоровʼя.
       { id: "dreams", q: "\u0414\u0435 \u0442\u0438 \u0431\u0430\u0447\u0438\u0448 \u0441\u0435\u0431\u0435 \u0447\u0435\u0440\u0435\u0437 \u0440\u0456\u043A? \u0429\u043E \u043C\u0430\u0454 \u0437\u043C\u0456\u043D\u0438\u0442\u0438\u0441\u044C?" },
       { id: "style", q: "\u042F\u043A \u0442\u043E\u0431\u0456 \u0437\u0440\u0443\u0447\u043D\u0456\u0448\u0435 \u0441\u043F\u0456\u043B\u043A\u0443\u0432\u0430\u0442\u0438\u0441\u044C \u2014 \u043A\u043E\u0440\u043E\u0442\u043A\u043E \u0456 \u043F\u043E \u0441\u043F\u0440\u0430\u0432\u0456 \u0447\u0438 \u0440\u043E\u0437\u0433\u043E\u0440\u043D\u0443\u0442\u043E \u0437 \u043F\u043E\u044F\u0441\u043D\u0435\u043D\u043D\u044F\u043C\u0438?" },
       { id: "daily_target", q: "\u0421\u043A\u0456\u043B\u044C\u043A\u0438 \u0437\u0430\u0434\u0430\u0447 \u043D\u0430 \u0434\u0435\u043D\u044C \u2014 \u043A\u043E\u043C\u0444\u043E\u0440\u0442\u043D\u0438\u0439 \u0442\u0435\u043C\u043F \u0434\u043B\u044F \u0442\u0435\u0431\u0435? \u041D\u0430\u0437\u0432\u0438 \u0447\u0438\u0441\u043B\u043E (\u043D\u0430\u043F\u0440\u0438\u043A\u043B\u0430\u0434: 3, 5, 7). \u042F\u043A\u0449\u043E \u0437\u0430\u043F\u0430\u043C'\u044F\u0442\u0430\u044E \u0446\u0435\u0439 \u0444\u0430\u043A\u0442 \u2014 \u0432\u0440\u0430\u0445\u043E\u0432\u0443\u0432\u0430\u0442\u0438\u043C\u0443 \u0443 \u043F\u043E\u0440\u0430\u0434\u0430\u0445." }
@@ -4833,13 +4779,7 @@ ${pulseParts.join("\n")}
         return false;
       }
     }
-    if (tab === "health") {
-      try {
-        return JSON.parse(localStorage.getItem("nm_health_cards") || "[]").length > 0;
-      } catch {
-        return false;
-      }
-    }
+    if (tab === "health") return false;
     if (tab === "projects") {
       try {
         return JSON.parse(localStorage.getItem("nm_projects") || "[]").length > 0;
@@ -5187,8 +5127,6 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
       } else if (tab === "tasks") {
         const tasks = getTasks().filter((t2) => t2.status === "active");
         text = tasks.length > 0 ? `${tasks.length} \u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0445 \u0437\u0430\u0434\u0430\u0447. \u0429\u043E \u0431\u0443\u0434\u0435\u043C\u043E \u0437\u0430\u043A\u0440\u0438\u0432\u0430\u0442\u0438?` : "\u041D\u0435\u043C\u0430\u0454 \u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0445 \u0437\u0430\u0434\u0430\u0447. \u0412\u0456\u043B\u044C\u043D\u0438\u0439 \u0434\u0435\u043D\u044C!";
-      } else if (tab === "health") {
-        text = "\u042F\u043A \u0441\u0430\u043C\u043E\u043F\u043E\u0447\u0443\u0442\u0442\u044F \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456?";
       } else if (tab === "notes") {
         text = "\u0417\u0430\u043F\u0438\u0448\u0438 \u0434\u0443\u043C\u043A\u0443 \u0430\u0431\u043E \u0456\u0434\u0435\u044E \u2014 \u044F \u0437\u0431\u0435\u0440\u0435\u0436\u0443 \u0443 \u043D\u043E\u0442\u0430\u0442\u043A\u0438 \u{1F4DD}";
       } else if (tab === "evening" || tab === "me") {
@@ -5302,7 +5240,7 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
         tasks: "\u0422\u0443\u0442 \u0436\u0438\u0432\u0443\u0442\u044C \u0442\u0432\u043E\u0457 \u0437\u0430\u0434\u0430\u0447\u0456 \u0456 \u0437\u0432\u0438\u0447\u043A\u0438. \u041D\u0430\u043F\u0438\u0448\u0438 \u043C\u0435\u043D\u0456 \u0449\u043E \u0442\u0440\u0435\u0431\u0430 \u0437\u0440\u043E\u0431\u0438\u0442\u0438 \u2014 \u044F \u0441\u0442\u0432\u043E\u0440\u044E \u0437\u0430\u0434\u0430\u0447\u0443 \u0437 \u043A\u0440\u043E\u043A\u0430\u043C\u0438 \u{1F4CB}",
         notes: "\u0426\u0435 \u0442\u0432\u043E\u0457 \u043D\u043E\u0442\u0430\u0442\u043A\u0438. \u041C\u043E\u0436\u0435\u0448 \u0440\u043E\u0437\u043A\u043B\u0430\u0434\u0430\u0442\u0438 \u043F\u043E \u043F\u0430\u043F\u043A\u0430\u0445. \u041D\u0430\u043F\u0438\u0448\u0438 \u0449\u043E \u0445\u043E\u0447\u0435\u0448 \u0437\u0430\u043F\u0430\u043C'\u044F\u0442\u0430\u0442\u0438 \u2014 \u044F \u0437\u0431\u0435\u0440\u0435\u0436\u0443 \u{1F4DD}",
         finance: "\u0422\u0443\u0442 \u0444\u0456\u043D\u0430\u043D\u0441\u0438. \u0421\u043A\u0430\u0436\u0438 \u0441\u043A\u0456\u043B\u044C\u043A\u0438 \u0432\u0438\u0442\u0440\u0430\u0442\u0438\u0432 \u2014 \u044F \u0437\u0430\u043F\u0438\u0448\u0443. \u041C\u043E\u0436\u0435\u0448 \u0432\u0441\u0442\u0430\u043D\u043E\u0432\u0438\u0442\u0438 \u043C\u0456\u0441\u044F\u0447\u043D\u0438\u0439 \u0431\u044E\u0434\u0436\u0435\u0442 \u{1F4B0}",
-        health: "\u0422\u0443\u0442 \u043F\u0440\u043E \u0437\u0434\u043E\u0440\u043E\u0432'\u044F. \u0414\u043E\u0434\u0430\u0432\u0430\u0439 \u043A\u0430\u0440\u0442\u043A\u0438 (\u043B\u0456\u043A\u0438, \u0441\u0438\u043C\u043F\u0442\u043E\u043C\u0438, \u0430\u043D\u0430\u043B\u0456\u0437\u0438) \u0456 \u0449\u043E\u0434\u0435\u043D\u043D\u0456 \u0448\u043A\u0430\u043B\u0438 (\u0435\u043D\u0435\u0440\u0433\u0456\u044F, \u0441\u043E\u043D, \u0431\u0456\u043B\u044C) \u{1F3E5}",
+        health: "\u0422\u0443\u0442 \u043F\u0440\u043E \u0437\u0434\u043E\u0440\u043E\u0432\u02BC\u044F \u2014 \u0434\u043E\u0434\u0430\u0432\u0430\u0439 \u043A\u0430\u0440\u0442\u043A\u0438/\u043B\u0456\u043A\u0438/\u0430\u043B\u0435\u0440\u0433\u0456\u0457 \u0447\u0435\u0440\u0435\u0437 UI. AI \u0456\u0437\u043E\u043B\u044C\u043E\u0432\u0430\u043D\u043E \u0432\u0456\u0434 \u043C\u0435\u0434\u0438\u0447\u043D\u0438\u0445 \u0434\u0430\u043D\u0438\u0445 (EU AI Act compliance) \u{1F3E5}",
         projects: '\u0422\u0443\u0442 \u0432\u0435\u043B\u0438\u043A\u0456 \u043F\u0440\u043E\u0435\u043A\u0442\u0438 \u0437 \u043A\u0440\u043E\u043A\u0430\u043C\u0438 \u0456 \u043C\u0435\u0442\u0440\u0438\u043A\u0430\u043C\u0438. \u0421\u043A\u0430\u0436\u0438 "\u043D\u043E\u0432\u0438\u0439 \u043F\u0440\u043E\u0435\u043A\u0442" \u2014 \u044F \u0434\u043E\u043F\u043E\u043C\u043E\u0436\u0443 \u0441\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u{1F680}',
         evening: "\u0422\u0443\u0442 \u043C\u043E\u043C\u0435\u043D\u0442\u0438 \u0434\u043D\u044F \u0456 \u0432\u0435\u0447\u0456\u0440\u043D\u0456\u0439 \u043F\u0456\u0434\u0441\u0443\u043C\u043E\u043A. \u0417\u0430\u043F\u0438\u0441\u0443\u0439 \u0449\u043E \u0432\u0430\u0436\u043B\u0438\u0432\u043E\u0433\u043E \u0441\u0442\u0430\u043B\u043E\u0441\u044F \u2014 \u0432\u0432\u0435\u0447\u0435\u0440\u0456 \u043F\u0456\u0434\u0432\u0435\u0434\u0435\u043C\u043E \u043F\u0456\u0434\u0441\u0443\u043C\u043A\u0438 \u2728",
         me: '\u0426\u0435 \u0432\u043A\u043B\u0430\u0434\u043A\u0430 "\u042F" \u2014 \u0437\u0432\u0438\u0447\u043A\u0438, \u0441\u0442\u0440\u0456\u043A\u0438, \u0441\u0442\u0430\u0442\u0438\u0441\u0442\u0438\u043A\u0430. \u0422\u0443\u0442 \u0431\u0430\u0447\u0438\u0448 \u0441\u0432\u0456\u0439 \u043F\u0440\u043E\u0433\u0440\u0435\u0441 \u0437\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C \u0456 \u043C\u0456\u0441\u044F\u0446\u044C \u{1F4CA}',
@@ -10556,36 +10494,6 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
   });
 
   // src/tabs/health.js
-  var health_exports = {};
-  __export(health_exports, {
-    HEALTH_STATUS_DEFS: () => HEALTH_STATUS_DEFS,
-    HEALTH_STATUS_KEYS: () => HEALTH_STATUS_KEYS,
-    addAllergy: () => addAllergy,
-    addHealthChatMsg: () => addHealthChatMsg,
-    addHealthHistoryEntry: () => addHealthHistoryEntry,
-    addMedicationToCard: () => addMedicationToCard,
-    applyHealthInterviewChoice: () => applyHealthInterviewChoice,
-    clearFocusedHealthCard: () => clearFocusedHealthCard,
-    createHealthCardProgrammatic: () => createHealthCardProgrammatic,
-    deleteAllergy: () => deleteAllergy,
-    deleteHealthCardProgrammatic: () => deleteHealthCardProgrammatic,
-    deleteMedicationFromCard: () => deleteMedicationFromCard,
-    editHealthCardProgrammatic: () => editHealthCardProgrammatic,
-    editMedicationInCard: () => editMedicationInCard,
-    getAllergies: () => getAllergies,
-    getFocusedHealthCard: () => getFocusedHealthCard,
-    getHealthCards: () => getHealthCards,
-    getHealthContext: () => getHealthContext,
-    logMedicationDose: () => logMedicationDose,
-    renderHealth: () => renderHealth,
-    saveAllergies: () => saveAllergies,
-    saveHealthCards: () => saveHealthCards,
-    sendHealthBarMessage: () => sendHealthBarMessage,
-    setFocusedHealthCard: () => setFocusedHealthCard,
-    startHealthInterview: () => startHealthInterview,
-    syncHealthFinanceToHistory: () => syncHealthFinanceToHistory,
-    updateHealthCardStatusProgrammatic: () => updateHealthCardStatusProgrammatic
-  });
   function _statusDef(s) {
     return HEALTH_STATUS_DEFS[s] || HEALTH_STATUS_DEFS.treatment;
   }
@@ -10701,15 +10609,6 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
     }
     return true;
   }
-  function setFocusedHealthCard(id) {
-    _focusedHealthCardId = id;
-  }
-  function getFocusedHealthCard() {
-    return _focusedHealthCardId;
-  }
-  function clearFocusedHealthCard() {
-    _focusedHealthCardId = null;
-  }
   function renderHealth() {
     if (activeHealthCardId === null) {
       try {
@@ -10816,77 +10715,6 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
       });
     });
   }
-  function createHealthCardProgrammatic(opts) {
-    const { name, subtitle, doctor, doctorRecommendations, doctorConclusion, startDate, nextAppointment, status, medications, initialHistoryEntry } = opts || {};
-    if (!name || !name.trim()) return null;
-    const cards = getHealthCards();
-    const newCard = {
-      id: generateUUID(),
-      name: name.trim(),
-      subtitle: (subtitle || "").trim(),
-      status: HEALTH_STATUS_DEFS[status] ? status : "treatment",
-      progress: 0,
-      nextStep: "",
-      treatments: [],
-      medications: Array.isArray(medications) ? medications.map((m) => ({
-        id: generateUUID(),
-        name: m.name || "",
-        dosage: m.dosage || "",
-        schedule: Array.isArray(m.schedule) ? m.schedule : m.schedule ? String(m.schedule).split(/[,;]\s*/).filter(Boolean) : [],
-        courseDuration: m.courseDuration || "",
-        log: [],
-        createTasks: !!m.createTasks
-      })) : [],
-      analyses: [],
-      owlAnalysis: "",
-      doctor: doctor || "",
-      doctorRecommendations: doctorRecommendations || "",
-      doctorConclusion: doctorConclusion || "",
-      startDate: startDate || "",
-      nextAppointment: null,
-      // встановиться через _syncCardAppointmentToEvent нижче
-      history: initialHistoryEntry ? [{ ts: Date.now(), type: "manual", text: String(initialHistoryEntry) }] : [],
-      createdAt: Date.now()
-    };
-    newCard.nextAppointment = _syncCardAppointmentToEvent(newCard.id, newCard.name, nextAppointment, null);
-    cards.unshift(newCard);
-    saveHealthCards(cards);
-    (newCard.medications || []).forEach((m) => _syncMedicationToTask(newCard.name, m));
-    return newCard;
-  }
-  function editHealthCardProgrammatic(cardId, updates) {
-    const cards = getHealthCards();
-    const idx = cards.findIndex((c) => c.id === cardId);
-    if (idx === -1) return null;
-    const old = cards[idx];
-    const next = { ...old };
-    ["name", "subtitle", "doctor", "doctorRecommendations", "doctorConclusion", "startDate", "status", "progress", "nextStep"].forEach((k) => {
-      if (updates[k] !== void 0) next[k] = updates[k];
-    });
-    if (updates.nextAppointment !== void 0) {
-      const oldEventId = old.nextAppointment && old.nextAppointment.eventId;
-      next.nextAppointment = _syncCardAppointmentToEvent(cardId, next.name, updates.nextAppointment, oldEventId);
-    }
-    cards[idx] = next;
-    saveHealthCards(cards);
-    return next;
-  }
-  function updateHealthCardStatusProgrammatic(cardId, status) {
-    if (!HEALTH_STATUS_DEFS[status]) return null;
-    const cards = getHealthCards();
-    const idx = cards.findIndex((c) => c.id === cardId);
-    if (idx === -1) return null;
-    const progressMap = { acute: 20, treatment: 40, improving: 60, remission: 80, done: 100 };
-    const progress = progressMap[status] !== void 0 ? progressMap[status] : cards[idx].progress || 0;
-    const oldStatus = cards[idx].status;
-    cards[idx] = { ...cards[idx], status, progress };
-    if (oldStatus !== status) {
-      cards[idx].history = cards[idx].history || [];
-      cards[idx].history.unshift({ ts: Date.now(), type: "status_change", text: t("health.history.status_change_text", "{from} \u2192 {to}", { from: _statusDef(oldStatus).label, to: _statusDef(status).label }) });
-    }
-    saveHealthCards(cards);
-    return cards[idx];
-  }
   function deleteHealthCardProgrammatic(cardId) {
     const cards = getHealthCards();
     const idx = cards.findIndex((c) => c.id === cardId);
@@ -10906,41 +10734,6 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
     saveHealthCards(cards);
     addToTrash("health_card", removed);
     return true;
-  }
-  function addMedicationToCard(cardId, med) {
-    const cards = getHealthCards();
-    const idx = cards.findIndex((c) => c.id === cardId);
-    if (idx === -1 || !med || !med.name) return null;
-    if (!Array.isArray(cards[idx].medications)) cards[idx].medications = [];
-    const newMed = {
-      id: generateUUID(),
-      name: String(med.name),
-      dosage: med.dosage || "",
-      schedule: Array.isArray(med.schedule) ? med.schedule : med.schedule ? String(med.schedule).split(/[,;]\s*/).filter(Boolean) : [],
-      courseDuration: med.courseDuration || "",
-      log: [],
-      createTasks: !!med.createTasks
-    };
-    cards[idx].medications.push(newMed);
-    saveHealthCards(cards);
-    _syncMedicationToTask(cards[idx].name, newMed);
-    return newMed;
-  }
-  function editMedicationInCard(cardId, medId, updates) {
-    const cards = getHealthCards();
-    const idx = cards.findIndex((c) => c.id === cardId);
-    if (idx === -1) return null;
-    const meds = cards[idx].medications || [];
-    const mIdx = meds.findIndex((m) => m.id === medId);
-    if (mIdx === -1) return null;
-    ["name", "dosage", "courseDuration"].forEach((k) => {
-      if (updates[k] !== void 0) meds[mIdx][k] = updates[k];
-    });
-    if (updates.schedule !== void 0) {
-      meds[mIdx].schedule = Array.isArray(updates.schedule) ? updates.schedule : String(updates.schedule).split(/[,;]\s*/).filter(Boolean);
-    }
-    saveHealthCards(cards);
-    return meds[mIdx];
   }
   function deleteMedicationFromCard(cardId, medId) {
     const cards = getHealthCards();
@@ -10983,20 +10776,6 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
     cards[idx].history.unshift({ ts: Date.now(), type: "dose_log", text: t("health.history.dose_taken", "\u041F\u0440\u0438\u0439\u043D\u044F\u0432 {name}", { name: med.name }) });
     saveHealthCards(cards);
     return med;
-  }
-  function addHealthHistoryEntry(cardId, type, text) {
-    const cards = getHealthCards();
-    const idx = cards.findIndex((c) => c.id === cardId);
-    if (idx === -1 || !text) return null;
-    if (!Array.isArray(cards[idx].history)) cards[idx].history = [];
-    const entry = {
-      ts: Date.now(),
-      type: type || "manual",
-      text: String(text)
-    };
-    cards[idx].history.unshift(entry);
-    saveHealthCards(cards);
-    return entry;
   }
   function buildHealthExportText() {
     const allergies = getAllergies();
@@ -11151,72 +10930,6 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
       }
     } catch (e) {
       showToast(t("health.export.copy_fail", "\u26A0\uFE0F \u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u0441\u043A\u043E\u043F\u0456\u044E\u0432\u0430\u0442\u0438 \u2014 \u0432\u0438\u0434\u0456\u043B\u0438 \u0442\u0435\u043A\u0441\u0442 \u0432\u0440\u0443\u0447\u043D\u0443"));
-    }
-  }
-  function _syncMedicationToTask(cardName, med) {
-    if (!med || !med.createTasks) return;
-    try {
-      const tasks = JSON.parse(localStorage.getItem("nm_tasks") || "[]");
-      const title = t("health.task.take_med_title", "\u041F\u0440\u0438\u0439\u043D\u044F\u0442\u0438 {name}{dosage}", { name: med.name, dosage: med.dosage ? " " + med.dosage : "" });
-      const existing = tasks.find((task) => task.title === title && task.status === "active");
-      if (existing) return;
-      const schedule = Array.isArray(med.schedule) ? med.schedule : [];
-      const steps = schedule.map((s) => ({ id: generateUUID(), text: s, done: false }));
-      const newTask = {
-        id: generateUUID(),
-        title,
-        text: t("health.task.take_med_step", "[{card}] {name}{dosage}{course}", { card: cardName, name: med.name, dosage: med.dosage ? " " + med.dosage : "", course: med.courseDuration ? " \xB7 \u043A\u0443\u0440\u0441 " + med.courseDuration : "" }),
-        status: "active",
-        steps,
-        priority: "important",
-        createdAt: Date.now(),
-        sourceMedId: med.id
-        // маркер що задача створена з препарату
-      };
-      tasks.unshift(newTask);
-      saveTasks(tasks);
-    } catch (e) {
-      console.warn("[health] syncMedicationToTask failed:", e);
-    }
-  }
-  function syncHealthFinanceToHistory(amount, category, comment) {
-    try {
-      const commentLower = (comment || "").toLowerCase();
-      const hasHealthMarker = category === "\u0417\u0434\u043E\u0440\u043E\u0432'\u044F" || /аптек|ліки|препарат|лікар|аналіз|тест|рецепт/i.test(commentLower);
-      if (!hasHealthMarker) return false;
-      const cards = getHealthCards();
-      const active = cards.filter((c) => _isActiveHealthStatus(c.status));
-      if (active.length === 0) return false;
-      let target = null;
-      for (const card of active) {
-        const cardNameLower = (card.name || "").toLowerCase();
-        if (cardNameLower && commentLower.includes(cardNameLower)) {
-          target = card;
-          break;
-        }
-        const meds = card.medications || [];
-        const medMatch = meds.find((m) => {
-          const mn = (m.name || "").toLowerCase();
-          return mn && commentLower.includes(mn);
-        });
-        if (medMatch) {
-          target = card;
-          break;
-        }
-      }
-      if (!target && active.length === 1) target = active[0];
-      if (!target) return false;
-      if (!Array.isArray(target.history)) target.history = [];
-      target.history.unshift({
-        ts: Date.now(),
-        type: "auto",
-        text: t("health.history.expense", "\u0412\u0438\u0442\u0440\u0430\u0442\u0430: {amount}\u20AC \u2014 {comment}", { amount, comment: comment || t("health.history.expense_default", "\u043B\u0456\u043A\u0438") })
-      });
-      saveHealthCards(cards);
-      return true;
-    } catch (e) {
-      console.warn("[health] syncHealthFinanceToHistory failed:", e);
-      return false;
     }
   }
   function _getMissedDoses() {
@@ -11990,88 +11703,13 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
     </div>
   </div>`;
   }
-  function getHealthContext() {
-    const parts = [];
-    if (_focusedHealthCardId) {
-      const focused = getHealthCards().find((c) => c.id === _focusedHealthCardId);
-      if (focused) {
-        const lines = [`\u{1F3AF} \u0424\u041E\u041A\u0423\u0421 \u0420\u041E\u0417\u041C\u041E\u0412\u0418 \u2014 \u0441\u0442\u0430\u043D "${focused.name}"${focused.subtitle ? " (" + focused.subtitle + ")" : ""}`];
-        lines.push(`  \u0421\u0442\u0430\u0442\u0443\u0441: ${focused.status}, \u043F\u0440\u043E\u0433\u0440\u0435\u0441: ${focused.progress || 0}%`);
-        if (focused.startDate) lines.push(`  \u041F\u043E\u0447\u0430\u0442\u043E\u043A \u043A\u0443\u0440\u0441\u0443: ${focused.startDate}`);
-        if (focused.doctor) lines.push(`  \u041B\u0456\u043A\u0430\u0440: ${focused.doctor}`);
-        if (focused.doctorRecommendations) lines.push(`  \u0420\u0435\u043A\u043E\u043C\u0435\u043D\u0434\u0430\u0446\u0456\u0457: ${focused.doctorRecommendations}`);
-        if (focused.doctorConclusion) lines.push(`  \u0412\u0438\u0441\u043D\u043E\u0432\u043E\u043A: ${focused.doctorConclusion}`);
-        if (focused.nextAppointment && focused.nextAppointment.date) {
-          lines.push(`  \u041D\u0430\u0441\u0442\u0443\u043F\u043D\u0438\u0439 \u043F\u0440\u0438\u0439\u043E\u043C: ${focused.nextAppointment.date}${focused.nextAppointment.time ? " " + focused.nextAppointment.time : ""}`);
-        }
-        if (Array.isArray(focused.medications) && focused.medications.length > 0) {
-          const meds = focused.medications.map((m) => `${m.name}${m.dosage ? " " + m.dosage : ""}`).join("; ");
-          lines.push(`  \u041F\u0440\u0435\u043F\u0430\u0440\u0430\u0442\u0438: ${meds}`);
-        }
-        const recentHistory = (focused.history || []).slice(0, 5);
-        if (recentHistory.length > 0) {
-          lines.push(`  \u041E\u0441\u0442\u0430\u043D\u043D\u0456 \u0437\u0430\u043F\u0438\u0441\u0438 \u0456\u0441\u0442\u043E\u0440\u0456\u0457:`);
-          recentHistory.forEach((h) => {
-            const d = new Date(h.ts);
-            const dateStr = isNaN(d) ? "" : d.toLocaleDateString("uk-UA");
-            lines.push(`    - [${h.type}, ${dateStr}] ${h.text}`);
-          });
-        }
-        lines.push(`  \u0412\u0410\u0416\u041B\u0418\u0412\u041E: \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u041F\u0420\u041E \u0426\u0415\u0419 \u0421\u0422\u0410\u041D. \u042F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u043F\u0438\u0442\u0430\u0454 \u0437\u0430\u0433\u0430\u043B\u044C\u043D\u0435 \u2014 \u043F\u043E\u0432\u0435\u0440\u0442\u0430\u0439 \u0442\u0435\u043C\u0443 \u0434\u043E \u0446\u044C\u043E\u0433\u043E \u0441\u0442\u0430\u043D\u0443. \u042F\u043A\u0449\u043E \u043D\u043E\u0432\u0438\u0439 \u0437\u0430\u043F\u0438\u0441 \u0441\u0442\u043E\u0441\u0443\u0454\u0442\u044C\u0441\u044F \u0446\u0456\u0454\u0457 \u043A\u0430\u0440\u0442\u043A\u0438 \u2014 \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u0430\u0439 add_health_history_entry \u0437 card_id:${focused.id}.`);
-        parts.push(lines.join("\n"));
-      }
-    }
-    const allergies = getAllergies();
-    if (allergies.length > 0) {
-      const list = allergies.map((a) => `[ID:${a.id}] ${a.name}${a.notes ? " (" + a.notes + ")" : ""}`).join(", ");
-      parts.push(`\u{1F6A8} \u0410\u041B\u0415\u0420\u0413\u0406\u0407 (\u0423\u0412\u0410\u0413\u0410 \u2014 \u043F\u043E\u043F\u0435\u0440\u0435\u0434\u0436\u0430\u0439 \u044E\u0437\u0435\u0440\u0430 \u043F\u0440\u0438 \u0431\u0443\u0434\u044C-\u044F\u043A\u0456\u0439 \u0437\u0433\u0430\u0434\u0446\u0456 \u0446\u0438\u0445 \u0430\u043B\u0435\u0440\u0433\u0435\u043D\u0456\u0432 \u0443 \u0437\u0430\u043F\u0438\u0441\u0430\u0445 Inbox/\u0424\u0456\u043D\u0430\u043D\u0441\u0456\u0432/\u041D\u043E\u0442\u0430\u0442\u043E\u043A: ${list})`);
-    }
-    const cards = getHealthCards();
-    const active = cards.filter((c) => _isActiveHealthStatus(c.status));
-    if (active.length > 0) {
-      parts.push(`\u0410\u043A\u0442\u0438\u0432\u043D\u0456 \u0441\u0442\u0430\u043D\u0438 \u0437\u0434\u043E\u0440\u043E\u0432'\u044F (${active.length}):`);
-      active.slice(0, 5).forEach((card) => {
-        const lines = [`- [ID:${card.id}] "${card.name}"${card.subtitle ? " \u2014 " + card.subtitle : ""} [${_statusDef(card.status).label}, \u043F\u0440\u043E\u0433\u0440\u0435\u0441: ${card.progress || 0}%]`];
-        if (card.startDate) {
-          const d = new Date(card.startDate);
-          if (!isNaN(d)) {
-            const daysSince = Math.round((Date.now() - d.getTime()) / 864e5);
-            if (daysSince >= 0) lines.push(`  \u043A\u0443\u0440\u0441: ${daysSince} \u0434\u043D \u0432\u0456\u0434 ${card.startDate}`);
-          }
-        }
-        if (card.doctor) lines.push(`  \u043B\u0456\u043A\u0430\u0440: ${card.doctor}`);
-        if (card.doctorRecommendations) lines.push(`  \u0440\u0435\u043A\u043E\u043C\u0435\u043D\u0434\u0430\u0446\u0456\u0457: ${card.doctorRecommendations}`);
-        if (card.nextAppointment && card.nextAppointment.date) {
-          const tm = card.nextAppointment.time ? " " + card.nextAppointment.time : "";
-          lines.push(`  \u043D\u0430\u0441\u0442\u0443\u043F\u043D\u0438\u0439 \u043F\u0440\u0438\u0439\u043E\u043C: ${card.nextAppointment.date}${tm}`);
-        }
-        if (Array.isArray(card.medications) && card.medications.length > 0) {
-          const meds = card.medications.map((m) => {
-            const sched = Array.isArray(m.schedule) && m.schedule.length ? " (" + m.schedule.join(", ") + ")" : "";
-            const course = m.courseDuration ? " \xB7 \u043A\u0443\u0440\u0441 " + m.courseDuration : "";
-            return `[ID:${m.id}] ${m.name}${m.dosage ? " " + m.dosage : ""}${sched}${course}`;
-          }).join("; ");
-          lines.push(`  \u043B\u0456\u043A\u0438: ${meds}`);
-        }
-        if (card.nextStep) lines.push(`  \u043D\u0430\u0441\u0442\u0443\u043F\u043D\u0438\u0439 \u043A\u0440\u043E\u043A: ${card.nextStep}`);
-        parts.push(lines.join("\n"));
-      });
-    }
-    return parts.join("\n");
-  }
   function addHealthChatMsg(_role, _text, _noSave = false, _chips = null) {
     return;
   }
   async function sendHealthBarMessage() {
     return;
   }
-  function startHealthInterview(_card) {
-    return;
-  }
-  function applyHealthInterviewChoice(_payload) {
-    return;
-  }
-  var HEALTH_STATUS_DEFS, HEALTH_STATUS_KEYS, activeHealthCardId, _focusedHealthCardId, _editingHealthCardId, _hdpTarget, _hdpType, _hdp;
+  var HEALTH_STATUS_DEFS, HEALTH_STATUS_KEYS, activeHealthCardId, _editingHealthCardId, _hdpTarget, _hdpType, _hdp;
   var init_health = __esm({
     "src/tabs/health.js"() {
       init_nav();
@@ -12101,7 +11739,6 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
       };
       HEALTH_STATUS_KEYS = Object.keys(HEALTH_STATUS_DEFS);
       activeHealthCardId = null;
-      _focusedHealthCardId = null;
       _editingHealthCardId = null;
       _hdpTarget = null;
       _hdpType = "date";
@@ -12335,7 +11972,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
     const chipsHTML = normChips.map((c) => {
       const id = c.id || "";
       const label = c.label || "";
-      const action = c.action === "nav" ? "nav" : c.action === "clarify_save" ? "clarify_save" : c.action === "health_interview" ? "health_interview" : c.action === "complete" ? "complete" : "chat";
+      const action = c.action === "nav" ? "nav" : c.action === "clarify_save" ? "clarify_save" : c.action === "complete" ? "complete" : "chat";
       const target = c.target || "";
       let payloadAttr = "";
       if (c.payload && typeof c.payload === "object") {
@@ -12395,17 +12032,6 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
       } catch {
       }
       handleClarifySaveChip(tab, target, payload);
-      return;
-    }
-    if (action === "health_interview") {
-      let payload = {};
-      try {
-        payload = payloadRaw ? JSON.parse(payloadRaw) : {};
-      } catch {
-      }
-      Promise.resolve().then(() => (init_health(), health_exports)).then((m) => {
-        if (m.applyHealthInterviewChoice) m.applyHealthInterviewChoice(payload);
-      }).catch((e) => console.warn("[chips] health_interview load failed:", e));
       return;
     }
     if (action === "nav" && target === "calendar") {
@@ -20478,11 +20104,6 @@ ${logLines}
       console.warn("[brain-signals] budget-warn failed:", e);
     }
     try {
-      signals.push(..._collectAppointmentSoon());
-    } catch (e) {
-      console.warn("[brain-signals] appointment-soon failed:", e);
-    }
-    try {
       signals.push(..._collectStreakRisk());
     } catch (e) {
       console.warn("[brain-signals] streak-risk failed:", e);
@@ -20587,44 +20208,6 @@ ${logLines}
       cdMs: PER_SIGNAL_CD
     }];
   }
-  function _collectAppointmentSoon() {
-    const now = Date.now();
-    const maxAhead = APPOINTMENT_SOON_HOURS * 60 * 60 * 1e3;
-    const cards = getHealthCards();
-    const candidates = [];
-    for (const c of cards) {
-      const appt = c.nextAppointment;
-      if (!appt || !appt.date) continue;
-      const t2 = appt.time || "09:00";
-      const [h, m] = t2.split(":").map(Number);
-      const [y, mo, d] = appt.date.split("-").map(Number);
-      if ([h, m, y, mo, d].some(isNaN)) continue;
-      const ts = new Date(y, mo - 1, d, h, m).getTime();
-      const ahead = ts - now;
-      if (ahead <= 0 || ahead > maxAhead) continue;
-      const cdKey = `brain_appt_${c.id}_${appt.date}`;
-      if (!owlCdExpired(cdKey, PER_SIGNAL_CD)) continue;
-      candidates.push({ card: c, appt, ahead, cdKey });
-    }
-    if (candidates.length === 0) return [];
-    candidates.sort((a, b) => a.ahead - b.ahead);
-    const best = candidates[0];
-    const hoursAhead = Math.round(best.ahead / (60 * 60 * 1e3));
-    return [{
-      tab: "health",
-      type: "appointment-soon",
-      urgency: hoursAhead <= 3 ? "critical" : "normal",
-      context: {
-        cardName: best.card.name,
-        doctor: best.card.doctor || "",
-        date: best.appt.date,
-        time: best.appt.time,
-        hoursAhead
-      },
-      cdKey: best.cdKey,
-      cdMs: PER_SIGNAL_CD
-    }];
-  }
   function _collectStreakRisk() {
     const hour = (/* @__PURE__ */ new Date()).getHours();
     if (hour < STREAK_RISK_HOUR) return [];
@@ -20690,19 +20273,17 @@ ${logLines}
       // 6 днів (щоб не спрацювало наступної неділі)
     }];
   }
-  var STUCK_TASK_DAYS, BUDGET_WARN_THRESHOLD, APPOINTMENT_SOON_HOURS, EVENT_PASSED_MIN_MIN, EVENT_PASSED_MAX_HR, EVENT_UPCOMING_MIN_HR, EVENT_UPCOMING_MAX_HR, STREAK_RISK_HOUR, PROJECT_STUCK_DAYS, PER_SIGNAL_CD;
+  var STUCK_TASK_DAYS, BUDGET_WARN_THRESHOLD, EVENT_PASSED_MIN_MIN, EVENT_PASSED_MAX_HR, EVENT_UPCOMING_MIN_HR, EVENT_UPCOMING_MAX_HR, STREAK_RISK_HOUR, PROJECT_STUCK_DAYS, PER_SIGNAL_CD;
   var init_brain_signals = __esm({
     "src/owl/brain-signals.js"() {
       init_tasks();
       init_calendar();
       init_finance();
       init_habits();
-      init_health();
       init_projects();
       init_inbox_board();
       STUCK_TASK_DAYS = 3;
       BUDGET_WARN_THRESHOLD = 80;
-      APPOINTMENT_SOON_HOURS = 48;
       EVENT_PASSED_MIN_MIN = 30;
       EVENT_PASSED_MAX_HR = 24;
       EVENT_UPCOMING_MIN_HR = 1;

@@ -125,12 +125,7 @@ export function getTabBoardContext(tab) {
     try { const finCtx = getFinanceContext(); if (finCtx) parts.push(finCtx); } catch(e) {}
   }
 
-  if (tab === 'health') {
-    try {
-      const cards = JSON.parse(localStorage.getItem('nm_health_cards') || '[]');
-      parts.push(`Карточок здоров'я: ${cards.length}.`);
-    } catch(e) {}
-  }
+  // health-board context REMOVED (EU AI Act compliance JMQuT 17.05.2026) — proactive не читає nm_health_cards.
 
   if (tab === 'projects') {
     try {
@@ -461,7 +456,7 @@ function _getInboxBoardContext() {
   if (tasks.length > 0 || getHabits().length > 0) activeTabs.push('Продуктивність (задачі, звички)');
   try { if (getNotes().length > 0) activeTabs.push('Нотатки'); } catch(e) {}
   try { if (getFinance().length > 0) activeTabs.push('Фінанси'); } catch(e) {}
-  try { if (JSON.parse(localStorage.getItem('nm_health_cards') || '[]').length > 0) activeTabs.push('Здоров\'я'); } catch(e) {}
+  // 'Здоров\'я' з activeTabs REMOVED (EU AI Act compliance JMQuT 17.05.2026) — health не активна AI-вкладка.
   try { if (JSON.parse(localStorage.getItem('nm_projects') || '[]').length > 0) activeTabs.push('Проекти'); } catch(e) {}
   try { if (JSON.parse(localStorage.getItem('nm_moments') || '[]').length > 0) activeTabs.push('Вечір (моменти дня)'); } catch(e) {}
   if (activeTabs.length > 0) {
@@ -481,7 +476,7 @@ function _getInboxBoardContext() {
     { id: 'values', q: 'Що для тебе найважливіше в житті — що ти ніколи не пожертвуєш?' },
     { id: 'relax', q: 'Як ти відпочиваєш? Що допомагає перезарядитись?' },
     { id: 'people', q: 'Хто найважливіші люди навколо тебе? Родина, друзі, партнер?' },
-    { id: 'health', q: 'Як у тебе зі здоров\'ям? Є щось що хвилює або над чим працюєш?' },
+    // health onboarding question REMOVED (EU AI Act compliance JMQuT 17.05.2026) — AI не питає про здоровʼя.
     { id: 'dreams', q: 'Де ти бачиш себе через рік? Що має змінитись?' },
     { id: 'style', q: 'Як тобі зручніше спілкуватись — коротко і по справі чи розгорнуто з поясненнями?' },
     { id: 'daily_target', q: 'Скільки задач на день — комфортний темп для тебе? Назви число (наприклад: 3, 5, 7). Якщо запам\'ятаю цей факт — враховуватиму у порадах.' },
@@ -624,9 +619,7 @@ function checkTabBoardTrigger(tab) {
   if (tab === 'finance') {
     try { return getFinance().length > 0; } catch { return false; }
   }
-  if (tab === 'health') {
-    try { return JSON.parse(localStorage.getItem('nm_health_cards') || '[]').length > 0; } catch { return false; }
-  }
+  if (tab === 'health') return false; // health більше не активна AI-вкладка (EU AI Act JMQuT 17.05.2026)
   if (tab === 'projects') {
     try { return JSON.parse(localStorage.getItem('nm_projects') || '[]').length > 0; } catch { return false; }
   }
@@ -1075,8 +1068,7 @@ function _tryTabLocalFallback(tab) {
     } else if (tab === 'tasks') {
       const tasks = getTasks().filter(t => t.status === 'active');
       text = tasks.length > 0 ? `${tasks.length} активних задач. Що будемо закривати?` : 'Немає активних задач. Вільний день!';
-    } else if (tab === 'health') {
-      text = 'Як самопочуття сьогодні?';
+    // health fallback REMOVED (EU AI Act compliance JMQuT 17.05.2026).
     } else if (tab === 'notes') {
       text = 'Запиши думку або ідею — я збережу у нотатки 📝';
     } else if (tab === 'evening' || tab === 'me') {
@@ -1100,7 +1092,7 @@ const TAB_HINTS = {
   tasks: 'Тут живуть твої задачі і звички. Напиши мені що треба зробити — я створю задачу з кроками 📋',
   notes: 'Це твої нотатки. Можеш розкладати по папках. Напиши що хочеш запам\'ятати — я збережу 📝',
   finance: 'Тут фінанси. Скажи скільки витратив — я запишу. Можеш встановити місячний бюджет 💰',
-  health: 'Тут про здоров\'я. Додавай картки (ліки, симптоми, аналізи) і щоденні шкали (енергія, сон, біль) 🏥',
+  health: 'Тут про здоровʼя — додавай картки/ліки/алергії через UI. AI ізольовано від медичних даних (EU AI Act compliance) 🏥',
   projects: 'Тут великі проекти з кроками і метриками. Скажи "новий проект" — я допоможу створити 🚀',
   evening: 'Тут моменти дня і вечірній підсумок. Записуй що важливого сталося — ввечері підведемо підсумки ✨',
   me: 'Це вкладка "Я" — звички, стріки, статистика. Тут бачиш свій прогрес за тиждень і місяць 📊',

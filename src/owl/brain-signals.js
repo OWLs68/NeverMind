@@ -15,7 +15,7 @@ import { getTasks } from '../tabs/tasks.js';
 import { getEvents } from '../tabs/calendar.js';
 import { getFinance, getFinBudget } from '../tabs/finance.js';
 import { getHabits, getHabitLog, getHabitStreak } from '../tabs/habits.js';
-import { getHealthCards } from '../tabs/health.js';
+// getHealthCards import REMOVED (EU AI Act compliance JMQuT 17.05.2026) — brain-signals більше не читає health-картки.
 import { getProjects } from '../tabs/projects.js';
 import { owlCdExpired } from './inbox-board.js';
 
@@ -49,7 +49,7 @@ export function collectBrainSignals() {
   try { signals.push(..._collectPassedEvents()); } catch (e) { console.warn('[brain-signals] passed-events failed:', e); }
   try { signals.push(..._collectUpcomingEvents()); } catch (e) { console.warn('[brain-signals] upcoming-events failed:', e); }
   try { signals.push(..._collectBudgetWarn()); } catch (e) { console.warn('[brain-signals] budget-warn failed:', e); }
-  try { signals.push(..._collectAppointmentSoon()); } catch (e) { console.warn('[brain-signals] appointment-soon failed:', e); }
+  // _collectAppointmentSoon REMOVED (EU AI Act compliance JMQuT 17.05.2026) — brain більше не нагадує про прийоми лікарів через AI.
   try { signals.push(..._collectStreakRisk()); } catch (e) { console.warn('[brain-signals] streak-risk failed:', e); }
   try { signals.push(..._collectProjectStuck()); } catch (e) { console.warn('[brain-signals] project-stuck failed:', e); }
   try { signals.push(..._collectWeeklyReview()); } catch (e) { console.warn('[brain-signals] weekly-review failed:', e); }
@@ -155,44 +155,10 @@ function _collectBudgetWarn() {
     cdMs: PER_SIGNAL_CD,
   }];
 }
-function _collectAppointmentSoon() {
-  const now = Date.now();
-  const maxAhead = APPOINTMENT_SOON_HOURS * 60 * 60 * 1000;
-  const cards = getHealthCards();
-  const candidates = [];
-  for (const c of cards) {
-    const appt = c.nextAppointment;
-    if (!appt || !appt.date) continue;
-    const t = appt.time || '09:00';
-    const [h, m] = t.split(':').map(Number);
-    const [y, mo, d] = appt.date.split('-').map(Number);
-    if ([h, m, y, mo, d].some(isNaN)) continue;
-    const ts = new Date(y, mo - 1, d, h, m).getTime();
-    const ahead = ts - now;
-    if (ahead <= 0 || ahead > maxAhead) continue;
-    const cdKey = `brain_appt_${c.id}_${appt.date}`;
-    if (!owlCdExpired(cdKey, PER_SIGNAL_CD)) continue;
-    candidates.push({ card: c, appt, ahead, cdKey });
-  }
-  if (candidates.length === 0) return [];
-  candidates.sort((a, b) => a.ahead - b.ahead);
-  const best = candidates[0];
-  const hoursAhead = Math.round(best.ahead / (60 * 60 * 1000));
-  return [{
-    tab: 'health',
-    type: 'appointment-soon',
-    urgency: hoursAhead <= 3 ? 'critical' : 'normal',
-    context: {
-      cardName: best.card.name,
-      doctor: best.card.doctor || '',
-      date: best.appt.date,
-      time: best.appt.time,
-      hoursAhead,
-    },
-    cdKey: best.cdKey,
-    cdMs: PER_SIGNAL_CD,
-  }];
-}
+// _collectAppointmentSoon REMOVED (EU AI Act compliance JMQuT 17.05.2026).
+// Раніше брало nm_health_cards + doctor + date і передавало у AI промпт.
+// Тепер прийоми лікарів видно лише у UI Health-картки (нагадування через native календар).
+function _collectAppointmentSoon() { return []; }
 function _collectStreakRisk() {
   const hour = new Date().getHours();
   if (hour < STREAK_RISK_HOUR) return [];

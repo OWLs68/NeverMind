@@ -16,6 +16,7 @@ import { sendFinanceBarMessage } from '../tabs/finance.js';
 import { addFinanceChatMsg } from '../tabs/finance-chat.js';
 import { sendEveningBarMessage, addEveningBarMsg } from '../tabs/evening-chat.js';
 import { sendMeChatMessage, addMeChatMsg } from '../tabs/me.js';
+// sendHealthBarMessage + addHealthChatMsg — no-op stubs у health.js (EU AI Act JMQuT 17.05.2026).
 import { sendHealthBarMessage, addHealthChatMsg } from '../tabs/health.js';
 import { sendProjectsBarMessage, addProjectsChatMsg } from '../tabs/projects.js';
 import { getTasks, saveTasks, renderTasks } from '../tabs/tasks.js';
@@ -325,7 +326,7 @@ export function renderChips(containerEl, chips, tab, options = {}) {
     const label = c.label || '';
     const action = c.action === 'nav' ? 'nav'
                  : c.action === 'clarify_save' ? 'clarify_save'
-                 : c.action === 'health_interview' ? 'health_interview'
+                 // 'health_interview' REMOVED (EU AI Act JMQuT 17.05.2026)
                  : c.action === 'complete' ? 'complete'
                  : 'chat';
     const target = c.target || '';
@@ -416,17 +417,8 @@ export function handleChipClick(tab, text, action, target, payloadRaw) {
     return;
   }
 
-  // 0.5. Health-interview chip (MIeXK 03.05) — детерміноване 3-крокове опитування
-  // після створення картки. Локальна обробка без AI — payload містить step/value.
-  if (action === 'health_interview') {
-    let payload = {};
-    try { payload = payloadRaw ? JSON.parse(payloadRaw) : {}; } catch {}
-    // Динамічний import щоб уникнути circular dependency (health.js імпортує chips.js).
-    import('../tabs/health.js').then(m => {
-      if (m.applyHealthInterviewChoice) m.applyHealthInterviewChoice(payload);
-    }).catch(e => console.warn('[chips] health_interview load failed:', e));
-    return;
-  }
+  // 0.5. Health-interview chip handler REMOVED (EU AI Act compliance JMQuT 17.05.2026).
+  // applyHealthInterviewChoice — no-op stub у health.js. Старі chips нікуди не приведуть.
 
   // Спеціальний target:'calendar' → відкриваємо модалку календаря + пульсація
   // (rJYkw 21.04.2026). Календар не є вкладкою — це модалка, тому окремо.
