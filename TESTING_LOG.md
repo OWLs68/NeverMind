@@ -14,6 +14,16 @@
 
 > Тут живе те що треба перевірити **наступної iPhone-сесії**. Claude додає сюди після кожної міграції / нової фічі / зміни UI. Роман викреслює коли протестив (переносить у архів).
 
+### v902+ (deploy 16.05 — DGH6F Event Delegation Phase 1б2: onboarding fv-tip close)
+
+**Контекст:** 1 onclick у `onboarding.js:616` (`this.closest('#fv-tip').remove()` для першого-візит tip) переведено на event delegation. Новий універсальний action `close-parent` у delegation.js (reuse для будь-якої кнопки `✕` що закриває модалку/tip через CSS selector батька — наприклад `health.js:1333`).
+
+**👋 Onboarding — first-visit tips:**
+- [ ] Очистити localStorage (Налаштування → Видалити всі дані) для імітації першого візиту.
+- [ ] Перезавантажити NeverMind → з'являється підказка-tip (#fv-tip) з кнопкою ✕.
+- [ ] Тап на ✕ → tip зникає одразу, без анімації-затримки.
+- [ ] DevTools Console → жодних `Cannot read properties of null (reading 'remove')` чи `closest is not a function`.
+
 ### v901+ (deploy 16.05 — DGH6F Event Delegation Phase 1б1: me.js project card)
 
 **Контекст:** 1 onclick у `me.js:185` (`renderProjects` рендер — картка проєкту з кліком що переходить на Projects-tab) переведено на event delegation. Використано новий універсальний action `switch-tab` у delegation.js (data-tab="X"). Reuse pattern для решти ~30 `switchTab(...)` onclick у проекті.

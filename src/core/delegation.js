@@ -74,3 +74,13 @@ reg('switch-tab', (data) => {
     window.switchTab(data.tab);
   }
 });
+// close-parent — універсальний для кнопок-закриття tip/модалок які раніше
+// робили `this.closest(selector).remove()` у inline onclick. У delegation
+// `this` був би document.body, тому використовуємо el (другий параметр) +
+// data-parent="#fv-tip" як CSS selector.
+reg('close-parent', (data, el) => {
+  const sel = data.parent;
+  if (!sel || !el || typeof el.closest !== 'function') return;
+  const parent = el.closest(sel);
+  if (parent && typeof parent.remove === 'function') parent.remove();
+});
