@@ -17717,7 +17717,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
       <div class="fv-tip-title">${tip.title}</div>
       <div class="fv-tip-text">${tip.text}</div>
     </div>
-    <div class="fv-tip-close" onclick="this.closest('#fv-tip').remove()">\u2715</div>
+    <div class="fv-tip-close" data-action="close-parent" data-parent="#fv-tip">\u2715</div>
   `;
     document.body.appendChild(tipEl);
     setTimeout(() => {
@@ -20998,6 +20998,12 @@ ${logLines}
         if (typeof window !== "undefined" && typeof window.switchTab === "function") {
           window.switchTab(data.tab);
         }
+      });
+      reg("close-parent", (data, el) => {
+        const sel = data.parent;
+        if (!sel || !el || typeof el.closest !== "function") return;
+        const parent = el.closest(sel);
+        if (parent && typeof parent.remove === "function") parent.remove();
       });
     }
   });
