@@ -1,6 +1,7 @@
 import { applyTheme, autoRefreshMemory, closeSettings, currentTab, setupDrumTabbar, updateKeyStatus } from './nav.js';
 import { generateUUID } from './uuid.js';
 import { createSelectiveBackup } from './backup.js';
+import { initDelegation } from './delegation.js';
 import { cleanupTrash } from './trash.js';
 import { restoreChatUI } from '../ai/core.js';
 import { renderTabBoard } from '../owl/board.js';
@@ -1314,6 +1315,10 @@ function showApp() {
 // Загалом юзер чекає ~200мс замість 700-900мс раніше.
 function bootApp() {
   try { init(); } catch(e) { console.error('init error:', e); }
+  // DGH6F 16.05.2026: event delegation listener реєструємо ПЕРЕД showApp щоб
+  // header buttons (data-action="open-settings"/"open-help") працювали з
+  // першого ж рендеру. ПIСЛЯ init() бо delegation imports nav (через app.js).
+  try { initDelegation(); } catch(e) { console.error('delegation init error:', e); }
   // Показуємо одразу — без delay
   showApp();
   // Фаза 6 OWL V3 (xHQfi 30.04): фоновий збір довгострокових патернів через

@@ -75,6 +75,10 @@
           {
             "type": "command",
             "command": "node .claude/hooks/pre-commit-screenshot.js"
+          },
+          {
+            "type": "command",
+            "command": "node .claude/hooks/pre-commit-onclick-freeze.js"
           }
         ]
       },

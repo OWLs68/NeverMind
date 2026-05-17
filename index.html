@@ -256,9 +256,9 @@
             <span id="inbox-count" style="margin-left:8px;font-size:14px;font-weight:600;color:rgba(139,105,20,0.5);display:none"></span>
           </div>
           <div class="header-actions">
-            <button class="icon-btn" onclick="openHelp('inbox')">?</button>
-            <span id="deploy-version" data-commit="764de2f2" data-source="claude/start-session-DGH6F" data-branch="main" onclick="showDeployInfo()" style="font-size:10px;font-weight:700;color:rgba(139,105,20,0.55);letter-spacing:0.3px;padding:2px 6px;background:rgba(139,105,20,0.1);border-radius:6px;user-select:none;cursor:pointer">v906 · 17.05 12:49</span>
-            <button class="icon-btn" onclick="openSettings()" title="Налаштування">⚙️</button>
+            <button class="icon-btn" data-action="open-help" data-tab="inbox">?</button>
+            <span id="deploy-version" data-commit="5bc25ab6" data-source="claude/start-session-e9t3N" data-branch="main" onclick="showDeployInfo()" style="font-size:10px;font-weight:700;color:rgba(139,105,20,0.55);letter-spacing:0.3px;padding:2px 6px;background:rgba(139,105,20,0.1);border-radius:6px;user-select:none;cursor:pointer">v892 · 16.05 13:49</span>
+            <button class="icon-btn" data-action="open-settings" title="Налаштування">⚙️</button>
           </div>
         </div>
 
@@ -311,8 +311,8 @@
             <button class="icon-btn" id="prod-add-btn" onclick="openAddTask()">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
             </button>
-            <button class="icon-btn" onclick="openHelp('tasks')">?</button>
-            <button class="icon-btn" onclick="openSettings()">⚙️</button>
+            <button class="icon-btn" data-action="open-help" data-tab="tasks">?</button>
+            <button class="icon-btn" data-action="open-settings">⚙️</button>
           </div>
         </div>
 
@@ -425,8 +425,8 @@
             <button class="icon-btn" onclick="openAddNote()" title="Новий запис">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
             </button>
-            <button class="icon-btn" onclick="openHelp('notes')">?</button>
-            <button class="icon-btn" onclick="openSettings()">⚙️</button>
+            <button class="icon-btn" data-action="open-help" data-tab="notes">?</button>
+            <button class="icon-btn" data-action="open-settings">⚙️</button>
           </div>
         </div>
 
@@ -464,8 +464,8 @@
               <span id="me-streak-count" style="font-size:12px;font-weight:900;color:#ea580c">0</span>
               <span style="font-size:10px;font-weight:700;color:rgba(234,88,12,0.6)">днів</span>
             </div>
-            <button class="icon-btn" onclick="openHelp('me')" style="color:rgba(124,74,42,0.5)">?</button>
-            <button class="icon-btn" onclick="openSettings()" style="color:rgba(124,74,42,0.5)">⚙️</button>
+            <button class="icon-btn" data-action="open-help" data-tab="me" style="color:rgba(124,74,42,0.5)">?</button>
+            <button class="icon-btn" data-action="open-settings" style="color:rgba(124,74,42,0.5)">⚙️</button>
           </div>
         </div>
 
@@ -520,8 +520,8 @@
           <span class="page-title" style="color:white">Вечір</span>
           <div class="header-actions" style="display:flex;align-items:center;gap:8px">
             <span id="evening-day-closed-badge" style="display:none;font-size:11px;font-weight:700;color:#86efac;background:rgba(22,163,74,0.15);border:1px solid rgba(22,163,74,0.4);border-radius:999px;padding:3px 9px;letter-spacing:0.02em">✓ День закрито</span>
-            <button class="icon-btn" onclick="openHelp('evening')" style="color:rgba(255,255,255,0.6)">?</button>
-            <button class="icon-btn" onclick="openSettings()" style="color:rgba(255,255,255,0.6)">⚙️</button>
+            <button class="icon-btn" data-action="open-help" data-tab="evening" style="color:rgba(255,255,255,0.6)">?</button>
+            <button class="icon-btn" data-action="open-settings" style="color:rgba(255,255,255,0.6)">⚙️</button>
           </div>
         </div>
 
@@ -611,9 +611,9 @@
           <span class="page-title">Фінанси</span>
           <div class="header-actions">
             <button class="icon-btn" onclick="openAddTransaction()" style="font-size:20px;font-weight:300;color:rgba(30,16,64,0.5)">+</button>
-            <button class="icon-btn" onclick="openHelp('finance')">?</button>
+            <button class="icon-btn" data-action="open-help" data-tab="finance">?</button>
             <button class="icon-btn" onclick="openFinAnalytics()" title="Аналітика"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></button>
-            <button class="icon-btn" onclick="openSettings()">⚙️</button>
+            <button class="icon-btn" data-action="open-settings">⚙️</button>
           </div>
         </div>
 
@@ -823,8 +823,8 @@
             <button class="icon-btn" onclick="openHealthExport()" title="Медична картка для лікаря">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/><path d="M12 12v2"/><path d="M10 14h4"/></svg>
             </button>
-            <button class="icon-btn" onclick="openHelp('health')">?</button>
-            <button class="icon-btn" onclick="openSettings()">⚙️</button>
+            <button class="icon-btn" data-action="open-help" data-tab="health">?</button>
+            <button class="icon-btn" data-action="open-settings">⚙️</button>
           </div>
         </div>
 
@@ -847,8 +847,8 @@
             <button class="icon-btn" onclick="openAddProject()" title="Новий проект">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
             </button>
-            <button class="icon-btn" onclick="openHelp('projects')">?</button>
-            <button class="icon-btn" onclick="openSettings()">⚙️</button>
+            <button class="icon-btn" data-action="open-help" data-tab="projects">?</button>
+            <button class="icon-btn" data-action="open-settings">⚙️</button>
           </div>
         </div>
 
