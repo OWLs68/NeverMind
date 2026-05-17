@@ -1550,11 +1550,13 @@ body {
    масштаб 96% з плавним поверненням — ефект "клацання" як на фізичних
    кнопках. Input/textarea/select/.drum-col не зачеплені (немає onclick). */
 button,
-[onclick] {
+[onclick],
+[data-action] {
   transition: transform 0.3s ease-out;
 }
 button:active,
-[onclick]:active {
+[onclick]:active,
+[data-action]:active {
   transform: scale(0.87);
 }
 /* UvEHE 03.05: КРИТИЧНИЙ override — root-модалки мають onclick для тапу
@@ -1572,6 +1574,7 @@ button:active,
 [id$="-modal"]:active,
 [id$="-modal"] button:active,
 [id$="-modal"] [onclick]:active,
+[id$="-modal"] [data-action]:active,
 #help-drawer-dim:active {
   transform: none;
 }
