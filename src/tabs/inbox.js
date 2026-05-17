@@ -30,7 +30,8 @@ import { getRoutine, saveRoutine } from './calendar.js';
 import { handleSurveyAnswer, maybeAskGuideQuestion, saveGuideTopicAnswer } from './onboarding.js';
 import { renderChips } from '../owl/chips.js';
 // Фаза 2 (15.04 6v2eR) — Здоров'я tool handlers
-import { renderHealth, addAllergy, deleteAllergy, createHealthCardProgrammatic, editHealthCardProgrammatic, deleteHealthCardProgrammatic, updateHealthCardStatusProgrammatic, startHealthInterview, addMedicationToCard, editMedicationInCard, logMedicationDose, addHealthHistoryEntry, HEALTH_STATUS_DEFS } from './health.js';
+// Health imports REMOVED (EU AI Act compliance JMQuT 17.05.2026) — AI більше не редагує health-дані.
+import { renderHealth } from './health.js'; // renderHealth лишається — тільки для cross-tab refresh не-AI потоків
 import { monthGenitive, monthShortCaps } from '../data/months.js';
 // Unread badge (універсальна червона крапка — QV1n2 19.04 Фаза 0)
 import { showUnreadBadge, clearUnreadBadge } from '../ui/unread-badge.js';
@@ -441,18 +442,7 @@ function _toolCallToAction(name, args) {
     case 'delete_folder': return { action: 'delete_folder', folder: args.folder };
     case 'move_note': return { action: 'move_note', query: args.query, folder: args.folder };
     case 'reopen_task': return { action: 'reopen_task', task_id: args.task_id };
-    // Здоров'я (Фаза 2, 15.04 6v2eR)
-    case 'create_health_card': return { action: 'create_health_card', name: args.name, subtitle: args.subtitle, doctor: args.doctor, doctor_recommendations: args.doctor_recommendations, doctor_conclusion: args.doctor_conclusion, start_date: args.start_date, next_appointment_date: args.next_appointment_date, next_appointment_time: args.next_appointment_time, status: args.status, initial_history_text: args.initial_history_text, comment: args.comment };
-    case 'edit_health_card': return { action: 'edit_health_card', card_id: args.card_id, name: args.name, subtitle: args.subtitle, doctor: args.doctor, doctor_recommendations: args.doctor_recommendations, doctor_conclusion: args.doctor_conclusion, start_date: args.start_date, next_appointment_date: args.next_appointment_date, next_appointment_time: args.next_appointment_time, status: args.status, comment: args.comment };
-    case 'delete_health_card': return { action: 'delete_health_card', card_id: args.card_id, comment: args.comment };
-    case 'update_health_card_status': return { action: 'update_health_card_status', card_id: args.card_id, status: args.status, comment: args.comment };
-    case 'add_medication': return { action: 'add_medication', card_id: args.card_id, med_name: args.med_name, dosage: args.dosage, schedule: args.schedule, course_duration: args.course_duration, comment: args.comment };
-    case 'edit_medication': return { action: 'edit_medication', card_id: args.card_id, med_id: args.med_id, med_name: args.med_name, dosage: args.dosage, schedule: args.schedule, course_duration: args.course_duration, comment: args.comment };
-    case 'log_medication_dose': return { action: 'log_medication_dose', card_id: args.card_id, med_name: args.med_name, comment: args.comment };
-    case 'add_allergy': return { action: 'add_allergy', name: args.name, notes: args.notes, comment: args.comment };
-    case 'delete_allergy': return { action: 'delete_allergy', allergy_id: args.allergy_id, comment: args.comment };
-    case 'delete_medication': return { action: 'delete_medication', card_id: args.card_id, med_id: args.med_id, comment: args.comment };
-    case 'add_health_history_entry': return { action: 'add_health_history_entry', card_id: args.card_id, entry_type: args.entry_type, text: args.text, comment: args.comment };
+    // Здоров'я: 11 cases ВИДАЛЕНО (EU AI Act compliance JMQuT 17.05.2026). UI CRUD у tabs/health.js.
     // Фаза 4 (K-02): CRUD категорій Фінансів через агента
     case 'create_finance_category': return { action: 'create_finance_category', name: args.name, cat_type: args.type || 'expense', icon: args.icon, color: args.color, subcategories: args.subcategories, comment: args.comment };
     case 'edit_finance_category': return { action: 'edit_finance_category', current_name: args.current_name, new_name: args.new_name, icon: args.icon, color: args.color, subcategories: args.subcategories, archived: args.archived, comment: args.comment };
@@ -845,129 +835,10 @@ ${aiContext}`;
           } catch (e) {
             console.warn('[memory] addFact failed:', e);
           }
-        // === ЗДОРОВ'Я (Фаза 2, 15.04 6v2eR) ===
-        } else if (action.action === 'create_health_card') {
-          const created = createHealthCardProgrammatic({
-            name: action.name,
-            subtitle: action.subtitle,
-            doctor: action.doctor,
-            doctorRecommendations: action.doctor_recommendations,
-            doctorConclusion: action.doctor_conclusion,
-            startDate: action.start_date,
-            nextAppointment: action.next_appointment_date ? { date: action.next_appointment_date, time: action.next_appointment_time || '' } : null,
-            status: action.status,
-            initialHistoryEntry: action.initial_history_text,
-          });
-          if (created) {
-            if (currentTab === 'health') renderHealth();
-            const items = getInbox(); items.unshift({ id: generateUUID(), text: t('inbox.health.state_inbox', '🏥 Стан: {name}', { name: created.name }), category: 'note', ts: Date.now(), processed: true }); saveInbox(items); renderInbox();
-            addInboxChatMsg('agent', t('inbox.health.card_created_redirect', '🏥 Створив картку "{name}" у Здоровʼї. Пройди коротке опитування там — 3 чіпи виставлять точний статус.', { name: created.name }));
-            // Phase C: запуск інтерв'ю (записує у Health-чат + червона крапка над Health-кнопкою)
-            setTimeout(() => { try { startHealthInterview(created); } catch(e) {} }, 300);
-          } else {
-            addInboxChatMsg('agent', t('inbox.chat.health_no_name', 'Не вдалось створити картку — потрібна назва.'));
-          }
-        } else if (action.action === 'edit_health_card') {
-          const updates = {};
-          if (action.name !== undefined) updates.name = action.name;
-          if (action.subtitle !== undefined) updates.subtitle = action.subtitle;
-          if (action.doctor !== undefined) updates.doctor = action.doctor;
-          if (action.doctor_recommendations !== undefined) updates.doctorRecommendations = action.doctor_recommendations;
-          if (action.doctor_conclusion !== undefined) updates.doctorConclusion = action.doctor_conclusion;
-          if (action.start_date !== undefined) updates.startDate = action.start_date;
-          if (action.status !== undefined) updates.status = action.status;
-          // nextAppointment: null = очистити; date= встановити
-          if (action.next_appointment_date !== undefined) {
-            updates.nextAppointment = action.next_appointment_date
-              ? { date: action.next_appointment_date, time: action.next_appointment_time || '' }
-              : null;
-          }
-          const updated = editHealthCardProgrammatic(action.card_id, updates);
-          if (updated) {
-            if (currentTab === 'health') renderHealth();
-            addInboxChatMsg('agent', t('inbox.health.card_updated', '✓ Оновив картку "{name}". {comment}', { name: updated.name, comment: action.comment || '' }));
-          } else {
-            addInboxChatMsg('agent', t('inbox.health.card_not_found', 'Не знайшов картку. Спробуй ще раз.'));
-          }
-        } else if (action.action === 'delete_health_card') {
-          const ok = deleteHealthCardProgrammatic(action.card_id);
-          if (ok) {
-            if (currentTab === 'health') renderHealth();
-            addInboxChatMsg('agent', t('inbox.health.card_deleted', '🗑️ Картку видалено (7 днів у кошику). {comment}', { comment: action.comment || '' }));
-          } else {
-            addInboxChatMsg('agent', t('inbox.health.card_not_found_del', 'Не знайшов картку для видалення.'));
-          }
-        } else if (action.action === 'update_health_card_status') {
-          const updated = updateHealthCardStatusProgrammatic(action.card_id, action.status);
-          if (updated) {
-            if (currentTab === 'health') renderHealth();
-            const def = HEALTH_STATUS_DEFS[action.status] || {};
-            addInboxChatMsg('agent', t('inbox.health.status_updated', '✓ Статус "{name}": {icon} {label}. {comment}', { name: updated.name, icon: def.icon || '', label: def.label || action.status, comment: action.comment || '' }));
-          } else {
-            addInboxChatMsg('agent', t('inbox.health.card_not_found', 'Не знайшов картку. Спробуй ще раз.'));
-          }
-        } else if (action.action === 'add_medication') {
-          const med = addMedicationToCard(action.card_id, {
-            name: action.med_name,
-            dosage: action.dosage,
-            schedule: action.schedule,
-            courseDuration: action.course_duration,
-          });
-          if (med) {
-            if (currentTab === 'health') renderHealth();
-            addInboxChatMsg('agent', t('inbox.health.med_added', '💊 Додав {name}{dose}. {comment}', { name: med.name, dose: med.dosage ? ' (' + med.dosage + ')' : '', comment: action.comment || '' }));
-            // nliW8 13.05 audit fix: action-log для universal undo з Inbox-чату.
-            // Dispatcher-handler логує сам (tool-dispatcher.js:176), але Inbox flow
-            // через processSaveAction обходив → silent fail для "скасуй" з Inbox.
-            logAction('add_medication', action, med.id, null, 'inbox');
-          } else {
-            addInboxChatMsg('agent', t('inbox.health.card_not_found_first', 'Не знайшов картку. Створи її спочатку.'));
-          }
-        } else if (action.action === 'edit_medication') {
-          const updates = {};
-          if (action.med_name !== undefined) updates.name = action.med_name;
-          if (action.dosage !== undefined) updates.dosage = action.dosage;
-          if (action.schedule !== undefined) updates.schedule = action.schedule;
-          if (action.course_duration !== undefined) updates.courseDuration = action.course_duration;
-          const med = editMedicationInCard(action.card_id, action.med_id, updates);
-          if (med) {
-            if (currentTab === 'health') renderHealth();
-            addInboxChatMsg('agent', t('inbox.health.med_updated', '✓ Оновив {name}. {comment}', { name: med.name, comment: action.comment || '' }));
-          } else {
-            addInboxChatMsg('agent', t('inbox.health.med_not_found', 'Не знайшов препарат у картці.'));
-          }
-        } else if (action.action === 'log_medication_dose') {
-          const med = logMedicationDose(action.card_id, action.med_name);
-          if (med) {
-            if (currentTab === 'health') renderHealth();
-            addInboxChatMsg('agent', t('inbox.health.med_taken', '💊✓ Прийняв {name}. {comment}', { name: med.name, comment: action.comment || '' }));
-          } else {
-            addInboxChatMsg('agent', t('inbox.health.med_not_found_clarify', 'Не знайшов препарат у картці. Уточни назву.'));
-          }
-        } else if (action.action === 'add_allergy') {
-          const added = addAllergy(action.name, action.notes || '');
-          if (added) {
-            if (currentTab === 'health') renderHealth();
-            addInboxChatMsg('agent', t('inbox.health.allergy_added', '🚨 Додав алергію: {name}. {comment}', { name: action.name, comment: action.comment || '' }));
-          } else {
-            addInboxChatMsg('agent', t('inbox.health.allergy_dupe', 'Алергія "{name}" вже є у списку.', { name: action.name }));
-          }
-        } else if (action.action === 'delete_allergy') {
-          const ok = deleteAllergy(action.allergy_id);
-          if (ok) {
-            if (currentTab === 'health') renderHealth();
-            addInboxChatMsg('agent', t('inbox.health.allergy_deleted', '🗑️ Алергію видалено. {comment}', { comment: action.comment || '' }));
-          } else {
-            addInboxChatMsg('agent', t('inbox.health.allergy_not_found', 'Не знайшов алергію для видалення.'));
-          }
-        } else if (action.action === 'add_health_history_entry') {
-          const entry = addHealthHistoryEntry(action.card_id, action.entry_type, action.text);
-          if (entry) {
-            if (currentTab === 'health') renderHealth();
-            addInboxChatMsg('agent', t('inbox.health.history_added', '📝 Додав запис у історію. {comment}', { comment: action.comment || '' }));
-          } else {
-            addInboxChatMsg('agent', t('inbox.health.card_not_found_history', 'Не знайшов картку для запису.'));
-          }
+        // === ЗДОРОВ'Я handlers ВИДАЛЕНО (EU AI Act compliance JMQuT 17.05.2026) ===
+        // 11 actions більше не нормалізуються у normalizeAction (рядок 444) — AI їх не повертає.
+        // Якщо стара conversation history принесе action.action === 'create_health_card' тощо —
+        // упаде у else fallback (commit/save_moment/clarify), нічого не зламається.
         } else if (action.action === 'create_finance_category') {
           // Фаза 4 (K-02): створити нову категорію
           const existing = findFinCatByName(action.name);

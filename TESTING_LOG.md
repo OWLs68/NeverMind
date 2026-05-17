@@ -35,7 +35,13 @@
 **🚫 Has-to-fail сценарії (захист від регресій):**
 - [ ] Якщо AI випадково викличе старий tool (з conversation history) — dispatcher повертає «🚫 AI більше не має доступу...» (заглушка у `tool-dispatcher.js _handleHealthTool`).
 
-**Версія:** CACHE_NAME `nm-20260517-2230`, commit `JMQuT Phase 2`.
+**Версія:** CACHE_NAME `nm-20260517-2245`, commit `JMQuT Phase 2+3`.
+
+### v927+ Phase 3 — Inbox handlers видалено
+
+- [ ] Inbox-чат: «Створи картку Спина» → AI більше НЕ створить картку (нема tool). Замість того save_note(folder="Здоров'я") з текстом.
+- [ ] Inbox-чат: «Лікар прописав Омез» → save_note(folder="Здоров'я") (НЕ add_medication).
+- [ ] Якщо стара conversation history принесла action.action='create_health_card' → handler НЕ існує → fallback (нічого не зламається).
 
 ---
 
