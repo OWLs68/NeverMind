@@ -1,5 +1,48 @@
 # SESSION_STATE — архів попередніх сесій
 
+## 🔧 Сесія DGH6F — Pre-Supabase hardening: NM_KEYS audit + Backup hardening + Event Delegation Phase 1а-1д (16.05.2026)
+
+### Зроблено — 1 великий блок (NM_KEYS audit) + 2 brain-задачі
+
+#### A. NM_KEYS audit — 50→94 ключів (+44) + boot-time assertion
+
+Council 5 паралельних агентів Sonnet знайшов критичну дірку: `clearAllData()` залишала 5 юзерських ключів (events/reminders/routine/allergies/action_log). Grep знайшов 137 унікальних ключів проти 50 у реєстрі. `56f4d41` — NM_KEYS розширено до 94 + boot-time `_assertAllKeysKnown()`.
+
+#### B. Backup механізм — 4 латентні дірки Pre-mortem + 7 self-аудит проблем (6 комітів)
+
+4 латентні дірки (B-185 закрито): quota silent fail, race lock без listener guards, migration flag mixed state, init() runMigrations swallow. Council self-аудит знайшов 7 додаткових проблем (5 критичних + 2 perf): KEY_MIGRATION_FLAGS включав CLEANUP flag (анти-патерн), пропущені v17 steps + v9 habit_log2 + v16 allergies, 4 listener guards у proactive/followups/brain-pulse/me, nm-data-changed dispatch у restoreBackup, recursive quota fail guard. Коміти: `bdc3aee` + `5d52507` + `91cfccc` + `9657117` + `727a5bb` + `a031563`.
+
+#### C. Event Delegation Phase 1а-1д — 40 inline handler'ів → 23 actions (7 комітів)
+
+- Phase 1а `62183fc` — `src/core/delegation.js` (новий) + 16 header onclick у `index.html` + pre-commit-onclick-freeze hook (9-й сторож).
+- Phase 1б `cb97845`+`cb5385d`+`3bd2796` — me.js (1) + onboarding.js (1) + inbox.js (4). + universal `switch-tab`, `close-parent`, `open-calendar`, `navigate-inbox-item`, `select-clarify-option`.
+- Phase 1в `c8803c2`+`36619be` — tasks.js (4/5, 1 step-check координатний відкладено) + `style.css` touch-action manipulation для data-task-check/step-check. + universal `toggle-entity-done`.
+- Phase 1г `39224b4` — board.js (3) + evening.js (6). reschedule-task universal з data-days. ontouchstart swipe board.js:41 НЕ мігровано (triple-event chain).
+- Phase 1д `cd97c94` — projects.js (5). open-notes-folder з інкапсульованим switchTab+setTimeout(150).
+- Phase 1+ hardening `a42cb9a`+`85eb0e8` — CSS :active для [data-action], renderEvening window export, pattern guards, docs.
+
+Загалом DGH6F: 334 → 296 onclick (-38). 9-й pre-commit сторож. 0 регресій.
+
+#### D. Brain-задачі (моніторинг власної інфраструктури)
+
+`ae96f1a` — `pre-commit-screenshot.js` локальний guard (другий рівень після workflow). Smoke 4/4. + lessons урок про workflow з зовнішнім API.
+
+### Гілка + контекст
+
+- Гілка: `claude/start-session-DGH6F`
+- Розмір сесії: 26 комітів, ~7 годин, 13 Council Sonnet
+- Pre-commit hooks: 9 (додано onclick-freeze net-rachet)
+
+### Що далі (наступні сесії JMQuT/OBErR закрили решту)
+
+- ✅ Health AI Isolation — закрито JMQuT 17.05
+- ✅ Event Delegation залишок — закрито OBErR 18.05 (241 onclick → 0)
+- ✅ Backup Phase 2 — закрито OBErR 18.05
+- ✅ B-179 UI Кошика — закрито OBErR 18.05
+- ✅ EU Compliance pre-MVP DRAFT — OBErR 18.05
+
+---
+
 ## 🔧 Сесія nliW8 — 4 фази: B-170 регресія + Phase 2 уніфікація save_finance + delete_medication + B-178 cross-chat + 6 авто-сторожів-хуків (13.05.2026)
 
 ### Зроблено — 4 фази
