@@ -4,6 +4,11 @@
 import { updateErrorLogBtn } from './logger.js';
 import { escapeHtml, t } from './utils.js';
 import { animateTabSwitch, NM_KEYS, applyBoardOverlays } from './boot.js';
+import {
+  createFullBackup, listBackups, getBackupInfo, restoreBackup,
+  downloadBackupAsJson, importBackupJson, cleanupOldBackups,
+} from './backup.js';
+import { getTrash, restoreFromTrash } from './trash.js';
 import { setupModalSwipeClose } from '../tabs/tasks.js';
 import { callAI, callAIWithTools, INBOX_TOOLS, closeAllChatBars } from '../ai/core.js';
 import {
@@ -1306,6 +1311,251 @@ export function closeDeployInfo() {
   setTimeout(() => modal.remove(), 200);
 }
 
+// === OBErR 18.05.2026 — Backup Phase 2 + B-179 Кошик UI ===
+
+// Helper: відносний час (як «3 год тому»).
+function _relativeTime(ts) {
+  const diff = Date.now() - ts;
+  const sec = Math.floor(diff / 1000);
+  if (sec < 60) return t('time.just_now', 'щойно');
+  const min = Math.floor(sec / 60);
+  if (min < 60) return t('time.minutes_ago', '{n} хв тому', { n: min });
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return t('time.hours_ago', '{n} год тому', { n: hr });
+  const day = Math.floor(hr / 24);
+  if (day < 7) return t('time.days_ago', '{n} дн тому', { n: day });
+  return new Date(ts).toLocaleDateString();
+}
+
+// Helper: ISO timestamp у людському форматі (для backup-list).
+function _formatBackupTs(iso) {
+  try {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return iso;
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mn = String(d.getMinutes()).padStart(2, '0');
+    return `${dd}.${mm} ${hh}:${mn}`;
+  } catch { return iso; }
+}
+
+// --- Backup UI ---
+
+function createFullBackupUI() {
+  const key = createFullBackup('manual');
+  if (key) {
+    showToast(t('backup.toast.created', '💾 Знімок створено'));
+  } else {
+    // null = quota fail. Pre-mortem Council: ОБОВ'ЯЗКОВО не ховати за success.
+    showToast(t('backup.toast.quota_fail', '⚠️ Не вдалось — дані надто великі. Експортуй у JSON.'));
+  }
+}
+
+function openBackupListModal() {
+  const m = document.getElementById('backup-list-modal');
+  if (!m) return;
+  m.style.display = 'flex';
+  renderBackupList();
+}
+
+function closeBackupListModal() {
+  const m = document.getElementById('backup-list-modal');
+  if (m) m.style.display = 'none';
+}
+
+function renderBackupList() {
+  const container = document.getElementById('backup-list');
+  if (!container) return;
+  const keys = listBackups().slice().reverse(); // нові зверху
+  if (keys.length === 0) {
+    container.innerHTML = `<div style="padding:40px 16px;text-align:center;color:rgba(30,16,64,0.35);font-size:14px">${escapeHtml(t('backup.empty', 'Знімків поки немає. Натисни «Створити знімок» у Налаштуваннях.'))}</div>`;
+    return;
+  }
+  container.innerHTML = keys.map(k => {
+    const info = getBackupInfo(k);
+    if (!info) return '';
+    const ts = _formatBackupTs(info.ts);
+    const label = escapeHtml(info.label || 'backup');
+    const sizeKB = info.sizeKB || 0;
+    const keyCount = (info.keys || []).length;
+    return `<div style="padding:12px 14px;margin-bottom:8px;background:rgba(255,255,255,0.55);border-radius:14px;border:1px solid rgba(30,16,64,0.08)">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:14px;font-weight:700;color:#1e1040;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${label}</div>
+          <div style="font-size:11px;color:rgba(30,16,64,0.45);margin-top:2px">${ts} · ${sizeKB} KB · ${keyCount} ${escapeHtml(t('backup.keys_short', 'ключ'))}</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:6px">
+        <button data-action="backup-restore" data-key="${escapeHtml(k)}" style="flex:1;padding:8px;border-radius:10px;border:none;background:rgba(99,102,241,0.10);color:#6366f1;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">${escapeHtml(t('backup.btn.restore', '↻ Відновити'))}</button>
+        <button data-action="backup-download" data-key="${escapeHtml(k)}" style="flex:1;padding:8px;border-radius:10px;border:none;background:rgba(30,16,64,0.05);color:rgba(30,16,64,0.6);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">${escapeHtml(t('backup.btn.export', '↗ Експорт'))}</button>
+        <button data-action="backup-delete" data-key="${escapeHtml(k)}" style="padding:8px 12px;border-radius:10px;border:none;background:rgba(239,68,68,0.08);color:#dc2626;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">×</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function restoreBackupFromUI(backupKey) {
+  if (!backupKey) return;
+  if (!confirm(t('backup.confirm.restore', 'Відновити цей знімок? Поточні дані будуть замінені.'))) return;
+  const ok = restoreBackup(backupKey);
+  if (ok) {
+    showToast(t('backup.toast.restored', '✅ Знімок відновлено'));
+    closeBackupListModal();
+    closeSettings();
+    // nm-data-changed:'restore' вже dispатчений у backup.restoreBackup — UI оновиться.
+    setTimeout(() => location.reload(), 800); // надійніше за всі рендери — повний reload
+  } else {
+    showToast(t('backup.toast.restore_fail', '⚠️ Не вдалось відновити'));
+  }
+}
+
+function downloadBackupFromUI(backupKey) {
+  const result = downloadBackupAsJson(backupKey);
+  if (result === 'share') {
+    showToast(t('backup.toast.shared', '📤 Файл — у Share Sheet'));
+  } else if (result === 'download') {
+    showToast(t('backup.toast.downloaded', '📤 Файл збережено'));
+  } else {
+    showToast(t('backup.toast.export_fail', '⚠️ Не вдалось експортувати'));
+  }
+}
+
+function deleteBackupFromUI(backupKey) {
+  if (!backupKey) return;
+  if (!confirm(t('backup.confirm.delete', 'Видалити цей знімок?'))) return;
+  try { localStorage.removeItem(backupKey); } catch {}
+  renderBackupList();
+  showToast(t('backup.toast.deleted', '🗑 Знімок видалено'));
+}
+
+function importBackupFromFile() {
+  const input = document.getElementById('import-backup-input');
+  if (!input) return;
+  input.value = ''; // дозволити повторний імпорт того ж файлу
+  input.onchange = (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const key = importBackupJson(ev.target.result);
+      if (key) {
+        showToast(t('backup.toast.imported', '✅ Імпортовано як знімок'));
+      } else {
+        showToast(t('backup.toast.import_fail', '⚠️ Не вдалось — невірний формат'));
+      }
+    };
+    reader.onerror = () => showToast(t('backup.toast.import_fail', '⚠️ Не вдалось — невірний формат'));
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
+// --- Кошик UI (B-179) ---
+
+const TRASH_TYPE_ICONS = {
+  task: '📝', note: '📒', habit: '✓', inbox: '📥', finance: '💰',
+  event: '📅', project: '📁', health_card: '🏥', allergy: '⚠️',
+  folder: '🗂', medication: '💊',
+};
+
+function openTrashModal() {
+  // OBErR Pre-mortem fix #2: clear undo toast щоб уникнути race — юзер не
+  // може випадково «Відновити» одну й ту саму річ через toast і Кошик паралельно.
+  if (_undoData) {
+    if (_undoToastTimer) clearTimeout(_undoToastTimer);
+    setUndoData(null);
+    const t = document.getElementById('toast');
+    if (t) t.classList.remove('show');
+  }
+  const m = document.getElementById('trash-modal');
+  if (!m) return;
+  m.style.display = 'flex';
+  renderTrashList();
+}
+
+function closeTrashModal() {
+  const m = document.getElementById('trash-modal');
+  if (m) m.style.display = 'none';
+}
+
+function renderTrashList() {
+  const container = document.getElementById('trash-list');
+  if (!container) return;
+  const all = getTrash();
+  const now = Date.now();
+  const TTL = 7 * 24 * 60 * 60 * 1000;
+  const items = all
+    .filter(x => now - x.deletedAt < TTL)
+    .sort((a, b) => b.deletedAt - a.deletedAt);
+  // Оновлюємо badge у Settings одразу.
+  const badge = document.getElementById('trash-count-badge');
+  if (badge) {
+    if (items.length > 0) {
+      badge.textContent = String(items.length);
+      badge.style.display = 'inline-block';
+    } else {
+      badge.style.display = 'none';
+    }
+  }
+  if (items.length === 0) {
+    container.innerHTML = `<div style="padding:40px 16px;text-align:center;color:rgba(30,16,64,0.35);font-size:14px">${escapeHtml(t('trash.empty', 'Кошик порожній'))}</div>`;
+    return;
+  }
+  container.innerHTML = items.map(x => {
+    const icon = TRASH_TYPE_ICONS[x.type] || '📄';
+    const item = x.item || {};
+    // Label — текст / назва / тема / категорія залежно від типу.
+    let label = item.text || item.title || item.name || item.category || item.folder || '—';
+    if (typeof label !== 'string') label = String(label);
+    label = label.length > 80 ? label.slice(0, 80) + '…' : label;
+    // Backward compat: старі entries без id — використовуємо deletedAt як ID.
+    const id = x.id || x.deletedAt;
+    const idStr = String(id);
+    return `<div style="display:flex;align-items:center;gap:10px;padding:11px 14px;margin-bottom:6px;background:rgba(255,255,255,0.55);border-radius:12px;border:1px solid rgba(30,16,64,0.06)">
+      <span style="font-size:18px;flex-shrink:0">${icon}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:14px;font-weight:600;color:#1e1040;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(label)}</div>
+        <div style="font-size:11px;color:rgba(30,16,64,0.4)">${escapeHtml(_relativeTime(x.deletedAt))}</div>
+      </div>
+      <button data-action="trash-restore-item" data-trash-id="${escapeHtml(idStr)}" style="font-size:12px;font-weight:700;color:#16a34a;background:rgba(22,163,74,0.10);border:none;border-radius:9px;padding:6px 12px;cursor:pointer;font-family:inherit;flex-shrink:0">↻ ${escapeHtml(t('trash.btn.restore', 'Відновити'))}</button>
+    </div>`;
+  }).join('');
+}
+
+function restoreTrashItemFromUI(trashId) {
+  // trashId може бути UUID-рядком (нові) або числом deletedAt (legacy).
+  // restoreFromTrash приймає обидва через id||deletedAt поле.
+  const idForFind = isNaN(Number(trashId)) ? trashId : Number(trashId);
+  const ok = restoreFromTrash(idForFind);
+  if (ok) {
+    showToast(t('trash.toast.restored', '✅ Відновлено'));
+    renderTrashList();
+  } else {
+    showToast(t('trash.toast.restore_fail', '⚠️ Не вдалось відновити'));
+  }
+}
+
+// Bootstrap: при openSettings оновити badge кошика щоб юзер бачив скільки items.
+function _updateTrashBadge() {
+  const badge = document.getElementById('trash-count-badge');
+  if (!badge) return;
+  const now = Date.now();
+  const TTL = 7 * 24 * 60 * 60 * 1000;
+  const count = getTrash().filter(x => now - x.deletedAt < TTL).length;
+  if (count > 0) {
+    badge.textContent = String(count);
+    badge.style.display = 'inline-block';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+window.addEventListener('nm-data-changed', (e) => {
+  // При зміні nm_trash (через addToTrash → save) оновлюємо badge.
+  // detail-based filter не потрібен — operation дешева.
+  try { _updateTrashBadge(); } catch {}
+});
+
 // Functions called from HTML event handlers (onclick, oninput, etc.)
 Object.assign(window, {
   switchTab, showToast, closeSettings, openSettings, saveSettings,
@@ -1315,4 +1565,9 @@ Object.assign(window, {
   applyTabSelection, selectTabOrder, moveTabOrder,
   deleteMemoryCard, saveFinanceSettings, clearFinanceData, exportData,
   toggleTabSelection, showDeployInfo, closeDeployInfo,
+  // OBErR Phase 2: Backup UI
+  createFullBackupUI, openBackupListModal, closeBackupListModal,
+  restoreBackupFromUI, downloadBackupFromUI, deleteBackupFromUI, importBackupFromFile,
+  // OBErR B-179: Trash UI
+  openTrashModal, closeTrashModal, restoreTrashItemFromUI,
 });
