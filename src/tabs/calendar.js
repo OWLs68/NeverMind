@@ -321,7 +321,7 @@ export function renderCalendar() {
     if (hasItems && !isToday) dot = `<div style="width:4px;height:4px;border-radius:50%;background:${hasEvent ? '#3b82f6' : 'currentColor'};margin-top:1px"></div>`;
 
     const cls = hasEvent ? ' class="cal-day-event"' : '';
-    cells += `<div${cls} data-action="calendar-day-tap" data-day="${d}" style="aspect-ratio:1;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:13px;font-weight:700;background:${bg};color:${color};border:1.5px solid ${border};cursor:pointer;transition:all 0.15s;-webkit-tap-highlight-color:transparent" ontouchstart="this.style.transform='scale(0.88)'" ontouchend="this.style.transform=''">${d}${dot}</div>`;
+    cells += `<div${cls} data-action="calendar-day-tap" data-day="${d}" style="aspect-ratio:1;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:13px;font-weight:700;background:${bg};color:${color};border:1.5px solid ${border};cursor:pointer;transition:all 0.15s;-webkit-tap-highlight-color:transparent">${d}${dot}</div>`;
   }
   // dyhJu: trailing empty cells щоб сітка завжди мала 6 рядів (42 cells).
   // Це гарантує однакову висоту календаря незалежно від місяця (травень — 5,
