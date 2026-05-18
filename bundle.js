@@ -476,7 +476,7 @@
       const opacity = isPast ? "opacity:0.4;" : "";
       const dateColor = isToday ? "#ea580c" : "rgba(30,16,64,0.4)";
       const iconHtml = _calendarEventIcon(item.type);
-      const tapAttr = item.type === "event" && item.id ? `onclick="openEventEditModal('${item.id}')" style="cursor:pointer;` : `style="`;
+      const tapAttr = item.type === "event" && item.id ? `data-action="open-calendar-event" data-id="${item.id}" style="cursor:pointer;` : `style="`;
       html += `<div ${tapAttr}display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(30,16,64,0.06);${opacity}">
       ${iconHtml}
       <div style="flex:1;min-width:0">
@@ -541,7 +541,7 @@
       const iconHtml = _calendarEventIcon(item.type);
       const prio = prioIcons[item.priority] || "";
       const timeStr = item.time ? ` \xB7 ${item.time}${item.endTime ? "\u2013" + item.endTime : ""}` : "";
-      const tapAttr = item.type === "event" && item.id ? `onclick="openEventEditModal('${item.id}')" ` : "";
+      const tapAttr = item.type === "event" && item.id ? `data-action="open-calendar-event" data-id="${item.id}" ` : "";
       return `<div ${tapAttr}style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid rgba(30,16,64,0.06);${tapAttr ? "cursor:pointer;" : ""}">
         ${iconHtml}
         <div style="flex:1">
@@ -635,7 +635,7 @@
       }
       if (hasItems && !isToday) dot = `<div style="width:4px;height:4px;border-radius:50%;background:${hasEvent ? "#3b82f6" : "currentColor"};margin-top:1px"></div>`;
       const cls = hasEvent ? ' class="cal-day-event"' : "";
-      cells += `<div${cls} onclick="calendarDayTap(${d})" data-day="${d}" style="aspect-ratio:1;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:13px;font-weight:700;background:${bg};color:${color};border:1.5px solid ${border};cursor:pointer;transition:all 0.15s;-webkit-tap-highlight-color:transparent" ontouchstart="this.style.transform='scale(0.88)'" ontouchend="this.style.transform=''">${d}${dot}</div>`;
+      cells += `<div${cls} data-action="calendar-day-tap" data-day="${d}" style="aspect-ratio:1;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:13px;font-weight:700;background:${bg};color:${color};border:1.5px solid ${border};cursor:pointer;transition:all 0.15s;-webkit-tap-highlight-color:transparent" ontouchstart="this.style.transform='scale(0.88)'" ontouchend="this.style.transform=''">${d}${dot}</div>`;
     }
     const totalCells = firstDow + daysInMonth;
     const trailingEmpty = 42 - totalCells;
@@ -707,7 +707,7 @@
         alldayEl.style.display = "block";
         alldayEl.innerHTML = allDayEvents.map((ev) => {
           const prio = ev.priority === "critical" ? "\u{1F534} " : ev.priority === "important" ? "\u{1F7E0} " : "";
-          return `<div onclick="openEventEditModal('${ev.id}')" style="display:flex;align-items:center;gap:10px;padding:8px 4px;cursor:pointer;border-radius:10px;background:rgba(59,130,246,0.10)">
+          return `<div data-action="open-calendar-event" data-id="${ev.id}" style="display:flex;align-items:center;gap:10px;padding:8px 4px;cursor:pointer;border-radius:10px;background:rgba(59,130,246,0.10)">
           <div style="font-size:15px;flex-shrink:0">\u{1F4C5}</div>
           <div style="flex:1;font-size:14px;font-weight:600;color:#3b82f6">${prio}${escapeHtml(ev.title)}</div>
           <div style="font-size:11px;color:rgba(30,16,64,0.35);font-weight:600">${t("calendar.event.all_day", "\u0432\u0435\u0441\u044C \u0434\u0435\u043D\u044C")}</div>
@@ -751,8 +751,8 @@
           const prio = item.priority === "critical" ? "\u{1F534} " : item.priority === "important" ? "\u{1F7E0} " : "";
           const strike = isDone ? "text-decoration:line-through;" : "";
           let tapAttr;
-          if (isEvent && item.id) tapAttr = `onclick="openEventEditModal('${item.id}')" style="cursor:pointer;`;
-          else if (item.type === "routine") tapAttr = `onclick="openRoutineFromCalendar('${dayKey}')" style="cursor:pointer;`;
+          if (isEvent && item.id) tapAttr = `data-action="open-calendar-event" data-id="${item.id}" style="cursor:pointer;`;
+          else if (item.type === "routine") tapAttr = `data-action="open-routine-from-calendar" data-day-key="${dayKey}" style="cursor:pointer;`;
           else tapAttr = `style="`;
           const timeLabel = item.endTime ? `${item.time}<br><span style="font-size:11px;font-weight:500;color:rgba(30,16,64,0.4)">${item.endTime}</span>` : item.time;
           html += `<div ${tapAttr}display:flex;align-items:flex-start;gap:12px;padding:10px 0;${isPast ? "opacity:0.4;" : ""}${isCurrent ? "background:rgba(234,88,12,0.06);border-radius:12px;padding:10px 8px;margin:0 -8px;" : ""}">
@@ -921,15 +921,15 @@
     el.style.overflow = "visible";
     el.style.flexWrap = "nowrap";
     const arrowStyle = "width:24px;height:34px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:600;color:rgba(30,16,64,0.45);cursor:pointer;border-radius:8px;-webkit-tap-highlight-color:transparent;flex-shrink:0;background:rgba(255,255,255,0.4)";
-    const prevBtn = `<div onclick="routineShiftWeek(-1)" style="${arrowStyle}" aria-label="${t("routine.aria.prev_week", "\u041C\u0438\u043D\u0443\u043B\u0438\u0439 \u0442\u0438\u0436\u0434\u0435\u043D\u044C")}">\u2039</div>`;
-    const nextBtn = `<div onclick="routineShiftWeek(1)" style="${arrowStyle}" aria-label="${t("routine.aria.next_week", "\u041D\u0430\u0441\u0442\u0443\u043F\u043D\u0438\u0439 \u0442\u0438\u0436\u0434\u0435\u043D\u044C")}">\u203A</div>`;
+    const prevBtn = `<div data-action="routine-shift-week" data-delta="-1" style="${arrowStyle}" aria-label="${t("routine.aria.prev_week", "\u041C\u0438\u043D\u0443\u043B\u0438\u0439 \u0442\u0438\u0436\u0434\u0435\u043D\u044C")}">\u2039</div>`;
+    const nextBtn = `<div data-action="routine-shift-week" data-delta="1" style="${arrowStyle}" aria-label="${t("routine.aria.next_week", "\u041D\u0430\u0441\u0442\u0443\u043F\u043D\u0438\u0439 \u0442\u0438\u0436\u0434\u0435\u043D\u044C")}">\u203A</div>`;
     const daysHtml = ROUTINE_TAB_ORDER.map((key) => {
       const isActive = key === _routineDay;
       const dateISO = _lastDateForDayKey(key);
       const isToday = dateISO === todayISO2;
       const hasOwn = !!routine[key];
       const dayNum = parseInt(dateISO.split("-")[2], 10);
-      return `<div onclick="routineSelectDay('${key}')" style="padding:6px 6px;border-radius:10px;font-size:12px;font-weight:${isActive ? "800" : "600"};cursor:pointer;white-space:nowrap;min-width:32px;text-align:center;line-height:1.15;
+      return `<div data-action="routine-select-day" data-key="${key}" style="padding:6px 6px;border-radius:10px;font-size:12px;font-weight:${isActive ? "800" : "600"};cursor:pointer;white-space:nowrap;min-width:32px;text-align:center;line-height:1.15;
       background:${isActive ? "#ea580c" : "rgba(255,255,255,0.5)"};
       color:${isActive ? "white" : isToday ? "#ea580c" : "rgba(30,16,64,0.5)"};
       border:1.5px solid ${isActive ? "#ea580c" : isToday ? "rgba(234,88,12,0.3)" : "rgba(30,16,64,0.08)"};
@@ -1031,7 +1031,7 @@
       const isCurrent = isViewingToday && b.kind === "routine" && blockMin >= 0 && nowMin >= blockMin && nowMin < nextMin;
       const isPast = b.isPast || isViewingToday && blockMin >= 0 && nowMin >= nextMin && b.kind === "routine";
       const style = KIND_STYLE[b.kind] || KIND_STYLE.routine;
-      const delAttr = b.kind === "routine" ? `onclick="routineDeleteBlock(${b.sourceIdx})"` : `onclick="routineDeleteFromTimeline('${b.kind}', ${b.sourceId}, ${b.reminderId || "null"})"`;
+      const delAttr = b.kind === "routine" ? `data-action="routine-delete-block" data-idx="${b.sourceIdx}"` : `data-action="routine-delete-timeline" data-kind="${b.kind}" data-source-id="${b.sourceId}" data-reminder-id="${b.reminderId || ""}"`;
       const dot = b.kind === "routine" ? `<div style="width:8px;height:8px;border-radius:50%;margin-top:5px;flex-shrink:0;background:${isCurrent ? "#ea580c" : isPast ? "rgba(30,16,64,0.15)" : style.color}"></div>` : `<div style="width:8px;height:8px;border-radius:50%;margin-top:5px;flex-shrink:0;background:${style.color};box-shadow:0 0 0 2px ${style.color}33"></div>`;
       return `<div style="display:flex;align-items:flex-start;gap:12px;padding:10px 0;${isPast ? "opacity:0.4;" : ""}${isCurrent ? "background:rgba(234,88,12,0.06);border-radius:12px;padding:10px 8px;margin:0 -8px;" : ""}">
       <div style="width:46px;flex-shrink:0;font-size:14px;font-weight:700;color:${isCurrent ? "#ea580c" : style.text};text-align:right">${time}</div>
@@ -1076,14 +1076,14 @@
     wrap.innerHTML = `
     <div style="background:rgba(255,255,255,0.6);border-radius:16px;padding:14px;border:1.5px solid rgba(234,88,12,0.2)">
       <div style="display:flex;gap:10px;margin-bottom:10px">
-        <div id="routine-add-time-trigger" data-value="09:00" onclick="openRoutineTimePicker()"
+        <div id="routine-add-time-trigger" data-value="09:00" data-action="open-routine-time-picker"
           style="flex:0 0 90px;padding:10px 8px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.15);font-size:16px;font-weight:700;color:#1e1040;background:white;cursor:pointer;text-align:center;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent">09:00</div>
         <input type="text" id="routine-add-activity" placeholder="${t("calendar.routine.activity_placeholder", "\u0429\u043E \u0440\u043E\u0431\u0438\u0442\u0438...")}" maxlength="40"
           style="flex:1;min-width:0;padding:10px 12px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.15);font-size:15px;color:#1e1040;background:white">
       </div>
       <div style="display:flex;gap:8px">
-        <button onclick="routineSaveNewBlock()" style="flex:1;padding:10px;border-radius:12px;border:none;background:#ea580c;color:white;font-size:14px;font-weight:700;cursor:pointer">${t("calendar.btn.save", "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438")}</button>
-        <button onclick="routineCancelAdd()" style="flex:1;padding:10px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.12);background:none;color:rgba(30,16,64,0.5);font-size:14px;font-weight:600;cursor:pointer">${t("calendar.btn.cancel", "\u0421\u043A\u0430\u0441\u0443\u0432\u0430\u0442\u0438")}</button>
+        <button data-action="routine-save-block" style="flex:1;padding:10px;border-radius:12px;border:none;background:#ea580c;color:white;font-size:14px;font-weight:700;cursor:pointer">${t("calendar.btn.save", "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438")}</button>
+        <button data-action="routine-cancel-add" style="flex:1;padding:10px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.12);background:none;color:rgba(30,16,64,0.5);font-size:14px;font-weight:600;cursor:pointer">${t("calendar.btn.cancel", "\u0421\u043A\u0430\u0441\u0443\u0432\u0430\u0442\u0438")}</button>
       </div>
     </div>`;
     setTimeout(() => document.getElementById("routine-add-activity")?.focus(), 100);
@@ -1141,7 +1141,7 @@
   function routineCancelAdd() {
     const wrap = document.getElementById("routine-add-wrap");
     if (!wrap) return;
-    wrap.innerHTML = `<button onclick="routineAddBlock()" style="width:100%;padding:12px;border-radius:14px;border:2px dashed rgba(234,88,12,0.45);background:rgba(255,255,255,0.5);font-size:14px;font-weight:600;color:rgba(234,88,12,0.7);cursor:pointer;-webkit-tap-highlight-color:transparent">${t("calendar.routine.add_block", "+ \u0414\u043E\u0434\u0430\u0442\u0438 \u0431\u043B\u043E\u043A")}</button>`;
+    wrap.innerHTML = `<button data-action="routine-add-block" style="width:100%;padding:12px;border-radius:14px;border:2px dashed rgba(234,88,12,0.45);background:rgba(255,255,255,0.5);font-size:14px;font-weight:600;color:rgba(234,88,12,0.7);cursor:pointer;-webkit-tap-highlight-color:transparent">${t("calendar.routine.add_block", "+ \u0414\u043E\u0434\u0430\u0442\u0438 \u0431\u043B\u043E\u043A")}</button>`;
   }
   function routineDeleteBlock(idx) {
     const routine = getRoutine();
@@ -20393,6 +20393,72 @@ ${logLines}
         }
         if (typeof window !== "undefined" && typeof window.openEditTransaction === "function") {
           window.openEditTransaction(data.id);
+        }
+      });
+      reg("open-calendar-event", (data) => {
+        if (!data.id) return;
+        if (typeof window !== "undefined" && typeof window.openEventEditModal === "function") {
+          window.openEventEditModal(data.id);
+        }
+      });
+      reg("calendar-day-tap", (data) => {
+        if (typeof window === "undefined") return;
+        if (typeof window.calendarDayTap !== "function") return;
+        const day = parseInt(data.day, 10);
+        if (Number.isNaN(day)) return;
+        window.calendarDayTap(day);
+      });
+      reg("open-routine-from-calendar", (data) => {
+        if (!data.dayKey) return;
+        if (typeof window !== "undefined" && typeof window.openRoutineFromCalendar === "function") {
+          window.openRoutineFromCalendar(data.dayKey);
+        }
+      });
+      reg("routine-shift-week", (data) => {
+        if (typeof window === "undefined") return;
+        if (typeof window.routineShiftWeek !== "function") return;
+        const delta = parseInt(data.delta, 10);
+        if (Number.isNaN(delta)) return;
+        window.routineShiftWeek(delta);
+      });
+      reg("routine-select-day", (data) => {
+        if (!data.key) return;
+        if (typeof window !== "undefined" && typeof window.routineSelectDay === "function") {
+          window.routineSelectDay(data.key);
+        }
+      });
+      reg("routine-delete-block", (data) => {
+        if (typeof window === "undefined") return;
+        if (typeof window.routineDeleteBlock !== "function") return;
+        const idx = parseInt(data.idx, 10);
+        if (Number.isNaN(idx)) return;
+        window.routineDeleteBlock(idx);
+      });
+      reg("routine-delete-timeline", (data) => {
+        if (typeof window === "undefined") return;
+        if (typeof window.routineDeleteFromTimeline !== "function") return;
+        if (!data.kind || !data.sourceId) return;
+        const reminderId = data.reminderId ? data.reminderId : null;
+        window.routineDeleteFromTimeline(data.kind, data.sourceId, reminderId);
+      });
+      reg("open-routine-time-picker", () => {
+        if (typeof window !== "undefined" && typeof window.openRoutineTimePicker === "function") {
+          window.openRoutineTimePicker();
+        }
+      });
+      reg("routine-save-block", () => {
+        if (typeof window !== "undefined" && typeof window.routineSaveNewBlock === "function") {
+          window.routineSaveNewBlock();
+        }
+      });
+      reg("routine-cancel-add", () => {
+        if (typeof window !== "undefined" && typeof window.routineCancelAdd === "function") {
+          window.routineCancelAdd();
+        }
+      });
+      reg("routine-add-block", () => {
+        if (typeof window !== "undefined" && typeof window.routineAddBlock === "function") {
+          window.routineAddBlock();
         }
       });
     }

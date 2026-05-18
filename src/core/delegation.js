@@ -761,3 +761,91 @@ reg('open-edit-transaction-from-all', (data) => {
     window.openEditTransaction(data.id);
   }
 });
+// === Phase 4 (OBErR) calendar.js actions ===
+// open-calendar-event — тап на event-картку у Inbox/Upcoming + all-day у
+// day-schedule + timed item. data-id = UUID події. REUSE у 4 точках.
+reg('open-calendar-event', (data) => {
+  if (!data.id) return;
+  if (typeof window !== 'undefined' && typeof window.openEventEditModal === 'function') {
+    window.openEventEditModal(data.id);
+  }
+});
+// calendar-day-tap — клік на клітинку календарної сітки. data-day = число
+// (1..31). parseInt захист.
+reg('calendar-day-tap', (data) => {
+  if (typeof window === 'undefined') return;
+  if (typeof window.calendarDayTap !== 'function') return;
+  const day = parseInt(data.day, 10);
+  if (Number.isNaN(day)) return;
+  window.calendarDayTap(day);
+});
+// open-routine-from-calendar — клік на routine-картку у day-schedule timeline
+// (закриває day-schedule + відкриває Routine модалку з вибраним днем).
+// data-day-key = ISO рядок дня (наприклад "2026-05-18").
+reg('open-routine-from-calendar', (data) => {
+  if (!data.dayKey) return;
+  if (typeof window !== 'undefined' && typeof window.openRoutineFromCalendar === 'function') {
+    window.openRoutineFromCalendar(data.dayKey);
+  }
+});
+// routine-shift-week — стрілки ‹/› у Routine модалці day-tabs.
+// data-delta = -1/1 parseInt.
+reg('routine-shift-week', (data) => {
+  if (typeof window === 'undefined') return;
+  if (typeof window.routineShiftWeek !== 'function') return;
+  const delta = parseInt(data.delta, 10);
+  if (Number.isNaN(delta)) return;
+  window.routineShiftWeek(delta);
+});
+// routine-select-day — клік на day-tab кнопку. data-key = ISO рядок дня.
+reg('routine-select-day', (data) => {
+  if (!data.key) return;
+  if (typeof window !== 'undefined' && typeof window.routineSelectDay === 'function') {
+    window.routineSelectDay(data.key);
+  }
+});
+// routine-delete-block — × кнопка на routine-блоці у Routine модалці.
+// data-idx = індекс блоку у getRoutine().routine[].
+reg('routine-delete-block', (data) => {
+  if (typeof window === 'undefined') return;
+  if (typeof window.routineDeleteBlock !== 'function') return;
+  const idx = parseInt(data.idx, 10);
+  if (Number.isNaN(idx)) return;
+  window.routineDeleteBlock(idx);
+});
+// routine-delete-timeline — × кнопка на event/reminder у timeline.
+// data-kind = 'event'|'reminder', data-source-id = ID події/нагадування,
+// data-reminder-id = опціональний (порожній рядок коли немає). Council
+// Pre-mortem: `${b.reminderId || 'null'}` у inline створював рядок "null"
+// що handler приймав як literal. Тут handler конвертує '' → null явно.
+reg('routine-delete-timeline', (data) => {
+  if (typeof window === 'undefined') return;
+  if (typeof window.routineDeleteFromTimeline !== 'function') return;
+  if (!data.kind || !data.sourceId) return;
+  const reminderId = data.reminderId ? data.reminderId : null;
+  window.routineDeleteFromTimeline(data.kind, data.sourceId, reminderId);
+});
+// open-routine-time-picker — тап на time-trigger div у inline add-form.
+reg('open-routine-time-picker', () => {
+  if (typeof window !== 'undefined' && typeof window.openRoutineTimePicker === 'function') {
+    window.openRoutineTimePicker();
+  }
+});
+// routine-save-block — «Зберегти» у inline add-form.
+reg('routine-save-block', () => {
+  if (typeof window !== 'undefined' && typeof window.routineSaveNewBlock === 'function') {
+    window.routineSaveNewBlock();
+  }
+});
+// routine-cancel-add — «Скасувати» у inline add-form.
+reg('routine-cancel-add', () => {
+  if (typeof window !== 'undefined' && typeof window.routineCancelAdd === 'function') {
+    window.routineCancelAdd();
+  }
+});
+// routine-add-block — «+ Додати блок» (показує inline add-form).
+reg('routine-add-block', () => {
+  if (typeof window !== 'undefined' && typeof window.routineAddBlock === 'function') {
+    window.routineAddBlock();
+  }
+});

@@ -166,7 +166,7 @@ function renderMonthEventsList() {
     // Прибрано синій для event-type — погано читалось на світлому склі.
     const dateColor = isToday ? '#ea580c' : 'rgba(30,16,64,0.4)';
     const iconHtml = _calendarEventIcon(item.type);
-    const tapAttr = item.type === 'event' && item.id ? `onclick="openEventEditModal('${item.id}')" style="cursor:pointer;` : `style="`;
+    const tapAttr = item.type === 'event' && item.id ? `data-action="open-calendar-event" data-id="${item.id}" style="cursor:pointer;` : `style="`;
     html += `<div ${tapAttr}display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(30,16,64,0.06);${opacity}">
       ${iconHtml}
       <div style="flex:1;min-width:0">
@@ -228,7 +228,7 @@ function renderUpcoming() {
       const iconHtml = _calendarEventIcon(item.type);
       const prio = prioIcons[item.priority] || '';
       const timeStr = item.time ? ` · ${item.time}${item.endTime ? '–' + item.endTime : ''}` : '';
-      const tapAttr = item.type === 'event' && item.id ? `onclick="openEventEditModal('${item.id}')" ` : '';
+      const tapAttr = item.type === 'event' && item.id ? `data-action="open-calendar-event" data-id="${item.id}" ` : '';
       return `<div ${tapAttr}style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid rgba(30,16,64,0.06);${tapAttr ? 'cursor:pointer;' : ''}">
         ${iconHtml}
         <div style="flex:1">
@@ -321,7 +321,7 @@ export function renderCalendar() {
     if (hasItems && !isToday) dot = `<div style="width:4px;height:4px;border-radius:50%;background:${hasEvent ? '#3b82f6' : 'currentColor'};margin-top:1px"></div>`;
 
     const cls = hasEvent ? ' class="cal-day-event"' : '';
-    cells += `<div${cls} onclick="calendarDayTap(${d})" data-day="${d}" style="aspect-ratio:1;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:13px;font-weight:700;background:${bg};color:${color};border:1.5px solid ${border};cursor:pointer;transition:all 0.15s;-webkit-tap-highlight-color:transparent" ontouchstart="this.style.transform='scale(0.88)'" ontouchend="this.style.transform=''">${d}${dot}</div>`;
+    cells += `<div${cls} data-action="calendar-day-tap" data-day="${d}" style="aspect-ratio:1;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:13px;font-weight:700;background:${bg};color:${color};border:1.5px solid ${border};cursor:pointer;transition:all 0.15s;-webkit-tap-highlight-color:transparent" ontouchstart="this.style.transform='scale(0.88)'" ontouchend="this.style.transform=''">${d}${dot}</div>`;
   }
   // dyhJu: trailing empty cells щоб сітка завжди мала 6 рядів (42 cells).
   // Це гарантує однакову висоту календаря незалежно від місяця (травень — 5,
@@ -427,7 +427,7 @@ function _openDayScheduleModal(day) {
       alldayEl.style.display = 'block';
       alldayEl.innerHTML = allDayEvents.map(ev => {
         const prio = ev.priority === 'critical' ? '🔴 ' : ev.priority === 'important' ? '🟠 ' : '';
-        return `<div onclick="openEventEditModal('${ev.id}')" style="display:flex;align-items:center;gap:10px;padding:8px 4px;cursor:pointer;border-radius:10px;background:rgba(59,130,246,0.10)">
+        return `<div data-action="open-calendar-event" data-id="${ev.id}" style="display:flex;align-items:center;gap:10px;padding:8px 4px;cursor:pointer;border-radius:10px;background:rgba(59,130,246,0.10)">
           <div style="font-size:15px;flex-shrink:0">📅</div>
           <div style="flex:1;font-size:14px;font-weight:600;color:#3b82f6">${prio}${escapeHtml(ev.title)}</div>
           <div style="font-size:11px;color:rgba(30,16,64,0.35);font-weight:600">${t('calendar.event.all_day', 'весь день')}</div>
@@ -484,8 +484,8 @@ function _openDayScheduleModal(day) {
         const prio = (item.priority === 'critical') ? '🔴 ' : (item.priority === 'important') ? '🟠 ' : '';
         const strike = isDone ? 'text-decoration:line-through;' : '';
         let tapAttr;
-        if (isEvent && item.id) tapAttr = `onclick="openEventEditModal('${item.id}')" style="cursor:pointer;`;
-        else if (item.type === 'routine') tapAttr = `onclick="openRoutineFromCalendar('${dayKey}')" style="cursor:pointer;`;
+        if (isEvent && item.id) tapAttr = `data-action="open-calendar-event" data-id="${item.id}" style="cursor:pointer;`;
+        else if (item.type === 'routine') tapAttr = `data-action="open-routine-from-calendar" data-day-key="${dayKey}" style="cursor:pointer;`;
         else tapAttr = `style="`;
 
         const timeLabel = item.endTime ? `${item.time}<br><span style="font-size:11px;font-weight:500;color:rgba(30,16,64,0.4)">${item.endTime}</span>` : item.time;
@@ -735,8 +735,8 @@ function _renderRoutineDayTabs() {
   // myshu 11.05: arrows 28→24px + min-width cells 36→32 + gap 4→2 — щоб 7 днів
   // + 2 стрілки вмістились у вузький iPhone-viewport без horizontal overflow.
   const arrowStyle = 'width:24px;height:34px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:600;color:rgba(30,16,64,0.45);cursor:pointer;border-radius:8px;-webkit-tap-highlight-color:transparent;flex-shrink:0;background:rgba(255,255,255,0.4)';
-  const prevBtn = `<div onclick="routineShiftWeek(-1)" style="${arrowStyle}" aria-label="${t('routine.aria.prev_week', 'Минулий тиждень')}">‹</div>`;
-  const nextBtn = `<div onclick="routineShiftWeek(1)" style="${arrowStyle}" aria-label="${t('routine.aria.next_week', 'Наступний тиждень')}">›</div>`;
+  const prevBtn = `<div data-action="routine-shift-week" data-delta="-1" style="${arrowStyle}" aria-label="${t('routine.aria.prev_week', 'Минулий тиждень')}">‹</div>`;
+  const nextBtn = `<div data-action="routine-shift-week" data-delta="1" style="${arrowStyle}" aria-label="${t('routine.aria.next_week', 'Наступний тиждень')}">›</div>`;
   // Дні зі своїми датами (з урахуванням _routineWeekOffset)
   const daysHtml = ROUTINE_TAB_ORDER.map(key => {
     const isActive = key === _routineDay;
@@ -744,7 +744,7 @@ function _renderRoutineDayTabs() {
     const isToday = dateISO === todayISO;
     const hasOwn = !!routine[key];
     const dayNum = parseInt(dateISO.split('-')[2], 10);
-    return `<div onclick="routineSelectDay('${key}')" style="padding:6px 6px;border-radius:10px;font-size:12px;font-weight:${isActive ? '800' : '600'};cursor:pointer;white-space:nowrap;min-width:32px;text-align:center;line-height:1.15;
+    return `<div data-action="routine-select-day" data-key="${key}" style="padding:6px 6px;border-radius:10px;font-size:12px;font-weight:${isActive ? '800' : '600'};cursor:pointer;white-space:nowrap;min-width:32px;text-align:center;line-height:1.15;
       background:${isActive ? '#ea580c' : 'rgba(255,255,255,0.5)'};
       color:${isActive ? 'white' : isToday ? '#ea580c' : 'rgba(30,16,64,0.5)'};
       border:1.5px solid ${isActive ? '#ea580c' : isToday ? 'rgba(234,88,12,0.3)' : 'rgba(30,16,64,0.08)'};
@@ -876,8 +876,8 @@ function _renderRoutineTimeline() {
     const style = KIND_STYLE[b.kind] || KIND_STYLE.routine;
     // delete-routing залежить від kind
     const delAttr = b.kind === 'routine'
-      ? `onclick="routineDeleteBlock(${b.sourceIdx})"`
-      : `onclick="routineDeleteFromTimeline('${b.kind}', ${b.sourceId}, ${b.reminderId || 'null'})"`;
+      ? `data-action="routine-delete-block" data-idx="${b.sourceIdx}"`
+      : `data-action="routine-delete-timeline" data-kind="${b.kind}" data-source-id="${b.sourceId}" data-reminder-id="${b.reminderId || ''}"`;
     const dot = b.kind === 'routine'
       ? `<div style="width:8px;height:8px;border-radius:50%;margin-top:5px;flex-shrink:0;background:${isCurrent ? '#ea580c' : isPast ? 'rgba(30,16,64,0.15)' : style.color}"></div>`
       : `<div style="width:8px;height:8px;border-radius:50%;margin-top:5px;flex-shrink:0;background:${style.color};box-shadow:0 0 0 2px ${style.color}33"></div>`;
@@ -925,14 +925,14 @@ function routineAddBlock() {
   wrap.innerHTML = `
     <div style="background:rgba(255,255,255,0.6);border-radius:16px;padding:14px;border:1.5px solid rgba(234,88,12,0.2)">
       <div style="display:flex;gap:10px;margin-bottom:10px">
-        <div id="routine-add-time-trigger" data-value="09:00" onclick="openRoutineTimePicker()"
+        <div id="routine-add-time-trigger" data-value="09:00" data-action="open-routine-time-picker"
           style="flex:0 0 90px;padding:10px 8px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.15);font-size:16px;font-weight:700;color:#1e1040;background:white;cursor:pointer;text-align:center;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent">09:00</div>
         <input type="text" id="routine-add-activity" placeholder="${t('calendar.routine.activity_placeholder', 'Що робити...')}" maxlength="40"
           style="flex:1;min-width:0;padding:10px 12px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.15);font-size:15px;color:#1e1040;background:white">
       </div>
       <div style="display:flex;gap:8px">
-        <button onclick="routineSaveNewBlock()" style="flex:1;padding:10px;border-radius:12px;border:none;background:#ea580c;color:white;font-size:14px;font-weight:700;cursor:pointer">${t('calendar.btn.save', 'Зберегти')}</button>
-        <button onclick="routineCancelAdd()" style="flex:1;padding:10px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.12);background:none;color:rgba(30,16,64,0.5);font-size:14px;font-weight:600;cursor:pointer">${t('calendar.btn.cancel', 'Скасувати')}</button>
+        <button data-action="routine-save-block" style="flex:1;padding:10px;border-radius:12px;border:none;background:#ea580c;color:white;font-size:14px;font-weight:700;cursor:pointer">${t('calendar.btn.save', 'Зберегти')}</button>
+        <button data-action="routine-cancel-add" style="flex:1;padding:10px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.12);background:none;color:rgba(30,16,64,0.5);font-size:14px;font-weight:600;cursor:pointer">${t('calendar.btn.cancel', 'Скасувати')}</button>
       </div>
     </div>`;
   // Фокус на поле активності
@@ -992,7 +992,7 @@ function routineSaveNewBlock() {
 function routineCancelAdd() {
   const wrap = document.getElementById('routine-add-wrap');
   if (!wrap) return;
-  wrap.innerHTML = `<button onclick="routineAddBlock()" style="width:100%;padding:12px;border-radius:14px;border:2px dashed rgba(234,88,12,0.45);background:rgba(255,255,255,0.5);font-size:14px;font-weight:600;color:rgba(234,88,12,0.7);cursor:pointer;-webkit-tap-highlight-color:transparent">${t('calendar.routine.add_block', '+ Додати блок')}</button>`;
+  wrap.innerHTML = `<button data-action="routine-add-block" style="width:100%;padding:12px;border-radius:14px;border:2px dashed rgba(234,88,12,0.45);background:rgba(255,255,255,0.5);font-size:14px;font-weight:600;color:rgba(234,88,12,0.7);cursor:pointer;-webkit-tap-highlight-color:transparent">${t('calendar.routine.add_block', '+ Додати блок')}</button>`;
 }
 
 function routineDeleteBlock(idx) {
