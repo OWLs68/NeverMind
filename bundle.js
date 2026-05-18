@@ -6378,13 +6378,13 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
       const sum = catMap[cat.name] || 0;
       const sumStr = sum > 0 ? formatMoney(sum) : "0 " + getCurrency();
       const sumCol = sum > 0 ? cat.color : "rgba(30,16,64,0.25)";
-      const onClick = _finEditMode ? `openCategoryEditModal('${escapeJsArg(cat.id)}')` : `openAddTransaction({category: '${escapeJsArg(cat.name)}', type: '${isExpense ? "expense" : "income"}'})`;
+      const tapAttrs = _finEditMode ? `data-action="open-category-edit-modal" data-id="${escapeHtml(cat.id)}"` : `data-action="open-fin-category" data-cat-name="${escapeHtml(cat.name)}" data-cat-type="${isExpense ? "expense" : "income"}"`;
       const levitShadow = `box-shadow:0 4px 10px rgba(0,0,0,0.32), 0 2px 4px rgba(0,0,0,0.22);`;
       const editStyle = _finEditMode ? `box-shadow:0 4px 10px rgba(0,0,0,0.32), 0 2px 4px rgba(0,0,0,0.22), 0 0 0 2px ${cat.color}55;` : levitShadow;
       const arrows = _finEditMode ? `
-      <button onclick="event.stopPropagation();moveFinCategory('${escapeJsArg(cat.id)}',-1);renderFinance()" aria-label="${t("finance.cat.move_left", "\u0412\u043B\u0456\u0432\u043E")}" style="position:absolute;left:-14px;top:50%;transform:translateY(-50%);width:22px;height:22px;border-radius:50%;border:none;background:rgba(255,255,255,0.95);color:#1e1040;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;padding:0;box-shadow:0 2px 6px rgba(30,16,64,0.18);z-index:2">\u2039</button>
-      <button onclick="event.stopPropagation();moveFinCategory('${escapeJsArg(cat.id)}',+1);renderFinance()" aria-label="${t("finance.cat.move_right", "\u0412\u043F\u0440\u0430\u0432\u043E")}" style="position:absolute;right:-14px;top:50%;transform:translateY(-50%);width:22px;height:22px;border-radius:50%;border:none;background:rgba(255,255,255,0.95);color:#1e1040;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;padding:0;box-shadow:0 2px 6px rgba(30,16,64,0.18);z-index:2">\u203A</button>` : "";
-      return `<div onclick="${onClick}" style="display:flex;flex-direction:column;align-items:center;cursor:pointer;padding:4px 0;min-width:0;position:relative">
+      <button data-action="move-fin-category" data-id="${escapeHtml(cat.id)}" data-dir="-1" aria-label="${t("finance.cat.move_left", "\u0412\u043B\u0456\u0432\u043E")}" style="position:absolute;left:-14px;top:50%;transform:translateY(-50%);width:22px;height:22px;border-radius:50%;border:none;background:rgba(255,255,255,0.95);color:#1e1040;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;padding:0;box-shadow:0 2px 6px rgba(30,16,64,0.18);z-index:2">\u2039</button>
+      <button data-action="move-fin-category" data-id="${escapeHtml(cat.id)}" data-dir="1" aria-label="${t("finance.cat.move_right", "\u0412\u043F\u0440\u0430\u0432\u043E")}" style="position:absolute;right:-14px;top:50%;transform:translateY(-50%);width:22px;height:22px;border-radius:50%;border:none;background:rgba(255,255,255,0.95);color:#1e1040;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;padding:0;box-shadow:0 2px 6px rgba(30,16,64,0.18);z-index:2">\u203A</button>` : "";
+      return `<div ${tapAttrs} style="display:flex;flex-direction:column;align-items:center;cursor:pointer;padding:4px 0;min-width:0;position:relative">
       <div style="font-size:11px;font-weight:600;color:rgba(30,16,64,0.55);margin-bottom:4px;text-align:center;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(cat.name)}</div>
       <div style="position:relative;width:48px;height:48px">
         ${arrows}
@@ -6395,7 +6395,7 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
       <div style="font-size:11px;font-weight:700;color:${sumCol};margin-top:4px">${sumStr}</div>
     </div>`;
     };
-    const renderAddCell = () => `<div onclick="openCategoryEditModal('new')" style="display:flex;flex-direction:column;align-items:center;cursor:pointer;padding:4px 0;min-width:0">
+    const renderAddCell = () => `<div data-action="open-category-edit-modal" data-id="new" style="display:flex;flex-direction:column;align-items:center;cursor:pointer;padding:4px 0;min-width:0">
     <div style="font-size:11px;font-weight:600;color:rgba(30,16,64,0.4);margin-bottom:4px">${t("finance.cat.add", "\u0414\u043E\u0434\u0430\u0442\u0438")}</div>
     <div style="width:48px;height:48px;border-radius:50%;background:rgba(194,65,12,0.08);border:2px dashed rgba(194,65,12,0.35);display:flex;align-items:center;justify-content:center">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#c2410c" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -6426,7 +6426,7 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
              transform="rotate(-90 50 50)"/>`
     ).join("");
     const donutBase = `<circle cx="50" cy="50" r="${donutR}" fill="none" stroke="rgba(30,16,64,0.06)" stroke-width="9"/>`;
-    const heroCircle = `<div onclick="toggleFinTabType()" style="grid-column:2/4;grid-row:2/4;position:relative;cursor:pointer;user-select:none;aspect-ratio:1;align-self:center;justify-self:center;width:100%;max-width:170px">
+    const heroCircle = `<div data-action="toggle-fin-tab-type" style="grid-column:2/4;grid-row:2/4;position:relative;cursor:pointer;user-select:none;aspect-ratio:1;align-self:center;justify-self:center;width:100%;max-width:170px">
     <svg viewBox="0 0 100 100" style="width:100%;height:100%;display:block;filter:drop-shadow(0 4px 10px rgba(0,0,0,0.32)) drop-shadow(0 2px 4px rgba(0,0,0,0.22))">
       ${donutBase}${donutRings}
       <circle cx="50" cy="50" r="${donutR - 5}" fill="rgba(255,255,255,0.95)"/>
@@ -6443,18 +6443,18 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
           <div style="font-size:14px;font-weight:800;color:#c2410c">${t("finance.edit.title", "\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u043D\u043D\u044F \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0439")}</div>
           <div style="font-size:10px;font-weight:600;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em">${t("finance.edit.hint", "\u0442\u0430\u043F\u043D\u0438 \u0449\u043E\u0431 \u0440\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0430\u0431\u043E +")}</div>
         </div>
-        <button onclick="toggleFinEditMode()" aria-label="${t("finance.edit.done", "\u0413\u043E\u0442\u043E\u0432\u043E")}" style="padding:6px 14px;border-radius:14px;border:none;background:#c2410c;color:white;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">${t("finance.edit.done", "\u0413\u043E\u0442\u043E\u0432\u043E")}</button>
+        <button data-action="toggle-fin-edit-mode" aria-label="${t("finance.edit.done", "\u0413\u043E\u0442\u043E\u0432\u043E")}" style="padding:6px 14px;border-radius:14px;border:none;background:#c2410c;color:white;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">${t("finance.edit.done", "\u0413\u043E\u0442\u043E\u0432\u043E")}</button>
       </div>` : `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;user-select:none">
-        <button onclick="shiftFinPeriod(-1)" aria-label="${t("finance.nav.prev_period", "\u041F\u043E\u043F\u0435\u0440\u0435\u0434\u043D\u0456\u0439 \u043F\u0435\u0440\u0456\u043E\u0434")}" style="width:32px;height:32px;border-radius:50%;border:none;background:rgba(30,16,64,0.05);color:rgba(30,16,64,0.55);box-shadow:0 4px 10px rgba(0,0,0,0.32), 0 2px 4px rgba(0,0,0,0.22);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit">\u2039</button>
+        <button data-action="shift-fin-period" data-dir="-1" aria-label="${t("finance.nav.prev_period", "\u041F\u043E\u043F\u0435\u0440\u0435\u0434\u043D\u0456\u0439 \u043F\u0435\u0440\u0456\u043E\u0434")}" style="width:32px;height:32px;border-radius:50%;border:none;background:rgba(30,16,64,0.05);color:rgba(30,16,64,0.55);box-shadow:0 4px 10px rgba(0,0,0,0.32), 0 2px 4px rgba(0,0,0,0.22);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit">\u2039</button>
         <div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex:1">
           <div style="font-size:14px;font-weight:800;color:#1e1040">${escapeHtml(periodLabel)}</div>
-          ${!isCurrent ? `<div onclick="shiftFinPeriod(${-currentFinPeriodOffset})" style="font-size:10px;font-weight:700;color:#c2410c;cursor:pointer;text-transform:uppercase;letter-spacing:0.06em">${t("finance.period.back_to_today", "\u21BA \u0434\u043E \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456")}</div>` : `<div style="font-size:10px;font-weight:600;color:rgba(30,16,64,0.3);text-transform:uppercase;letter-spacing:0.06em">${t("finance.period.swipe_hint", "\u0441\u0432\u0430\u0439\u043F \u2190\u2192 \u0434\u043B\u044F \u043D\u0430\u0432\u0456\u0433\u0430\u0446\u0456\u0457")}</div>`}
+          ${!isCurrent ? `<div data-action="shift-fin-period" data-dir="${-currentFinPeriodOffset}" style="font-size:10px;font-weight:700;color:#c2410c;cursor:pointer;text-transform:uppercase;letter-spacing:0.06em">${t("finance.period.back_to_today", "\u21BA \u0434\u043E \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456")}</div>` : `<div style="font-size:10px;font-weight:600;color:rgba(30,16,64,0.3);text-transform:uppercase;letter-spacing:0.06em">${t("finance.period.swipe_hint", "\u0441\u0432\u0430\u0439\u043F \u2190\u2192 \u0434\u043B\u044F \u043D\u0430\u0432\u0456\u0433\u0430\u0446\u0456\u0457")}</div>`}
         </div>
         <div style="display:flex;align-items:center;gap:4px">
-          <button onclick="toggleFinEditMode()" aria-label="${t("finance.nav.edit_cats", "\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457")}" title="${t("finance.nav.edit_cats", "\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457")}" style="width:32px;height:32px;border-radius:50%;border:none;background:rgba(30,16,64,0.05);color:rgba(30,16,64,0.55);box-shadow:0 4px 10px rgba(0,0,0,0.32), 0 2px 4px rgba(0,0,0,0.22);cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit">
+          <button data-action="toggle-fin-edit-mode" aria-label="${t("finance.nav.edit_cats", "\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457")}" title="${t("finance.nav.edit_cats", "\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457")}" style="width:32px;height:32px;border-radius:50%;border:none;background:rgba(30,16,64,0.05);color:rgba(30,16,64,0.55);box-shadow:0 4px 10px rgba(0,0,0,0.32), 0 2px 4px rgba(0,0,0,0.22);cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
           </button>
-          <button onclick="shiftFinPeriod(1)" aria-label="${t("finance.nav.next_period", "\u041D\u0430\u0441\u0442\u0443\u043F\u043D\u0438\u0439 \u043F\u0435\u0440\u0456\u043E\u0434")}" style="width:32px;height:32px;border-radius:50%;border:none;background:rgba(30,16,64,0.05);color:rgba(30,16,64,0.55);box-shadow:0 4px 10px rgba(0,0,0,0.32), 0 2px 4px rgba(0,0,0,0.22);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit">\u203A</button>
+          <button data-action="shift-fin-period" data-dir="1" aria-label="${t("finance.nav.next_period", "\u041D\u0430\u0441\u0442\u0443\u043F\u043D\u0438\u0439 \u043F\u0435\u0440\u0456\u043E\u0434")}" style="width:32px;height:32px;border-radius:50%;border:none;background:rgba(30,16,64,0.05);color:rgba(30,16,64,0.55);box-shadow:0 4px 10px rgba(0,0,0,0.32), 0 2px 4px rgba(0,0,0,0.22);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit">\u203A</button>
         </div>
       </div>`;
     return `<div id="fin-cats-grid-wrap" class="card-glass-blur" style="padding:14px;margin-bottom:12px">
@@ -6479,7 +6479,7 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
       const _subBubble = t2.subcategory ? `<span style="display:inline-block;padding:1px 8px;border-radius:999px;background:transparent;border:1px solid rgba(30,16,64,0.18);color:rgba(30,16,64,0.55);font-size:10px;font-weight:500;line-height:1.5;margin-left:5px">${escapeHtml(t2.subcategory)}</span>` : "";
       const categoryLine = _catBubble + _subBubble;
       return `<div class="fin-tx-swipe-wrap" data-tx-id="${t2.id}" style="position:relative;overflow:hidden;border-radius:10px">
-      <div class="tx-row" onclick="openEditTransaction('${t2.id}')" style="position:relative;z-index:1;background:#fff">
+      <div class="tx-row" data-action="open-edit-transaction" data-id="${t2.id}" style="position:relative;z-index:1;background:#fff">
         <div style="flex:1;min-width:0">
           <div style="font-size:13px">${categoryLine}</div>
           ${t2.comment ? `<div style="font-size:11px;color:rgba(30,16,64,0.4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(t2.comment)}</div>` : ""}
@@ -6491,11 +6491,11 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
       </div>
     </div>`;
     }).join("");
-    const moreBtn = allTxs.length > 8 ? `<div onclick="openAllTransactions()" style="text-align:center;margin-top:10px;font-size:13px;font-weight:700;color:#c2410c;cursor:pointer">${t("finance.tx.all_count", "\u0412\u0441\u0456 \u043E\u043F\u0435\u0440\u0430\u0446\u0456\u0457 ({n})", { n: allTxs.length })} <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#c2410c" stroke-width="2.5" stroke-linecap="round" style="vertical-align:middle"><polyline points="9 18 15 12 9 6"/></svg></div>` : "";
+    const moreBtn = allTxs.length > 8 ? `<div data-action="open-all-transactions" style="text-align:center;margin-top:10px;font-size:13px;font-weight:700;color:#c2410c;cursor:pointer">${t("finance.tx.all_count", "\u0412\u0441\u0456 \u043E\u043F\u0435\u0440\u0430\u0446\u0456\u0457 ({n})", { n: allTxs.length })} <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#c2410c" stroke-width="2.5" stroke-linecap="round" style="vertical-align:middle"><polyline points="9 18 15 12 9 6"/></svg></div>` : "";
     return `<div class="card-glass-blur">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
       <div class="fin-section-label">${t("finance.tx.recent_title", "\u041E\u0441\u0442\u0430\u043D\u043D\u0456 \u043E\u043F\u0435\u0440\u0430\u0446\u0456\u0457")}</div>
-      <button onclick="openAddTransaction()" style="background:rgba(194,65,12,0.08);border:none;border-radius:8px;padding:4px 10px;font-size:12px;font-weight:700;color:#c2410c;cursor:pointer;font-family:inherit">${t("finance.tx.add_short", "+ \u0434\u043E\u0434\u0430\u0442\u0438")}</button>
+      <button data-action="open-add-transaction" style="background:rgba(194,65,12,0.08);border:none;border-radius:8px;padding:4px 10px;font-size:12px;font-weight:700;color:#c2410c;cursor:pointer;font-family:inherit">${t("finance.tx.add_short", "+ \u0434\u043E\u0434\u0430\u0442\u0438")}</button>
     </div>
     ${rows || `<div style="font-size:13px;color:rgba(30,16,64,0.3);text-align:center;padding:8px">${t("finance.tx.empty_period", "\u041D\u0435\u043C\u0430\u0454 \u043E\u043F\u0435\u0440\u0430\u0446\u0456\u0439 \u0437\u0430 \u0446\u0435\u0439 \u043F\u0435\u0440\u0456\u043E\u0434")}</div>`}
     ${moreBtn}
@@ -6515,7 +6515,7 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
       const _catBubble = `<span style="display:inline-block;padding:2px 8px;border-radius:999px;background:rgba(30,16,64,0.09);color:#1e1040;font-size:11px;font-weight:700;line-height:1.4">${escapeHtml(t2.category)}</span>`;
       const _subBubble = t2.subcategory ? `<span style="display:inline-block;padding:1px 8px;border-radius:999px;background:transparent;border:1px solid rgba(30,16,64,0.18);color:rgba(30,16,64,0.55);font-size:10px;font-weight:500;line-height:1.5;margin-left:5px">${escapeHtml(t2.subcategory)}</span>` : "";
       const categoryLine = _catBubble + _subBubble;
-      return `<div class="tx-row" onclick="document.getElementById('fin-all-txs-modal').remove();openEditTransaction('${t2.id}')">
+      return `<div class="tx-row" data-action="open-edit-transaction-from-all" data-id="${t2.id}">
       <div style="flex:1;min-width:0">
         <div style="font-size:13px">${categoryLine}</div>
         ${t2.comment ? `<div style="font-size:11px;color:rgba(30,16,64,0.4)">${escapeHtml(t2.comment)}</div>` : ""}
@@ -6527,7 +6527,7 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     </div>`;
     }).join("");
     modal.innerHTML = `
-    <div onclick="document.getElementById('fin-all-txs-modal').remove()" class="modal-backdrop"></div>
+    <div data-action="close-element-by-id" data-target-id="fin-all-txs-modal" class="modal-backdrop"></div>
     <div style="position:relative;width:100%;max-width:480px;background:rgba(255,255,255,0.95);backdrop-filter:blur(24px);border-radius:24px;margin:0 16px 16px;z-index:1;padding:16px 16px calc(env(safe-area-inset-bottom) + 16px);max-height:80vh;overflow-y:auto;box-sizing:border-box">
       <div class="modal-handle"></div>
       <div style="font-size:16px;font-weight:800;color:#1e1040;margin-bottom:12px">${t("finance.modal.all_title", "\u0412\u0441\u0456 \u043E\u043F\u0435\u0440\u0430\u0446\u0456\u0457 ({n})", { n: allTxs.length })}</div>
@@ -20325,6 +20325,74 @@ ${logLines}
       reg("save-category-from-modal", () => {
         if (typeof window !== "undefined" && typeof window.saveCategoryFromModal === "function") {
           window.saveCategoryFromModal();
+        }
+      });
+      reg("move-fin-category", (data) => {
+        if (typeof window === "undefined") return;
+        if (typeof window.moveFinCategory !== "function") return;
+        const dir = parseInt(data.dir, 10);
+        if (!data.id || Number.isNaN(dir)) return;
+        window.moveFinCategory(data.id, dir);
+      });
+      reg("open-fin-category", (data) => {
+        if (!data.catName) return;
+        if (typeof window !== "undefined" && typeof window.openAddTransaction === "function") {
+          window.openAddTransaction({ category: data.catName, type: data.catType });
+        }
+      });
+      reg("open-category-edit-modal", (data) => {
+        if (!data.id) return;
+        if (typeof window !== "undefined" && typeof window.openCategoryEditModal === "function") {
+          window.openCategoryEditModal(data.id);
+        }
+      });
+      reg("toggle-fin-tab-type", () => {
+        if (typeof window !== "undefined" && typeof window.toggleFinTabType === "function") {
+          window.toggleFinTabType();
+        }
+      });
+      reg("toggle-fin-edit-mode", () => {
+        if (typeof window !== "undefined" && typeof window.toggleFinEditMode === "function") {
+          window.toggleFinEditMode();
+        }
+      });
+      reg("shift-fin-period", (data) => {
+        if (typeof window === "undefined") return;
+        if (typeof window.shiftFinPeriod !== "function") return;
+        const dir = parseInt(data.dir, 10);
+        if (Number.isNaN(dir)) return;
+        window.shiftFinPeriod(dir);
+      });
+      reg("open-add-transaction", () => {
+        if (typeof window !== "undefined" && typeof window.openAddTransaction === "function") {
+          window.openAddTransaction();
+        }
+      });
+      reg("open-edit-transaction", (data) => {
+        if (!data.id) return;
+        if (typeof window !== "undefined" && typeof window.openEditTransaction === "function") {
+          window.openEditTransaction(data.id);
+        }
+      });
+      reg("open-all-transactions", () => {
+        if (typeof window !== "undefined" && typeof window.openAllTransactions === "function") {
+          window.openAllTransactions();
+        }
+      });
+      reg("close-element-by-id", (data, el, e) => {
+        if (e.target !== el) return;
+        if (!data.targetId) return;
+        const node = typeof document !== "undefined" ? document.getElementById(data.targetId) : null;
+        if (node && typeof node.remove === "function") node.remove();
+      });
+      reg("open-edit-transaction-from-all", (data) => {
+        if (!data.id) return;
+        if (typeof document !== "undefined") {
+          const all = document.getElementById("fin-all-txs-modal");
+          if (all && typeof all.remove === "function") all.remove();
+        }
+        if (typeof window !== "undefined" && typeof window.openEditTransaction === "function") {
+          window.openEditTransaction(data.id);
         }
       });
     }

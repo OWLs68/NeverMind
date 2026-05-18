@@ -670,3 +670,94 @@ reg('save-category-from-modal', () => {
     window.saveCategoryFromModal();
   }
 });
+// === Phase 3 (OBErR) finance.js actions ===
+// move-fin-category — стрілки ‹/› переміщення категорії у edit-режимі.
+// data-id = UUID категорії, data-dir = -1/1. renderFinance НЕ викликаємо тут —
+// saveFinCats() усередині moveFinCategory dispатчить nm-data-changed → auto-render.
+// Inline stopPropagation НЕ потрібен (closest бере найближчий = button).
+reg('move-fin-category', (data) => {
+  if (typeof window === 'undefined') return;
+  if (typeof window.moveFinCategory !== 'function') return;
+  const dir = parseInt(data.dir, 10);
+  if (!data.id || Number.isNaN(dir)) return;
+  window.moveFinCategory(data.id, dir);
+});
+// open-fin-category — тап на cat-tile у звичайному режимі (відкриває
+// openAddTransaction з prefilled категорією). data-cat-name + data-cat-type.
+reg('open-fin-category', (data) => {
+  if (!data.catName) return;
+  if (typeof window !== 'undefined' && typeof window.openAddTransaction === 'function') {
+    window.openAddTransaction({ category: data.catName, type: data.catType });
+  }
+});
+// open-category-edit-modal — тап на cat-tile у edit-режимі АБО на «+ Додати»
+// (data-id="new" для нової). reuse у 2 точках.
+reg('open-category-edit-modal', (data) => {
+  if (!data.id) return;
+  if (typeof window !== 'undefined' && typeof window.openCategoryEditModal === 'function') {
+    window.openCategoryEditModal(data.id);
+  }
+});
+// toggle-fin-tab-type — тап на центральний круг (перемикач Витрати/Доходи).
+reg('toggle-fin-tab-type', () => {
+  if (typeof window !== 'undefined' && typeof window.toggleFinTabType === 'function') {
+    window.toggleFinTabType();
+  }
+});
+// toggle-fin-edit-mode — «Готово» у edit-режимі + олівець ✎ у звичайному.
+reg('toggle-fin-edit-mode', () => {
+  if (typeof window !== 'undefined' && typeof window.toggleFinEditMode === 'function') {
+    window.toggleFinEditMode();
+  }
+});
+// shift-fin-period — стрілки ‹/› навігації періоду + текст «↺ до сьогодні»
+// (data-dir = -1, 1, або -currentFinPeriodOffset snapshot).
+reg('shift-fin-period', (data) => {
+  if (typeof window === 'undefined') return;
+  if (typeof window.shiftFinPeriod !== 'function') return;
+  const dir = parseInt(data.dir, 10);
+  if (Number.isNaN(dir)) return;
+  window.shiftFinPeriod(dir);
+});
+// open-add-transaction — кнопки «+ Додати операцію» (empty state) +
+// «+ додати» (short). Виклик без аргументів = нова tx без prefill.
+reg('open-add-transaction', () => {
+  if (typeof window !== 'undefined' && typeof window.openAddTransaction === 'function') {
+    window.openAddTransaction();
+  }
+});
+// open-edit-transaction — клік на tx-row (data-id = UUID транзакції).
+reg('open-edit-transaction', (data) => {
+  if (!data.id) return;
+  if (typeof window !== 'undefined' && typeof window.openEditTransaction === 'function') {
+    window.openEditTransaction(data.id);
+  }
+});
+// open-all-transactions — кнопка «Всі операції (N)».
+reg('open-all-transactions', () => {
+  if (typeof window !== 'undefined' && typeof window.openAllTransactions === 'function') {
+    window.openAllTransactions();
+  }
+});
+// close-element-by-id — UNIVERSAL для backdrop'ів модалок створених через
+// document.body.appendChild (не render-template). Замінює inline
+// `onclick="document.getElementById('X').remove()"`. data-target-id = ID без #.
+reg('close-element-by-id', (data, el, e) => {
+  if (e.target !== el) return; // backdrop guard — клік усередині content не закриває
+  if (!data.targetId) return;
+  const node = typeof document !== 'undefined' ? document.getElementById(data.targetId) : null;
+  if (node && typeof node.remove === 'function') node.remove();
+});
+// open-edit-transaction-from-all — компаунд: закрити all-transactions модалку
+// + відкрити edit-tx (data-id = UUID транзакції). Уникає inline
+// `onclick="document.getElementById('fin-all-txs-modal').remove();openEditTransaction(...)"`.
+reg('open-edit-transaction-from-all', (data) => {
+  if (!data.id) return;
+  if (typeof document !== 'undefined') {
+    const all = document.getElementById('fin-all-txs-modal');
+    if (all && typeof all.remove === 'function') all.remove();
+  }
+  if (typeof window !== 'undefined' && typeof window.openEditTransaction === 'function') {
+    window.openEditTransaction(data.id);
+  }
+});

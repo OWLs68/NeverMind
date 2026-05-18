@@ -11,7 +11,7 @@
 
 import { currentTab, showToast } from '../core/nav.js';
 import { generateUUID } from '../core/uuid.js';
-import { escapeHtml, escapeJsArg, t } from '../core/utils.js';
+import { escapeHtml, t } from '../core/utils.js';
 import { addToTrash, showUndoToast } from '../core/trash.js';
 import { SWIPE_DELETE_THRESHOLD, applySwipeTrail, clearSwipeTrail, attachSwipeDelete } from '../ui/swipe-delete.js';
 import { getAIContext, getOWLPersonality, openChatBar, safeAgentReply, saveChatMsg } from '../ai/core.js';
@@ -334,19 +334,26 @@ function _finCatsGrid(allTxs, win) {
     const sumStr = sum > 0 ? formatMoney(sum) : '0 ' + getCurrency();
     const sumCol = sum > 0 ? cat.color : 'rgba(30,16,64,0.25)';
     // У edit-режимі — тап = редагування. У звичайному — тап = додати транзакцію.
-    const onClick = _finEditMode
-      ? `openCategoryEditModal('${escapeJsArg(cat.id)}')`
-      : `openAddTransaction({category: '${escapeJsArg(cat.name)}', type: '${isExpense ? 'expense' : 'income'}'})`;
+    // OBErR Phase 3: onClick рядок → data-action атрибути. Edit-mode передає
+    // UUID id; normal-mode передає назву категорії + тип (open-fin-category
+    // викликає openAddTransaction з prefilled полями).
+    const tapAttrs = _finEditMode
+      ? `data-action="open-category-edit-modal" data-id="${escapeHtml(cat.id)}"`
+      : `data-action="open-fin-category" data-cat-name="${escapeHtml(cat.name)}" data-cat-type="${isExpense ? 'expense' : 'income'}"`;
     // B-61: тінь-левітація. Оновлено 17.04.2026 (14zLe) — чорна тінь замість
     // кольору категорії: виразніше "висить" над фоном, контрастніше.
     // У edit-режимі ще додатковий outline кольором категорії (вибраний стан).
     const levitShadow = `box-shadow:0 4px 10px rgba(0,0,0,0.32), 0 2px 4px rgba(0,0,0,0.22);`;
     const editStyle = _finEditMode ? `box-shadow:0 4px 10px rgba(0,0,0,0.32), 0 2px 4px rgba(0,0,0,0.22), 0 0 0 2px ${cat.color}55;` : levitShadow;
     // B-57: стрілки ‹ › у edit-режимі для переміщення категорії.
+    // stopPropagation видалено — delegation closest() бере найближчий = button,
+    // батьківський open-category-edit-modal НЕ triggered. renderFinance()
+    // теж видалено — saveFinCats() усередині moveFinCategory dispатчить
+    // nm-data-changed:'finance' → auto-render через DETAIL_TO_KEY (boot.js:187).
     const arrows = _finEditMode ? `
-      <button onclick="event.stopPropagation();moveFinCategory('${escapeJsArg(cat.id)}',-1);renderFinance()" aria-label="${t('finance.cat.move_left', 'Вліво')}" style="position:absolute;left:-14px;top:50%;transform:translateY(-50%);width:22px;height:22px;border-radius:50%;border:none;background:rgba(255,255,255,0.95);color:#1e1040;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;padding:0;box-shadow:0 2px 6px rgba(30,16,64,0.18);z-index:2">‹</button>
-      <button onclick="event.stopPropagation();moveFinCategory('${escapeJsArg(cat.id)}',+1);renderFinance()" aria-label="${t('finance.cat.move_right', 'Вправо')}" style="position:absolute;right:-14px;top:50%;transform:translateY(-50%);width:22px;height:22px;border-radius:50%;border:none;background:rgba(255,255,255,0.95);color:#1e1040;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;padding:0;box-shadow:0 2px 6px rgba(30,16,64,0.18);z-index:2">›</button>` : '';
-    return `<div onclick="${onClick}" style="display:flex;flex-direction:column;align-items:center;cursor:pointer;padding:4px 0;min-width:0;position:relative">
+      <button data-action="move-fin-category" data-id="${escapeHtml(cat.id)}" data-dir="-1" aria-label="${t('finance.cat.move_left', 'Вліво')}" style="position:absolute;left:-14px;top:50%;transform:translateY(-50%);width:22px;height:22px;border-radius:50%;border:none;background:rgba(255,255,255,0.95);color:#1e1040;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;padding:0;box-shadow:0 2px 6px rgba(30,16,64,0.18);z-index:2">‹</button>
+      <button data-action="move-fin-category" data-id="${escapeHtml(cat.id)}" data-dir="1" aria-label="${t('finance.cat.move_right', 'Вправо')}" style="position:absolute;right:-14px;top:50%;transform:translateY(-50%);width:22px;height:22px;border-radius:50%;border:none;background:rgba(255,255,255,0.95);color:#1e1040;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;padding:0;box-shadow:0 2px 6px rgba(30,16,64,0.18);z-index:2">›</button>` : '';
+    return `<div ${tapAttrs} style="display:flex;flex-direction:column;align-items:center;cursor:pointer;padding:4px 0;min-width:0;position:relative">
       <div style="font-size:11px;font-weight:600;color:rgba(30,16,64,0.55);margin-bottom:4px;text-align:center;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(cat.name)}</div>
       <div style="position:relative;width:48px;height:48px">
         ${arrows}
@@ -359,7 +366,7 @@ function _finCatsGrid(allTxs, win) {
   };
 
   // У edit-режимі — додаткова комірка "+" як остання категорія
-  const renderAddCell = () => `<div onclick="openCategoryEditModal('new')" style="display:flex;flex-direction:column;align-items:center;cursor:pointer;padding:4px 0;min-width:0">
+  const renderAddCell = () => `<div data-action="open-category-edit-modal" data-id="new" style="display:flex;flex-direction:column;align-items:center;cursor:pointer;padding:4px 0;min-width:0">
     <div style="font-size:11px;font-weight:600;color:rgba(30,16,64,0.4);margin-bottom:4px">${t('finance.cat.add', 'Додати')}</div>
     <div style="width:48px;height:48px;border-radius:50%;background:rgba(194,65,12,0.08);border:2px dashed rgba(194,65,12,0.35);display:flex;align-items:center;justify-content:center">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#c2410c" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -396,7 +403,7 @@ function _finCatsGrid(allTxs, win) {
   ).join('');
   // Базове сіре кільце (видно якщо totalSum=0 або якщо сегменти не покривають 100%)
   const donutBase = `<circle cx="50" cy="50" r="${donutR}" fill="none" stroke="rgba(30,16,64,0.06)" stroke-width="9"/>`;
-  const heroCircle = `<div onclick="toggleFinTabType()" style="grid-column:2/4;grid-row:2/4;position:relative;cursor:pointer;user-select:none;aspect-ratio:1;align-self:center;justify-self:center;width:100%;max-width:170px">
+  const heroCircle = `<div data-action="toggle-fin-tab-type" style="grid-column:2/4;grid-row:2/4;position:relative;cursor:pointer;user-select:none;aspect-ratio:1;align-self:center;justify-self:center;width:100%;max-width:170px">
     <svg viewBox="0 0 100 100" style="width:100%;height:100%;display:block;filter:drop-shadow(0 4px 10px rgba(0,0,0,0.32)) drop-shadow(0 2px 4px rgba(0,0,0,0.22))">
       ${donutBase}${donutRings}
       <circle cx="50" cy="50" r="${donutR - 5}" fill="rgba(255,255,255,0.95)"/>
@@ -417,19 +424,19 @@ function _finCatsGrid(allTxs, win) {
           <div style="font-size:14px;font-weight:800;color:#c2410c">${t('finance.edit.title', 'Редагування категорій')}</div>
           <div style="font-size:10px;font-weight:600;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em">${t('finance.edit.hint', 'тапни щоб редагувати або +')}</div>
         </div>
-        <button onclick="toggleFinEditMode()" aria-label="${t('finance.edit.done', 'Готово')}" style="padding:6px 14px;border-radius:14px;border:none;background:#c2410c;color:white;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">${t('finance.edit.done', 'Готово')}</button>
+        <button data-action="toggle-fin-edit-mode" aria-label="${t('finance.edit.done', 'Готово')}" style="padding:6px 14px;border-radius:14px;border:none;background:#c2410c;color:white;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">${t('finance.edit.done', 'Готово')}</button>
       </div>`
     : `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;user-select:none">
-        <button onclick="shiftFinPeriod(-1)" aria-label="${t('finance.nav.prev_period', 'Попередній період')}" style="width:32px;height:32px;border-radius:50%;border:none;background:rgba(30,16,64,0.05);color:rgba(30,16,64,0.55);box-shadow:0 4px 10px rgba(0,0,0,0.32), 0 2px 4px rgba(0,0,0,0.22);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit">‹</button>
+        <button data-action="shift-fin-period" data-dir="-1" aria-label="${t('finance.nav.prev_period', 'Попередній період')}" style="width:32px;height:32px;border-radius:50%;border:none;background:rgba(30,16,64,0.05);color:rgba(30,16,64,0.55);box-shadow:0 4px 10px rgba(0,0,0,0.32), 0 2px 4px rgba(0,0,0,0.22);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit">‹</button>
         <div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex:1">
           <div style="font-size:14px;font-weight:800;color:#1e1040">${escapeHtml(periodLabel)}</div>
-          ${!isCurrent ? `<div onclick="shiftFinPeriod(${-currentFinPeriodOffset})" style="font-size:10px;font-weight:700;color:#c2410c;cursor:pointer;text-transform:uppercase;letter-spacing:0.06em">${t('finance.period.back_to_today', '↺ до сьогодні')}</div>` : `<div style="font-size:10px;font-weight:600;color:rgba(30,16,64,0.3);text-transform:uppercase;letter-spacing:0.06em">${t('finance.period.swipe_hint', 'свайп ←→ для навігації')}</div>`}
+          ${!isCurrent ? `<div data-action="shift-fin-period" data-dir="${-currentFinPeriodOffset}" style="font-size:10px;font-weight:700;color:#c2410c;cursor:pointer;text-transform:uppercase;letter-spacing:0.06em">${t('finance.period.back_to_today', '↺ до сьогодні')}</div>` : `<div style="font-size:10px;font-weight:600;color:rgba(30,16,64,0.3);text-transform:uppercase;letter-spacing:0.06em">${t('finance.period.swipe_hint', 'свайп ←→ для навігації')}</div>`}
         </div>
         <div style="display:flex;align-items:center;gap:4px">
-          <button onclick="toggleFinEditMode()" aria-label="${t('finance.nav.edit_cats', 'Редагувати категорії')}" title="${t('finance.nav.edit_cats', 'Редагувати категорії')}" style="width:32px;height:32px;border-radius:50%;border:none;background:rgba(30,16,64,0.05);color:rgba(30,16,64,0.55);box-shadow:0 4px 10px rgba(0,0,0,0.32), 0 2px 4px rgba(0,0,0,0.22);cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit">
+          <button data-action="toggle-fin-edit-mode" aria-label="${t('finance.nav.edit_cats', 'Редагувати категорії')}" title="${t('finance.nav.edit_cats', 'Редагувати категорії')}" style="width:32px;height:32px;border-radius:50%;border:none;background:rgba(30,16,64,0.05);color:rgba(30,16,64,0.55);box-shadow:0 4px 10px rgba(0,0,0,0.32), 0 2px 4px rgba(0,0,0,0.22);cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
           </button>
-          <button onclick="shiftFinPeriod(1)" aria-label="${t('finance.nav.next_period', 'Наступний період')}" style="width:32px;height:32px;border-radius:50%;border:none;background:rgba(30,16,64,0.05);color:rgba(30,16,64,0.55);box-shadow:0 4px 10px rgba(0,0,0,0.32), 0 2px 4px rgba(0,0,0,0.22);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit">›</button>
+          <button data-action="shift-fin-period" data-dir="1" aria-label="${t('finance.nav.next_period', 'Наступний період')}" style="width:32px;height:32px;border-radius:50%;border:none;background:rgba(30,16,64,0.05);color:rgba(30,16,64,0.55);box-shadow:0 4px 10px rgba(0,0,0,0.32), 0 2px 4px rgba(0,0,0,0.22);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit">›</button>
         </div>
       </div>`;
 
@@ -458,7 +465,7 @@ function _finEmptyState() {
     </div>
     <div style="font-size:16px;font-weight:800;color:#1e1040;margin-bottom:6px">${t('finance.empty.title', 'Поки порожньо')}</div>
     <div style="font-size:14px;color:rgba(30,16,64,0.45);line-height:1.5;margin-bottom:16px">${t('finance.empty.hint', 'Додай перші операції через Inbox або кнопку нижче')}</div>
-    <button onclick="openAddTransaction()" style="background:linear-gradient(135deg,#f97316,#c2410c);color:white;border:none;border-radius:14px;padding:12px 24px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit">${t('finance.empty.add_btn', '+ Додати операцію')}</button>
+    <button data-action="open-add-transaction" style="background:linear-gradient(135deg,#f97316,#c2410c);color:white;border:none;border-radius:14px;padding:12px 24px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit">${t('finance.empty.add_btn', '+ Додати операцію')}</button>
   </div>`;
 }
 
@@ -478,7 +485,7 @@ function _finTxsBlock(allTxs) {
     const categoryLine = _catBubble + _subBubble;
     // B-37: обгортка для swipe-delete (swipe-wrap → tx-row)
     return `<div class="fin-tx-swipe-wrap" data-tx-id="${t.id}" style="position:relative;overflow:hidden;border-radius:10px">
-      <div class="tx-row" onclick="openEditTransaction('${t.id}')" style="position:relative;z-index:1;background:#fff">
+      <div class="tx-row" data-action="open-edit-transaction" data-id="${t.id}" style="position:relative;z-index:1;background:#fff">
         <div style="flex:1;min-width:0">
           <div style="font-size:13px">${categoryLine}</div>
           ${t.comment ? `<div style="font-size:11px;color:rgba(30,16,64,0.4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(t.comment)}</div>` : ''}
@@ -492,13 +499,13 @@ function _finTxsBlock(allTxs) {
   }).join('');
 
   const moreBtn = allTxs.length > 8
-    ? `<div onclick="openAllTransactions()" style="text-align:center;margin-top:10px;font-size:13px;font-weight:700;color:#c2410c;cursor:pointer">${t('finance.tx.all_count', 'Всі операції ({n})', { n: allTxs.length })} <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#c2410c" stroke-width="2.5" stroke-linecap="round" style="vertical-align:middle"><polyline points="9 18 15 12 9 6"/></svg></div>`
+    ? `<div data-action="open-all-transactions" style="text-align:center;margin-top:10px;font-size:13px;font-weight:700;color:#c2410c;cursor:pointer">${t('finance.tx.all_count', 'Всі операції ({n})', { n: allTxs.length })} <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#c2410c" stroke-width="2.5" stroke-linecap="round" style="vertical-align:middle"><polyline points="9 18 15 12 9 6"/></svg></div>`
     : '';
 
   return `<div class="card-glass-blur">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
       <div class="fin-section-label">${t('finance.tx.recent_title', 'Останні операції')}</div>
-      <button onclick="openAddTransaction()" style="background:rgba(194,65,12,0.08);border:none;border-radius:8px;padding:4px 10px;font-size:12px;font-weight:700;color:#c2410c;cursor:pointer;font-family:inherit">${t('finance.tx.add_short', '+ додати')}</button>
+      <button data-action="open-add-transaction" style="background:rgba(194,65,12,0.08);border:none;border-radius:8px;padding:4px 10px;font-size:12px;font-weight:700;color:#c2410c;cursor:pointer;font-family:inherit">${t('finance.tx.add_short', '+ додати')}</button>
     </div>
     ${rows || `<div style="font-size:13px;color:rgba(30,16,64,0.3);text-align:center;padding:8px">${t('finance.tx.empty_period', 'Немає операцій за цей період')}</div>`}
     ${moreBtn}
@@ -524,7 +531,7 @@ function openAllTransactions() {
       ? `<span style="display:inline-block;padding:1px 8px;border-radius:999px;background:transparent;border:1px solid rgba(30,16,64,0.18);color:rgba(30,16,64,0.55);font-size:10px;font-weight:500;line-height:1.5;margin-left:5px">${escapeHtml(t.subcategory)}</span>`
       : '';
     const categoryLine = _catBubble + _subBubble;
-    return `<div class="tx-row" onclick="document.getElementById('fin-all-txs-modal').remove();openEditTransaction('${t.id}')">
+    return `<div class="tx-row" data-action="open-edit-transaction-from-all" data-id="${t.id}">
       <div style="flex:1;min-width:0">
         <div style="font-size:13px">${categoryLine}</div>
         ${t.comment ? `<div style="font-size:11px;color:rgba(30,16,64,0.4)">${escapeHtml(t.comment)}</div>` : ''}
@@ -536,7 +543,7 @@ function openAllTransactions() {
     </div>`;
   }).join('');
   modal.innerHTML = `
-    <div onclick="document.getElementById('fin-all-txs-modal').remove()" class="modal-backdrop"></div>
+    <div data-action="close-element-by-id" data-target-id="fin-all-txs-modal" class="modal-backdrop"></div>
     <div style="position:relative;width:100%;max-width:480px;background:rgba(255,255,255,0.95);backdrop-filter:blur(24px);border-radius:24px;margin:0 16px 16px;z-index:1;padding:16px 16px calc(env(safe-area-inset-bottom) + 16px);max-height:80vh;overflow-y:auto;box-sizing:border-box">
       <div class="modal-handle"></div>
       <div style="font-size:16px;font-weight:800;color:#1e1040;margin-bottom:12px">${t('finance.modal.all_title', 'Всі операції ({n})', { n: allTxs.length })}</div>
