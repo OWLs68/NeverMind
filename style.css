@@ -1694,6 +1694,9 @@ button:active,
    (Phase 1в-prep). Без цього юзер тапає галочку → 300ms лаг → жахливий UX.
    `manipulation` дозволяє pinch-zoom, але прибирає double-tap zoom delay. */
 [data-task-check],
-[data-step-check] {
+[data-step-check],
+[data-habit-check] {
+  /* data-habit-check додано JMQuT 17.05: habits.js checkbox-и (Me-tab + Prod-tab) теж страждали
+     iOS 300мс delay після onclick → delegation `click` міграції. */
   touch-action: manipulation;
 }
