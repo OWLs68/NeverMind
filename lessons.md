@@ -10,6 +10,14 @@
 
 ## 🔄 Робочі патерни (коли X — роблю Y)
 
+### escapeJsArg ≠ escapeHtml для `data-*` атрибутів (JMQuT 17.05.2026)
+
+- **Контекст:** `escapeJsArg(s)` додає JS-escape (`\\`, `\'`, `\"`) для безпечного вкладення у `onclick="fn('${...}')"`. Браузер парсить HTML attr → JS string → обидва рівні відновлюються.
+- **БАГ для `data-*`:** значення `data-folder="${escapeJsArg(folder)}"` зберігає `\\'` як ЛІТЕРАЛЬНИЙ backslash. При читанні `el.dataset.folder` НЕ виконує JS-eval → залишається `Roman\'s folder` замість `Roman's folder` → `openNotesFolder()` шукає неіснуючу папку → silent fail.
+- **Правило:** для `data-*` атрибутів використовувати `escapeHtml()` (тільки HTML-escape `&<>`). Браузер декодує HTML entities при читанні dataset → отримуємо оригінал.
+- **Підтверджений кейс JMQuT:** Pre-mortem Council Sonnet знайшов баг ПЕРЕД деплоєм при міграції notes.js на delegation. 4 точки виправлено: `safeFolder` → `escapeHtml(folder)`. Той самий патерн застосовано у health.js (`data-time` через `escapeHtml`).
+- **Сигнал для майбутніх міграцій:** коли міграруєш `onclick="fn('${escapeJsArg(x)}')"` → `data-action="X" data-x="${...}"` — ОБОВ'ЯЗКОВО замінити `escapeJsArg` на `escapeHtml`. Інакше silent fail на даних з апострофами / лапками / backslash.
+
 ### Council 5 агентів — НЕ після 5-ї невдачі а після 2-ї (MPVly-day2 06.05)
 - **Якщо 2 спроби фіксити одне і те ж не дають результату** → STOP + Council 5 паралельних агентів Sonnet (Critic / Стратег / Свіжий погляд / iOS quirk hunter / Виконавець). Кожен читає код самостійно через Read/Grep.
 - **Антипатерн:** `git log` MPVly-day2 — B-138/B-139/B-140/B-141/B-141 hot/B-142 — **6 фіксів-наосліп** для «кнопки Аналітики не клікаються». 5 з них були помилковими (CSS scale, dy>8 поріг, backdrop class, refactor, removeWatcher). REAL корінь B-143 — `scrollEl=null` через нормалізацію inline style браузером — Council Виконавець знайшов через diagnostic logging за 1 раунд. **Втратив ~2 години на наосліп до того.**
