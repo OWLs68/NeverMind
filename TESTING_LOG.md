@@ -37,6 +37,17 @@
 
 **Версія:** CACHE_NAME `nm-20260517-2245`, commit `JMQuT Phase 2+3`.
 
+### v935+ Event Delegation: habits.js (12 onclick → delegation, 3 reuse universal)
+
+- [ ] Me-tab: тап на checkbox звички → toggle (✓/empty) працює.
+- [ ] Me-tab: тап на квадратик у progress-bar → toggle цього square.
+- [ ] Me-tab: тап на «+» квадрат → +1 до прогресу.
+- [ ] Me-tab: тап на текст картки звички (не на checkbox) → відкриває редактор.
+- [ ] Prod-tab: тап на checkbox prod-звички → toggle.
+- [ ] Prod-tab: тап на саму картку (не на checkbox/квадратики) → prodHabitCardClick (відкриває редактор з guard'ом).
+- [ ] Quit-habit картка: «Тримаюсь» / «Зірвався» — швидкий tap без 300мс делею (CSS `touch-action:manipulation`).
+- [ ] Quit-habit картка: тап на саму картку (не на кнопки) → редактор.
+
 ### v934+ Event Delegation: nav.js (9 onclick → delegation)
 
 - [ ] Налаштування → tab-selector модалка → тап на картку вкладки → toggle active state.

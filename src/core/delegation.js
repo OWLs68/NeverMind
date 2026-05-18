@@ -359,3 +359,33 @@ reg('close-deploy-info', () => {
     window.closeDeployInfo();
   }
 });
+// === Phase 1+ (JMQuT) habits.js actions ===
+// tap-habit-square — клік на існуючий квадратик у прогрес-стрічці звички.
+// data-entity='habit' (Me-tab tapHabitSquareMe) | 'habit-prod' (Prod-tab tapHabitSquare).
+// data-idx — позиція квадратика (parseInt). stopPropagation видалено — closest бере найближчий.
+reg('tap-habit-square', (data) => {
+  if (typeof window === 'undefined') return;
+  const idx = parseInt(data.idx, 10);
+  if (Number.isNaN(idx) || !data.id) return;
+  if (data.entity === 'habit' && typeof window.tapHabitSquareMe === 'function') {
+    window.tapHabitSquareMe(data.id, idx);
+  } else if (data.entity === 'habit-prod' && typeof window.tapHabitSquare === 'function') {
+    window.tapHabitSquare(data.id, idx);
+  }
+});
+// open-edit-habit — клік на картку звички (Me-tab + Prod-tab + quit-habit).
+// Сам обробник toggle-entity-done на checkbox блокує bubble через closest().
+reg('open-edit-habit', (data) => {
+  if (!data.id) return;
+  if (typeof window !== 'undefined' && typeof window.openEditHabit === 'function') {
+    window.openEditHabit(data.id);
+  }
+});
+// prod-habit-card-click — клік на картку Prod-habit. Як task-card-click (передаємо event).
+// Функція сама перевіряє event.target.closest для guard'а (checkbox/squares).
+reg('prod-habit-card-click', (data, el, ev) => {
+  if (!data.id) return;
+  if (typeof window !== 'undefined' && typeof window.prodHabitCardClick === 'function') {
+    window.prodHabitCardClick(data.id, ev);
+  }
+});
