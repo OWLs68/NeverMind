@@ -13850,8 +13850,7 @@ ${CHIP_PROMPT_RULES}`;
     document.querySelectorAll(".habit-me-item-wrap").forEach((w) => bind(w, w.querySelector('[id^="habit-me-item-"]')));
     document.querySelectorAll(".prod-habit-item-wrap").forEach((w) => bind(w, w.querySelector('[id^="prod-habit-item-"]')));
   }
-  function prodHabitCardClick(id, event) {
-    if (event.target.closest("[data-habit-check]")) return;
+  function prodHabitCardClick(id, _event) {
     openEditHabit(id);
   }
   function _fuzzyFindFolder(query, folders) {

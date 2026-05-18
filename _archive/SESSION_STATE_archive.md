@@ -3366,3 +3366,52 @@ Claude підготував питання для другої думки про
 - Gemini раундів: 3
 - Закриті баги: B-160..B-164 (5 нових)
 - Нові файли: `src/data/ua-time-parser.js`
+
+---
+
+## 🔧 Сесія e9t3N — AI-тестер 24/7 + Security Hardening (15-16.05.2026)
+
+> Архівовано JMQuT 17.05.2026 — детальний блок переміщено з SESSION_STATE.md.
+
+### Зроблено — 2 великі блоки + 6 системних security фіксів
+
+#### A. AI-тестер 24/7 інфраструктура (NM-сторона Фази 1)
+
+Hetzner + persistent Chrome profile + GPT-4o-mini планування. 4 раунди обговорення з brain-Claude + Council 5 агентів Sonnet (Критик / Стратег / Pragmatic MVP / Pre-mortem / NM-integrator) + 3 WebSearch ринку 2026.
+
+1. `8270d87` — workflow `.github/workflows/auto-merge-tester.yml` для `claude/ai-tester-*` БЕЗ build.js (BLOCKER: кирилиця у звітах ламала основний деплой).
+2. `9dca3ca` — 5 файлів NM↔Hetzner обміну: AI_TESTER_INTEGRATION.md (380), tester-config.json, tester-commands.md, tester-status.json, tester-log.md.
+3. `5838dbf` — `window.NM_BOOT_DONE = true` після bootApp(). CACHE bump `nm-20260515-2100`.
+4. `16c630a` — `/start` Крок 1.5 + `/finish` Фаза 3.5 з тестером.
+5. `7ca79fd` — INDEX.md секція AI-тестер.
+
+#### B. Security Hardening — Council 5 агентів + 8 фіксів
+
+Council 5 паралельних агентів Sonnet (Secret/Key + XSS + CSP + Supply chain + Supabase). Знайдено 5 CRITICAL + 6 HIGH + 5 MEDIUM/LOW.
+
+6. `3aa1569` — Stored XSS у notes.js:186 (datalist).
+7. `71d27ba` — SECURITY.md (400+) + SECURITY_AUDIT_e9t3N.md + ROADMAP Security Hardening block.
+8. `a82ea3b` — ANTI_INJECTION_RULE у BASE_CHAT_RULES + 3 функції-промпти.
+9. `f3f2fa3` — screenshot_b64 → screenshot_path (workflow guard).
+10. `88cf44c` — dependabot.yml + npm audit step + claude-security.yml.
+11. Dependabot 5 PR'ів merged (actions/checkout 4→6, setup-node 4→6 тощо).
+
+#### C. Claude Security Action — 4 ітерації
+
+12-15. `d6bdf20` + `4585350` + `b6e22c6` + `6812f6e` — параметри, заміна на власний workflow, YAML fixes, Sonnet 4.5 + 1M context.
+
+**Останній запуск (full mode):** rate limit 429 — 210K request > 30K/min Tier 1.
+
+### Ключові рішення
+- AI-тестер: Hetzner (не GitHub Actions) — юзер з накопиченими даними.
+- Безпека: системно, не латка — CSP-латка з `unsafe-inline` відкладено до Event Delegation.
+- Sonnet 4.5 + 1M context — codebase 210K > Opus 200K limit.
+
+### Інциденти
+- 3 невдалих запуски Claude Security Action (#1 default params, #7-9 YAML, #11-12 rate limit).
+- Auto-merge.yml впав через GitHub permissions — manual merge PR #7+#8.
+
+### Метрики
+- Гілка: `claude/start-session-e9t3N`. Коміти: 15. Версії: v878.
+- CACHE_NAME: `nm-20260515-2230`. Council Sonnet: 9. WebSearch: 4.
+- Files created: 8. Files edited: ~12.

@@ -946,9 +946,12 @@ function _attachHabitsSwipeDelete() {
     bind(w, w.querySelector('[id^="prod-habit-item-"]')));
 }
 
-// Тап на prod-habit картку — якщо на чекбокс → toggleProdHabitToday, інакше → edit
-function prodHabitCardClick(id, event) {
-  if (event.target.closest('[data-habit-check]')) return; // чекбокс має власний handler
+// Тап на prod-habit картку → відкрити edit модалку.
+// Guard `event.target.closest('[data-habit-check]')` ВИДАЛЕНО JMQuT (Council post-аудит):
+// delegation `closest('[data-action]')` уже бере НАЙБЛИЖЧИЙ data-action елемент — якщо клік
+// був на чекбокс з `data-action="toggle-entity-done"`, prod-habit-card-click ВЗАГАЛІ НЕ
+// викликається. Guard став dead code після event-delegation міграції.
+function prodHabitCardClick(id, _event) {
   openEditHabit(id);
 }
 

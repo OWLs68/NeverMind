@@ -12,6 +12,31 @@
 
 ## 🏆 Завершені Active-блоки
 
+### ✅ Health AI Isolation — EU AI Act compliance (JMQuT 17.05.2026)
+
+**8 фаз / 8 комітів / Council 8 паралельних агентів Sonnet / 4 WebSearch (EU AI Act + GDPR Art.9 + Annex III + productivity apps).**
+
+Стратегічне рішення Романа («так щоб до нас не було претензій»). NM = Limited Risk productivity app (не High-risk). Стає High-risk при profiling або clinical decisions → видаляємо AI-доступ до health-даних на 7 рівнях.
+
+**Видалено:**
+- 11 AI-tools (`create_health_card`, `edit_health_card`, `delete_health_card`, `update_health_card_status`, `add_medication`, `edit_medication`, `delete_medication`, `log_medication_dose`, `add_allergy`, `delete_allergy`, `add_health_history_entry`) + `export_health_card` UI-tool
+- `getHealthContext()` з загального промпту — головний канал profiling (PHI у 8 чатах)
+- Brain-signals `_collectAppointmentSoon` (лікар + дата у промпт)
+- Clarify-guard doctor profiling chips (`DOCTOR_MENTION_RE` + `_buildDoctorChips`)
+- OWL proactive health згадки (board context, activeTabs, OWL_QUESTIONS, fallback messages)
+- `save_memory_fact category='health'` enum
+- Health chat-bar HTML + JS (`addHealthChatMsg`, `sendHealthBarMessage`, 185-рядковий 3-кроковий AI-інтерв'ю)
+- `syncHealthFinanceToHistory` (auto-write health від finance)
+- Cross-tab refs у 8 точках
+
+**Migration v18 у boot.js:** cleanup `nm_chat_health` + `nm_health_interview_pending` + facts з `category='health'` + старі health tool_calls з усіх `nm_chat_*` історій.
+
+**Залишено (Limited risk):** UI CRUD Health-вкладки повністю функціональний, кошик restore, Health-папка у Notes (AI зберігає текст без judgment), `switch_tab('health')` навігація, експорт через UI кнопку.
+
+**Bundle:** 25742 → 24948 рядків (-794, -3.1%).
+
+**Документи:** `docs/AI_ACT_COMPLIANCE.md` (повний звіт) + `docs/EU_COMPLIANCE.md` (зонтичний — AI Act = 1 з ~10 EU compliance шарів).
+
 ### ✅ Architecture Refactor — Сесія 3 UUID повний блок (myshu 11.05 + db0YY 12.05.2026)
 
 UUID coverage **100% повний** на всіх рівнях — 10 з 10 top-level entities + sub-entity steps.

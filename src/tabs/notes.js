@@ -1051,7 +1051,7 @@ function _folderKey(folder) {
   return btoa(unescape(encodeURIComponent(folder))).replace(/[^a-zA-Z0-9]/g, '_');
 }
 // Свайп-видалення папок підключено через _attachNotesSwipeDelete (B-54 механізм).
-// Тап на папку → onclick="openNotesFolder(...)" inline.
+// Тап на папку → data-action="open-notes-folder-local" → src/core/delegation.js (JMQuT 17.05.2026).
 
 // === FOLDER EDIT MODAL (#20) ===
 let _editingFolder = null;
