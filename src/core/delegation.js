@@ -258,3 +258,63 @@ reg('open-notes-folder', (data) => {
     setTimeout(() => window.openNotesFolder(data.folder), 150);
   }
 });
+// === Phase 1+ (JMQuT) notes.js actions ===
+// open-notes-folder-local — INTRA-tab версія (юзер вже на Notes). Без switchTab
+// + setTimeout — миттєвий рендер. Розрізнення з open-notes-folder вище: cross-tab
+// версія має 150ms лаг бо чекає на рендер вкладки.
+reg('open-notes-folder-local', (data) => {
+  if (typeof window !== 'undefined' && typeof window.openNotesFolder === 'function') {
+    window.openNotesFolder(data.folder);
+  }
+});
+// close-notes-folder — кнопка «← Назад» з folder-view. JS state reset
+// (currentNotesFolder=parent|null + renderNotes()), не DOM-remove.
+reg('close-notes-folder', () => {
+  if (typeof window !== 'undefined' && typeof window.closeNotesFolder === 'function') {
+    window.closeNotesFolder();
+  }
+});
+// open-folder-edit-modal — ··· на картці папки (відкриває модалку редагування).
+// Inline `event.stopPropagation()` ВИДАЛЕНО при міграції: delegation closest()
+// бере найближчий data-action = цей ···, батьківський open-notes-folder-local
+// НЕ triggered (один listener на body — той самий патерн що delete-moment).
+reg('open-folder-edit-modal', (data) => {
+  if (typeof window !== 'undefined' && typeof window.openFolderEditModal === 'function') {
+    window.openFolderEditModal(data.folder);
+  }
+});
+// open-note — тап на тіло нотатки → openNoteView. UUID-immune (data-id string).
+reg('open-note', (data) => {
+  if (!data.id) return;
+  if (typeof window !== 'undefined' && typeof window.openNoteView === 'function') {
+    window.openNoteView(data.id);
+  }
+});
+// open-note-menu — ··· на нотатці. stopPropagation НЕ потрібен (closest бере
+// найближчий = ···, не батьківський open-note).
+reg('open-note-menu', (data) => {
+  if (!data.id) return;
+  if (typeof window !== 'undefined' && typeof window.openNoteMenu === 'function') {
+    window.openNoteMenu(data.id);
+  }
+});
+// select-folder-icon — picker іконки у folder-edit-modal. data-icon = ключ з ALL_FOLDER_ICONS.
+reg('select-folder-icon', (data) => {
+  if (typeof window !== 'undefined' && typeof window.selectFolderIcon === 'function') {
+    window.selectFolderIcon(data.icon);
+  }
+});
+// select-folder-color — picker кольору. data-color = ключ з FOLDER_COLOR_PALETTE.
+reg('select-folder-color', (data) => {
+  if (typeof window !== 'undefined' && typeof window.selectFolderColor === 'function') {
+    window.selectFolderColor(data.color);
+  }
+});
+// open-note-from-search — chat-bubble результат пошуку: 2 виклики поспіль.
+// addNotesChatMsg показує empty user-message (візуально «це твій запит»), потім openNoteView.
+reg('open-note-from-search', (data) => {
+  if (!data.id) return;
+  if (typeof window === 'undefined') return;
+  if (typeof window.addNotesChatMsg === 'function') window.addNotesChatMsg('user', '');
+  if (typeof window.openNoteView === 'function') window.openNoteView(data.id);
+});

@@ -37,6 +37,17 @@
 
 **Версія:** CACHE_NAME `nm-20260517-2245`, commit `JMQuT Phase 2+3`.
 
+### v933+ Event Delegation: notes.js (10 onclick → delegation)
+
+- [ ] Notes-tab → тап на картку папки → відкриває папку (intra-tab без лагу 150мс).
+- [ ] Тап на «···» картки папки → відкриває modal редагування папки (батьківський open-folder не тригериться).
+- [ ] Тап на нотатку → відкриває view-modal.
+- [ ] Тап на «···» нотатки → меню (батьківський open-note не тригериться).
+- [ ] У folder-edit-modal: тап на іконку → виділення активної іконки. Тап на колір → виділення.
+- [ ] Назад з folder-view → закриває папку, рендериться список папок.
+- [ ] **CRITICAL** Папка з апострофом (наприклад «Roman's notes») → відкривається коректно. (Pre-mortem: data-folder тепер `escapeHtml` а не `escapeJsArg` → нема \\' literal у dataset).
+- [ ] Пошук → результат у чаті → тап → відкриває нотатку.
+
 ### v932+ Phase 8 — Council post-audit hardening
 
 - [ ] Видалено мертві функції з health.js (-138 рядків).

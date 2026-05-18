@@ -8662,7 +8662,7 @@ ${recent}`;
       if (header) {
         header.style.display = "flex";
         header.innerHTML = `
-        <button onclick="closeNotesFolder()" style="background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:6px;padding:0;font-size:15px;font-weight:700;color:#1e1040">
+        <button data-action="close-notes-folder" style="background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:6px;padding:0;font-size:15px;font-weight:700;color:#1e1040">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1e1040" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
           ${t("common.back", "\u041D\u0430\u0437\u0430\u0434")}
         </button>
@@ -8680,7 +8680,7 @@ ${recent}`;
           const colorDef = meta.colorKey && FOLDER_COLOR_PALETTE[meta.colorKey] ? FOLDER_COLOR_PALETTE[meta.colorKey] : null;
           const fc = colorDef ? { bg: colorDef.bg, border: "rgba(255,255,255,0.5)" } : getFolderColor(child);
           return `<div class="folder-item-wrap" data-folder="${safeChild}" data-nested="1" style="position:relative;overflow:hidden;border-radius:18px;margin-bottom:var(--card-gap)">
-          <div onclick="openNotesFolder('${safeChild}')" style="cursor:pointer;border-radius:18px;padding:var(--card-pad-y) var(--card-pad-x);background:${fc.bg};border:1.5px solid ${fc.border};box-shadow:0 2px 12px rgba(0,0,0,0.05);display:flex;align-items:center;gap:14px;position:relative;z-index:1">
+          <div data-action="open-notes-folder-local" data-folder="${escapeHtml(child)}" style="cursor:pointer;border-radius:18px;padding:var(--card-pad-y) var(--card-pad-x);background:${fc.bg};border:1.5px solid ${fc.border};box-shadow:0 2px 12px rgba(0,0,0,0.05);display:flex;align-items:center;gap:14px;position:relative;z-index:1">
             <div style="width:42px;height:42px;border-radius:12px;background:rgba(255,255,255,0.4);display:flex;align-items:center;justify-content:center;flex-shrink:0">${getFolderIcon(child)}</div>
             <div style="flex:1;min-width:0;font-size:15px;font-weight:700;color:#1e1040;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(child)}</div>
             <div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex-shrink:0;min-width:36px">
@@ -8737,7 +8737,7 @@ ${recent}`;
       const pinBadge = meta.pinned ? '<div style="position:absolute;top:8px;right:8px;font-size:10px;opacity:0.4">\u{1F4CC}</div>' : "";
       const desc = meta.desc ? `<div style="font-size:11px;color:rgba(30,16,64,0.38);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(meta.desc)}</div>` : `<div style="font-size:12px;color:rgba(30,16,64,0.45);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(preview)}</div>`;
       return `<div class="folder-item-wrap" data-folder="${safeFolder}" style="position:relative;overflow:hidden;border-radius:18px">
-        <div id="folder-item-${key}" onclick="openNotesFolder('${safeFolder}')"
+        <div id="folder-item-${key}" data-action="open-notes-folder-local" data-folder="${escapeHtml(folder)}"
           style="cursor:pointer;border-radius:18px;padding:var(--card-pad-y) var(--card-pad-x);background:${fc.bg};border:1.5px solid ${fc.border};box-shadow:0 2px 12px rgba(0,0,0,0.05);display:flex;align-items:center;gap:14px;position:relative;z-index:1">
           ${pinBadge}
           <div style="width:48px;height:48px;border-radius:14px;background:rgba(255,255,255,0.4);display:flex;align-items:center;justify-content:center;flex-shrink:0">${getFolderIcon(folder)}</div>
@@ -8749,7 +8749,7 @@ ${recent}`;
             <div style="font-size:20px;font-weight:900;color:#1e1040;line-height:1">${items.length}</div>
             <div style="font-size:10px;font-weight:600;color:rgba(30,16,64,0.4)">${t("notes.folder.entries", "\u0437\u0430\u043F\u0438\u0441\u0456\u0432")}</div>
           </div>
-          <div onclick="event.stopPropagation();openFolderEditModal('${safeFolder}')" style="position:absolute;top:8px;right:8px;padding:6px 8px;cursor:pointer;color:rgba(30,16,64,0.35);font-size:18px;line-height:1;border-radius:8px;-webkit-tap-highlight-color:transparent;min-width:32px;text-align:center">\xB7\xB7\xB7</div>
+          <div data-action="open-folder-edit-modal" data-folder="${escapeHtml(folder)}" style="position:absolute;top:8px;right:8px;padding:6px 8px;cursor:pointer;color:rgba(30,16,64,0.35);font-size:18px;line-height:1;border-radius:8px;-webkit-tap-highlight-color:transparent;min-width:32px;text-align:center">\xB7\xB7\xB7</div>
         </div>
       </div>`;
     }).join("") + "</div>";
@@ -8764,11 +8764,11 @@ ${recent}`;
       <div class="note-item-wrap" id="note-wrap-${n.id}" data-id="${n.id}" style="position:relative;overflow:hidden;border-radius:var(--card-radius);margin-bottom:var(--card-gap)">
         <div id="note-item-${n.id}" class="inbox-item"
           style="cursor:default;padding:var(--card-pad-y) var(--card-pad-x);width:100%;box-sizing:border-box;background:${fc.bg};border-color:${fc.border};">
-          <div onclick="openNoteView('${n.id}')" style="cursor:pointer">
+          <div data-action="open-note" data-id="${n.id}" style="cursor:pointer">
             <div style="font-size:15px;line-height:1.55;color:#1e1040;font-weight:500;margin-bottom:5px">${escapeHtml(preview)}</div>
             <div style="display:flex;align-items:center;justify-content:space-between">
               <div style="font-size:12px;color:rgba(30,16,64,0.3)">${formatTime(n.ts)}${n.source === "inbox" ? t("notes.source.from_inbox", " \xB7 \u0437 Inbox") : n.source === "agent" ? t("notes.source.from_owl", " \xB7 \u0447\u0435\u0440\u0435\u0437 OWL") : ""}</div>
-              <div onclick="event.stopPropagation();openNoteMenu('${n.id}')" style="padding:4px 8px;cursor:pointer;color:rgba(30,16,64,0.4);font-size:22px;line-height:1;min-width:32px;text-align:center">\xB7\xB7\xB7</div>
+              <div data-action="open-note-menu" data-id="${n.id}" style="padding:4px 8px;cursor:pointer;color:rgba(30,16,64,0.4);font-size:22px;line-height:1;min-width:32px;text-align:center">\xB7\xB7\xB7</div>
             </div>
           </div>
         </div>
@@ -9211,7 +9211,7 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
     if (!grid) return;
     grid.innerHTML = ALL_FOLDER_ICONS.map((key) => {
       const isActive = key === activeKey;
-      return `<div onclick="selectFolderIcon('${key}')" id="ficon-${key}" style="width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;cursor:pointer;background:${isActive ? "rgba(30,16,64,0.1)" : "rgba(30,16,64,0.03)"};border:1.5px solid ${isActive ? "rgba(30,16,64,0.25)" : "transparent"};transition:all 0.15s">
+      return `<div data-action="select-folder-icon" data-icon="${key}" id="ficon-${key}" style="width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;cursor:pointer;background:${isActive ? "rgba(30,16,64,0.1)" : "rgba(30,16,64,0.03)"};border:1.5px solid ${isActive ? "rgba(30,16,64,0.25)" : "transparent"};transition:all 0.15s">
       ${ICON_SVG[key]}
     </div>`;
     }).join("");
@@ -9231,7 +9231,7 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
     if (!grid) return;
     grid.innerHTML = Object.entries(FOLDER_COLOR_PALETTE).map(([key, val]) => {
       const isActive = key === activeKey;
-      return `<div onclick="selectFolderColor('${key}')" id="fcolor-${key}" title="${val.label}" style="width:36px;height:36px;border-radius:10px;cursor:pointer;background:${val.bg};border:2.5px solid ${isActive ? "rgba(30,16,64,0.4)" : "transparent"};transition:all 0.15s"></div>`;
+      return `<div data-action="select-folder-color" data-color="${key}" id="fcolor-${key}" title="${val.label}" style="width:36px;height:36px;border-radius:10px;cursor:pointer;background:${val.bg};border:2.5px solid ${isActive ? "rgba(30,16,64,0.4)" : "transparent"};transition:all 0.15s"></div>`;
     }).join("");
   }
   function selectFolderColor(key) {
@@ -9418,7 +9418,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
               if (!el) return;
               const div = document.createElement("div");
               div.style.cssText = "display:flex";
-              div.innerHTML = `<div onclick="addNotesChatMsg('user','');openNoteView('${n.id}')" style="max-width:85%;background:rgba(255,255,255,0.12);color:white;border-radius:4px 12px 12px 12px;padding:8px 11px;font-size:14px;line-height:1.5;font-weight:500;cursor:pointer;border:1px solid rgba(255,255,255,0.15)">
+              div.innerHTML = `<div data-action="open-note-from-search" data-id="${n.id}" style="max-width:85%;background:rgba(255,255,255,0.12);color:white;border-radius:4px 12px 12px 12px;padding:8px 11px;font-size:14px;line-height:1.5;font-weight:500;cursor:pointer;border:1px solid rgba(255,255,255,0.15)">
               <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.45);margin-bottom:3px">${escapeHtml(n.folder || t("notes.default_folder", "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435"))}</div>
               ${escapeHtml(preview)}
             </div>`;
@@ -20002,6 +20002,49 @@ ${logLines}
         if (typeof window.openNotesFolder === "function") {
           setTimeout(() => window.openNotesFolder(data.folder), 150);
         }
+      });
+      reg("open-notes-folder-local", (data) => {
+        if (typeof window !== "undefined" && typeof window.openNotesFolder === "function") {
+          window.openNotesFolder(data.folder);
+        }
+      });
+      reg("close-notes-folder", () => {
+        if (typeof window !== "undefined" && typeof window.closeNotesFolder === "function") {
+          window.closeNotesFolder();
+        }
+      });
+      reg("open-folder-edit-modal", (data) => {
+        if (typeof window !== "undefined" && typeof window.openFolderEditModal === "function") {
+          window.openFolderEditModal(data.folder);
+        }
+      });
+      reg("open-note", (data) => {
+        if (!data.id) return;
+        if (typeof window !== "undefined" && typeof window.openNoteView === "function") {
+          window.openNoteView(data.id);
+        }
+      });
+      reg("open-note-menu", (data) => {
+        if (!data.id) return;
+        if (typeof window !== "undefined" && typeof window.openNoteMenu === "function") {
+          window.openNoteMenu(data.id);
+        }
+      });
+      reg("select-folder-icon", (data) => {
+        if (typeof window !== "undefined" && typeof window.selectFolderIcon === "function") {
+          window.selectFolderIcon(data.icon);
+        }
+      });
+      reg("select-folder-color", (data) => {
+        if (typeof window !== "undefined" && typeof window.selectFolderColor === "function") {
+          window.selectFolderColor(data.color);
+        }
+      });
+      reg("open-note-from-search", (data) => {
+        if (!data.id) return;
+        if (typeof window === "undefined") return;
+        if (typeof window.addNotesChatMsg === "function") window.addNotesChatMsg("user", "");
+        if (typeof window.openNoteView === "function") window.openNoteView(data.id);
       });
     }
   });
