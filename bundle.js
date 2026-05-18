@@ -20461,6 +20461,131 @@ ${logLines}
           window.routineAddBlock();
         }
       });
+      reg("call", (data) => {
+        if (typeof window === "undefined") return;
+        const fn = data.fn;
+        if (!fn) return;
+        if (typeof window[fn] === "function") window[fn]();
+      });
+      reg("close-chat-bar", (data) => {
+        if (!data.tab) return;
+        if (typeof window !== "undefined" && typeof window.closeChatBar === "function") {
+          window.closeChatBar(data.tab);
+        }
+      });
+      reg("set-evening-mood", (data) => {
+        if (!data.mood) return;
+        if (typeof window !== "undefined" && typeof window.setEveningMood === "function") {
+          window.setEveningMood(data.mood);
+        }
+      });
+      reg("switch-fin-tab", (data) => {
+        if (!data.type) return;
+        if (typeof window !== "undefined" && typeof window.switchFinTab === "function") {
+          window.switchFinTab(data.type);
+        }
+      });
+      reg("set-owl-mode-setting", (data) => {
+        if (!data.mode) return;
+        if (typeof window !== "undefined" && typeof window.setOwlModeSetting === "function") {
+          window.setOwlModeSetting(data.mode);
+        }
+      });
+      reg("set-moment-mood", (data) => {
+        if (!data.mood) return;
+        if (typeof window !== "undefined" && typeof window.setMomentMood === "function") {
+          window.setMomentMood(data.mood);
+        }
+      });
+      reg("set-language", (data) => {
+        if (!data.lang) return;
+        if (typeof window !== "undefined" && typeof window.setLanguage === "function") {
+          window.setLanguage(data.lang);
+        }
+      });
+      reg("set-fin-period", (data) => {
+        if (!data.period) return;
+        if (typeof window !== "undefined" && typeof window.setFinPeriod === "function") {
+          window.setFinPeriod(data.period);
+        }
+      });
+      reg("set-event-priority", (data) => {
+        if (!data.priority) return;
+        if (typeof window !== "undefined" && typeof window.setEventPriority === "function") {
+          window.setEventPriority(data.priority);
+        }
+      });
+      reg("set-currency", (data) => {
+        if (!data.cur) return;
+        if (typeof window !== "undefined" && typeof window.setCurrency === "function") {
+          window.setCurrency(data.cur);
+        }
+      });
+      reg("select-owl-mode", (data) => {
+        if (!data.mode) return;
+        if (typeof window !== "undefined" && typeof window.selectOwlMode === "function") {
+          window.selectOwlMode(data.mode);
+        }
+      });
+      reg("ob-next", (data) => {
+        if (!data.step) return;
+        if (typeof window !== "undefined" && typeof window.obNext === "function") {
+          window.obNext(data.step);
+        }
+      });
+      reg("switch-prod-tab", (data) => {
+        if (!data.tab) return;
+        if (typeof window !== "undefined" && typeof window.switchProdTab === "function") {
+          window.switchProdTab(data.tab);
+        }
+      });
+      reg("switch-note-view-tab", (data) => {
+        if (!data.tab) return;
+        if (typeof window !== "undefined" && typeof window.switchNoteViewTab === "function") {
+          window.switchNoteViewTab(data.tab);
+        }
+      });
+      reg("set-habit-modal-type", (data) => {
+        if (!data.type) return;
+        if (typeof window !== "undefined" && typeof window.setHabitModalType === "function") {
+          window.setHabitModalType(data.type);
+        }
+      });
+      reg("open-evening-topic", (data) => {
+        if (!data.topic) return;
+        if (typeof window !== "undefined" && typeof window.openEveningTopic === "function") {
+          window.openEveningTopic(data.topic);
+        }
+      });
+      reg("adjust-habit-count", (data) => {
+        if (typeof window === "undefined") return;
+        if (typeof window.adjustHabitCount !== "function") return;
+        const delta = parseInt(data.delta, 10);
+        if (Number.isNaN(delta)) return;
+        window.adjustHabitCount(delta);
+      });
+      reg("open-health-dt-picker", (data) => {
+        if (!data.field || !data.dtType) return;
+        if (typeof window !== "undefined" && typeof window.openHealthDtPicker === "function") {
+          window.openHealthDtPicker(data.field, data.dtType);
+        }
+      });
+      reg("show-toast", (data) => {
+        if (!data.msg) return;
+        if (typeof window !== "undefined" && typeof window.showToast === "function") {
+          window.showToast(data.msg);
+        }
+      });
+      reg("close-settings-open-slides-tour", () => {
+        if (typeof window === "undefined") return;
+        if (typeof window.closeSettings === "function") window.closeSettings();
+        if (typeof window.openSlidesTour === "function") window.openSlidesTour();
+      });
+      reg("close-settings-open-update-slides", () => {
+        if (typeof window === "undefined") return;
+        if (typeof window.closeSettings === "function") window.closeSettings();
+        if (typeof window.openUpdateSlides === "function") window.openUpdateSlides();
+      });
     }
   });
 

@@ -134,7 +134,7 @@
       <div style="font-size:15px;color:rgba(30,16,64,0.45);margin-bottom:20px">Агент звертатиметься до тебе на ім'я</div>
       <input id="ob-name" type="text" placeholder="Ім'я або нікнейм" autocomplete="off" style="width:100%;padding:16px;background:rgba(255,255,255,0.85);border:1.5px solid rgba(30,16,64,0.14);border-radius:16px;font-size:18px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:12px">
       <input id="ob-age" type="number" placeholder="Вік (необов'язково)" style="width:100%;padding:16px;background:rgba(255,255,255,0.85);border:1.5px solid rgba(30,16,64,0.14);border-radius:16px;font-size:18px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:24px">
-      <button onclick="obNext(1)" style="width:100%;background:rgba(30,16,64,0.88);border:none;border-radius:16px;padding:16px;font-size:17px;font-weight:700;color:white;cursor:pointer">Далі →</button>
+      <button data-action="ob-next" data-step="1" style="width:100%;background:rgba(30,16,64,0.88);border:none;border-radius:16px;padding:16px;font-size:17px;font-weight:700;color:white;cursor:pointer">Далі →</button>
     </div>
 
     <div id="ob-step-2" style="display:none;width:100%;max-width:360px">
@@ -142,8 +142,8 @@
       <div style="font-size:15px;color:rgba(30,16,64,0.45);margin-bottom:6px">Потрібен для роботи агента</div>
       <div style="font-size:14px;color:rgba(194,121,10,0.85);margin-bottom:20px;line-height:1.5">platform.openai.com → API keys → Create new key</div>
       <input id="ob-key" type="password" placeholder="sk-proj-..." autocomplete="off" style="width:100%;padding:16px;background:rgba(255,255,255,0.85);border:1.5px solid rgba(30,16,64,0.14);border-radius:16px;font-size:16px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:24px">
-      <button onclick="obNext(2)" style="width:100%;background:rgba(30,16,64,0.88);border:none;border-radius:16px;padding:16px;font-size:17px;font-weight:700;color:white;cursor:pointer;margin-bottom:10px">Далі →</button>
-      <button onclick="obSkipKey()" style="width:100%;background:none;border:none;font-size:15px;color:rgba(30,16,64,0.4);cursor:pointer;padding:8px">Пропустити, додам пізніше</button>
+      <button data-action="ob-next" data-step="2" style="width:100%;background:rgba(30,16,64,0.88);border:none;border-radius:16px;padding:16px;font-size:17px;font-weight:700;color:white;cursor:pointer;margin-bottom:10px">Далі →</button>
+      <button data-action="call" data-fn="obSkipKey" style="width:100%;background:none;border:none;font-size:15px;color:rgba(30,16,64,0.4);cursor:pointer;padding:8px">Пропустити, додам пізніше</button>
     </div>
 
     <!-- Вибір моделі OWL -->
@@ -151,7 +151,7 @@
       <div style="font-size:20px;font-weight:700;color:#1e1040;margin-bottom:6px">Обери стиль OWL</div>
       <div style="font-size:15px;color:rgba(30,16,64,0.45);margin-bottom:24px">Як агент буде спілкуватись з тобою?</div>
       <div id="owl-mode-cards" style="display:flex;flex-direction:column;gap:12px;margin-bottom:28px">
-        <div onclick="selectOwlMode('coach')" id="owl-card-coach" class="owl-mode-card" style="padding:16px;background:rgba(255,255,255,0.75);border:2px solid rgba(30,16,64,0.09);border-radius:16px;cursor:pointer;transition:all 0.2s">
+        <div data-action="select-owl-mode" data-mode="coach" id="owl-card-coach" class="owl-mode-card" style="padding:16px;background:rgba(255,255,255,0.75);border:2px solid rgba(30,16,64,0.09);border-radius:16px;cursor:pointer;transition:all 0.2s">
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
             <div style="width:32px;height:32px;border-radius:9px;background:rgba(239,68,68,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0">
               <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
@@ -161,7 +161,7 @@
           <div style="font-size:14px;font-weight:600;color:#1e1040;margin-bottom:2px">Прямий і жорсткий</div>
           <div style="font-size:13px;color:rgba(30,16,64,0.5)">Підштовхує до дії, не дає відмовок, говорить як є</div>
         </div>
-        <div onclick="selectOwlMode('partner')" id="owl-card-partner" class="owl-mode-card" style="padding:16px;background:rgba(255,255,255,0.75);border:2px solid rgba(30,16,64,0.09);border-radius:16px;cursor:pointer;transition:all 0.2s">
+        <div data-action="select-owl-mode" data-mode="partner" id="owl-card-partner" class="owl-mode-card" style="padding:16px;background:rgba(255,255,255,0.75);border:2px solid rgba(30,16,64,0.09);border-radius:16px;cursor:pointer;transition:all 0.2s">
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
             <div style="width:32px;height:32px;border-radius:9px;background:rgba(59,130,246,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0">
               <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
@@ -171,7 +171,7 @@
           <div style="font-size:14px;font-weight:600;color:#1e1040;margin-bottom:2px">Збалансований і підтримуючий</div>
           <div style="font-size:13px;color:rgba(30,16,64,0.5)">Як розумний друг — слухає, радить, не осуджує</div>
         </div>
-        <div onclick="selectOwlMode('mentor')" id="owl-card-mentor" class="owl-mode-card" style="padding:16px;background:rgba(255,255,255,0.75);border:2px solid rgba(30,16,64,0.09);border-radius:16px;cursor:pointer;transition:all 0.2s">
+        <div data-action="select-owl-mode" data-mode="mentor" id="owl-card-mentor" class="owl-mode-card" style="padding:16px;background:rgba(255,255,255,0.75);border:2px solid rgba(30,16,64,0.09);border-radius:16px;cursor:pointer;transition:all 0.2s">
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
             <div style="width:32px;height:32px;border-radius:9px;background:rgba(194,121,10,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0">
               <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#c2790a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M12 14c-5 0-8 2.5-8 4v1h16v-1c0-1.5-3-4-8-4z"/><circle cx="10" cy="7.2" r=".8" fill="#c2790a"/><circle cx="14" cy="7.2" r=".8" fill="#c2790a"/></svg>
@@ -182,7 +182,7 @@
           <div style="font-size:13px;color:rgba(30,16,64,0.5)">Дивиться ширше, задає правильні питання, допомагає думати</div>
         </div>
       </div>
-      <button onclick="obNext('owl')" style="width:100%;background:rgba(30,16,64,0.88);border:none;border-radius:16px;padding:16px;font-size:17px;font-weight:700;color:white;cursor:pointer">Далі →</button>
+      <button data-action="ob-next" data-step="owl" style="width:100%;background:rgba(30,16,64,0.88);border:none;border-radius:16px;padding:16px;font-size:17px;font-weight:700;color:white;cursor:pointer">Далі →</button>
     </div>
 
     <div id="ob-step-consent" style="display:none;width:100%;max-width:360px">
@@ -225,14 +225,14 @@
         NeverMind не є медичним або фінансовим сервісом.<br>Використовуй дані агента як рекомендації, не як поради спеціаліста.
       </div>
 
-      <button onclick="obFinish()" style="width:100%;background:rgba(30,16,64,0.88);border:none;border-radius:16px;padding:16px;font-size:17px;font-weight:700;color:white;cursor:pointer">Погоджуюсь і починаю →</button>
+      <button data-action="call" data-fn="obFinish" style="width:100%;background:rgba(30,16,64,0.88);border:none;border-radius:16px;padding:16px;font-size:17px;font-weight:700;color:white;cursor:pointer">Погоджуюсь і починаю →</button>
     </div>
 
     <div id="ob-step-3" style="display:none;width:100%;max-width:360px;text-align:center">
       <div style="font-size:46px;margin-bottom:16px">🎯</div>
       <div style="font-size:20px;font-weight:700;color:#1e1040;margin-bottom:10px" id="ob-welcome-text">Привіт!</div>
       <div style="font-size:15px;color:rgba(30,16,64,0.5);line-height:1.6;margin-bottom:28px">Агент готовий. Пиши в Inbox будь-що — думки, задачі, ідеї. Він розбереться.</div>
-      <button onclick="obFinish()" style="width:100%;background:rgba(30,16,64,0.88);border:none;border-radius:16px;padding:16px;font-size:17px;font-weight:700;color:white;cursor:pointer">Почати →</button>
+      <button data-action="call" data-fn="obFinish" style="width:100%;background:rgba(30,16,64,0.88);border:none;border-radius:16px;padding:16px;font-size:17px;font-weight:700;color:white;cursor:pointer">Почати →</button>
     </div>
   </div>
 </div>
@@ -257,7 +257,7 @@
           </div>
           <div class="header-actions">
             <button class="icon-btn" data-action="open-help" data-tab="inbox">?</button>
-            <span id="deploy-version" data-commit="4b34f534" data-source="claude/start-session-JMQuT" data-branch="main" onclick="showDeployInfo()" style="font-size:10px;font-weight:700;color:rgba(139,105,20,0.55);letter-spacing:0.3px;padding:2px 6px;background:rgba(139,105,20,0.1);border-radius:6px;user-select:none;cursor:pointer">v932 · 18.05 18:23</span>
+            <span id="deploy-version" data-commit="4b34f534" data-source="claude/start-session-JMQuT" data-branch="main" data-action="call" data-fn="showDeployInfo" style="font-size:10px;font-weight:700;color:rgba(139,105,20,0.55);letter-spacing:0.3px;padding:2px 6px;background:rgba(139,105,20,0.1);border-radius:6px;user-select:none;cursor:pointer">v932 · 18.05 18:23</span>
             <button class="icon-btn" data-action="open-settings" title="Налаштування">⚙️</button>
           </div>
         </div>
@@ -266,7 +266,7 @@
         <div id="owl-board" class="owl-board-sticky" style="display:none;padding:4px 14px 0">
 
           <!-- Inbox board — read-only табло (чат через чат-бар знизу) -->
-          <div id="owl-tab-collapsed-inbox" class="owl-collapsed" style="display:none" onclick="toggleOwlTabChat('inbox')">
+          <div id="owl-tab-collapsed-inbox" class="owl-collapsed" style="display:none" data-action="toggle-owl-collapsed" data-tab="inbox">
             <div class="owl-collapsed-avatar">🦉</div>
             <div class="owl-collapsed-text" id="owl-tab-ctext-inbox"></div>
           </div>
@@ -283,9 +283,9 @@
             </div>
           </div>
           <div class="owl-chips-wrapper" id="owl-tab-chips-wrap-inbox">
-            <button class="owl-chips-arrow owl-chips-arrow-left" id="owl-tab-chips-left-inbox" onclick="scrollOwlTabChips('inbox',-1)">‹</button>
+            <button class="owl-chips-arrow owl-chips-arrow-left" id="owl-tab-chips-left-inbox" data-action="scroll-owl-chips" data-tab="inbox" data-dir="-1">‹</button>
             <div id="owl-tab-chips-inbox" class="owl-speech-chips"></div>
-            <button class="owl-chips-arrow owl-chips-arrow-right" id="owl-tab-chips-right-inbox" onclick="scrollOwlTabChips('inbox',1)">›</button>
+            <button class="owl-chips-arrow owl-chips-arrow-right" id="owl-tab-chips-right-inbox" data-action="scroll-owl-chips" data-tab="inbox" data-dir="1">›</button>
           </div>
 
         </div>
@@ -308,7 +308,7 @@
         <div class="page-header" style="position:relative;top:auto">
           <span class="page-title">Продуктивність</span>
           <div class="header-actions">
-            <button class="icon-btn" id="prod-add-btn" onclick="openAddTask()">
+            <button class="icon-btn" id="prod-add-btn" data-action="call" data-fn="openAddTask">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
             </button>
             <button class="icon-btn" data-action="open-help" data-tab="tasks">?</button>
@@ -332,7 +332,7 @@
               <div id="prod-tab-indicator" style="position:absolute;top:4px;left:4px;width:calc(50% - 4px);height:calc(100% - 8px);background:#ffffff;border-radius:14px;border:2px solid rgba(234,88,12,0.6);box-shadow:0 4px 10px rgba(30,16,64,0.14), 0 1px 2px rgba(30,16,64,0.06);box-sizing:border-box;pointer-events:none;z-index:0;transform:translateX(0);transition:transform 0.3s cubic-bezier(0.4,0,0.2,1), border-color 0.3s ease;will-change:transform"></div>
 
               <!-- Половинка Задачі -->
-              <div id="prod-tab-tasks" onclick="switchProdTab('tasks')"
+              <div id="prod-tab-tasks" data-action="switch-prod-tab" data-tab="tasks"
                 style="flex:1;padding:7px 12px;cursor:pointer;position:relative;z-index:1">
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px">
                   <div style="font-size:13px;font-weight:800;color:#ea580c">Задачі</div>
@@ -342,7 +342,7 @@
               </div>
 
               <!-- Половинка Звички -->
-              <div id="prod-tab-habits" onclick="switchProdTab('habits')"
+              <div id="prod-tab-habits" data-action="switch-prod-tab" data-tab="habits"
                 style="flex:1;padding:7px 12px;cursor:pointer;position:relative;z-index:1">
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px">
                   <div style="font-size:13px;font-weight:800;color:rgba(30,16,64,0.3)">Звички</div>
@@ -355,7 +355,7 @@
             <!-- Об'єднаний блок: Календар + Розпорядок (PJi7l 08.05) — drum-style глибина як у перемикачі -->
             <div style="width:120px;border-radius:16px;cursor:default;background:rgba(255,255,255,0.5);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1.5px solid rgba(30,16,64,0.12);box-shadow:inset 0 3px 8px rgba(30,16,64,0.14), inset 0 -2px 6px rgba(30,16,64,0.08), inset 3px 0 8px rgba(30,16,64,0.06), inset -3px 0 8px rgba(30,16,64,0.06), 0 1px 0 rgba(255,255,255,0.6);display:flex;align-items:stretch;flex-shrink:0;-webkit-tap-highlight-color:transparent;overflow:hidden">
               <!-- Ліва половина — Календар -->
-              <div onclick="openCalendarModal()" style="flex:1;padding:8px 0;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background 0.15s">
+              <div data-action="call" data-fn="openCalendarModal" style="flex:1;padding:8px 0;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background 0.15s">
                 <svg id="cal-icon-svg" width="36" height="36" viewBox="0 0 28 28" fill="none" style="filter:drop-shadow(0 4px 5px rgba(30,16,64,0.22))">
                   <rect x="2" y="4" width="24" height="22" rx="4" stroke="#ea580c" stroke-width="2" fill="#ffffff"/>
                   <line x1="2" y1="10" x2="26" y2="10" stroke="#ea580c" stroke-width="1.5"/>
@@ -367,7 +367,7 @@
               <!-- Тонкий розділювач -->
               <div style="width:1px;background:rgba(30,16,64,0.10);margin:8px 0"></div>
               <!-- Права половина — Розпорядок -->
-              <div onclick="openRoutineModal()" style="flex:1;padding:8px 0;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background 0.15s">
+              <div data-action="call" data-fn="openRoutineModal" style="flex:1;padding:8px 0;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background 0.15s">
                 <svg width="36" height="36" viewBox="0 0 28 28" fill="none" style="filter:drop-shadow(0 4px 5px rgba(30,16,64,0.22))">
                   <rect x="4" y="2" width="18" height="24" rx="3" stroke="#ea580c" stroke-width="1.8" fill="#ffffff"/>
                   <line x1="8" y1="9" x2="18" y2="9" stroke="#ea580c" stroke-width="1.3" stroke-linecap="round" opacity="0.5"/>
@@ -422,7 +422,7 @@
         <div class="page-header" style="padding-left:0;padding-right:0">
           <span class="page-title">Нотатки</span>
           <div class="header-actions">
-            <button class="icon-btn" onclick="openAddNote()" title="Новий запис">
+            <button class="icon-btn" data-action="call" data-fn="openAddNote" title="Новий запис">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
             </button>
             <button class="icon-btn" data-action="open-help" data-tab="notes">?</button>
@@ -538,11 +538,11 @@
         <div style="background:rgba(255,255,255,0.72);border:1.5px solid rgba(255,255,255,0.75);border-radius:16px;padding:13px 14px;margin-bottom:10px">
           <div style="font-size:10px;font-weight:800;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px">Як пройшов день?</div>
           <div style="display:flex;gap:8px;justify-content:center" id="evening-mood-row">
-            <div onclick="setEveningMood('bad')" id="evening-mood-bad" style="width:44px;height:44px;border-radius:50%;background:rgba(30,16,64,0.06);display:flex;align-items:center;justify-content:center;font-size:24px;opacity:0.4;cursor:pointer;transition:all 0.2s">😔</div>
-            <div onclick="setEveningMood('meh')" id="evening-mood-meh" style="width:44px;height:44px;border-radius:50%;background:rgba(30,16,64,0.06);display:flex;align-items:center;justify-content:center;font-size:24px;opacity:0.4;cursor:pointer;transition:all 0.2s">😐</div>
-            <div onclick="setEveningMood('ok')" id="evening-mood-ok" style="width:44px;height:44px;border-radius:50%;background:rgba(30,16,64,0.06);display:flex;align-items:center;justify-content:center;font-size:24px;opacity:0.4;cursor:pointer;transition:all 0.2s">🙂</div>
-            <div onclick="setEveningMood('good')" id="evening-mood-good" style="width:44px;height:44px;border-radius:50%;background:rgba(30,16,64,0.06);display:flex;align-items:center;justify-content:center;font-size:24px;opacity:0.4;cursor:pointer;transition:all 0.2s">😄</div>
-            <div onclick="setEveningMood('fire')" id="evening-mood-fire" style="width:44px;height:44px;border-radius:50%;background:rgba(30,16,64,0.06);display:flex;align-items:center;justify-content:center;font-size:24px;opacity:0.4;cursor:pointer;transition:all 0.2s">🔥</div>
+            <div data-action="set-evening-mood" data-mood="bad" id="evening-mood-bad" style="width:44px;height:44px;border-radius:50%;background:rgba(30,16,64,0.06);display:flex;align-items:center;justify-content:center;font-size:24px;opacity:0.4;cursor:pointer;transition:all 0.2s">😔</div>
+            <div data-action="set-evening-mood" data-mood="meh" id="evening-mood-meh" style="width:44px;height:44px;border-radius:50%;background:rgba(30,16,64,0.06);display:flex;align-items:center;justify-content:center;font-size:24px;opacity:0.4;cursor:pointer;transition:all 0.2s">😐</div>
+            <div data-action="set-evening-mood" data-mood="ok" id="evening-mood-ok" style="width:44px;height:44px;border-radius:50%;background:rgba(30,16,64,0.06);display:flex;align-items:center;justify-content:center;font-size:24px;opacity:0.4;cursor:pointer;transition:all 0.2s">🙂</div>
+            <div data-action="set-evening-mood" data-mood="good" id="evening-mood-good" style="width:44px;height:44px;border-radius:50%;background:rgba(30,16,64,0.06);display:flex;align-items:center;justify-content:center;font-size:24px;opacity:0.4;cursor:pointer;transition:all 0.2s">😄</div>
+            <div data-action="set-evening-mood" data-mood="fire" id="evening-mood-fire" style="width:44px;height:44px;border-radius:50%;background:rgba(30,16,64,0.06);display:flex;align-items:center;justify-content:center;font-size:24px;opacity:0.4;cursor:pointer;transition:all 0.2s">🔥</div>
           </div>
         </div>
 
@@ -568,21 +568,21 @@
 
         <!-- Дві CTA (Фаза 6 Вечора 2.0): замість форм — живий діалог з совою у чат-барі -->
         <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:10px">
-          <button onclick="openEveningTopic('tomorrow')" style="display:flex;align-items:center;gap:14px;background:linear-gradient(135deg,rgba(255,236,196,0.95),rgba(253,186,116,0.85));border:1.5px solid rgba(194,121,10,0.4);border-radius:18px;padding:16px 18px;cursor:pointer;font-family:inherit;text-align:left;width:100%">
+          <button data-action="open-evening-topic" data-topic="tomorrow" style="display:flex;align-items:center;gap:14px;background:linear-gradient(135deg,rgba(255,236,196,0.95),rgba(253,186,116,0.85));border:1.5px solid rgba(194,121,10,0.4);border-radius:18px;padding:16px 18px;cursor:pointer;font-family:inherit;text-align:left;width:100%">
             <div style="font-size:28px;line-height:1">📅</div>
             <div style="flex:1">
               <div style="font-size:15px;font-weight:800;color:#5b3d12;letter-spacing:-0.01em">Поговорити про завтра</div>
               <div style="font-size:12px;font-weight:600;color:rgba(91,61,18,0.65);margin-top:2px">Плани, події, задачі — сова запише</div>
             </div>
           </button>
-          <button onclick="openEveningTopic('diary')" style="display:flex;align-items:center;gap:14px;background:rgba(255,255,255,0.78);border:1.5px solid rgba(255,255,255,0.8);border-radius:18px;padding:16px 18px;cursor:pointer;font-family:inherit;text-align:left;width:100%">
+          <button data-action="open-evening-topic" data-topic="diary" style="display:flex;align-items:center;gap:14px;background:rgba(255,255,255,0.78);border:1.5px solid rgba(255,255,255,0.8);border-radius:18px;padding:16px 18px;cursor:pointer;font-family:inherit;text-align:left;width:100%">
             <div style="font-size:28px;line-height:1">📔</div>
             <div style="flex:1">
               <div style="font-size:15px;font-weight:800;color:#1e1040;letter-spacing:-0.01em">Записати свій день</div>
               <div style="font-size:12px;font-weight:600;color:rgba(30,16,64,0.55);margin-top:2px">Розкажи як воно — сова розкладе</div>
             </div>
           </button>
-          <button onclick="closeEveningDay()" style="display:flex;align-items:center;gap:14px;background:rgba(12,6,28,0.85);border:1.5px solid rgba(251,191,36,0.4);border-radius:18px;padding:16px 18px;cursor:pointer;font-family:inherit;text-align:left;width:100%">
+          <button data-action="call" data-fn="closeEveningDay" style="display:flex;align-items:center;gap:14px;background:rgba(12,6,28,0.85);border:1.5px solid rgba(251,191,36,0.4);border-radius:18px;padding:16px 18px;cursor:pointer;font-family:inherit;text-align:left;width:100%">
             <div style="font-size:28px;line-height:1">🌙</div>
             <div style="flex:1">
               <div style="font-size:15px;font-weight:800;color:white;letter-spacing:-0.01em">Закрити день</div>
@@ -610,9 +610,9 @@
         <div class="page-header" style="padding-left:0;padding-right:0">
           <span class="page-title">Фінанси</span>
           <div class="header-actions">
-            <button class="icon-btn" onclick="openAddTransaction()" style="font-size:20px;font-weight:300;color:rgba(30,16,64,0.5)">+</button>
+            <button class="icon-btn" data-action="call" data-fn="openAddTransaction" style="font-size:20px;font-weight:300;color:rgba(30,16,64,0.5)">+</button>
             <button class="icon-btn" data-action="open-help" data-tab="finance">?</button>
-            <button class="icon-btn" onclick="openFinAnalytics()" title="Аналітика"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></button>
+            <button class="icon-btn" data-action="call" data-fn="openFinAnalytics" title="Аналітика"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></button>
             <button class="icon-btn" data-action="open-settings">⚙️</button>
           </div>
         </div>
@@ -625,16 +625,16 @@
 
         <!-- Перемикач тип: Витрати / Доходи / Баланс -->
         <div style="display:flex;background:rgba(30,16,64,0.06);border-radius:12px;padding:3px;gap:3px;margin-bottom:12px">
-          <div id="fin-tab-expense" onclick="switchFinTab('expense')" style="flex:1;text-align:center;padding:8px;font-size:14px;font-weight:700;border-radius:10px;cursor:pointer;background:white;color:#c2410c;box-shadow:0 2px 8px rgba(0,0,0,0.08)">Витрати</div>
-          <div id="fin-tab-income" onclick="switchFinTab('income')" style="flex:1;text-align:center;padding:8px;font-size:14px;font-weight:700;border-radius:10px;cursor:pointer;color:rgba(30,16,64,0.4)">Доходи</div>
-          <div id="fin-tab-balance" onclick="switchFinTab('balance')" style="flex:1;text-align:center;padding:8px;font-size:14px;font-weight:700;border-radius:10px;cursor:pointer;color:rgba(30,16,64,0.4)">Баланс</div>
+          <div id="fin-tab-expense" data-action="switch-fin-tab" data-type="expense" style="flex:1;text-align:center;padding:8px;font-size:14px;font-weight:700;border-radius:10px;cursor:pointer;background:white;color:#c2410c;box-shadow:0 2px 8px rgba(0,0,0,0.08)">Витрати</div>
+          <div id="fin-tab-income" data-action="switch-fin-tab" data-type="income" style="flex:1;text-align:center;padding:8px;font-size:14px;font-weight:700;border-radius:10px;cursor:pointer;color:rgba(30,16,64,0.4)">Доходи</div>
+          <div id="fin-tab-balance" data-action="switch-fin-tab" data-type="balance" style="flex:1;text-align:center;padding:8px;font-size:14px;font-weight:700;border-radius:10px;cursor:pointer;color:rgba(30,16,64,0.4)">Баланс</div>
         </div>
 
         <!-- Перемикач період -->
         <div style="display:flex;gap:6px;margin-bottom:12px">
-          <button id="fin-period-week" onclick="setFinPeriod('week')" style="padding:6px 14px;border-radius:20px;border:1.5px solid rgba(194,65,12,0.2);background:rgba(194,65,12,0.05);font-size:13px;font-weight:700;color:rgba(30,16,64,0.5);cursor:pointer;font-family:inherit">Тиждень</button>
-          <button id="fin-period-month" onclick="setFinPeriod('month')" style="padding:6px 14px;border-radius:20px;border:1.5px solid #c2410c;background:rgba(194,65,12,0.1);font-size:13px;font-weight:700;color:#c2410c;cursor:pointer;font-family:inherit">Місяць</button>
-          <button id="fin-period-3months" onclick="setFinPeriod('3months')" style="padding:6px 14px;border-radius:20px;border:1.5px solid rgba(194,65,12,0.2);background:rgba(194,65,12,0.05);font-size:13px;font-weight:700;color:rgba(30,16,64,0.5);cursor:pointer;font-family:inherit">3 місяці</button>
+          <button id="fin-period-week" data-action="set-fin-period" data-period="week" style="padding:6px 14px;border-radius:20px;border:1.5px solid rgba(194,65,12,0.2);background:rgba(194,65,12,0.05);font-size:13px;font-weight:700;color:rgba(30,16,64,0.5);cursor:pointer;font-family:inherit">Тиждень</button>
+          <button id="fin-period-month" data-action="set-fin-period" data-period="month" style="padding:6px 14px;border-radius:20px;border:1.5px solid #c2410c;background:rgba(194,65,12,0.1);font-size:13px;font-weight:700;color:#c2410c;cursor:pointer;font-family:inherit">Місяць</button>
+          <button id="fin-period-3months" data-action="set-fin-period" data-period="3months" style="padding:6px 14px;border-radius:20px;border:1.5px solid rgba(194,65,12,0.2);background:rgba(194,65,12,0.05);font-size:13px;font-weight:700;color:rgba(30,16,64,0.5);cursor:pointer;font-family:inherit">3 місяці</button>
         </div>
 
         <!-- Зведення — сума + бюджет -->
@@ -673,7 +673,7 @@
         <div id="fin-cat-budgets-block" style="background:rgba(255,255,255,0.6);border:1.5px solid rgba(255,255,255,0.8);border-radius:18px;padding:14px;margin-bottom:12px">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
             <div style="font-size:12px;font-weight:800;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.08em">Бюджет по категоріях</div>
-            <button onclick="openFinBudgetModal()" style="font-size:13px;font-weight:700;color:#c2410c;background:rgba(194,65,12,0.08);border:none;border-radius:8px;padding:4px 10px;cursor:pointer">✎</button>
+            <button data-action="call" data-fn="openFinBudgetModal" style="font-size:13px;font-weight:700;color:#c2410c;background:rgba(194,65,12,0.08);border:none;border-radius:8px;padding:4px 10px;cursor:pointer">✎</button>
           </div>
           <div id="fin-cat-budgets"></div>
         </div>
@@ -682,7 +682,7 @@
         <div style="background:rgba(255,255,255,0.6);border:1.5px solid rgba(255,255,255,0.8);border-radius:18px;padding:14px;margin-bottom:12px">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
             <div style="font-size:12px;font-weight:800;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.08em">Операції</div>
-            <button onclick="openAddTransaction()" style="font-size:13px;font-weight:700;color:#c2410c;background:rgba(194,65,12,0.08);border:none;border-radius:8px;padding:4px 10px;cursor:pointer">+ додати</button>
+            <button data-action="call" data-fn="openAddTransaction" style="font-size:13px;font-weight:700;color:#c2410c;background:rgba(194,65,12,0.08);border:none;border-radius:8px;padding:4px 10px;cursor:pointer">+ додати</button>
           </div>
           <div id="fin-transactions"></div>
         </div>
@@ -695,13 +695,13 @@
 <!-- AI BARS — поза .page щоб position:fixed працював на iOS -->
 <div id="inbox-ai-bar" class="ai-bar-new" style="display:none;bottom:calc(var(--tabbar-h, 83px) + 4px)">
   <div class="ai-bar-chat-window" id="inbox-chat-window">
-    <div class="ai-bar-chat-handle" onclick="closeChatBar('inbox')"></div>
+    <div class="ai-bar-chat-handle" data-action="close-chat-bar" data-tab="inbox"></div>
     <div class="ai-bar-messages" id="inbox-chat-messages">
     </div>
   </div>
   <div class="ai-bar-input-box">
     <!-- Камера зліва -->
-    <button style="width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,0.12);border:none;display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;-webkit-tap-highlight-color:transparent" onclick="showToast('Фото — скоро 📷')">
+    <button style="width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,0.12);border:none;display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;-webkit-tap-highlight-color:transparent" data-action="show-toast" data-msg="Фото — скоро 📷">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.55)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
     </button>
     <textarea id="inbox-input" rows="1" placeholder="Напиши що завгодно — Агент розбереться…"
@@ -713,14 +713,14 @@
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.55)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
     </button>
     <!-- Відправка -->
-    <button class="ai-bar-send-btn" id="ai-send-btn" onclick="sendToAI()">
+    <button class="ai-bar-send-btn" id="ai-send-btn" data-action="call" data-fn="sendToAI">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1e1040" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
     </button>
   </div>
 </div>
 <div id="finance-ai-bar" class="ai-bar-new" style="display:none;bottom:calc(var(--tabbar-h, 83px) + 4px)">
   <div class="ai-bar-chat-window" id="finance-chat-window">
-    <div class="ai-bar-chat-handle" onclick="closeChatBar('finance')"></div>
+    <div class="ai-bar-chat-handle" data-action="close-chat-bar" data-tab="finance"></div>
     <div class="ai-bar-messages" id="finance-chat-messages"></div>
   </div>
   <div class="ai-bar-input-box">
@@ -728,14 +728,14 @@
       maxlength="500" oninput="autoResizeTextarea(this)"
       onfocus="openChatBar('finance')"
       onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendFinanceBarMessage()}"></textarea>
-    <button class="ai-bar-send-btn" id="finance-send-btn" onclick="sendFinanceBarMessage()">
+    <button class="ai-bar-send-btn" id="finance-send-btn" data-action="call" data-fn="sendFinanceBarMessage">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1e1040" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
     </button>
   </div>
 </div>
 <div id="notes-ai-bar" class="ai-bar-new" style="display:none;bottom:calc(var(--tabbar-h, 83px) + 4px)">
   <div class="ai-bar-chat-window" id="notes-chat-window">
-    <div class="ai-bar-chat-handle" onclick="closeChatBar('notes')"></div>
+    <div class="ai-bar-chat-handle" data-action="close-chat-bar" data-tab="notes"></div>
     <div class="ai-bar-messages" id="notes-chat-messages"></div>
   </div>
   <div class="ai-bar-input-box">
@@ -743,7 +743,7 @@
       maxlength="500" oninput="autoResizeTextarea(this)"
       onfocus="openChatBar('notes')"
       onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendNotesBarMessage()}"></textarea>
-    <button class="ai-bar-send-btn" id="notes-send-btn" onclick="sendNotesBarMessage()">
+    <button class="ai-bar-send-btn" id="notes-send-btn" data-action="call" data-fn="sendNotesBarMessage">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1e1040" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
     </button>
   </div>
@@ -751,7 +751,7 @@
 <div id="tasks-ai-bar" class="ai-bar-new" style="display:none;bottom:calc(var(--tabbar-h, 83px) + 4px)">
   <!-- Чат-вікно (з'являється при фокусі) -->
   <div class="ai-bar-chat-window" id="tasks-chat-window">
-    <div class="ai-bar-chat-handle" onclick="closeChatBar('tasks')"></div>
+    <div class="ai-bar-chat-handle" data-action="close-chat-bar" data-tab="tasks"></div>
     <div class="ai-bar-messages" id="tasks-chat-messages"></div>
   </div>
   <!-- Поле вводу -->
@@ -760,14 +760,14 @@
       maxlength="500" oninput="autoResizeTextarea(this)"
       onfocus="openChatBar('tasks')"
       onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendTasksBarMessage()}"></textarea>
-    <button class="ai-bar-send-btn" id="tasks-send-btn" onclick="sendTasksBarMessage()">
+    <button class="ai-bar-send-btn" id="tasks-send-btn" data-action="call" data-fn="sendTasksBarMessage">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1e1040" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
     </button>
   </div>
 </div>
 <div id="me-ai-bar" class="ai-bar-new" style="display:none;bottom:calc(var(--tabbar-h, 83px) + 4px)">
       <div class="ai-bar-chat-window" id="me-chat-window">
-        <div class="ai-bar-chat-handle" onclick="closeChatBar('me')"></div>
+        <div class="ai-bar-chat-handle" data-action="close-chat-bar" data-tab="me"></div>
         <div class="ai-bar-messages" id="me-chat-messages"></div>
       </div>
       <div class="ai-bar-input-box">
@@ -775,14 +775,14 @@
           maxlength="500" oninput="autoResizeTextarea(this)"
           onfocus="openChatBar('me')"
           onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMeChatMessage()}"></textarea>
-        <button class="ai-bar-send-btn" id="me-send-btn" onclick="sendMeChatMessage()">
+        <button class="ai-bar-send-btn" id="me-send-btn" data-action="call" data-fn="sendMeChatMessage">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1e1040" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
         </button>
       </div>
     </div>
 <div id="evening-ai-bar" class="ai-bar-new" style="display:none;bottom:calc(var(--tabbar-h, 83px) + 4px)">
       <div class="ai-bar-chat-window" id="evening-chat-window">
-        <div class="ai-bar-chat-handle" onclick="closeChatBar('evening')"></div>
+        <div class="ai-bar-chat-handle" data-action="close-chat-bar" data-tab="evening"></div>
         <div class="ai-bar-messages" id="evening-bar-messages"></div>
       </div>
       <div class="ai-bar-input-box">
@@ -790,7 +790,7 @@
           maxlength="500" oninput="autoResizeTextarea(this)"
           onfocus="openChatBar('evening')"
           onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendEveningBarMessage()}"></textarea>
-        <button class="ai-bar-send-btn" id="evening-send-btn" onclick="sendEveningBarMessage()">
+        <button class="ai-bar-send-btn" id="evening-send-btn" data-action="call" data-fn="sendEveningBarMessage">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1e1040" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
         </button>
       </div>
@@ -804,7 +804,7 @@
         <!-- Вкладки будуються динамічно через rebuildDrumTabbar() -->
       </div>
     </div>
-    <div class="drum-plus-btn" onclick="openTabSelector()">
+    <div class="drum-plus-btn" data-action="call" data-fn="openTabSelector">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.4)" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
     </div>
   </nav>
@@ -817,10 +817,10 @@
         <div class="page-header" style="padding-left:0;padding-right:0">
           <span class="page-title" style="color:#1a5c2a">Здоров'я</span>
           <div class="header-actions">
-            <button class="icon-btn" onclick="openAddHealthCard()" title="Нова картка">
+            <button class="icon-btn" data-action="call" data-fn="openAddHealthCard" title="Нова картка">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
             </button>
-            <button class="icon-btn" onclick="openHealthExport()" title="Медична картка для лікаря">
+            <button class="icon-btn" data-action="call" data-fn="openHealthExport" title="Медична картка для лікаря">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/><path d="M12 12v2"/><path d="M10 14h4"/></svg>
             </button>
             <button class="icon-btn" data-action="open-help" data-tab="health">?</button>
@@ -844,7 +844,7 @@
         <div class="page-header" style="padding-left:0;padding-right:0">
           <span class="page-title" style="color:#3d2e1e">Проекти</span>
           <div class="header-actions">
-            <button class="icon-btn" onclick="openAddProject()" title="Новий проект">
+            <button class="icon-btn" data-action="call" data-fn="openAddProject" title="Новий проект">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
             </button>
             <button class="icon-btn" data-action="open-help" data-tab="projects">?</button>
@@ -863,7 +863,7 @@
           <div style="font-size:36px;margin-bottom:10px">🚀</div>
           <div style="font-size:15px;font-weight:700;color:rgba(30,16,64,0.5)">Немає активних проектів</div>
           <div style="font-size:13px;color:rgba(30,16,64,0.3);margin-top:4px">Додай перший — від ідеї до результату</div>
-          <button onclick="openAddProject()" style="margin-top:14px;font-size:13px;font-weight:700;color:white;background:#3d2e1e;border:none;border-radius:12px;padding:10px 20px;cursor:pointer">+ Новий проект</button>
+          <button data-action="call" data-fn="openAddProject" style="margin-top:14px;font-size:13px;font-weight:700;color:white;background:#3d2e1e;border:none;border-radius:12px;padding:10px 20px;cursor:pointer">+ Новий проект</button>
         </div>
       </div>
     </div>
@@ -875,7 +875,7 @@
 <!-- PROJECTS AI BAR -->
 <div id="projects-ai-bar" class="ai-bar-new" style="display:none;bottom:calc(var(--tabbar-h, 83px) + 4px)">
   <div class="ai-bar-chat-window" id="projects-chat-window">
-    <div class="ai-bar-chat-handle" onclick="closeChatBar('projects')"></div>
+    <div class="ai-bar-chat-handle" data-action="close-chat-bar" data-tab="projects"></div>
     <div class="ai-bar-messages" id="projects-chat-messages"></div>
   </div>
   <div class="ai-bar-input-box">
@@ -883,7 +883,7 @@
       maxlength="500" oninput="autoResizeTextarea(this)"
       onfocus="openChatBar('projects')"
       onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendProjectsBarMessage()}"></textarea>
-    <button class="ai-bar-send-btn" id="projects-send-btn" onclick="sendProjectsBarMessage()">
+    <button class="ai-bar-send-btn" id="projects-send-btn" data-action="call" data-fn="sendProjectsBarMessage">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1e1040" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
     </button>
   </div>
@@ -891,19 +891,19 @@
 
 <!-- HABIT MODAL -->
 <div id="habit-modal-overlay" style="display:none;position:fixed;inset:0;z-index:199;background:rgba(0,0,0,0.35);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);pointer-events:none"></div>
-<div id="habit-modal" onclick="if(event.target===this)closeHabitModal()" style="display:none;position:fixed;inset:0;z-index:200;align-items:flex-end;justify-content:center;padding:0 16px 16px">
+<div id="habit-modal" data-action="close-backdrop" data-fn="closeHabitModal" style="display:none;position:fixed;inset:0;z-index:200;align-items:flex-end;justify-content:center;padding:0 16px 16px">
   <div style="position:relative;width:100%;max-width:480px;background:rgba(255,255,255,0.30);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border-radius:24px;overflow:hidden;z-index:1;max-height:80vh;border:1.5px solid rgba(255,255,255,0.5);padding:0 20px;">
     <div style="overflow-y:auto;max-height:80vh;padding:28px 0 calc(env(safe-area-inset-bottom) + 28px);box-sizing:border-box;">
     <div style="width:36px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 20px"></div>
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
       <div id="habit-modal-title" style="font-family:var(--font-display);font-size:18px;font-weight:700;color:#1e1040">Нова звичка</div>
-      <button id="habit-delete-btn" onclick="deleteHabitFromModal()" style="display:none;background:none;border:none;font-size:13px;font-weight:700;color:#ef4444;cursor:pointer;padding:4px 8px">Видалити</button>
+      <button id="habit-delete-btn" data-action="call" data-fn="deleteHabitFromModal" style="display:none;background:none;border:none;font-size:13px;font-weight:700;color:#ef4444;cursor:pointer;padding:4px 8px">Видалити</button>
     </div>
 
     <!-- Тип звички: Набути / Кинути -->
     <div style="display:flex;background:rgba(30,16,64,0.06);border-radius:12px;padding:3px;gap:3px;margin-bottom:14px">
-      <button id="habit-type-build" onclick="setHabitModalType('build')" style="flex:1;padding:9px;border-radius:10px;border:none;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;background:white;color:#16a34a;box-shadow:0 2px 8px rgba(0,0,0,0.08);transition:all 0.18s">✅ Набути</button>
-      <button id="habit-type-quit" onclick="setHabitModalType('quit')" style="flex:1;padding:9px;border-radius:10px;border:none;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;background:transparent;color:rgba(30,16,64,0.4);transition:all 0.18s">🚫 Кинути</button>
+      <button id="habit-type-build" data-action="set-habit-modal-type" data-type="build" style="flex:1;padding:9px;border-radius:10px;border:none;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;background:white;color:#16a34a;box-shadow:0 2px 8px rgba(0,0,0,0.08);transition:all 0.18s">✅ Набути</button>
+      <button id="habit-type-quit" data-action="set-habit-modal-type" data-type="quit" style="flex:1;padding:9px;border-radius:10px;border:none;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;background:transparent;color:rgba(30,16,64,0.4);transition:all 0.18s">🚫 Кинути</button>
     </div>
     <input id="habit-input-name" type="text" placeholder="Назва звички" style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:13px 16px;font-size:16px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:12px;box-sizing:border-box;background:rgba(255,255,255,0.7)">
     <textarea id="habit-input-details" placeholder="Деталі (необовʼязково: ціль, умови, нотатки)" style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:13px 16px;font-size:15px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:12px;resize:none;min-height:64px;box-sizing:border-box;background:rgba(255,255,255,0.7)"></textarea>
@@ -914,9 +914,9 @@
         <div style="font-size:11px;color:rgba(30,16,64,0.4);font-weight:500;margin-top:1px">1 = звичайна звичка</div>
       </div>
       <div style="display:flex;align-items:center;gap:10px">
-        <button onclick="adjustHabitCount(-1)" style="width:32px;height:32px;border-radius:50%;background:rgba(30,16,64,0.08);border:none;font-size:18px;font-weight:700;color:#1e1040;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1">−</button>
+        <button data-action="adjust-habit-count" data-delta="-1" style="width:32px;height:32px;border-radius:50%;background:rgba(30,16,64,0.08);border:none;font-size:18px;font-weight:700;color:#1e1040;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1">−</button>
         <span id="habit-count-display" style="font-size:20px;font-weight:800;color:#1e1040;min-width:24px;text-align:center">1</span>
-        <button onclick="adjustHabitCount(1)" style="width:32px;height:32px;border-radius:50%;background:rgba(30,16,64,0.08);border:none;font-size:18px;font-weight:700;color:#1e1040;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1">+</button>
+        <button data-action="adjust-habit-count" data-delta="1" style="width:32px;height:32px;border-radius:50%;background:rgba(30,16,64,0.08);border:none;font-size:18px;font-weight:700;color:#1e1040;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1">+</button>
       </div>
     </div>
     <input id="habit-input-count" type="hidden" value="1">
@@ -932,8 +932,8 @@
       <button class="habit-day-btn" data-day="6">Нд</button>
     </div>
     <div style="display:flex;gap:10px">
-      <button onclick="closeHabitModal()" style="flex:1;background:rgba(30,16,64,0.06);border:none;border-radius:12px;padding:14px;font-size:16px;font-weight:700;color:rgba(30,16,64,0.5);cursor:pointer">Скасувати</button>
-      <button onclick="saveHabit()" style="flex:2;background:linear-gradient(135deg,#4ade80,#16a34a);border:none;border-radius:12px;padding:14px;font-size:16px;font-weight:700;color:white;cursor:pointer">Зберегти</button>
+      <button data-action="call" data-fn="closeHabitModal" style="flex:1;background:rgba(30,16,64,0.06);border:none;border-radius:12px;padding:14px;font-size:16px;font-weight:700;color:rgba(30,16,64,0.5);cursor:pointer">Скасувати</button>
+      <button data-action="call" data-fn="saveHabit" style="flex:2;background:linear-gradient(135deg,#4ade80,#16a34a);border:none;border-radius:12px;padding:14px;font-size:16px;font-weight:700;color:white;cursor:pointer">Зберегти</button>
     </div>
     </div>
   </div>
@@ -941,7 +941,7 @@
 
 <!-- MOMENT VIEW MODAL -->
 <div id="moment-view-modal-overlay" style="display:none;position:fixed;inset:0;z-index:199;background:rgba(0,0,0,0.35);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);pointer-events:none"></div>
-<div id="moment-view-modal" onclick="if(event.target===this)closeMomentView()" style="display:none;position:fixed;inset:0;z-index:200;align-items:flex-end;justify-content:center;padding:0 16px 16px">
+<div id="moment-view-modal" data-action="close-backdrop" data-fn="closeMomentView" style="display:none;position:fixed;inset:0;z-index:200;align-items:flex-end;justify-content:center;padding:0 16px 16px">
   <div style="position:relative;width:100%;max-width:480px;background:rgba(30,51,80,0.55);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border-radius:24px;overflow:hidden;z-index:1;max-height:80vh;border:1.5px solid rgba(255,255,255,0.2);padding:0 20px;">
     <div style="overflow-y:auto;max-height:80vh;padding:28px 0 calc(env(safe-area-inset-bottom) + 28px);box-sizing:border-box;">
       <div style="width:36px;height:4px;background:rgba(255,255,255,0.25);border-radius:2px;margin:0 auto 20px"></div>
@@ -954,27 +954,27 @@
         <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">Короткий зміст</div>
         <div id="moment-view-summary" style="font-size:13px;color:rgba(255,255,255,0.6);line-height:1.45;font-weight:500"></div>
       </div>
-      <button onclick="closeMomentView()" style="width:100%;margin-top:10px;background:linear-gradient(135deg,#3a5a80,#1e3350);border:none;border-radius:12px;padding:14px;font-size:16px;font-weight:700;color:white;cursor:pointer;font-family:inherit">Закрити</button>
+      <button data-action="call" data-fn="closeMomentView" style="width:100%;margin-top:10px;background:linear-gradient(135deg,#3a5a80,#1e3350);border:none;border-radius:12px;padding:14px;font-size:16px;font-weight:700;color:white;cursor:pointer;font-family:inherit">Закрити</button>
     </div>
   </div>
 </div>
 
 <!-- MOMENT MODAL -->
 <div id="moment-modal-overlay" style="display:none;position:fixed;inset:0;z-index:199;background:rgba(0,0,0,0.35);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);pointer-events:none"></div>
-<div id="moment-modal" onclick="if(event.target===this)closeMomentModal()" style="display:none;position:fixed;inset:0;z-index:200;align-items:flex-end;justify-content:center;padding:0 16px 16px">
+<div id="moment-modal" data-action="close-backdrop" data-fn="closeMomentModal" style="display:none;position:fixed;inset:0;z-index:200;align-items:flex-end;justify-content:center;padding:0 16px 16px">
   <div style="position:relative;width:100%;max-width:480px;background:rgba(30,51,80,0.55);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border-radius:24px;overflow:hidden;z-index:1;max-height:80vh;border:1.5px solid rgba(255,255,255,0.2);padding:0 20px;">
     <div style="overflow-y:auto;max-height:80vh;padding:28px 0 calc(env(safe-area-inset-bottom) + 28px);box-sizing:border-box;">
     <div style="width:36px;height:4px;background:rgba(255,255,255,0.25);border-radius:2px;margin:0 auto 20px"></div>
     <div style="font-family:var(--font-display);font-size:18px;font-weight:700;color:white;margin-bottom:14px">Момент дня</div>
     <div style="display:flex;gap:8px;margin-bottom:12px">
-      <button onclick="setMomentMood('positive')" id="mood-positive" style="flex:1;border:1.5px solid rgba(22,163,74,0.4);background:rgba(22,163,74,0.2);border-radius:10px;padding:9px;font-size:14px;font-weight:700;color:#4ade80;cursor:pointer">😊 Добре</button>
-      <button onclick="setMomentMood('neutral')" id="mood-neutral" style="flex:1;border:1.5px solid rgba(245,158,11,0.4);background:rgba(245,158,11,0.2);border-radius:10px;padding:9px;font-size:14px;font-weight:700;color:#fbbf24;cursor:pointer">😐 Нейтрально</button>
-      <button onclick="setMomentMood('negative')" id="mood-negative" style="flex:1;border:1.5px solid rgba(239,68,68,0.4);background:rgba(239,68,68,0.2);border-radius:10px;padding:9px;font-size:14px;font-weight:700;color:#f87171;cursor:pointer">😞 Погано</button>
+      <button data-action="set-moment-mood" data-mood="positive" id="mood-positive" style="flex:1;border:1.5px solid rgba(22,163,74,0.4);background:rgba(22,163,74,0.2);border-radius:10px;padding:9px;font-size:14px;font-weight:700;color:#4ade80;cursor:pointer">😊 Добре</button>
+      <button data-action="set-moment-mood" data-mood="neutral" id="mood-neutral" style="flex:1;border:1.5px solid rgba(245,158,11,0.4);background:rgba(245,158,11,0.2);border-radius:10px;padding:9px;font-size:14px;font-weight:700;color:#fbbf24;cursor:pointer">😐 Нейтрально</button>
+      <button data-action="set-moment-mood" data-mood="negative" id="mood-negative" style="flex:1;border:1.5px solid rgba(239,68,68,0.4);background:rgba(239,68,68,0.2);border-radius:10px;padding:9px;font-size:14px;font-weight:700;color:#f87171;cursor:pointer">😞 Погано</button>
     </div>
     <textarea id="moment-input-text" rows="3" style="width:100%;border:1.5px solid rgba(255,255,255,0.2);border-radius:12px;padding:12px 14px;font-size:16px;font-family:inherit;color:white;outline:none;resize:none;margin-bottom:14px;box-sizing:border-box;background:rgba(255,255,255,0.12)" placeholder="Що сталося? Що відчував?"></textarea>
     <div style="display:flex;gap:10px">
-      <button onclick="closeMomentModal()" style="flex:1;background:rgba(255,255,255,0.1);border:none;border-radius:12px;padding:14px;font-size:16px;font-weight:700;color:rgba(255,255,255,0.6);cursor:pointer">Скасувати</button>
-      <button onclick="saveMoment()" style="flex:2;background:linear-gradient(135deg,#3a5a80,#1e3350);border:none;border-radius:12px;padding:14px;font-size:16px;font-weight:700;color:white;cursor:pointer">Зберегти</button>
+      <button data-action="call" data-fn="closeMomentModal" style="flex:1;background:rgba(255,255,255,0.1);border:none;border-radius:12px;padding:14px;font-size:16px;font-weight:700;color:rgba(255,255,255,0.6);cursor:pointer">Скасувати</button>
+      <button data-action="call" data-fn="saveMoment" style="flex:2;background:linear-gradient(135deg,#3a5a80,#1e3350);border:none;border-radius:12px;padding:14px;font-size:16px;font-weight:700;color:white;cursor:pointer">Зберегти</button>
     </div>
     </div>
   </div>
@@ -983,15 +983,15 @@
 <!-- CALENDAR EVENTS LIST (зверху екрану) -->
 <!-- CALENDAR MODAL (знизу екрану) -->
 <div id="calendar-modal-overlay" style="display:none;position:fixed;inset:0;z-index:199;background:rgba(0,0,0,0.35);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);pointer-events:none"></div>
-<div id="calendar-modal" onclick="if(event.target===this)closeCalendarModal()" style="display:none;position:fixed;inset:0;z-index:200">
+<div id="calendar-modal" data-action="close-backdrop" data-fn="closeCalendarModal" style="display:none;position:fixed;inset:0;z-index:200">
   <div id="calendar-panel" style="position:absolute;top:10vh;left:16px;right:16px;margin:0 auto;max-width:480px;background:rgba(255,255,255,0.30);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border-radius:24px;overflow:hidden;z-index:1;max-height:calc(85vh - env(safe-area-inset-bottom));border:1.5px solid rgba(255,255,255,0.5);padding:0 20px;transform:scale(0);opacity:0;transition:transform 0.35s cubic-bezier(0.34,1.56,0.64,1),opacity 0.2s ease">
     <div class="nm-modal-scroll" style="overflow-y:auto;overflow-x:hidden;max-height:calc(85vh - env(safe-area-inset-bottom));padding:28px 0 calc(env(safe-area-inset-bottom) + 28px);box-sizing:border-box;">
       <div style="width:36px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 20px"></div>
       <div id="calendar-upcoming" style="display:none;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid rgba(30,16,64,0.08)"></div>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-        <button onclick="calendarPrevMonth()" style="background:none;border:none;font-size:20px;cursor:pointer;padding:4px 8px;color:#1e1040">‹</button>
+        <button data-action="call" data-fn="calendarPrevMonth" style="background:none;border:none;font-size:20px;cursor:pointer;padding:4px 8px;color:#1e1040">‹</button>
         <div id="calendar-month-label" style="font-family:var(--font-display);font-size:18px;font-weight:700;color:#1e1040"></div>
-        <button onclick="calendarNextMonth()" style="background:none;border:none;font-size:20px;cursor:pointer;padding:4px 8px;color:#1e1040">›</button>
+        <button data-action="call" data-fn="calendarNextMonth" style="background:none;border:none;font-size:20px;cursor:pointer;padding:4px 8px;color:#1e1040">›</button>
       </div>
       <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:4px">
         <div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.35);text-align:center">Пн</div>
@@ -1010,7 +1010,7 @@
 
 <!-- DAY SCHEDULE MODAL -->
 <div id="day-schedule-modal-overlay" style="display:none;position:fixed;inset:0;z-index:209;background:rgba(0,0,0,0.35);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);pointer-events:none"></div>
-<div id="day-schedule-modal" onclick="if(event.target===this)closeDayScheduleModal()" style="display:none;position:fixed;inset:0;z-index:210;align-items:center;justify-content:center;padding:0 16px">
+<div id="day-schedule-modal" data-action="close-backdrop" data-fn="closeDayScheduleModal" style="display:none;position:fixed;inset:0;z-index:210;align-items:center;justify-content:center;padding:0 16px">
   <div id="day-schedule-panel" style="position:relative;width:100%;max-width:480px;background:rgba(255,255,255,0.30);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border-radius:24px;overflow:hidden;z-index:1;max-height:85vh;border:1.5px solid rgba(255,255,255,0.5);padding:0 20px;transform:scale(0);opacity:0;transition:transform 0.35s cubic-bezier(0.34,1.56,0.64,1),opacity 0.2s ease">
     <div style="overflow-y:auto;max-height:85vh;padding:28px 0 calc(env(safe-area-inset-bottom) + 28px);box-sizing:border-box;">
       <div style="width:36px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 18px"></div>
@@ -1023,13 +1023,13 @@
 
 <!-- EVENT EDIT MODAL -->
 <div id="event-edit-modal-overlay" style="display:none;position:fixed;inset:0;z-index:249;background:rgba(0,0,0,0.35);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);pointer-events:none"></div>
-<div id="event-edit-modal" onclick="if(event.target===this)closeEventEditModal()" style="display:none;position:fixed;inset:0;z-index:250;align-items:flex-end;justify-content:center;padding:0 16px 16px">
+<div id="event-edit-modal" data-action="close-backdrop" data-fn="closeEventEditModal" style="display:none;position:fixed;inset:0;z-index:250;align-items:flex-end;justify-content:center;padding:0 16px 16px">
   <div style="position:relative;width:100%;max-width:480px;background:rgba(255,255,255,0.30);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border-radius:24px;overflow:hidden;z-index:1;max-height:85vh;border:1.5px solid rgba(255,255,255,0.5);padding:0 20px;">
     <div style="overflow-y:auto;max-height:85vh;padding:28px 0 calc(env(safe-area-inset-bottom) + 28px);box-sizing:border-box;">
       <div style="width:36px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 18px"></div>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
         <div style="font-family:var(--font-display);font-size:18px;font-weight:700;color:#1e1040">Редагувати подію</div>
-        <button id="event-edit-delete-btn" onclick="deleteEventFromModal()" style="background:none;border:none;font-size:13px;font-weight:700;color:#ef4444;cursor:pointer;padding:4px 8px">Видалити</button>
+        <button id="event-edit-delete-btn" data-action="call" data-fn="deleteEventFromModal" style="background:none;border:none;font-size:13px;font-weight:700;color:#ef4444;cursor:pointer;padding:4px 8px">Видалити</button>
       </div>
       <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:6px">Назва</div>
       <input id="event-edit-title" type="text" style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:12px 14px;font-size:17px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:14px;box-sizing:border-box;background:rgba(255,255,255,0.7)" autocomplete="off">
@@ -1057,7 +1057,7 @@
         <div style="flex:3">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
             <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.07em">До (опційно)</div>
-            <button id="event-end-clear-btn" type="button" onclick="clearEventEndTime()" style="background:none;border:none;font-size:11px;font-weight:600;color:rgba(30,16,64,0.4);cursor:pointer;padding:0;display:none">очистити</button>
+            <button id="event-end-clear-btn" type="button" data-action="call" data-fn="clearEventEndTime" style="background:none;border:none;font-size:11px;font-weight:600;color:rgba(30,16,64,0.4);cursor:pointer;padding:0;display:none">очистити</button>
           </div>
           <div id="event-end-time-drum" style="display:flex;gap:0;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;background:rgba(255,255,255,0.7);overflow:hidden;height:120px;position:relative">
             <div id="drum-end-hour" class="drum-col"></div>
@@ -1070,13 +1070,13 @@
       </div>
       <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:6px">Пріоритет</div>
       <div id="event-edit-priority" style="display:flex;gap:8px;margin-bottom:20px">
-        <div onclick="setEventPriority('normal')" data-p="normal" style="flex:1;text-align:center;padding:10px;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;border:1.5px solid rgba(30,16,64,0.12);background:rgba(255,255,255,0.5);color:rgba(30,16,64,0.5)">Звичайний</div>
-        <div onclick="setEventPriority('important')" data-p="important" style="flex:1;text-align:center;padding:10px;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;border:1.5px solid rgba(30,16,64,0.12);background:rgba(255,255,255,0.5);color:rgba(30,16,64,0.5)">Важливий</div>
-        <div onclick="setEventPriority('critical')" data-p="critical" style="flex:1;text-align:center;padding:10px;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;border:1.5px solid rgba(30,16,64,0.12);background:rgba(255,255,255,0.5);color:rgba(30,16,64,0.5)">Критичний</div>
+        <div data-action="set-event-priority" data-priority="normal" data-p="normal" style="flex:1;text-align:center;padding:10px;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;border:1.5px solid rgba(30,16,64,0.12);background:rgba(255,255,255,0.5);color:rgba(30,16,64,0.5)">Звичайний</div>
+        <div data-action="set-event-priority" data-priority="important" data-p="important" style="flex:1;text-align:center;padding:10px;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;border:1.5px solid rgba(30,16,64,0.12);background:rgba(255,255,255,0.5);color:rgba(30,16,64,0.5)">Важливий</div>
+        <div data-action="set-event-priority" data-priority="critical" data-p="critical" style="flex:1;text-align:center;padding:10px;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;border:1.5px solid rgba(30,16,64,0.12);background:rgba(255,255,255,0.5);color:rgba(30,16,64,0.5)">Критичний</div>
       </div>
       <div style="display:flex;gap:8px">
-        <button onclick="closeEventEditModal()" style="flex:1;background:rgba(30,16,64,0.06);border:none;border-radius:12px;padding:13px;font-size:16px;font-weight:700;color:rgba(30,16,64,0.5);cursor:pointer">Скасувати</button>
-        <button onclick="saveEventFromModal()" style="flex:2;background:linear-gradient(135deg,#60a5fa,#3b82f6);border:none;border-radius:12px;padding:13px;font-size:16px;font-weight:700;color:white;cursor:pointer">Зберегти</button>
+        <button data-action="call" data-fn="closeEventEditModal" style="flex:1;background:rgba(30,16,64,0.06);border:none;border-radius:12px;padding:13px;font-size:16px;font-weight:700;color:rgba(30,16,64,0.5);cursor:pointer">Скасувати</button>
+        <button data-action="call" data-fn="saveEventFromModal" style="flex:2;background:linear-gradient(135deg,#60a5fa,#3b82f6);border:none;border-radius:12px;padding:13px;font-size:16px;font-weight:700;color:white;cursor:pointer">Зберегти</button>
       </div>
     </div>
   </div>
@@ -1084,7 +1084,7 @@
 
 <!-- ROUTINE MODAL -->
 <div id="routine-modal-overlay" style="display:none;position:fixed;inset:0;z-index:199;background:rgba(0,0,0,0.35);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);pointer-events:none"></div>
-<div id="routine-modal" onclick="if(event.target===this)closeRoutineModal()" style="display:none;position:fixed;inset:0;z-index:200;align-items:flex-end;justify-content:center;padding:0 16px 16px">
+<div id="routine-modal" data-action="close-backdrop" data-fn="closeRoutineModal" style="display:none;position:fixed;inset:0;z-index:200;align-items:flex-end;justify-content:center;padding:0 16px 16px">
   <div id="routine-panel" style="position:relative;width:100%;max-width:480px;background:rgba(255,255,255,0.30);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border-radius:24px;overflow:hidden;z-index:1;min-height:70vh;max-height:85vh;border:1.5px solid rgba(255,255,255,0.5);padding:0 20px;transform:scale(0);opacity:0;transition:transform 0.35s cubic-bezier(0.34,1.56,0.64,1),opacity 0.2s ease">
     <div class="nm-modal-scroll" style="overflow-y:auto;overflow-x:hidden;min-height:70vh;max-height:85vh;padding:28px 0 calc(env(safe-area-inset-bottom) + 28px);box-sizing:border-box;">
       <div style="width:36px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 20px"></div>
@@ -1095,7 +1095,7 @@
       <div id="routine-day-tabs" style="display:flex;gap:4px;margin-bottom:16px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none"></div>
       <div id="routine-timeline" style="margin-bottom:16px"></div>
       <div id="routine-add-wrap">
-        <button onclick="routineAddBlock()" style="width:100%;padding:12px;border-radius:14px;border:2px dashed rgba(234,88,12,0.45);background:rgba(255,255,255,0.5);font-size:14px;font-weight:600;color:rgba(234,88,12,0.7);cursor:pointer;-webkit-tap-highlight-color:transparent">+ Додати блок</button>
+        <button data-action="call" data-fn="routineAddBlock" style="width:100%;padding:12px;border-radius:14px;border:2px dashed rgba(234,88,12,0.45);background:rgba(255,255,255,0.5);font-size:14px;font-weight:600;color:rgba(234,88,12,0.7);cursor:pointer;-webkit-tap-highlight-color:transparent">+ Додати блок</button>
       </div>
     </div>
   </div>
@@ -1110,7 +1110,7 @@
 <!-- NOTE CONTEXT MENU -->
 <!-- FOLDER EDIT MODAL (#20) -->
 <div id="folder-edit-modal-overlay" style="display:none;position:fixed;inset:0;z-index:499;background:rgba(0,0,0,0.35);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);pointer-events:none"></div>
-<div id="folder-edit-modal" onclick="if(event.target===this)closeFolderEditModal()" style="display:none;position:fixed;inset:0;z-index:500;align-items:flex-end;justify-content:center;padding:0 16px 16px">
+<div id="folder-edit-modal" data-action="close-backdrop" data-fn="closeFolderEditModal" style="display:none;position:fixed;inset:0;z-index:500;align-items:flex-end;justify-content:center;padding:0 16px 16px">
   <div style="position:relative;width:100%;max-width:480px;background:rgba(255,255,255,0.88);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-radius:24px;padding:20px 20px calc(env(safe-area-inset-bottom) + 32px);z-index:1;max-height:88vh;overflow-y:auto;box-sizing:border-box;border:1.5px solid rgba(255,255,255,0.6)">
     <div style="width:36px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 16px"></div>
     <div style="font-size:17px;font-weight:800;color:#1e1040;margin-bottom:16px">Редагувати папку</div>
@@ -1142,30 +1142,30 @@
 
     <!-- Кнопки -->
     <div style="display:flex;gap:8px">
-      <button onclick="closeFolderEditModal()" style="flex:1;background:rgba(30,16,64,0.06);border:none;border-radius:12px;padding:13px;font-size:16px;font-weight:700;color:rgba(30,16,64,0.5);cursor:pointer;font-family:inherit">Скасувати</button>
-      <button onclick="saveFolderEdit()" style="flex:2;background:linear-gradient(135deg,#c2620a,#a0500a);border:none;border-radius:12px;padding:13px;font-size:16px;font-weight:700;color:white;cursor:pointer;font-family:inherit">Зберегти</button>
+      <button data-action="call" data-fn="closeFolderEditModal" style="flex:1;background:rgba(30,16,64,0.06);border:none;border-radius:12px;padding:13px;font-size:16px;font-weight:700;color:rgba(30,16,64,0.5);cursor:pointer;font-family:inherit">Скасувати</button>
+      <button data-action="call" data-fn="saveFolderEdit" style="flex:2;background:linear-gradient(135deg,#c2620a,#a0500a);border:none;border-radius:12px;padding:13px;font-size:16px;font-weight:700;color:white;cursor:pointer;font-family:inherit">Зберегти</button>
     </div>
   </div>
 </div>
 
 <div id="note-menu" style="display:none;position:fixed;inset:0;z-index:500;align-items:flex-end;justify-content:center;padding:0 16px 16px">
-  <div onclick="closeNoteMenu()" style="position:absolute;inset:0;background:rgba(0,0,0,0.3);backdrop-filter:blur(4px)"></div>
+  <div data-action="call" data-fn="closeNoteMenu" style="position:absolute;inset:0;background:rgba(0,0,0,0.3);backdrop-filter:blur(4px)"></div>
   <div style="position:relative;width:100%;max-width:480px;background:rgba(255,255,255,0.88);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-radius:24px;border:1.5px solid rgba(255,255,255,0.6);padding:12px 20px calc(env(safe-area-inset-bottom) + 24px);z-index:1;box-sizing:border-box;">
     <div style="width:36px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 12px"></div>
-    <button onclick="noteMenuEdit()" style="width:100%;display:flex;align-items:center;gap:14px;background:none;border:none;padding:14px 16px;font-size:17px;font-family:inherit;color:#1e1040;cursor:pointer;border-radius:12px;text-align:left" onmouseover="this.style.background='rgba(30,16,64,0.04)'" onmouseout="this.style.background='none'">
+    <button data-action="call" data-fn="noteMenuEdit" style="width:100%;display:flex;align-items:center;gap:14px;background:none;border:none;padding:14px 16px;font-size:17px;font-family:inherit;color:#1e1040;cursor:pointer;border-radius:12px;text-align:left" onmouseover="this.style.background='rgba(30,16,64,0.04)'" onmouseout="this.style.background='none'">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
       Відкрити та редагувати
     </button>
-    <button onclick="noteMenuMove()" style="width:100%;display:flex;align-items:center;gap:14px;background:none;border:none;padding:14px 16px;font-size:17px;font-family:inherit;color:#1e1040;cursor:pointer;border-radius:12px;text-align:left" onmouseover="this.style.background='rgba(30,16,64,0.04)'" onmouseout="this.style.background='none'">
+    <button data-action="call" data-fn="noteMenuMove" style="width:100%;display:flex;align-items:center;gap:14px;background:none;border:none;padding:14px 16px;font-size:17px;font-family:inherit;color:#1e1040;cursor:pointer;border-radius:12px;text-align:left" onmouseover="this.style.background='rgba(30,16,64,0.04)'" onmouseout="this.style.background='none'">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
       Перемістити в папку
     </button>
-    <button onclick="noteMenuCopy()" style="width:100%;display:flex;align-items:center;gap:14px;background:none;border:none;padding:14px 16px;font-size:17px;font-family:inherit;color:#1e1040;cursor:pointer;border-radius:12px;text-align:left" onmouseover="this.style.background='rgba(30,16,64,0.04)'" onmouseout="this.style.background='none'">
+    <button data-action="call" data-fn="noteMenuCopy" style="width:100%;display:flex;align-items:center;gap:14px;background:none;border:none;padding:14px 16px;font-size:17px;font-family:inherit;color:#1e1040;cursor:pointer;border-radius:12px;text-align:left" onmouseover="this.style.background='rgba(30,16,64,0.04)'" onmouseout="this.style.background='none'">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
       Скопіювати текст
     </button>
     <div style="height:1px;background:rgba(30,16,64,0.06);margin:4px 16px"></div>
-    <button onclick="noteMenuDelete()" style="width:100%;display:flex;align-items:center;gap:14px;background:none;border:none;padding:14px 16px;font-size:17px;font-family:inherit;color:#ef4444;cursor:pointer;border-radius:12px;text-align:left" onmouseover="this.style.background='rgba(239,68,68,0.05)'" onmouseout="this.style.background='none'">
+    <button data-action="call" data-fn="noteMenuDelete" style="width:100%;display:flex;align-items:center;gap:14px;background:none;border:none;padding:14px 16px;font-size:17px;font-family:inherit;color:#ef4444;cursor:pointer;border-radius:12px;text-align:left" onmouseover="this.style.background='rgba(239,68,68,0.05)'" onmouseout="this.style.background='none'">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg>
       Видалити
     </button>
@@ -1174,7 +1174,7 @@
 
 <!-- NOTE MODAL -->
 <div id="note-modal-overlay" style="display:none;position:fixed;inset:0;z-index:199;background:rgba(0,0,0,0.35);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);pointer-events:none"></div>
-<div id="note-modal" onclick="if(event.target===this)closeNoteModal()" style="display:none;position:fixed;inset:0;z-index:200;align-items:flex-end;justify-content:center;padding:0 16px 16px">
+<div id="note-modal" data-action="close-backdrop" data-fn="closeNoteModal" style="display:none;position:fixed;inset:0;z-index:200;align-items:flex-end;justify-content:center;padding:0 16px 16px">
   <div style="position:relative;width:100%;max-width:480px;background:rgba(255,255,255,0.88);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-radius:24px;padding:20px 20px calc(env(safe-area-inset-bottom) + 40px);z-index:1;max-height:85vh;overflow-y:auto;box-sizing:border-box;border:1.5px solid rgba(255,255,255,0.6);">
     <div style="width:36px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 18px"></div>
     <div id="note-modal-title" style="font-family:var(--font-display);font-size:18px;font-weight:700;color:#1e1040;margin-bottom:16px">Нова нотатка</div>
@@ -1182,21 +1182,21 @@
     <datalist id="folder-suggestions"></datalist>
     <textarea id="note-input-text" rows="5" style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:12px 14px;font-size:16px;font-family:inherit;color:#1e1040;outline:none;resize:none;line-height:1.6;margin-bottom:14px;box-sizing:border-box;background:rgba(255,255,255,0.7)" placeholder="Текст нотатки…"></textarea>
     <div style="display:flex;gap:8px">
-      <button onclick="closeNoteModal()" style="flex:1;background:rgba(30,16,64,0.06);border:none;border-radius:12px;padding:13px;font-size:16px;font-weight:700;color:rgba(30,16,64,0.5);cursor:pointer">Скасувати</button>
-      <button onclick="saveNote()" style="flex:2;background:linear-gradient(135deg,#818cf8,#4f46e5);border:none;border-radius:12px;padding:13px;font-size:16px;font-weight:700;color:white;cursor:pointer">Зберегти</button>
+      <button data-action="call" data-fn="closeNoteModal" style="flex:1;background:rgba(30,16,64,0.06);border:none;border-radius:12px;padding:13px;font-size:16px;font-weight:700;color:rgba(30,16,64,0.5);cursor:pointer">Скасувати</button>
+      <button data-action="call" data-fn="saveNote" style="flex:2;background:linear-gradient(135deg,#818cf8,#4f46e5);border:none;border-radius:12px;padding:13px;font-size:16px;font-weight:700;color:white;cursor:pointer">Зберегти</button>
     </div>
   </div>
 </div>
 
 <!-- TASK MODAL -->
 <div id="task-modal-overlay" style="display:none;position:fixed;inset:0;z-index:199;background:rgba(0,0,0,0.35);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);pointer-events:none"></div>
-<div id="task-modal" onclick="if(event.target===this)closeTaskModal()" style="display:none;position:fixed;inset:0;z-index:200;align-items:flex-end;justify-content:center;padding:0 16px 16px">
+<div id="task-modal" data-action="close-backdrop" data-fn="closeTaskModal" style="display:none;position:fixed;inset:0;z-index:200;align-items:flex-end;justify-content:center;padding:0 16px 16px">
   <div style="position:relative;width:100%;max-width:480px;background:rgba(255,255,255,0.30);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border-radius:24px;overflow:hidden;z-index:1;max-height:85vh;border:1.5px solid rgba(255,255,255,0.5);padding:0 20px;">
     <div style="overflow-y:auto;max-height:85vh;padding:28px 0 calc(env(safe-area-inset-bottom) + 28px);box-sizing:border-box;">
     <div style="width:36px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 18px"></div>
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
       <div id="task-modal-title" style="font-family:var(--font-display);font-size:18px;font-weight:700;color:#1e1040">Нова задача</div>
-      <button id="task-delete-btn" onclick="deleteTaskFromModal()" style="display:none;background:none;border:none;font-size:13px;font-weight:700;color:#ef4444;cursor:pointer;padding:4px 8px">Видалити</button>
+      <button id="task-delete-btn" data-action="call" data-fn="deleteTaskFromModal" style="display:none;background:none;border:none;font-size:13px;font-weight:700;color:#ef4444;cursor:pointer;padding:4px 8px">Видалити</button>
     </div>
     <input id="task-input-title" type="text" autocomplete="off" style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:12px 14px;font-size:17px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:10px;box-sizing:border-box;background:rgba(255,255,255,0.7)" placeholder="Назва задачі…" ontouchend="this.focus()">
     <textarea id="task-input-desc" rows="2" style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:12px 14px;font-size:15px;font-family:inherit;color:#1e1040;outline:none;resize:none;margin-bottom:14px;box-sizing:border-box;background:rgba(255,255,255,0.7)" placeholder="Опис або мета (необовʼязково)…" ontouchend="this.focus()"></textarea>
@@ -1207,8 +1207,8 @@
       <button onmousedown="event.preventDefault();addTaskStep()" ontouchend="event.preventDefault();addTaskStep()" style="background:rgba(234,88,12,0.1);border:none;border-radius:10px;padding:9px 14px;font-size:15px;font-weight:700;color:#ea580c;cursor:pointer;-webkit-tap-highlight-color:transparent">+</button>
     </div>
     <div style="display:flex;gap:8px">
-      <button onclick="closeTaskModal()" style="flex:1;background:rgba(30,16,64,0.06);border:none;border-radius:12px;padding:13px;font-size:16px;font-weight:700;color:rgba(30,16,64,0.5);cursor:pointer">Скасувати</button>
-      <button onclick="saveTask()" style="flex:2;background:linear-gradient(135deg,#f97316,#ea580c);border:none;border-radius:12px;padding:13px;font-size:16px;font-weight:700;color:white;cursor:pointer">Зберегти</button>
+      <button data-action="call" data-fn="closeTaskModal" style="flex:1;background:rgba(30,16,64,0.06);border:none;border-radius:12px;padding:13px;font-size:16px;font-weight:700;color:rgba(30,16,64,0.5);cursor:pointer">Скасувати</button>
+      <button data-action="call" data-fn="saveTask" style="flex:2;background:linear-gradient(135deg,#f97316,#ea580c);border:none;border-radius:12px;padding:13px;font-size:16px;font-weight:700;color:white;cursor:pointer">Зберегти</button>
     </div>
     </div>
   </div>
@@ -1216,22 +1216,22 @@
 
 <!-- PROJECT MODAL -->
 <div id="project-modal-overlay" style="display:none;position:fixed;inset:0;z-index:199;background:rgba(0,0,0,0.35);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);pointer-events:none"></div>
-<div id="project-modal" onclick="if(event.target===this)closeProjectModal()" style="display:none;position:fixed;inset:0;z-index:200;align-items:flex-end;justify-content:center;padding:0 16px 16px">
+<div id="project-modal" data-action="close-backdrop" data-fn="closeProjectModal" style="display:none;position:fixed;inset:0;z-index:200;align-items:flex-end;justify-content:center;padding:0 16px 16px">
   <div style="position:relative;width:100%;max-width:480px;background:rgba(255,255,255,0.88);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-radius:24px;padding:20px 20px calc(env(safe-area-inset-bottom) + 40px);z-index:1;max-height:85vh;overflow-y:auto;box-sizing:border-box;border:1.5px solid rgba(255,255,255,0.6);">
     <div style="width:36px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 18px"></div>
     <div style="font-size:18px;font-weight:700;color:#1e1040;margin-bottom:16px">Новий проект</div>
     <input id="project-input-name" type="text" autocomplete="off" style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:12px 14px;font-size:17px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:10px;box-sizing:border-box;background:rgba(255,255,255,0.7)" placeholder="Назва проекту…" ontouchend="this.focus()">
     <textarea id="project-input-subtitle" rows="2" style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:12px 14px;font-size:15px;font-family:inherit;color:#1e1040;outline:none;resize:none;margin-bottom:16px;box-sizing:border-box;background:rgba(255,255,255,0.7)" placeholder="Підзаголовок або мета (необовʼязково)…" ontouchend="this.focus()"></textarea>
     <div style="display:flex;gap:8px">
-      <button onclick="closeProjectModal()" style="flex:1;background:rgba(30,16,64,0.06);border:none;border-radius:12px;padding:13px;font-size:16px;font-weight:700;color:rgba(30,16,64,0.5);cursor:pointer">Скасувати</button>
-      <button onclick="saveNewProject()" style="flex:2;background:linear-gradient(135deg,#5c4a2a,#3d2e1e);border:none;border-radius:12px;padding:13px;font-size:16px;font-weight:700;color:white;cursor:pointer">Створити</button>
+      <button data-action="call" data-fn="closeProjectModal" style="flex:1;background:rgba(30,16,64,0.06);border:none;border-radius:12px;padding:13px;font-size:16px;font-weight:700;color:rgba(30,16,64,0.5);cursor:pointer">Скасувати</button>
+      <button data-action="call" data-fn="saveNewProject" style="flex:2;background:linear-gradient(135deg,#5c4a2a,#3d2e1e);border:none;border-radius:12px;padding:13px;font-size:16px;font-weight:700;color:white;cursor:pointer">Створити</button>
     </div>
   </div>
 </div>
 
 <!-- SETTINGS OVERLAY -->
 <div id="settings-overlay-bg" style="display:none;position:fixed;inset:0;z-index:499;background:rgba(0,0,0,0.35);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);pointer-events:none"></div>
-<div id="settings-overlay" onclick="if(event.target===this)closeSettings()" style="display:none;position:fixed;inset:0;z-index:500;align-items:flex-end;justify-content:center;padding:0 16px 16px">
+<div id="settings-overlay" data-action="close-backdrop" data-fn="closeSettings" style="display:none;position:fixed;inset:0;z-index:500;align-items:flex-end;justify-content:center;padding:0 16px 16px">
   <div class="settings-panel" id="settings-panel-el" style="position:relative;width:100%;max-width:480px;background:rgba(255,255,255,0.30);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border-radius:24px;overflow:hidden;z-index:1;max-height:85vh;border:1.5px solid rgba(255,255,255,0.5);padding:12px 0 0;transform:scale(0);opacity:0;transition:transform 0.35s cubic-bezier(0.34,1.56,0.64,1),opacity 0.2s ease">
     <div class="settings-handle" style="cursor:grab"></div>
     <div class="settings-title">Налаштування</div>
@@ -1241,7 +1241,7 @@
 
     <!-- Як користуватися -->
     <div class="s-group" style="background:rgba(242,217,120,0.35);border-color:rgba(242,217,120,0.5)">
-      <div class="s-row" onclick="closeSettings();openSlidesTour()">
+      <div class="s-row" data-action="close-settings-open-slides-tour">
         <div class="s-row-left">
           <div class="s-icon" style="background:rgba(242,217,120,0.6)">
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#8b6914" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
@@ -1283,9 +1283,9 @@
           <div class="s-row-title">Валюта</div>
         </div>
         <div class="s-currency-group">
-          <button onclick="setCurrency('₴')" id="btn-currency-uah" class="s-currency-btn">₴</button>
-          <button onclick="setCurrency('$')" id="btn-currency-usd" class="s-currency-btn">$</button>
-          <button onclick="setCurrency('€')" id="btn-currency-eur" class="s-currency-btn">€</button>
+          <button data-action="set-currency" data-cur="₴" id="btn-currency-uah" class="s-currency-btn">₴</button>
+          <button data-action="set-currency" data-cur="$" id="btn-currency-usd" class="s-currency-btn">$</button>
+          <button data-action="set-currency" data-cur="€" id="btn-currency-eur" class="s-currency-btn">€</button>
         </div>
       </div>
       <div class="s-row" style="cursor:default">
@@ -1296,9 +1296,9 @@
           <div class="s-row-title">Мова</div>
         </div>
         <div class="s-lang-group">
-          <button onclick="setLanguage('uk')" id="btn-lang-uk" class="s-lang-btn">УКР</button>
-          <button onclick="setLanguage('en')" id="btn-lang-en" class="s-lang-btn">ENG</button>
-          <button onclick="setLanguage('nl')" id="btn-lang-nl" class="s-lang-btn">NL</button>
+          <button data-action="set-language" data-lang="uk" id="btn-lang-uk" class="s-lang-btn">УКР</button>
+          <button data-action="set-language" data-lang="en" id="btn-lang-en" class="s-lang-btn">ENG</button>
+          <button data-action="set-language" data-lang="nl" id="btn-lang-nl" class="s-lang-btn">NL</button>
         </div>
       </div>
       <div class="s-row" style="cursor:default">
@@ -1342,7 +1342,7 @@
 
     <!-- Зберегти профіль -->
     <div style="padding:0 14px 10px">
-      <button class="btn-primary" onclick="saveSettings()">Зберегти</button>
+      <button class="btn-primary" data-action="call" data-fn="saveSettings">Зберегти</button>
     </div>
 
     <!-- Агент OWL -->
@@ -1351,7 +1351,7 @@
       <!-- OWL Characters -->
       <div class="s-row" style="cursor:default;flex-direction:column;align-items:stretch;gap:8px;padding:14px">
         <div style="font-size:12px;font-weight:700;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:2px">Характер</div>
-        <div onclick="setOwlModeSetting('coach')" id="set-owl-coach" style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:12px;cursor:pointer;border:1.5px solid rgba(30,16,64,0.08);background:rgba(255,255,255,0.5);transition:all 0.2s">
+        <div data-action="set-owl-mode-setting" data-mode="coach" id="set-owl-coach" style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:12px;cursor:pointer;border:1.5px solid rgba(30,16,64,0.08);background:rgba(255,255,255,0.5);transition:all 0.2s">
           <div class="s-icon" style="background:rgba(239,68,68,0.1)">
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
           </div>
@@ -1360,7 +1360,7 @@
             <div style="font-size:12px;color:rgba(30,16,64,0.42)">Прямий і жорсткий</div>
           </div>
         </div>
-        <div onclick="setOwlModeSetting('partner')" id="set-owl-partner" style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:12px;cursor:pointer;border:1.5px solid rgba(30,16,64,0.08);background:rgba(255,255,255,0.5);transition:all 0.2s">
+        <div data-action="set-owl-mode-setting" data-mode="partner" id="set-owl-partner" style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:12px;cursor:pointer;border:1.5px solid rgba(30,16,64,0.08);background:rgba(255,255,255,0.5);transition:all 0.2s">
           <div class="s-icon" style="background:rgba(59,130,246,0.12)">
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
           </div>
@@ -1369,7 +1369,7 @@
             <div style="font-size:12px;color:rgba(30,16,64,0.42)">Як розумний друг</div>
           </div>
         </div>
-        <div onclick="setOwlModeSetting('mentor')" id="set-owl-mentor" style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:12px;cursor:pointer;border:1.5px solid rgba(30,16,64,0.08);background:rgba(255,255,255,0.5);transition:all 0.2s">
+        <div data-action="set-owl-mode-setting" data-mode="mentor" id="set-owl-mentor" style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:12px;cursor:pointer;border:1.5px solid rgba(30,16,64,0.08);background:rgba(255,255,255,0.5);transition:all 0.2s">
           <div class="s-icon" style="background:rgba(194,121,10,0.12)">
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#c2790a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M12 14c-5 0-8 2.5-8 4v1h16v-1c0-1.5-3-4-8-4z"/><circle cx="10" cy="7.2" r=".8" fill="#c2790a"/><circle cx="14" cy="7.2" r=".8" fill="#c2790a"/></svg>
           </div>
@@ -1380,7 +1380,7 @@
         </div>
       </div>
       <!-- Памʼять -->
-      <div class="s-row" onclick="openMemoryModal()">
+      <div class="s-row" data-action="call" data-fn="openMemoryModal">
         <div class="s-row-left">
           <div class="s-icon" style="background:rgba(194,121,10,0.12)">
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#c2790a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
@@ -1391,7 +1391,7 @@
           </div>
         </div>
         <div style="display:flex;align-items:center;gap:6px">
-          <button onclick="event.stopPropagation();refreshMemory()" id="memory-refresh-btn-settings" style="font-size:13px;font-weight:700;color:rgba(30,16,64,0.4);background:none;border:none;cursor:pointer;padding:4px 6px">↻</button>
+          <button data-action="call" data-fn="refreshMemory" id="memory-refresh-btn-settings" style="font-size:13px;font-weight:700;color:rgba(30,16,64,0.4);background:none;border:none;cursor:pointer;padding:4px 6px">↻</button>
           <svg class="s-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.3)" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
         </div>
       </div>
@@ -1400,7 +1400,7 @@
     <!-- Дані -->
     <div class="s-group-label" style="padding:4px 14px;font-size:11px;font-weight:700;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.09em">Дані</div>
     <div class="s-group">
-      <div class="s-row" onclick="showErrorLog()">
+      <div class="s-row" data-action="call" data-fn="showErrorLog">
         <div class="s-row-left">
           <div class="s-icon" style="background:rgba(30,16,64,0.06)">
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.5)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -1412,7 +1412,7 @@
           <svg class="s-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.3)" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
         </div>
       </div>
-      <div class="s-row" onclick="clearAllData()" style="border-bottom:none">
+      <div class="s-row" data-action="call" data-fn="clearAllData" style="border-bottom:none">
         <div class="s-row-left">
           <div class="s-icon" style="background:rgba(239,68,68,0.09)">
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M9 6V4h6v2"/><path d="M10 11v6M14 11v6"/></svg>
@@ -1425,7 +1425,7 @@
     <!-- Інформація -->
     <div class="s-group-label" style="padding:4px 14px;font-size:11px;font-weight:700;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.09em">Інформація</div>
     <div class="s-group">
-      <div class="s-row" onclick="openPrivacyPolicy()">
+      <div class="s-row" data-action="call" data-fn="openPrivacyPolicy">
         <div class="s-row-left">
           <div class="s-icon" style="background:rgba(30,16,64,0.05)">
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.45)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
@@ -1434,7 +1434,7 @@
         </div>
         <svg class="s-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.3)" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
       </div>
-      <div class="s-row" onclick="openTerms()">
+      <div class="s-row" data-action="call" data-fn="openTerms">
         <div class="s-row-left">
           <div class="s-icon" style="background:rgba(30,16,64,0.05)">
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.45)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
@@ -1443,7 +1443,7 @@
         </div>
         <svg class="s-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.3)" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
       </div>
-      <div class="s-row" onclick="openFeedback()">
+      <div class="s-row" data-action="call" data-fn="openFeedback">
         <div class="s-row-left">
           <div class="s-icon" style="background:rgba(30,16,64,0.05)">
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.45)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
@@ -1452,7 +1452,7 @@
         </div>
         <svg class="s-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.3)" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
       </div>
-      <div class="s-row" onclick="closeSettings();openUpdateSlides()" style="border-bottom:none">
+      <div class="s-row" data-action="close-settings-open-update-slides" style="border-bottom:none">
         <div class="s-row-left">
           <div class="s-icon" style="background:rgba(30,16,64,0.05)">
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.45)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
@@ -1468,7 +1468,7 @@
     <div class="s-group">
       <div class="s-row" style="cursor:default;flex-direction:column;align-items:stretch;gap:8px;padding:14px">
         <input class="settings-input" type="password" id="input-api-key" placeholder="sk-proj-..." autocomplete="off" autocorrect="off" spellcheck="false" onblur="saveSettings()" style="padding:10px 14px;font-size:15px;border-radius:12px;background:rgba(255,255,255,0.7);border:1px solid rgba(30,16,64,0.1)">
-        <button onclick="saveSettings()" style="padding:10px 14px;font-size:14px;font-weight:700;border-radius:10px;background:rgba(194,121,10,0.12);border:1.5px solid rgba(194,121,10,0.35);color:#c2790a;cursor:pointer;font-family:inherit">Зберегти ключ</button>
+        <button data-action="call" data-fn="saveSettings" style="padding:10px 14px;font-size:14px;font-weight:700;border-radius:10px;background:rgba(194,121,10,0.12);border:1.5px solid rgba(194,121,10,0.35);color:#c2790a;cursor:pointer;font-family:inherit">Зберегти ключ</button>
         <div id="key-status" class="key-status no-key">⚠️ Ключ не встановлено</div>
       </div>
     </div>
@@ -1479,8 +1479,8 @@
       <div class="s-row" style="cursor:default;flex-direction:column;align-items:stretch;gap:10px;padding:14px">
         <div id="usage-meter-display"></div>
         <div style="display:flex;gap:8px">
-          <button onclick="exportUsageWithToast()" style="flex:1;background:rgba(194,121,10,0.08);border:1.5px solid rgba(194,121,10,0.20);border-radius:10px;padding:10px;font-size:13px;font-weight:600;color:#c2790a;cursor:pointer;font-family:inherit">📋 Експортувати JSON</button>
-          <button onclick="clearUsageWithConfirm()" style="background:rgba(239,68,68,0.06);border:1.5px solid rgba(239,68,68,0.18);border-radius:10px;padding:10px 14px;font-size:13px;font-weight:600;color:#ef4444;cursor:pointer;font-family:inherit">🗑️</button>
+          <button data-action="call" data-fn="exportUsageWithToast" style="flex:1;background:rgba(194,121,10,0.08);border:1.5px solid rgba(194,121,10,0.20);border-radius:10px;padding:10px;font-size:13px;font-weight:600;color:#c2790a;cursor:pointer;font-family:inherit">📋 Експортувати JSON</button>
+          <button data-action="call" data-fn="clearUsageWithConfirm" style="background:rgba(239,68,68,0.06);border:1.5px solid rgba(239,68,68,0.18);border-radius:10px;padding:10px 14px;font-size:13px;font-weight:600;color:#ef4444;cursor:pointer;font-family:inherit">🗑️</button>
         </div>
       </div>
     </div>
@@ -1503,28 +1503,28 @@
 
 <!-- MEMORY MODAL -->
 <div id="memory-modal-overlay" style="display:none;position:fixed;inset:0;z-index:599;background:rgba(20,10,50,0.45);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);pointer-events:none"></div>
-<div id="memory-modal" data-skip-auto-swipe="1" onclick="if(event.target===this)closeMemoryModal()" style="display:none;position:fixed;inset:0;z-index:600;align-items:flex-end;justify-content:center">
+<div id="memory-modal" data-skip-auto-swipe="1" data-action="close-backdrop" data-fn="closeMemoryModal" style="display:none;position:fixed;inset:0;z-index:600;align-items:flex-end;justify-content:center">
   <div style="position:relative;width:100%;max-width:480px;background:linear-gradient(180deg,#f5f0e8 0%,#faf7f2 20%,#ffffff 100%);border-radius:24px 24px 0 0;z-index:1;max-height:88vh;display:flex;flex-direction:column">
     <!-- Handle -->
     <div style="padding:12px 20px 0;flex-shrink:0">
       <div class="modal-handle" style="width:36px;height:4px;background:rgba(30,16,64,0.15);border-radius:2px;margin:0 auto 12px"></div>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
         <div style="font-family:var(--font-display);font-size:17px;font-weight:900;color:#1e1040">Памʼять агента</div>
-        <button onclick="closeMemoryModal()" style="background:none;border:none;font-size:22px;color:rgba(30,16,64,0.3);cursor:pointer;padding:2px 6px;line-height:1">×</button>
+        <button data-action="call" data-fn="closeMemoryModal" style="background:none;border:none;font-size:22px;color:rgba(30,16,64,0.3);cursor:pointer;padding:2px 6px;line-height:1">×</button>
       </div>
       <div style="font-size:13px;color:rgba(30,16,64,0.4);margin-bottom:12px">OWL читає це при кожному запиті</div>
       <!-- Add new entry -->
       <div style="display:flex;gap:8px;margin-bottom:12px">
         <input id="memory-new-input" type="text" placeholder="Додати факт про себе…" style="flex:1;border:1.5px solid rgba(30,16,64,0.1);border-radius:12px;padding:10px 14px;font-size:15px;font-family:inherit;color:#1e1040;outline:none;background:rgba(255,255,255,0.8)" ontouchend="this.focus()">
-        <button onclick="addMemoryEntry()" style="background:#1e1040;border:none;border-radius:12px;padding:10px 16px;font-size:15px;font-weight:700;color:white;cursor:pointer;flex-shrink:0">+</button>
+        <button data-action="call" data-fn="addMemoryEntry" style="background:#1e1040;border:none;border-radius:12px;padding:10px 16px;font-size:15px;font-weight:700;color:white;cursor:pointer;flex-shrink:0">+</button>
       </div>
     </div>
     <!-- Cards list -->
     <div id="memory-cards-list" style="flex:1;overflow-y:auto;padding:0 14px 40px;display:flex;flex-direction:column;gap:8px"></div>
     <!-- Refresh -->
     <div style="padding:12px 14px;border-top:1px solid rgba(30,16,64,0.07);flex-shrink:0;display:flex;gap:8px">
-      <button onclick="refreshMemory()" id="memory-refresh-btn-modal" style="flex:1;background:rgba(194,121,10,0.08);border:1.5px solid rgba(194,121,10,0.2);border-radius:12px;padding:11px;font-size:14px;font-weight:700;color:#c2790a;cursor:pointer">↻ Оновити через OWL</button>
-      <button onclick="saveMemoryCards()" style="flex:1;background:linear-gradient(135deg,#a67c52,#7a4e2d);border:none;border-radius:12px;padding:11px;font-size:14px;font-weight:700;color:white;cursor:pointer">Зберегти</button>
+      <button data-action="call" data-fn="refreshMemory" id="memory-refresh-btn-modal" style="flex:1;background:rgba(194,121,10,0.08);border:1.5px solid rgba(194,121,10,0.2);border-radius:12px;padding:11px;font-size:14px;font-weight:700;color:#c2790a;cursor:pointer">↻ Оновити через OWL</button>
+      <button data-action="call" data-fn="saveMemoryCards" style="flex:1;background:linear-gradient(135deg,#a67c52,#7a4e2d);border:none;border-radius:12px;padding:11px;font-size:14px;font-weight:700;color:white;cursor:pointer">Зберегти</button>
     </div>
   </div>
 </div>
@@ -1532,7 +1532,7 @@
 <!-- SLIDES TOUR -->
 <div id="slides-tour" style="display:none;position:fixed;inset:0;z-index:600;align-items:flex-end;justify-content:center;padding:0 12px 12px">
   <!-- Затемнений фон -->
-  <div style="position:absolute;inset:0;background:rgba(10,5,25,0.7);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)" onclick="closeSlidesTour()"></div>
+  <div style="position:absolute;inset:0;background:rgba(10,5,25,0.7);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)" data-action="call" data-fn="closeSlidesTour"></div>
   <!-- Картка слайду -->
   <div style="position:relative;width:100%;max-width:420px;padding:0 12px 32px;z-index:1">
     <div style="background:white;border-radius:24px;padding:22px 18px 18px;box-shadow:0 16px 48px rgba(0,0,0,0.25)">
@@ -1542,8 +1542,8 @@
       <div id="slides-content"></div>
       <!-- Кнопки -->
       <div style="display:flex;gap:8px;margin-top:16px">
-        <button id="slides-skip-btn" onclick="closeSlidesTour()" style="flex:1;padding:12px;border-radius:12px;background:rgba(30,16,64,0.06);border:none;font-size:14px;font-weight:700;color:rgba(30,16,64,0.4);cursor:pointer;font-family:inherit">Закрити</button>
-        <button id="slides-next-btn" onclick="slidesNext()" style="flex:2;padding:12px;border-radius:12px;border:none;font-size:14px;font-weight:800;color:white;cursor:pointer;font-family:inherit">Далі →</button>
+        <button id="slides-skip-btn" data-action="call" data-fn="closeSlidesTour" style="flex:1;padding:12px;border-radius:12px;background:rgba(30,16,64,0.06);border:none;font-size:14px;font-weight:700;color:rgba(30,16,64,0.4);cursor:pointer;font-family:inherit">Закрити</button>
+        <button id="slides-next-btn" data-action="call" data-fn="slidesNext" style="flex:2;padding:12px;border-radius:12px;border:none;font-size:14px;font-weight:800;color:white;cursor:pointer;font-family:inherit">Далі →</button>
       </div>
     </div>
   </div>
@@ -1551,11 +1551,11 @@
 
 <!-- HELP DRAWER -->
 <div id="help-drawer">
-  <div id="help-drawer-dim" onclick="closeHelp()"></div>
+  <div id="help-drawer-dim" data-action="call" data-fn="closeHelp"></div>
   <div id="help-drawer-panel">
     <div id="help-drawer-header">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-        <button onclick="closeHelp()" style="background:rgba(255,255,255,0.15);border:none;border-radius:50%;width:30px;height:30px;cursor:pointer;color:white;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <button data-action="call" data-fn="closeHelp" style="background:rgba(255,255,255,0.15);border:none;border-radius:50%;width:30px;height:30px;cursor:pointer;color:white;display:flex;align-items:center;justify-content:center;flex-shrink:0">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
         </button>
         <div style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:0.1em">Довідка</div>
@@ -1570,14 +1570,14 @@
 </div>
 
 <!-- TOAST -->
-<div id="toast"><span id="toast-msg"></span><button id="toast-undo-btn" onclick="undoDelete()">Відновити</button></div>
+<div id="toast"><span id="toast-msg"></span><button id="toast-undo-btn" data-action="call" data-fn="undoDelete">Відновити</button></div>
 
 <script src="bundle.js?v=932-20260518-1823"></script>
 
 <!-- TASK CHAT MODAL -->
 <div id="task-chat-modal" style="display:none;position:fixed;inset:0;z-index:300;flex-direction:column;background:white;">
   <div style="display:flex;align-items:center;gap:12px;padding:max(56px, calc(env(safe-area-inset-top) + 16px)) 16px 12px;border-bottom:1px solid rgba(30,16,64,0.08);flex-shrink:0;background:white;">
-    <button onclick="closeTaskChat()" style="background:rgba(234,88,12,0.1);border:none;font-size:23px;cursor:pointer;color:#ea580c;padding:8px 12px;line-height:1;border-radius:12px;font-weight:900;min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center">←</button>
+    <button data-action="call" data-fn="closeTaskChat" style="background:rgba(234,88,12,0.1);border:none;font-size:23px;cursor:pointer;color:#ea580c;padding:8px 12px;line-height:1;border-radius:12px;font-weight:900;min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center">←</button>
     <div style="flex:1;min-width:0">
       <div style="font-size:13px;font-weight:700;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.08em">Обговорення задачі</div>
       <div id="task-chat-title" style="font-size:16px;font-weight:700;color:#1e1040;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
@@ -1589,7 +1589,7 @@
       maxlength="500" oninput="autoResizeTextarea(this)"
       onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendTaskChatMessage();}"
       style="flex:1;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:10px 12px;font-size:16px;font-family:inherit;color:#1e1040;outline:none;resize:none;max-height:100px;"></textarea>
-    <button onclick="sendTaskChatMessage()" id="task-chat-send" style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#f97316,#ea580c);border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;">
+    <button data-action="call" data-fn="sendTaskChatMessage" id="task-chat-send" style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#f97316,#ea580c);border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1e1040" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
     </button>
   </div>
@@ -1600,19 +1600,19 @@
   <!-- Header — тема Нотаток -->
   <div id="note-view-header" style="padding-top:env(safe-area-inset-top,0px);background:linear-gradient(160deg,#fed7aa,#ffedd5);flex-shrink:0;border-bottom:1px solid rgba(194,98,10,0.1)">
     <div style="display:flex;align-items:center;gap:12px;padding:10px 16px 12px;">
-      <button onclick="closeNoteView()" style="background:rgba(194,98,10,0.12);border:none;cursor:pointer;color:#c2620a;padding:0;border-radius:12px;width:44px;height:44px;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+      <button data-action="call" data-fn="closeNoteView" style="background:rgba(194,98,10,0.12);border:none;cursor:pointer;color:#c2620a;padding:0;border-radius:12px;width:44px;height:44px;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
       <div style="flex:1;min-width:0">
         <div id="note-view-folder" style="font-size:11px;font-weight:800;color:rgba(194,98,10,0.6);text-transform:uppercase;letter-spacing:0.08em"></div>
         <div style="font-size:14px;font-weight:600;color:#1e1040;overflow:hidden;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;" id="note-view-preview"></div>
       </div>
-      <button onclick="openNoteViewMenu()" style="background:rgba(194,98,10,0.1);border:none;cursor:pointer;color:#c2620a;border-radius:10px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button>
+      <button data-action="call" data-fn="openNoteViewMenu" style="background:rgba(194,98,10,0.1);border:none;cursor:pointer;color:#c2620a;border-radius:10px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button>
     </div>
   </div>
 
   <!-- Tabs — SVG іконки -->
   <div style="display:flex;border-bottom:1px solid rgba(194,98,10,0.1);background:rgba(254,215,170,0.5);flex-shrink:0">
-    <button id="note-view-tab-note" onclick="switchNoteViewTab('note')" style="flex:1;padding:10px;font-size:13px;font-weight:700;color:#c2620a;background:none;border:none;border-bottom:2px solid #c2620a;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg> Нотатка</button>
-    <button id="note-view-tab-chat" onclick="switchNoteViewTab('chat')" style="flex:1;padding:10px;font-size:13px;font-weight:700;color:rgba(30,16,64,0.4);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Агент</button>
+    <button id="note-view-tab-note" data-action="switch-note-view-tab" data-tab="note" style="flex:1;padding:10px;font-size:13px;font-weight:700;color:#c2620a;background:none;border:none;border-bottom:2px solid #c2620a;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg> Нотатка</button>
+    <button id="note-view-tab-chat" data-action="switch-note-view-tab" data-tab="chat" style="flex:1;padding:10px;font-size:13px;font-weight:700;color:rgba(30,16,64,0.4);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Агент</button>
   </div>
 
   <!-- Note content panel — колір картки -->
@@ -1634,7 +1634,7 @@
       maxlength="500" oninput="autoResizeTextarea(this)"
       onkeydown="if(event.key==='Enter'&&(event.metaKey||event.ctrlKey)){event.preventDefault();sendNoteChatMessage();}"
       style="flex:1;border:1.5px solid rgba(194,98,10,0.15);border-radius:12px;padding:10px 12px;font-size:16px;font-family:inherit;color:#1e1040;outline:none;resize:none;max-height:100px;background:rgba(255,255,255,0.7);"></textarea>
-    <button onclick="sendNoteChatMessage()" id="note-chat-send" style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#f97316,#c2410c);border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;">
+    <button data-action="call" data-fn="sendNoteChatMessage" id="note-chat-send" style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#f97316,#c2410c);border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
     </button>
   </div>
@@ -1650,9 +1650,9 @@
         <div id="log-panel-count" style="font-size:11px;color:rgba(30,16,64,0.5);margin-top:2px"></div>
       </div>
       <div style="display:flex;gap:8px;align-items:center">
-        <button onclick="copyLogForClaude()" style="padding:7px 14px;border-radius:10px;background:rgba(194,121,10,0.12);border:1px solid rgba(194,121,10,0.3);color:#b45309;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer">Копіювати</button>
-        <button onclick="clearErrorLog()" style="padding:7px 12px;border-radius:10px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.25);color:#dc2626;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer">Очистити</button>
-        <button onclick="closeLogPanel()" style="width:34px;height:34px;border-radius:10px;background:rgba(30,16,64,0.06);border:none;color:rgba(30,16,64,0.55);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">✕</button>
+        <button data-action="call" data-fn="copyLogForClaude" style="padding:7px 14px;border-radius:10px;background:rgba(194,121,10,0.12);border:1px solid rgba(194,121,10,0.3);color:#b45309;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer">Копіювати</button>
+        <button data-action="call" data-fn="clearErrorLog" style="padding:7px 12px;border-radius:10px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.25);color:#dc2626;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer">Очистити</button>
+        <button data-action="call" data-fn="closeLogPanel" style="width:34px;height:34px;border-radius:10px;background:rgba(30,16,64,0.06);border:none;color:rgba(30,16,64,0.55);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">✕</button>
       </div>
     </div>
   </div>
@@ -1672,8 +1672,8 @@
         <div style="font-size:10px;font-weight:600;opacity:0.8;margin-top:1px">Експорт для лікаря · NeverMind</div>
       </div>
       <div style="display:flex;gap:6px">
-        <button onclick="copyHealthExport()" id="health-export-copy-btn" style="background:white;color:#1a5c2a;border:none;border-radius:10px;padding:8px 14px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">📋 Скопіювати</button>
-        <button onclick="closeHealthExport()" style="background:rgba(255,255,255,0.2);color:white;border:none;border-radius:10px;padding:8px 12px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">✕</button>
+        <button data-action="call" data-fn="copyHealthExport" id="health-export-copy-btn" style="background:white;color:#1a5c2a;border:none;border-radius:10px;padding:8px 14px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">📋 Скопіювати</button>
+        <button data-action="call" data-fn="closeHealthExport" style="background:rgba(255,255,255,0.2);color:white;border:none;border-radius:10px;padding:8px 12px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">✕</button>
       </div>
     </div>
     <!-- Content (plain-text preview, rendered via JS) -->
@@ -1688,13 +1688,13 @@
      Замінює рідний prompt() + додає UI редагування полів Фази 1. -->
 <!-- HEALTH CARD MODAL OVERLAY — top-level sibling (НЕ дитина модалки) щоб iOS Safari не клав overlay у transformed-context при свайпі картки -->
 <div id="health-card-modal-overlay" style="display:none;position:fixed;inset:0;z-index:199;background:rgba(0,0,0,0.35);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);pointer-events:none"></div>
-<div id="health-card-modal" onclick="if(event.target===this)closeHealthCardModal()" style="display:none;position:fixed;inset:0;z-index:200;align-items:flex-end;justify-content:center;padding:0 16px 16px">
+<div id="health-card-modal" data-action="close-backdrop" data-fn="closeHealthCardModal" style="display:none;position:fixed;inset:0;z-index:200;align-items:flex-end;justify-content:center;padding:0 16px 16px">
   <div style="position:relative;width:100%;max-width:480px;background:rgba(255,255,255,0.30);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border-radius:24px;overflow:hidden;z-index:1;max-height:88vh;border:1.5px solid rgba(255,255,255,0.5);padding:0 20px;">
     <div class="health-modal-scroll" style="overflow-y:auto;overflow-x:hidden;max-height:88vh;padding:28px 0 calc(env(safe-area-inset-bottom) + 28px);box-sizing:border-box;">
       <div style="width:36px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 20px"></div>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
         <div id="health-card-modal-title" style="font-family:var(--font-display);font-size:18px;font-weight:700;color:#1e1040">Новий стан</div>
-        <button id="health-card-delete-btn" onclick="deleteHealthCardFromModal()" style="display:none;background:none;border:none;font-size:13px;font-weight:700;color:#ef4444;cursor:pointer;padding:4px 8px">Видалити</button>
+        <button id="health-card-delete-btn" data-action="call" data-fn="deleteHealthCardFromModal" style="display:none;background:none;border:none;font-size:13px;font-weight:700;color:#ef4444;cursor:pointer;padding:4px 8px">Видалити</button>
       </div>
 
       <!-- Назва -->
@@ -1723,16 +1723,16 @@
         <div style="flex:1;min-width:0">
           <div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">Початок</div>
           <div id="health-card-start-date-trigger" data-value=""
-            onclick="openHealthDtPicker('start-date','date')"
+            data-action="open-health-dt-picker" data-field="start-date" data-dt-type="date"
             style="width:100%;min-width:0;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:11px 14px;font-size:14px;font-family:inherit;color:rgba(30,16,64,0.4);box-sizing:border-box;background:rgba(255,255,255,0.7);cursor:pointer;text-overflow:ellipsis;overflow:hidden;white-space:nowrap">Вибери дату</div>
         </div>
         <div style="flex:1;min-width:0">
           <div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">Наст. прийом</div>
           <div id="health-card-appt-date-trigger" data-value=""
-            onclick="openHealthDtPicker('appt-date','date')"
+            data-action="open-health-dt-picker" data-field="appt-date" data-dt-type="date"
             style="width:100%;min-width:0;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:11px 14px;font-size:14px;font-family:inherit;color:rgba(30,16,64,0.4);box-sizing:border-box;background:rgba(255,255,255,0.7);cursor:pointer;margin-bottom:6px;text-overflow:ellipsis;overflow:hidden;white-space:nowrap">Вибери дату</div>
           <div id="health-card-appt-time-trigger" data-value=""
-            onclick="openHealthDtPicker('appt-time','time')"
+            data-action="open-health-dt-picker" data-field="appt-time" data-dt-type="time"
             style="width:100%;min-width:0;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:11px 14px;font-size:14px;font-family:inherit;color:rgba(30,16,64,0.4);box-sizing:border-box;background:rgba(255,255,255,0.7);cursor:pointer;text-overflow:ellipsis;overflow:hidden;white-space:nowrap">Вибери час</div>
         </div>
       </div>
@@ -1740,15 +1740,15 @@
       <!-- Препарати -->
       <div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px">Препарати</div>
       <div id="health-card-meds-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px"></div>
-      <button onclick="addHealthMedicationRow()" style="font-size:12px;font-weight:700;padding:7px 12px;border-radius:10px;border:1.5px solid rgba(30,16,64,0.15);background:white;color:#c2790a;cursor:pointer;font-family:inherit;display:block;margin:0 0 20px 0">+ Додати препарат</button>
+      <button data-action="call" data-fn="addHealthMedicationRow" style="font-size:12px;font-weight:700;padding:7px 12px;border-radius:10px;border:1.5px solid rgba(30,16,64,0.15);background:white;color:#c2790a;cursor:pointer;font-family:inherit;display:block;margin:0 0 20px 0">+ Додати препарат</button>
 
       <!-- Статус прибрано (роадмап «Health: AI-інтерв'ю»). За замовчуванням 'active',
            зміна статусу — через кнопки на самій картці (setHealthCardStatus). -->
 
       <!-- Кнопки -->
       <div style="display:flex;gap:10px">
-        <button onclick="closeHealthCardModal()" style="flex:1;background:rgba(30,16,64,0.06);border:none;border-radius:12px;padding:14px;font-size:16px;font-weight:700;color:rgba(30,16,64,0.5);cursor:pointer">Скасувати</button>
-        <button onclick="saveHealthCardFromModal()" style="flex:2;background:linear-gradient(135deg,#d68f1c,#c2790a);border:none;border-radius:12px;padding:14px;font-size:16px;font-weight:700;color:white;cursor:pointer">Зберегти</button>
+        <button data-action="call" data-fn="closeHealthCardModal" style="flex:1;background:rgba(30,16,64,0.06);border:none;border-radius:12px;padding:14px;font-size:16px;font-weight:700;color:rgba(30,16,64,0.5);cursor:pointer">Скасувати</button>
+        <button data-action="call" data-fn="saveHealthCardFromModal" style="flex:2;background:linear-gradient(135deg,#d68f1c,#c2790a);border:none;border-radius:12px;padding:14px;font-size:16px;font-weight:700;color:white;cursor:pointer">Зберегти</button>
       </div>
     </div>
   </div>
@@ -1756,7 +1756,7 @@
 
 <!-- HEALTH DATE/TIME PICKER MODAL — drum-picker над health-card-modal (z-index:300 > 200) -->
 <div id="health-dt-picker-modal-overlay" style="display:none;position:fixed;inset:0;z-index:299;background:rgba(0,0,0,0.45);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);pointer-events:none"></div>
-<div id="health-dt-picker-modal" onclick="if(event.target===this)closeHealthDtPicker()" style="display:none;position:fixed;inset:0;z-index:300;align-items:flex-end;justify-content:center;padding:0 16px 16px">
+<div id="health-dt-picker-modal" data-action="close-backdrop" data-fn="closeHealthDtPicker" style="display:none;position:fixed;inset:0;z-index:300;align-items:flex-end;justify-content:center;padding:0 16px 16px">
   <div style="position:relative;width:100%;max-width:480px;background:rgba(255,255,255,0.30);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border-radius:24px;overflow:hidden;z-index:1;border:1.5px solid rgba(255,255,255,0.5);padding:28px 20px calc(env(safe-area-inset-bottom) + 20px)">
     <div style="width:36px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 18px"></div>
     <div id="health-dt-picker-title" style="font-family:var(--font-display);font-size:18px;font-weight:700;color:#1e1040;margin-bottom:16px">Виберіть дату</div>
@@ -1773,15 +1773,15 @@
       <div style="position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);height:40px;border-top:1.5px solid rgba(194,121,10,0.3);border-bottom:1.5px solid rgba(194,121,10,0.3);pointer-events:none"></div>
     </div>
     <div style="display:flex;gap:8px">
-      <button onclick="closeHealthDtPicker()" style="flex:1;background:rgba(30,16,64,0.06);border:none;border-radius:12px;padding:13px;font-size:16px;font-weight:700;color:rgba(30,16,64,0.5);cursor:pointer">Скасувати</button>
-      <button onclick="saveHealthDtPicker()" style="flex:2;background:linear-gradient(135deg,#d68f1c,#c2790a);border:none;border-radius:12px;padding:13px;font-size:16px;font-weight:700;color:white;cursor:pointer">Готово</button>
+      <button data-action="call" data-fn="closeHealthDtPicker" style="flex:1;background:rgba(30,16,64,0.06);border:none;border-radius:12px;padding:13px;font-size:16px;font-weight:700;color:rgba(30,16,64,0.5);cursor:pointer">Скасувати</button>
+      <button data-action="call" data-fn="saveHealthDtPicker" style="flex:2;background:linear-gradient(135deg,#d68f1c,#c2790a);border:none;border-radius:12px;padding:13px;font-size:16px;font-weight:700;color:white;cursor:pointer">Готово</button>
     </div>
   </div>
 </div>
 
 <!-- ROUTINE TIME PICKER (drum-picker замість native iOS picker для розпорядку, dyhJu 11.05) -->
 <div id="routine-time-picker-modal-overlay" style="display:none;position:fixed;inset:0;z-index:299;background:rgba(0,0,0,0.45);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);pointer-events:none"></div>
-<div id="routine-time-picker-modal" onclick="if(event.target===this)closeRoutineTimePicker()" style="display:none;position:fixed;inset:0;z-index:300;align-items:flex-end;justify-content:center;padding:0 16px 16px">
+<div id="routine-time-picker-modal" data-action="close-backdrop" data-fn="closeRoutineTimePicker" style="display:none;position:fixed;inset:0;z-index:300;align-items:flex-end;justify-content:center;padding:0 16px 16px">
   <div style="position:relative;width:100%;max-width:480px;background:rgba(255,255,255,0.30);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border-radius:24px;overflow:hidden;z-index:1;border:1.5px solid rgba(255,255,255,0.5);padding:28px 20px calc(env(safe-area-inset-bottom) + 20px)">
     <div style="width:36px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 18px"></div>
     <div style="font-family:var(--font-display);font-size:18px;font-weight:700;color:#1e1040;margin-bottom:16px">Виберіть час</div>
@@ -1792,15 +1792,15 @@
       <div style="position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);height:40px;border-top:1.5px solid rgba(234,88,12,0.3);border-bottom:1.5px solid rgba(234,88,12,0.3);pointer-events:none"></div>
     </div>
     <div style="display:flex;gap:8px">
-      <button onclick="closeRoutineTimePicker()" style="flex:1;background:rgba(30,16,64,0.06);border:none;border-radius:12px;padding:13px;font-size:16px;font-weight:700;color:rgba(30,16,64,0.5);cursor:pointer">Скасувати</button>
-      <button onclick="saveRoutineTimePicker()" style="flex:2;background:linear-gradient(135deg,#f97316,#ea580c);border:none;border-radius:12px;padding:13px;font-size:16px;font-weight:700;color:white;cursor:pointer">Готово</button>
+      <button data-action="call" data-fn="closeRoutineTimePicker" style="flex:1;background:rgba(30,16,64,0.06);border:none;border-radius:12px;padding:13px;font-size:16px;font-weight:700;color:rgba(30,16,64,0.5);cursor:pointer">Скасувати</button>
+      <button data-action="call" data-fn="saveRoutineTimePicker" style="flex:2;background:linear-gradient(135deg,#f97316,#ea580c);border:none;border-radius:12px;padding:13px;font-size:16px;font-weight:700;color:white;cursor:pointer">Готово</button>
     </div>
   </div>
 </div>
 
 <!-- CLARIFY MODAL — вікно уточнення від Агента -->
 <div id="clarify-modal-overlay" style="display:none;position:fixed;inset:0;z-index:499;background:rgba(10,5,30,0.3);backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);pointer-events:none"></div>
-<div id="clarify-modal" onclick="if(event.target===this)closeClarify()" style="display:none;position:fixed;inset:0;z-index:500;align-items:flex-end;justify-content:center;padding:0 12px 12px">
+<div id="clarify-modal" data-action="close-backdrop" data-fn="closeClarify" style="display:none;position:fixed;inset:0;z-index:500;align-items:flex-end;justify-content:center;padding:0 12px 12px">
   <div style="position:relative;width:100%;max-width:480px;background:rgba(255,255,255,0.88);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-radius:24px;padding:14px 18px calc(env(safe-area-inset-bottom) + 24px);z-index:1;border:1.5px solid rgba(255,255,255,0.6);box-sizing:border-box;">
     <div style="width:36px;height:4px;background:rgba(0,0,0,0.1);border-radius:2px;margin:0 auto 14px"></div>
     <div style="display:inline-flex;align-items:center;gap:4px;background:rgba(194,121,10,0.08);color:#c2790a;font-size:10px;font-weight:700;padding:3px 9px;border-radius:8px;margin-bottom:10px">OWL уточнює</div>
@@ -1812,7 +1812,7 @@
         maxlength="500" oninput="autoResizeTextarea(this)"
         onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendClarifyText()}"
         style="flex:1;border:1.5px solid rgba(194,121,10,0.20);border-radius:13px;padding:10px 13px;font-size:14px;font-family:inherit;color:#1e1040;outline:none;resize:none;max-height:80px;box-sizing:border-box;"></textarea>
-      <button onclick="sendClarifyText()" style="width:42px;height:42px;border-radius:13px;background:#c2790a;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+      <button data-action="call" data-fn="sendClarifyText" style="width:42px;height:42px;border-radius:13px;background:#c2790a;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
       </button>
     </div>
