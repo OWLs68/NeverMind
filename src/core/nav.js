@@ -791,6 +791,11 @@ export function openSettings() {
     const finBudgetEl = document.getElementById('input-finance-budget');
     if (finBudgetEl) finBudgetEl.value = bdg.total || '';
   } catch(e) {}
+
+  // OBErR audit fix: badge Кошика при першому відкритті Налаштувань (не
+  // через nm-data-changed listener) — інакше юзер бачить badge=0 коли
+  // у trash є items видалені у попередніх сесіях.
+  try { _updateTrashBadge(); } catch(e) {}
 }
 
 function setOwlModeSetting(mode) {
@@ -1033,7 +1038,7 @@ const LEGAL_CONTENT = {
     </p>
     <h3 style="font-size:15px;font-weight:700;color:#1e1040;margin:16px 0 6px">2. Право на 14-денну відмову (EU)</h3>
     <p style="font-size:13.5px;line-height:1.55;color:#1e1040;margin:0 0 10px">
-      Як споживач у ЄС маєш право повернути гроші протягом 14 днів. <strong>Виняток:</strong> при оплаті ставлячи галочку «Я погоджуюсь почати користування одразу і знаю що втрачаю право на 14-денну відмову» — звільняєш нас від цього зобов'язання.
+      Сервіс наразі надається <strong>безкоштовно</strong>. EU Consumer Rights Directive Art. 9-16 (право на 14-денну відмову) не застосовується, оскільки договір не передбачає оплати. Як тільки введемо платні плани — додамо тут явну форму згоди (Art. 16(m) для цифрового контенту) і checkbox при оплаті.
     </p>
     <h3 style="font-size:15px;font-weight:700;color:#1e1040;margin:16px 0 6px">3. Обмеження відповідальності (PLD)</h3>
     <p style="font-size:13.5px;line-height:1.55;color:#1e1040;margin:0 0 10px">
@@ -1055,10 +1060,21 @@ const LEGAL_CONTENT = {
 };
 
 function _openLegal(page) {
+  // OBErR audit fix: whitelist (security agent) — без перевірки `page` як
+  // string, юзер з DevTools міг би викликати _openLegal('__proto__') або
+  // інше → undefined → fallback. Whitelist робить намір явним.
+  if (!['impressum', 'privacy', 'terms'].includes(page)) return;
   const overlay = document.getElementById('legal-overlay');
   const body = document.getElementById('legal-overlay-body');
   if (!overlay || !body) return;
-  body.innerHTML = LEGAL_CONTENT[page] || '<p>Не знайдено</p>';
+  const content = LEGAL_CONTENT[page] || '<p>Не знайдено</p>';
+  // OBErR audit fix: runtime warning для розробника якщо контент має
+  // PLACEHOLDER. Без цього Роман міг би задеплоїти з literal '[PLACEHOLDER]'
+  // у public Impressum → Abmahnung-ризик у DE €500-2000.
+  if (content.includes('[PLACEHOLDER')) {
+    console.warn('[legal] DRAFT із незаповненими PLACEHOLDER — НЕ публікувати:', page);
+  }
+  body.innerHTML = content;
   body.scrollTop = 0;
   overlay.style.display = 'flex';
 }
@@ -1122,7 +1138,7 @@ function saveSettings() {
   setTimeout(() => closeSettings(), 600);
 }
 
-function exportData() {
+async function exportData() {
   const data = {};
   const keys = ['nm_inbox','nm_tasks','nm_notes','nm_moments','nm_settings','nm_memory','nm_facts','nm_habits2','nm_habit_log2','nm_finance','nm_finance_budget','nm_finance_cats','nm_health_cards','nm_health_log','nm_projects','nm_evening_mood'];
   keys.forEach(k => {
@@ -1132,17 +1148,27 @@ function exportData() {
 
   const filename = `nevermind-backup-${new Date().toISOString().split('T')[0]}.json`;
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-  // OBErR 18.05.2026: iOS PWA standalone не підтримує <a download> — файл
-  // відкривається у новій вкладці без download. Pre-mortem Council. На iOS
-  // PWA fallback на navigator.share (Share Sheet → Save to Files).
+  // OBErR audit fix: iOS PWA navigator.share з canShare feature-detect +
+  // proper await. Раніше .then() ланцюг показував toast тільки після resolve,
+  // АЛЕ якщо canShare false (iOS 14) — share не виконувався, юзер чекав і не
+  // отримував toast взагалі. Тепер: чекаємо resolve, AbortError = silent,
+  // інші помилки = fall through на <a download>.
   const isIosPwa = /iP(hone|ad|od)/.test(navigator.userAgent || '') &&
                    (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
   if (isIosPwa && typeof navigator.share === 'function' && typeof File === 'function') {
     const file = new File([blob], filename, { type: 'application/json' });
-    navigator.share({ files: [file], title: 'NeverMind backup' })
-      .then(() => showToast(t('nav.toast.exported', '📤 Дані експортовано')))
-      .catch(() => {}); // юзер скасував share — без помилки
-    return;
+    const canShareFiles = typeof navigator.canShare === 'function'
+      ? navigator.canShare({ files: [file] }) : true;
+    if (canShareFiles) {
+      try {
+        await navigator.share({ files: [file], title: 'NeverMind backup' });
+        showToast(t('nav.toast.exported', '📤 Дані експортовано'));
+        return;
+      } catch (e) {
+        if (e && e.name === 'AbortError') return; // silent cancel
+        // Інші помилки — fall through на <a download>
+      }
+    }
   }
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -1511,12 +1537,17 @@ function restoreBackupFromUI(backupKey) {
   }
 }
 
-function downloadBackupFromUI(backupKey) {
-  const result = downloadBackupAsJson(backupKey);
+async function downloadBackupFromUI(backupKey) {
+  // OBErR audit fix: await Promise, не sync. Без await на iOS PWA toast
+  // показувався одразу після navigator.share виклику — юзер бачив «📤 Файл
+  // — у Share Sheet» навіть коли cancel'нув Share Sheet → втрата backup.
+  const result = await downloadBackupAsJson(backupKey);
   if (result === 'share') {
     showToast(t('backup.toast.shared', '📤 Файл — у Share Sheet'));
   } else if (result === 'download') {
     showToast(t('backup.toast.downloaded', '📤 Файл збережено'));
+  } else if (result === 'cancelled') {
+    // юзер скасував — без toast (відомий вибір)
   } else {
     showToast(t('backup.toast.export_fail', '⚠️ Не вдалось експортувати'));
   }

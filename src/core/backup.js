@@ -240,11 +240,15 @@ export function createFullBackup(label) {
   const labelStr = label || 'manual';
   // Запит NM_KEYS через window — глобально доступний після boot. Якщо backup
   // викликається до boot (раннє завантаження) — fallback на мінімальний набір.
+  // OBErR audit fix: ВКЛЮЧАЄМО і chat історію (nm.chat — 8 чатів). Раніше
+  // restore відновлював дані але видаляв всі розмови → юзер думав що це
+  // втрата даних. Chat історія ≤50 повідомлень/чат після truncate — розмір
+  // прийнятний. Quota check у createSelectiveBackup захищає від quota fail.
   let keys;
   try {
     const nm = (typeof window !== 'undefined' && window.NM_KEYS) ? window.NM_KEYS : null;
     if (nm && Array.isArray(nm.data) && Array.isArray(nm.settings)) {
-      keys = [...nm.data, ...nm.settings];
+      keys = [...nm.data, ...nm.settings, ...(Array.isArray(nm.chat) ? nm.chat : [])];
     } else {
       // Fallback (boot ще не закінчився): мінімальний набір з даних.
       keys = ['nm_inbox','nm_tasks','nm_notes','nm_habits2','nm_finance',
@@ -262,8 +266,12 @@ export function createFullBackup(label) {
 // download). На iOS PWA: navigator.share({ files: [File] }) → Share Sheet →
 // «Save to Files». На desktop / Chrome Android: звичайний download anchor.
 //
-// Returns: 'download' | 'share' | 'error'.
-export function downloadBackupAsJson(backupKey, filename) {
+// OBErR audit fix: повертає Promise<'download' | 'share' | 'cancelled' | 'error'>
+// замість sync return. Раніше: caller бачив 'share' одразу після виклику
+// navigator.share без await → toast «📤 Файл — у Share Sheet» показувався
+// навіть коли юзер cancel'нув share → втрата backup без попередження.
+// Тепер: чекаємо resolve/reject, AbortError → 'cancelled' (mute), інші → 'error'.
+export async function downloadBackupAsJson(backupKey, filename) {
   const raw = localStorage.getItem(backupKey);
   if (!raw) return 'error';
   const name = filename || ('nm-backup-' + backupKey.replace(/^nm_backup_/, '') + '.json');
@@ -273,8 +281,21 @@ export function downloadBackupAsJson(backupKey, filename) {
                      (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
     if (isIosPwa && typeof navigator.share === 'function' && typeof File === 'function') {
       const file = new File([blob], name, { type: 'application/json' });
-      navigator.share({ files: [file], title: 'NeverMind backup' }).catch(() => {});
-      return 'share';
+      // Pre-mortem #1: canShare feature-detect (iOS 15+) щоб поглянути що файлова
+      // share не буде відхилена браузером (iPhone 12 iOS 14 має navigator.share
+      // але не files). Якщо false — fall through до <a download> fallback.
+      const canShareFiles = typeof navigator.canShare === 'function'
+        ? navigator.canShare({ files: [file] }) : true;
+      if (canShareFiles) {
+        try {
+          await navigator.share({ files: [file], title: 'NeverMind backup' });
+          return 'share';
+        } catch (e) {
+          // AbortError — юзер cancel'нув Share Sheet, не помилка
+          if (e && e.name === 'AbortError') return 'cancelled';
+          // Інші помилки — fall through до <a download>
+        }
+      }
     }
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');

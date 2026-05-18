@@ -18781,8 +18781,14 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
   function formatTime(ts) {
     const diff = Date.now() - ts;
     if (diff < 6e4) return t("time.just_now", "\u0449\u043E\u0439\u043D\u043E");
-    if (diff < 36e5) return Math.floor(diff / 6e4) + t("time.minutes_ago", " \u0445\u0432 \u0442\u043E\u043C\u0443");
-    if (diff < 864e5) return Math.floor(diff / 36e5) + t("time.hours_ago", " \u0433\u043E\u0434 \u0442\u043E\u043C\u0443");
+    if (diff < 36e5) {
+      const min = Math.floor(diff / 6e4);
+      return t("time.minutes_ago", "{n} \u0445\u0432 \u0442\u043E\u043C\u0443", { n: min });
+    }
+    if (diff < 864e5) {
+      const hr = Math.floor(diff / 36e5);
+      return t("time.hours_ago", "{n} \u0433\u043E\u0434 \u0442\u043E\u043C\u0443", { n: hr });
+    }
     return new Date(ts).toLocaleDateString("uk-UA", { day: "numeric", month: "short" });
   }
   function escapeHtml(s) {
@@ -19909,7 +19915,7 @@ ${logLines}
     try {
       const nm = typeof window !== "undefined" && window.NM_KEYS ? window.NM_KEYS : null;
       if (nm && Array.isArray(nm.data) && Array.isArray(nm.settings)) {
-        keys = [...nm.data, ...nm.settings];
+        keys = [...nm.data, ...nm.settings, ...Array.isArray(nm.chat) ? nm.chat : []];
       } else {
         keys = [
           "nm_inbox",
@@ -19928,7 +19934,7 @@ ${logLines}
     }
     return createSelectiveBackup(keys, "full-" + labelStr);
   }
-  function downloadBackupAsJson(backupKey, filename) {
+  async function downloadBackupAsJson(backupKey, filename) {
     const raw = localStorage.getItem(backupKey);
     if (!raw) return "error";
     const name = filename || "nm-backup-" + backupKey.replace(/^nm_backup_/, "") + ".json";
@@ -19937,9 +19943,15 @@ ${logLines}
       const isIosPwa = /iP(hone|ad|od)/.test(navigator.userAgent || "") && (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches);
       if (isIosPwa && typeof navigator.share === "function" && typeof File === "function") {
         const file = new File([blob], name, { type: "application/json" });
-        navigator.share({ files: [file], title: "NeverMind backup" }).catch(() => {
-        });
-        return "share";
+        const canShareFiles = typeof navigator.canShare === "function" ? navigator.canShare({ files: [file] }) : true;
+        if (canShareFiles) {
+          try {
+            await navigator.share({ files: [file], title: "NeverMind backup" });
+            return "share";
+          } catch (e) {
+            if (e && e.name === "AbortError") return "cancelled";
+          }
+        }
       }
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -23505,6 +23517,10 @@ ${logLines}
       if (finBudgetEl) finBudgetEl.value = bdg.total || "";
     } catch (e) {
     }
+    try {
+      _updateTrashBadge();
+    } catch (e) {
+    }
   }
   function setOwlModeSetting(mode) {
     const settings = JSON.parse(localStorage.getItem("nm_settings") || "{}");
@@ -23650,10 +23666,15 @@ ${logLines}
     if (tsEl) tsEl.textContent = t("nav.mem.saved_now", "\u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E \u0449\u043E\u0439\u043D\u043E");
   }
   function _openLegal(page) {
+    if (!["impressum", "privacy", "terms"].includes(page)) return;
     const overlay = document.getElementById("legal-overlay");
     const body = document.getElementById("legal-overlay-body");
     if (!overlay || !body) return;
-    body.innerHTML = LEGAL_CONTENT[page] || "<p>\u041D\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E</p>";
+    const content = LEGAL_CONTENT[page] || "<p>\u041D\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E</p>";
+    if (content.includes("[PLACEHOLDER")) {
+      console.warn("[legal] DRAFT \u0456\u0437 \u043D\u0435\u0437\u0430\u043F\u043E\u0432\u043D\u0435\u043D\u0438\u043C\u0438 PLACEHOLDER \u2014 \u041D\u0415 \u043F\u0443\u0431\u043B\u0456\u043A\u0443\u0432\u0430\u0442\u0438:", page);
+    }
+    body.innerHTML = content;
     body.scrollTop = 0;
     overlay.style.display = "flex";
   }
@@ -23714,7 +23735,7 @@ ${logLines}
     updateKeyStatus(!!key);
     setTimeout(() => closeSettings(), 600);
   }
-  function exportData() {
+  async function exportData() {
     const data = {};
     const keys = ["nm_inbox", "nm_tasks", "nm_notes", "nm_moments", "nm_settings", "nm_memory", "nm_facts", "nm_habits2", "nm_habit_log2", "nm_finance", "nm_finance_budget", "nm_finance_cats", "nm_health_cards", "nm_health_log", "nm_projects", "nm_evening_mood"];
     keys.forEach((k) => {
@@ -23726,9 +23747,16 @@ ${logLines}
     const isIosPwa = /iP(hone|ad|od)/.test(navigator.userAgent || "") && (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches);
     if (isIosPwa && typeof navigator.share === "function" && typeof File === "function") {
       const file = new File([blob], filename, { type: "application/json" });
-      navigator.share({ files: [file], title: "NeverMind backup" }).then(() => showToast(t("nav.toast.exported", "\u{1F4E4} \u0414\u0430\u043D\u0456 \u0435\u043A\u0441\u043F\u043E\u0440\u0442\u043E\u0432\u0430\u043D\u043E"))).catch(() => {
-      });
-      return;
+      const canShareFiles = typeof navigator.canShare === "function" ? navigator.canShare({ files: [file] }) : true;
+      if (canShareFiles) {
+        try {
+          await navigator.share({ files: [file], title: "NeverMind backup" });
+          showToast(t("nav.toast.exported", "\u{1F4E4} \u0414\u0430\u043D\u0456 \u0435\u043A\u0441\u043F\u043E\u0440\u0442\u043E\u0432\u0430\u043D\u043E"));
+          return;
+        } catch (e) {
+          if (e && e.name === "AbortError") return;
+        }
+      }
     }
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -24043,12 +24071,13 @@ ${legacy}`;
       showToast(t("backup.toast.restore_fail", "\u26A0\uFE0F \u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u0432\u0456\u0434\u043D\u043E\u0432\u0438\u0442\u0438"));
     }
   }
-  function downloadBackupFromUI(backupKey) {
-    const result = downloadBackupAsJson(backupKey);
+  async function downloadBackupFromUI(backupKey) {
+    const result = await downloadBackupAsJson(backupKey);
     if (result === "share") {
       showToast(t("backup.toast.shared", "\u{1F4E4} \u0424\u0430\u0439\u043B \u2014 \u0443 Share Sheet"));
     } else if (result === "download") {
       showToast(t("backup.toast.downloaded", "\u{1F4E4} \u0424\u0430\u0439\u043B \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E"));
+    } else if (result === "cancelled") {
     } else {
       showToast(t("backup.toast.export_fail", "\u26A0\uFE0F \u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u0435\u043A\u0441\u043F\u043E\u0440\u0442\u0443\u0432\u0430\u0442\u0438"));
     }
@@ -24363,7 +24392,7 @@ ${legacy}`;
     </p>
     <h3 style="font-size:15px;font-weight:700;color:#1e1040;margin:16px 0 6px">2. \u041F\u0440\u0430\u0432\u043E \u043D\u0430 14-\u0434\u0435\u043D\u043D\u0443 \u0432\u0456\u0434\u043C\u043E\u0432\u0443 (EU)</h3>
     <p style="font-size:13.5px;line-height:1.55;color:#1e1040;margin:0 0 10px">
-      \u042F\u043A \u0441\u043F\u043E\u0436\u0438\u0432\u0430\u0447 \u0443 \u0404\u0421 \u043C\u0430\u0454\u0448 \u043F\u0440\u0430\u0432\u043E \u043F\u043E\u0432\u0435\u0440\u043D\u0443\u0442\u0438 \u0433\u0440\u043E\u0448\u0456 \u043F\u0440\u043E\u0442\u044F\u0433\u043E\u043C 14 \u0434\u043D\u0456\u0432. <strong>\u0412\u0438\u043D\u044F\u0442\u043E\u043A:</strong> \u043F\u0440\u0438 \u043E\u043F\u043B\u0430\u0442\u0456 \u0441\u0442\u0430\u0432\u043B\u044F\u0447\u0438 \u0433\u0430\u043B\u043E\u0447\u043A\u0443 \xAB\u042F \u043F\u043E\u0433\u043E\u0434\u0436\u0443\u044E\u0441\u044C \u043F\u043E\u0447\u0430\u0442\u0438 \u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u043D\u043D\u044F \u043E\u0434\u0440\u0430\u0437\u0443 \u0456 \u0437\u043D\u0430\u044E \u0449\u043E \u0432\u0442\u0440\u0430\u0447\u0430\u044E \u043F\u0440\u0430\u0432\u043E \u043D\u0430 14-\u0434\u0435\u043D\u043D\u0443 \u0432\u0456\u0434\u043C\u043E\u0432\u0443\xBB \u2014 \u0437\u0432\u0456\u043B\u044C\u043D\u044F\u0454\u0448 \u043D\u0430\u0441 \u0432\u0456\u0434 \u0446\u044C\u043E\u0433\u043E \u0437\u043E\u0431\u043E\u0432'\u044F\u0437\u0430\u043D\u043D\u044F.
+      \u0421\u0435\u0440\u0432\u0456\u0441 \u043D\u0430\u0440\u0430\u0437\u0456 \u043D\u0430\u0434\u0430\u0454\u0442\u044C\u0441\u044F <strong>\u0431\u0435\u0437\u043A\u043E\u0448\u0442\u043E\u0432\u043D\u043E</strong>. EU Consumer Rights Directive Art. 9-16 (\u043F\u0440\u0430\u0432\u043E \u043D\u0430 14-\u0434\u0435\u043D\u043D\u0443 \u0432\u0456\u0434\u043C\u043E\u0432\u0443) \u043D\u0435 \u0437\u0430\u0441\u0442\u043E\u0441\u043E\u0432\u0443\u0454\u0442\u044C\u0441\u044F, \u043E\u0441\u043A\u0456\u043B\u044C\u043A\u0438 \u0434\u043E\u0433\u043E\u0432\u0456\u0440 \u043D\u0435 \u043F\u0435\u0440\u0435\u0434\u0431\u0430\u0447\u0430\u0454 \u043E\u043F\u043B\u0430\u0442\u0438. \u042F\u043A \u0442\u0456\u043B\u044C\u043A\u0438 \u0432\u0432\u0435\u0434\u0435\u043C\u043E \u043F\u043B\u0430\u0442\u043D\u0456 \u043F\u043B\u0430\u043D\u0438 \u2014 \u0434\u043E\u0434\u0430\u043C\u043E \u0442\u0443\u0442 \u044F\u0432\u043D\u0443 \u0444\u043E\u0440\u043C\u0443 \u0437\u0433\u043E\u0434\u0438 (Art. 16(m) \u0434\u043B\u044F \u0446\u0438\u0444\u0440\u043E\u0432\u043E\u0433\u043E \u043A\u043E\u043D\u0442\u0435\u043D\u0442\u0443) \u0456 checkbox \u043F\u0440\u0438 \u043E\u043F\u043B\u0430\u0442\u0456.
     </p>
     <h3 style="font-size:15px;font-weight:700;color:#1e1040;margin:16px 0 6px">3. \u041E\u0431\u043C\u0435\u0436\u0435\u043D\u043D\u044F \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u043B\u044C\u043D\u043E\u0441\u0442\u0456 (PLD)</h3>
     <p style="font-size:13.5px;line-height:1.55;color:#1e1040;margin:0 0 10px">

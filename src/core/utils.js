@@ -47,10 +47,21 @@ export function saveOffline(text) {
 }
 
 export function formatTime(ts) {
+  // OBErR audit fix: i18n interpolation pattern узгоджено з nav.js _relativeTime.
+  // Раніше: `Math.floor(...) + t('time.minutes_ago', ' хв тому')` — число поза
+  // t() через концатенацію. При перекладі на FR/DE (де порядок слів інший:
+  // «5 minutes ago» vs «vor 5 Minuten») структура ламається. Тепер
+  // t('time.minutes_ago', '{n} хв тому', { n: min }) — взаємозамінне між мовами.
   const diff = Date.now() - ts;
   if (diff < 60000) return t('time.just_now', 'щойно');
-  if (diff < 3600000) return Math.floor(diff / 60000) + t('time.minutes_ago', ' хв тому');
-  if (diff < 86400000) return Math.floor(diff / 3600000) + t('time.hours_ago', ' год тому');
+  if (diff < 3600000) {
+    const min = Math.floor(diff / 60000);
+    return t('time.minutes_ago', '{n} хв тому', { n: min });
+  }
+  if (diff < 86400000) {
+    const hr = Math.floor(diff / 3600000);
+    return t('time.hours_ago', '{n} год тому', { n: hr });
+  }
   return new Date(ts).toLocaleDateString('uk-UA', { day: 'numeric', month: 'short' });
 }
 
