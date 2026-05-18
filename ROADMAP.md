@@ -16,6 +16,35 @@
 
 ---
 
+**🚨 Pre-EU-MVP Compliance — критично перед першим EU юзером** (додано JMQuT 17.05.2026 — research brain-Claude)
+
+> **Повний контекст:** [`docs/EU_COMPLIANCE.md`](docs/EU_COMPLIANCE.md). Зонтичний документ — AI Act compliance (Health Isolation, ✅ JMQuT 17.05) — лише один з ~10 регуляторних шарів.
+>
+> **Чому Active:** з першого € від європейського юзера діють законодавчі вимоги. Без них — податкові порушення (VAT) + позови (€500-2000 за відсутність Impressum у DE) + chargebacks (14-day withdrawal).
+
+**6 пунктів (за пріоритетом):**
+
+1. **🔴 VAT OSS** — критично ПЕРЕД першим EU юзером. Paddle/Lemonsqueezy як merchant of record (~5% комісія, 1 день setup) АБО OSS реєстрація через Belastingdienst NL (2-3 тижні + квартальні звіти). Рекомендую Paddle.
+
+2. **🟡 Impressum / Legal Notice** — 1 год. Сторінка з імʼям, NL адресою, KvK + VAT номерами, email. Лінк у футері. Без неї німецькі юристи реально шлють Abmahnung-листи €500-2000.
+
+3. **🟡 14-day withdrawal checkbox** — 2 год. Checkbox при оплаті «знаю що втрачаю право на 14-денну відмову» + явний текст у ToS. Без галочки юзер може забрати гроші назад навіть після місяця використання.
+
+4. **🟡 Privacy Policy DPF / Schrems II** — пів дня. Явно вказати передачу даних в США (OpenAI + Anthropic, DPF-certified). Підписати їхні DPA. Стежити за FISA Section 702 (закінчується 20.04.2026 — може похитнути DPF).
+
+5. **⚪ Data Export функція** — до кінця 2026. Кнопка «Export my data» у Налаштування → JSON. CRA + Data Act обидва вимагають. Корисна фіча для юзерів.
+
+6. **⚪ CRA + PLD + ePrivacy** — восени 2026. Vulnerability reporting процес (CRA з 11.09.2026), limited liability клаузула у ToS (PLD з 09.12.2026), окремий checkbox marketing emails (ePrivacy).
+
+**НЕ стосується** (соло-розробник <€2M):
+EAA (мікро-виняток), NIS2 (мікро-виняток), DSA (особистий застосунок, не share-платформа), AI Code of Practice (стосується провайдерів GPAI, не deployer-ів NM).
+
+**Звʼязок з іншими блоками:**
+- ✅ Health AI Isolation (`docs/AI_ACT_COMPLIANCE.md`) знизив PLD ризик — AI більше не приймає рішень про health.
+- 🚀 Security Hardening (нижче) — Event Delegation 88/334 onclick готує до strict CSP, дотичне до CRA.
+
+---
+
 **🛡️ Security Hardening — критично перед Supabase** (додано e9t3N 15.05.2026 після Council 5 агентів security аудиту)
 
 > **Повний контекст:** [`docs/SECURITY.md`](docs/SECURITY.md). Звіт аудиту: `_ai-tools/SECURITY_AUDIT_e9t3N_2026-05-15.md`.
@@ -24,9 +53,10 @@
 
 **4 критичні блокери до Supabase:**
 
-1. **🟡 Event Delegation Refactor + strict CSP** (Phase 1а-1д ✅ DGH6F 16.05; ~3-4 год залишку)
+1. **🟡 Event Delegation Refactor + strict CSP** (Phase 1а-1д ✅ DGH6F 16.05; JMQuT +4 файли ✅ 17.05; ~4 год залишку)
    - **Прогрес DGH6F:** 40 handler'ів → delegation, 334→296 onclick. Новий модуль `src/core/delegation.js` (23 actions). Файли мігровано: header buttons + me + onboarding + inbox + tasks (4/5) + board + evening + projects. Pre-commit-onclick-freeze hook (9-й сторож, net-rachet).
-   - **Залишок (~5 год):** notes.js (10) → nav.js (9, ПРОПУЩЕНО Стратегом раніше) → habits.js (12, reuse `toggle-entity-done` universal) → health.js (14, але див. Health AI isolation нижче) → calendar.js (15) → finance-analytics.js (9) → finance.js (16) → finance-modals.js (35) → index.html залишки (169). Phase 1в-b: окремий `src/ui/touch-detect.js` для tasks step-check координат swipe-vs-tap.
+   - **Прогрес JMQuT:** notes (10) + nav (9) + habits (12) + health (13) = 44 onclick. delegation registry 23 → 49 actions. iOS 300мс delay закрито через `touch-action:manipulation` для `[data-habit-check]`. 0 регресій (Council audit).
+   - **Залишок (~4 год):** calendar (15) → finance-analytics (9) → finance (16) → finance-modals (34) → index.html залишки (167). Phase 1в-b: окремий `src/ui/touch-detect.js` для tasks step-check координат swipe-vs-tap.
    - Після цього strict CSP `script-src 'self'` без `unsafe-inline` — блокує 95% XSS. Bonus: UUID завжди безпечні у атрибутах (B-108/B-170 клас зникає).
 
 2. **🔴 OpenAI ключ → Supabase Edge Function** (під час Supabase міграції)

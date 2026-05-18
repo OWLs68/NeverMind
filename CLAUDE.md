@@ -152,6 +152,8 @@
 | UI / CSS / модалки / анімації / свайпи | `_ai-tools/RULES_UI.md` + `docs/DESIGN_SYSTEM.md` |
 | AI tools, рефакторинг, деплой, i18n, документація після змін | `_ai-tools/RULES_TECH.md` |
 | Священні корови (що НЕ чіпати без обговорення) | `docs/DO_NOT_TOUCH.md` |
+| **EU compliance** (VAT, Impressum, 14-day withdrawal, DPF, CRA, PLD, ePrivacy) | `docs/EU_COMPLIANCE.md` |
+| Health AI isolation (підмножина EU compliance — AI Act) | `docs/AI_ACT_COMPLIANCE.md` |
 | Екстрений git-скид (історія v54-v130) | `docs/GIT_EMERGENCY.md` |
 | Скіли — коли який спрацьовує (16 скілів з тригерами) | `_ai-tools/SKILLS_PLAN.md` |
 | Технічна довідка (деплой, AI-логіка, localStorage, структури) | `docs/TECHNICAL_REFERENCE.md` |

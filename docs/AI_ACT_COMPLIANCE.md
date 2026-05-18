@@ -1,5 +1,7 @@
 # AI Act + GDPR Compliance — Health Isolation
 
+> **🔗 Ширший контекст:** [`docs/EU_COMPLIANCE.md`](EU_COMPLIANCE.md) — зонтичний документ усіх EU compliance шарів (VAT, Impressum, CRA, PLD, ePrivacy тощо). AI Act — лише один з ~10.
+>
 > **Створено:** 2026-05-17 (сесія JMQuT). Стратегічне рішення Романа після Council 6 агентів Sonnet + 4 WebSearch EU AI Act / GDPR / Annex III / productivity apps classification.
 
 ---
