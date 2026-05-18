@@ -16448,12 +16448,12 @@ ${JSON.stringify(contextData, null, 2)}` : "";
     const trash = getTrash();
     const now = Date.now();
     const fresh = trash.filter((t2) => now - t2.deletedAt < TRASH_TTL);
-    fresh.push({ type, item, extra: extra || null, deletedAt: now });
+    fresh.push({ id: generateUUID(), type, item, extra: extra || null, deletedAt: now });
     saveTrash(fresh.slice(-200));
   }
   function restoreFromTrash(trashId) {
     const trash = getTrash();
-    const entry = trash.find((t2) => t2.deletedAt === trashId);
+    const entry = trash.find((t2) => t2.id === trashId || t2.deletedAt === trashId);
     if (!entry) return false;
     const { type, item, extra } = entry;
     if (type === "task") {
@@ -16518,7 +16518,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
         if (currentTab === "health") renderHealth();
       }
     }
-    saveTrash(trash.filter((t2) => t2.deletedAt !== trashId));
+    saveTrash(trash.filter((t2) => t2 !== entry));
     return true;
   }
   function cleanupTrash() {
@@ -16553,6 +16553,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
   var init_trash = __esm({
     "src/core/trash.js"() {
       init_nav();
+      init_uuid();
       init_inbox();
       init_tasks();
       init_notes();
@@ -22436,6 +22437,10 @@ ${logLines}
       console.error("init error:", e);
     }
     try {
+      window.NM_KEYS = NM_KEYS;
+    } catch {
+    }
+    try {
       initDelegation();
     } catch (e) {
       console.error("delegation init error:", e);
@@ -23497,11 +23502,19 @@ ${logLines}
       const v = localStorage.getItem(k);
       if (v) data[k] = JSON.parse(v);
     });
+    const filename = `nevermind-backup-${(/* @__PURE__ */ new Date()).toISOString().split("T")[0]}.json`;
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const isIosPwa = /iP(hone|ad|od)/.test(navigator.userAgent || "") && (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches);
+    if (isIosPwa && typeof navigator.share === "function" && typeof File === "function") {
+      const file = new File([blob], filename, { type: "application/json" });
+      navigator.share({ files: [file], title: "NeverMind backup" }).then(() => showToast(t("nav.toast.exported", "\u{1F4E4} \u0414\u0430\u043D\u0456 \u0435\u043A\u0441\u043F\u043E\u0440\u0442\u043E\u0432\u0430\u043D\u043E"))).catch(() => {
+      });
+      return;
+    }
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `nevermind-backup-${(/* @__PURE__ */ new Date()).toISOString().split("T")[0]}.json`;
+    a.download = filename;
     a.click();
     URL.revokeObjectURL(url);
     showToast(t("nav.toast.exported", "\u{1F4E4} \u0414\u0430\u043D\u0456 \u0435\u043A\u0441\u043F\u043E\u0440\u0442\u043E\u0432\u0430\u043D\u043E"));

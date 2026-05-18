@@ -1024,11 +1024,24 @@ function exportData() {
     if (v) data[k] = JSON.parse(v);
   });
 
+  const filename = `nevermind-backup-${new Date().toISOString().split('T')[0]}.json`;
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  // OBErR 18.05.2026: iOS PWA standalone не підтримує <a download> — файл
+  // відкривається у новій вкладці без download. Pre-mortem Council. На iOS
+  // PWA fallback на navigator.share (Share Sheet → Save to Files).
+  const isIosPwa = /iP(hone|ad|od)/.test(navigator.userAgent || '') &&
+                   (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+  if (isIosPwa && typeof navigator.share === 'function' && typeof File === 'function') {
+    const file = new File([blob], filename, { type: 'application/json' });
+    navigator.share({ files: [file], title: 'NeverMind backup' })
+      .then(() => showToast(t('nav.toast.exported', '📤 Дані експортовано')))
+      .catch(() => {}); // юзер скасував share — без помилки
+    return;
+  }
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `nevermind-backup-${new Date().toISOString().split('T')[0]}.json`;
+  a.download = filename;
   a.click();
   URL.revokeObjectURL(url);
   showToast(t('nav.toast.exported', '📤 Дані експортовано'));
