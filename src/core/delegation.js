@@ -318,3 +318,44 @@ reg('open-note-from-search', (data) => {
   if (typeof window.addNotesChatMsg === 'function') window.addNotesChatMsg('user', '');
   if (typeof window.openNoteView === 'function') window.openNoteView(data.id);
 });
+// === Phase 1+ (JMQuT) nav.js actions ===
+// toggle-tab-selection — клік на картку вибору вкладки у tab-selector модалці.
+reg('toggle-tab-selection', (data) => {
+  if (typeof window !== 'undefined' && typeof window.toggleTabSelection === 'function') {
+    window.toggleTabSelection(data.tab);
+  }
+});
+// apply-tab-selection — кнопка «Готово» у tab-selector.
+reg('apply-tab-selection', () => {
+  if (typeof window !== 'undefined' && typeof window.applyTabSelection === 'function') {
+    window.applyTabSelection();
+  }
+});
+// move-tab-order — кнопки ‹/› біля рядка вкладки у порядку. data-tab-id + data-dir='-1'/'1'.
+// stopPropagation видалено — delegation closest() бере найближчий = button, не батьківський select-tab-order.
+reg('move-tab-order', (data) => {
+  if (typeof window === 'undefined') return;
+  if (typeof window.moveTabOrder !== 'function') return;
+  const dir = parseInt(data.dir, 10);
+  if (Number.isNaN(dir)) return;
+  window.moveTabOrder(data.tabId, dir);
+});
+// select-tab-order — клік на сам рядок вкладки (всередині drum) → вибір цієї вкладки активною.
+reg('select-tab-order', (data) => {
+  if (typeof window !== 'undefined' && typeof window.selectTabOrder === 'function') {
+    window.selectTabOrder(data.tabId);
+  }
+});
+// delete-memory-card — × на картці памʼяті у Налаштуваннях. data-id = factId (через escapeHtml).
+reg('delete-memory-card', (data) => {
+  if (!data.id) return;
+  if (typeof window !== 'undefined' && typeof window.deleteMemoryCard === 'function') {
+    window.deleteMemoryCard(data.id);
+  }
+});
+// close-deploy-info — × у модалці «Інфо про деплой».
+reg('close-deploy-info', () => {
+  if (typeof window !== 'undefined' && typeof window.closeDeployInfo === 'function') {
+    window.closeDeployInfo();
+  }
+});

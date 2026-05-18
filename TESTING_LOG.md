@@ -37,6 +37,14 @@
 
 **Версія:** CACHE_NAME `nm-20260517-2245`, commit `JMQuT Phase 2+3`.
 
+### v934+ Event Delegation: nav.js (9 onclick → delegation)
+
+- [ ] Налаштування → tab-selector модалка → тап на картку вкладки → toggle active state.
+- [ ] У tab-selector кнопка «Готово» → застосовує вибір, закриває.
+- [ ] Drum (рядок вкладок) у налаштуваннях → стрілки ‹/› переміщують позицію вкладки (з click guard через closest — не активують select-tab-order).
+- [ ] Картка факту у Памʼяті → × кнопка → видаляє факт.
+- [ ] Модалка «Інфо про деплой» → × кнопка → закриває.
+
 ### v933+ Event Delegation: notes.js (10 onclick → delegation)
 
 - [ ] Notes-tab → тап на картку папки → відкриває папку (intra-tab без лагу 150мс).
