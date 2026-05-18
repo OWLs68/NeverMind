@@ -53,11 +53,16 @@ EAA (мікро-виняток), NIS2 (мікро-виняток), DSA (особ
 
 **4 критичні блокери до Supabase:**
 
-1. **🟡 Event Delegation Refactor + strict CSP** (Phase 1а-1д ✅ DGH6F 16.05; JMQuT +4 файли ✅ 17.05; ~4 год залишку)
-   - **Прогрес DGH6F:** 40 handler'ів → delegation, 334→296 onclick. Новий модуль `src/core/delegation.js` (23 actions). Файли мігровано: header buttons + me + onboarding + inbox + tasks (4/5) + board + evening + projects. Pre-commit-onclick-freeze hook (9-й сторож, net-rachet).
-   - **Прогрес JMQuT:** notes (10) + nav (9) + habits (12) + health (13) = 44 onclick. delegation registry 23 → 49 actions. iOS 300мс delay закрито через `touch-action:manipulation` для `[data-habit-check]`. 0 регресій (Council audit).
-   - **Залишок (~4 год):** calendar (15) → finance-analytics (9) → finance (16) → finance-modals (34) → index.html залишки (167). Phase 1в-b: окремий `src/ui/touch-detect.js` для tasks step-check координат swipe-vs-tap.
-   - Після цього strict CSP `script-src 'self'` без `unsafe-inline` — блокує 95% XSS. Bonus: UUID завжди безпечні у атрибутах (B-108/B-170 клас зникає).
+1. **✅ Event Delegation Refactor onclick** (Phase 1а-1д ✅ DGH6F 16.05; +4 файли ✅ JMQuT 17.05; залишок 241 ✅ **OBErR 18-19.05**)
+   - **Загалом:** 334 → 0 inline `onclick` у production коді (excludes diagnostics.js 3 + logger.js 1 internal). delegation registry 0 → 119 actions (+1 universal `call`, +1 universal `close-backdrop`). pre-commit-onclick-freeze hook (9-й сторож, net-rachet).
+   - **Security hardening (OBErR audit fix 19.05):** CALL_PREFIX_WHITELIST + BLACKLIST у `delegation.js` блокує `eval`/`Function`/`setTimeout`/`fetch`/`open` (window.open phishing). 43 префікси покривають 105/105 поточних data-fn (0 регресій).
+
+2. **🟡 CSP Enablement Phase 2 — 55 inline non-onclick handlers** (нова після OBErR, ~4-6 год)
+   - Залишок: ontouchstart/end (15) + oninput (15) + onkeydown (11) + onfocus (7) + onblur (2) + onchange (2) + ontouchmove (2) + onmousedown (1).
+   - **Найскладніше:** swipe-handlers з координатами — `board.js:41` (owlTabSwipe ×3) + `index.html:274` (owlTabSwipe ×3) + `tasks.js:290` (step-check swipe-vs-tap). Потребує `src/ui/touch-detect.js` helper з pointer events delegation.
+   - **Дешеві wins (1 год):** 6× `ontouchend="this.focus()"` — iOS клавіатура hack що став зайвим на iOS 15+. Видалити + перевірити tap → keyboard на iPhone. Якщо OK — gone.
+   - **DRY групи:** 15 `oninput` patterns у Settings + finance-modals → global `input` listener з data-* attributes. 11 `onkeydown="if(Enter)..."` → 1 global keydown listener з data-action handlers.
+   - **Після цього:** strict CSP `script-src 'self'` без `unsafe-inline` — блокує 95% XSS. UUID завжди безпечні у атрибутах (B-108/B-170 клас зник назавжди).
 
 2. **🔴 OpenAI ключ → Supabase Edge Function** (під час Supabase міграції)
    - Зараз `nm_gemini_key` у localStorage видно через DevTools
