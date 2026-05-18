@@ -8,7 +8,7 @@ import {
   createFullBackup, listBackups, getBackupInfo, restoreBackup,
   downloadBackupAsJson, importBackupJson, cleanupOldBackups,
 } from './backup.js';
-import { getTrash, restoreFromTrash } from './trash.js';
+import { getTrash, restoreFromTrash, TRASH_TTL } from './trash.js';
 import { setupModalSwipeClose } from '../tabs/tasks.js';
 import { callAI, callAIWithTools, INBOX_TOOLS, closeAllChatBars } from '../ai/core.js';
 import {
@@ -1514,9 +1514,9 @@ function renderBackupList() {
         </div>
       </div>
       <div style="display:flex;gap:6px">
-        <button data-action="backup-restore" data-key="${escapeHtml(k)}" style="flex:1;padding:8px;border-radius:10px;border:none;background:rgba(99,102,241,0.10);color:#6366f1;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">${escapeHtml(t('backup.btn.restore', '↻ Відновити'))}</button>
-        <button data-action="backup-download" data-key="${escapeHtml(k)}" style="flex:1;padding:8px;border-radius:10px;border:none;background:rgba(30,16,64,0.05);color:rgba(30,16,64,0.6);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">${escapeHtml(t('backup.btn.export', '↗ Експорт'))}</button>
-        <button data-action="backup-delete" data-key="${escapeHtml(k)}" style="padding:8px 12px;border-radius:10px;border:none;background:rgba(239,68,68,0.08);color:#dc2626;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">×</button>
+        <button data-action="backup-restore" data-key="${escapeHtml(k)}" style="flex:1;padding:11px 8px;min-height:44px;border-radius:11px;border:none;background:rgba(99,102,241,0.10);color:#6366f1;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">${escapeHtml(t('backup.btn.restore', '↻ Відновити'))}</button>
+        <button data-action="backup-download" data-key="${escapeHtml(k)}" style="flex:1;padding:11px 8px;min-height:44px;border-radius:11px;border:none;background:rgba(30,16,64,0.05);color:rgba(30,16,64,0.6);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">${escapeHtml(t('backup.btn.export', '↗ Експорт'))}</button>
+        <button data-action="backup-delete" data-key="${escapeHtml(k)}" style="padding:11px 16px;min-height:44px;min-width:44px;border-radius:11px;border:none;background:rgba(239,68,68,0.08);color:#dc2626;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">×</button>
       </div>
     </div>`;
   }).join('');
@@ -1568,6 +1568,14 @@ function importBackupFromFile() {
   input.onchange = (e) => {
     const file = e.target.files && e.target.files[0];
     if (!file) return;
+    // OBErR audit fix (Security агент DoS): size cap. Без нього 100 MB файл
+    // блокує UI на 5+ сек при readAsText, потім quota exceeded silent fail.
+    // 10 MB > 4 MB QUOTA_BUDGET у backup.js — дає юзеру явне попередження.
+    const MAX_IMPORT_BYTES = 10 * 1024 * 1024;
+    if (file.size > MAX_IMPORT_BYTES) {
+      showToast(t('backup.toast.import_too_big', '⚠️ Файл > 10 MB — занадто великий'));
+      return;
+    }
     const reader = new FileReader();
     reader.onload = (ev) => {
       const key = importBackupJson(ev.target.result);
@@ -1616,9 +1624,8 @@ function renderTrashList() {
   if (!container) return;
   const all = getTrash();
   const now = Date.now();
-  const TTL = 7 * 24 * 60 * 60 * 1000;
   const items = all
-    .filter(x => now - x.deletedAt < TTL)
+    .filter(x => now - x.deletedAt < TRASH_TTL)
     .sort((a, b) => b.deletedAt - a.deletedAt);
   // Оновлюємо badge у Settings одразу.
   const badge = document.getElementById('trash-count-badge');
@@ -1650,7 +1657,7 @@ function renderTrashList() {
         <div style="font-size:14px;font-weight:600;color:#1e1040;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(label)}</div>
         <div style="font-size:11px;color:rgba(30,16,64,0.4)">${escapeHtml(_relativeTime(x.deletedAt))}</div>
       </div>
-      <button data-action="trash-restore-item" data-trash-id="${escapeHtml(idStr)}" style="font-size:12px;font-weight:700;color:#16a34a;background:rgba(22,163,74,0.10);border:none;border-radius:9px;padding:6px 12px;cursor:pointer;font-family:inherit;flex-shrink:0">↻ ${escapeHtml(t('trash.btn.restore', 'Відновити'))}</button>
+      <button data-action="trash-restore-item" data-trash-id="${escapeHtml(idStr)}" style="font-size:13px;font-weight:700;color:#16a34a;background:rgba(22,163,74,0.10);border:none;border-radius:11px;padding:11px 14px;min-height:44px;cursor:pointer;font-family:inherit;flex-shrink:0">↻ ${escapeHtml(t('trash.btn.restore', 'Відновити'))}</button>
     </div>`;
   }).join('');
 }
@@ -1673,8 +1680,7 @@ function _updateTrashBadge() {
   const badge = document.getElementById('trash-count-badge');
   if (!badge) return;
   const now = Date.now();
-  const TTL = 7 * 24 * 60 * 60 * 1000;
-  const count = getTrash().filter(x => now - x.deletedAt < TTL).length;
+  const count = getTrash().filter(x => now - x.deletedAt < TRASH_TTL).length;
   if (count > 0) {
     badge.textContent = String(count);
     badge.style.display = 'inline-block';
