@@ -998,6 +998,36 @@ reg('show-toast', (data) => {
     window.showToast(data.msg);
   }
 });
+// === OBErR Phase 2 (18.05.2026) Backup + Кошик UI actions ===
+// backup-restore — кнопка «↻ Відновити» у backup-list-modal. data-key = nm_backup_*
+reg('backup-restore', (data) => {
+  if (!data.key) return;
+  if (typeof window !== 'undefined' && typeof window.restoreBackupFromUI === 'function') {
+    window.restoreBackupFromUI(data.key);
+  }
+});
+// backup-download — кнопка «↗ Експорт» (download JSON / iOS share).
+reg('backup-download', (data) => {
+  if (!data.key) return;
+  if (typeof window !== 'undefined' && typeof window.downloadBackupFromUI === 'function') {
+    window.downloadBackupFromUI(data.key);
+  }
+});
+// backup-delete — × кнопка на backup-картці.
+reg('backup-delete', (data) => {
+  if (!data.key) return;
+  if (typeof window !== 'undefined' && typeof window.deleteBackupFromUI === 'function') {
+    window.deleteBackupFromUI(data.key);
+  }
+});
+// trash-restore-item — кнопка «↻ Відновити» у trash-modal. data-trash-id = UUID
+// або legacy deletedAt-число.
+reg('trash-restore-item', (data) => {
+  if (!data.trashId) return;
+  if (typeof window !== 'undefined' && typeof window.restoreTrashItemFromUI === 'function') {
+    window.restoreTrashItemFromUI(data.trashId);
+  }
+});
 // Compound actions для closeSettings()+openX() chains.
 reg('close-settings-open-slides-tour', () => {
   if (typeof window === 'undefined') return;

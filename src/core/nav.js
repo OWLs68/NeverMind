@@ -4,6 +4,11 @@
 import { updateErrorLogBtn } from './logger.js';
 import { escapeHtml, t } from './utils.js';
 import { animateTabSwitch, NM_KEYS, applyBoardOverlays } from './boot.js';
+import {
+  createFullBackup, listBackups, getBackupInfo, restoreBackup,
+  downloadBackupAsJson, importBackupJson, cleanupOldBackups,
+} from './backup.js';
+import { getTrash, restoreFromTrash } from './trash.js';
 import { setupModalSwipeClose } from '../tabs/tasks.js';
 import { callAI, callAIWithTools, INBOX_TOOLS, closeAllChatBars } from '../ai/core.js';
 import {
@@ -958,13 +963,114 @@ function saveMemoryCards() {
   if (tsEl) tsEl.textContent = t('nav.mem.saved_now', 'Збережено щойно');
 }
 
-function openPrivacyPolicy() {
-  showToast(t('nav.toast.privacy_soon', 'Конфіденційність — незабаром'));
+// === OBErR 18.05.2026 — EU Compliance pre-MVP legal pages ===
+// Це DRAFTS з [PLACEHOLDER] токенами які Роман має замінити реальними даними
+// (KvK, VAT, адреса) ПЕРЕД першим €. Без цього публічний релиз =
+// (а) Abmahnung-ризик у DE (Impressum без реквізитів),
+// (б) GDPR порушення (Privacy Policy без правових засад).
+// Повний контекст: docs/EU_COMPLIANCE.md + docs/EU_LAUNCH_CHECKLIST.md.
+//
+// Контент рендериться у #legal-overlay. Українською — інша мова буде через
+// i18n після Supabase (правило 11 CLAUDE.md). Тут промпт-стиль HTML — не
+// обгортаємо у t() для зменшення розміру bundle.
+const LEGAL_CONTENT = {
+  impressum: `
+    <h2 style="font-size:20px;font-weight:800;color:#1e1040;margin:0 0 16px">Impressum / Legal Notice</h2>
+    <div style="background:rgba(239,68,68,0.06);border-left:3px solid #ef4444;padding:10px 14px;margin-bottom:18px;border-radius:8px;font-size:13px;color:#dc2626;line-height:1.5">
+      ⚠️ DRAFT — Роман: замінити <code>[PLACEHOLDER]</code> токени реальними даними ПЕРЕД публічним релізом. Без цього німецькі юристи можуть надіслати Abmahnung €500-2000. Деталі: <code>docs/EU_LAUNCH_CHECKLIST.md</code>.
+    </div>
+    <p style="font-size:14px;line-height:1.55;color:#1e1040;margin:0 0 12px"><strong>Відповідальна особа</strong> (Verantwortlich gemäß § 5 TMG / § 1 KvK):</p>
+    <div style="font-size:14px;line-height:1.7;color:#1e1040;background:rgba(255,255,255,0.5);border-radius:10px;padding:12px 14px;margin-bottom:16px">
+      [PLACEHOLDER: Повне ім'я]<br>
+      [PLACEHOLDER: Адреса, NL]<br>
+      Email: [PLACEHOLDER: контактний email]<br>
+      KvK (Chamber of Commerce): [PLACEHOLDER: KvK номер]<br>
+      VAT / BTW: [PLACEHOLDER: VAT номер]
+    </div>
+    <p style="font-size:13px;line-height:1.55;color:rgba(30,16,64,0.7);margin:0">
+      NeverMind — персональний застосунок продуктивності. Розробник: соло-підприємець, реєстрація у Нідерландах. Питання, скарги та DSGVO / GDPR запити — на email вище.
+    </p>
+  `,
+  privacy: `
+    <h2 style="font-size:20px;font-weight:800;color:#1e1040;margin:0 0 16px">Privacy Policy / Політика конфіденційності</h2>
+    <div style="background:rgba(239,68,68,0.06);border-left:3px solid #ef4444;padding:10px 14px;margin-bottom:18px;border-radius:8px;font-size:13px;color:#dc2626;line-height:1.5">
+      ⚠️ DRAFT — Роман: перевірити DPF статус OpenAI/Anthropic перед публікацією (FISA Section 702 на 20.04.2026, поточний статус: dataprivacyframework.gov).
+    </div>
+    <p style="font-size:13px;color:rgba(30,16,64,0.55);margin:0 0 16px">Останнє оновлення: 18.05.2026</p>
+    <h3 style="font-size:15px;font-weight:700;color:#1e1040;margin:16px 0 6px">1. Що збираємо</h3>
+    <p style="font-size:13.5px;line-height:1.55;color:#1e1040;margin:0 0 10px">
+      NeverMind зараз працює <strong>повністю локально</strong> у твоєму браузері (localStorage). Жодних даних не передаємо на власні сервери — їх просто немає. Після переходу на Supabase backend (плановано 2026) — зберігатимемо твої записи у базі ЄС-регіону (Frankfurt) під твоїм акаунтом.
+    </p>
+    <h3 style="font-size:15px;font-weight:700;color:#1e1040;margin:16px 0 6px">2. Передача даних</h3>
+    <p style="font-size:13.5px;line-height:1.55;color:#1e1040;margin:0 0 10px">
+      Твої записи в Inbox/чатах обробляються через OpenAI (США) — це необхідно для AI-функцій (розпізнавання типу запису, відповіді чату). OpenAI <strong>DPF-certified</strong> (EU-US Data Privacy Framework). Дотримуємось SCC Module 2/3 у Data Processing Agreement.
+    </p>
+    <h3 style="font-size:15px;font-weight:700;color:#1e1040;margin:16px 0 6px">3. Твої права (GDPR Art. 15-22)</h3>
+    <ul style="font-size:13.5px;line-height:1.7;color:#1e1040;margin:0 0 10px;padding-left:22px">
+      <li>Право доступу — Налаштування → «Експортувати JSON»</li>
+      <li>Право на видалення — Налаштування → «Очистити всі дані»</li>
+      <li>Право на переносимість — JSON export сумісний з імпортом</li>
+      <li>Право на скаргу — DPA NL (Autoriteit Persoonsgegevens, autoriteitpersoonsgegevens.nl)</li>
+    </ul>
+    <h3 style="font-size:15px;font-weight:700;color:#1e1040;margin:16px 0 6px">4. Health-дані</h3>
+    <p style="font-size:13.5px;line-height:1.55;color:#1e1040;margin:0 0 10px">
+      Вкладка «Здоров'я» <strong>ізольована від AI</strong> (EU AI Act compliance) — твої медкартки/алергії/ліки AI <strong>НЕ читає і НЕ обробляє</strong>. Ти ведеш їх вручну.
+    </p>
+    <h3 style="font-size:15px;font-weight:700;color:#1e1040;margin:16px 0 6px">5. Контакт</h3>
+    <p style="font-size:13.5px;line-height:1.55;color:#1e1040;margin:0">
+      Email: [PLACEHOLDER: контактний email] · Impressum: див. Налаштування → «Юридична інформація».
+    </p>
+  `,
+  terms: `
+    <h2 style="font-size:20px;font-weight:800;color:#1e1040;margin:0 0 16px">Terms of Service / Умови використання</h2>
+    <div style="background:rgba(239,68,68,0.06);border-left:3px solid #ef4444;padding:10px 14px;margin-bottom:18px;border-radius:8px;font-size:13px;color:#dc2626;line-height:1.5">
+      ⚠️ DRAFT — Роман: 14-day withdrawal checkbox потребує юридичного огляду перед платним релізом. Paddle/Lemonsqueezy беруть це на себе автоматично.
+    </div>
+    <p style="font-size:13px;color:rgba(30,16,64,0.55);margin:0 0 16px">Останнє оновлення: 18.05.2026</p>
+    <h3 style="font-size:15px;font-weight:700;color:#1e1040;margin:16px 0 6px">1. Що це за сервіс</h3>
+    <p style="font-size:13.5px;line-height:1.55;color:#1e1040;margin:0 0 10px">
+      NeverMind — персональний AI-агент продуктивності. Зараз працює локально (PWA + localStorage). Платний доступ — після переходу на Supabase backend.
+    </p>
+    <h3 style="font-size:15px;font-weight:700;color:#1e1040;margin:16px 0 6px">2. Право на 14-денну відмову (EU)</h3>
+    <p style="font-size:13.5px;line-height:1.55;color:#1e1040;margin:0 0 10px">
+      Як споживач у ЄС маєш право повернути гроші протягом 14 днів. <strong>Виняток:</strong> при оплаті ставлячи галочку «Я погоджуюсь почати користування одразу і знаю що втрачаю право на 14-денну відмову» — звільняєш нас від цього зобов'язання.
+    </p>
+    <h3 style="font-size:15px;font-weight:700;color:#1e1040;margin:16px 0 6px">3. Обмеження відповідальності (PLD)</h3>
+    <p style="font-size:13.5px;line-height:1.55;color:#1e1040;margin:0 0 10px">
+      AI може помилятись. NeverMind — інструмент, не медичний / юридичний / фінансовий радник. <strong>Не покладайся на AI для критичних рішень</strong> (терапія, інвестиції, договори). Ми обмежуємо нашу відповідальність до суми твоєї підписки за 12 місяців.
+    </p>
+    <h3 style="font-size:15px;font-weight:700;color:#1e1040;margin:16px 0 6px">4. Acceptable use</h3>
+    <p style="font-size:13.5px;line-height:1.55;color:#1e1040;margin:0 0 10px">
+      Не використовуй для незаконної діяльності. Не атакуй сервіс (DoS, reverse-engineering ключів). Підтримай нас — дай feedback на email нижче.
+    </p>
+    <h3 style="font-size:15px;font-weight:700;color:#1e1040;margin:16px 0 6px">5. Governing law</h3>
+    <p style="font-size:13.5px;line-height:1.55;color:#1e1040;margin:0 0 10px">
+      Право Нідерландів. Спори — у нідерландських судах (Amsterdam) АБО твого ЄС-регіону (за вибором споживача, GDPR Art. 79).
+    </p>
+    <h3 style="font-size:15px;font-weight:700;color:#1e1040;margin:16px 0 6px">6. Контакт</h3>
+    <p style="font-size:13.5px;line-height:1.55;color:#1e1040;margin:0">
+      Email: [PLACEHOLDER: контактний email] · Impressum: див. Налаштування → «Юридична інформація».
+    </p>
+  `,
+};
+
+function _openLegal(page) {
+  const overlay = document.getElementById('legal-overlay');
+  const body = document.getElementById('legal-overlay-body');
+  if (!overlay || !body) return;
+  body.innerHTML = LEGAL_CONTENT[page] || '<p>Не знайдено</p>';
+  body.scrollTop = 0;
+  overlay.style.display = 'flex';
 }
 
-function openTerms() {
-  showToast(t('nav.toast.terms_soon', 'Умови використання — незабаром'));
+function closeLegal() {
+  const overlay = document.getElementById('legal-overlay');
+  if (overlay) overlay.style.display = 'none';
 }
+
+function openPrivacyPolicy() { _openLegal('privacy'); }
+function openTerms() { _openLegal('terms'); }
+function openImpressum() { _openLegal('impressum'); }
 
 function openFeedback() {
   showToast(t('nav.toast.feedback_soon', 'Написати автору — незабаром'));
@@ -1024,11 +1130,24 @@ function exportData() {
     if (v) data[k] = JSON.parse(v);
   });
 
+  const filename = `nevermind-backup-${new Date().toISOString().split('T')[0]}.json`;
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  // OBErR 18.05.2026: iOS PWA standalone не підтримує <a download> — файл
+  // відкривається у новій вкладці без download. Pre-mortem Council. На iOS
+  // PWA fallback на navigator.share (Share Sheet → Save to Files).
+  const isIosPwa = /iP(hone|ad|od)/.test(navigator.userAgent || '') &&
+                   (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+  if (isIosPwa && typeof navigator.share === 'function' && typeof File === 'function') {
+    const file = new File([blob], filename, { type: 'application/json' });
+    navigator.share({ files: [file], title: 'NeverMind backup' })
+      .then(() => showToast(t('nav.toast.exported', '📤 Дані експортовано')))
+      .catch(() => {}); // юзер скасував share — без помилки
+    return;
+  }
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `nevermind-backup-${new Date().toISOString().split('T')[0]}.json`;
+  a.download = filename;
   a.click();
   URL.revokeObjectURL(url);
   showToast(t('nav.toast.exported', '📤 Дані експортовано'));
@@ -1293,6 +1412,251 @@ export function closeDeployInfo() {
   setTimeout(() => modal.remove(), 200);
 }
 
+// === OBErR 18.05.2026 — Backup Phase 2 + B-179 Кошик UI ===
+
+// Helper: відносний час (як «3 год тому»).
+function _relativeTime(ts) {
+  const diff = Date.now() - ts;
+  const sec = Math.floor(diff / 1000);
+  if (sec < 60) return t('time.just_now', 'щойно');
+  const min = Math.floor(sec / 60);
+  if (min < 60) return t('time.minutes_ago', '{n} хв тому', { n: min });
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return t('time.hours_ago', '{n} год тому', { n: hr });
+  const day = Math.floor(hr / 24);
+  if (day < 7) return t('time.days_ago', '{n} дн тому', { n: day });
+  return new Date(ts).toLocaleDateString();
+}
+
+// Helper: ISO timestamp у людському форматі (для backup-list).
+function _formatBackupTs(iso) {
+  try {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return iso;
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mn = String(d.getMinutes()).padStart(2, '0');
+    return `${dd}.${mm} ${hh}:${mn}`;
+  } catch { return iso; }
+}
+
+// --- Backup UI ---
+
+function createFullBackupUI() {
+  const key = createFullBackup('manual');
+  if (key) {
+    showToast(t('backup.toast.created', '💾 Знімок створено'));
+  } else {
+    // null = quota fail. Pre-mortem Council: ОБОВ'ЯЗКОВО не ховати за success.
+    showToast(t('backup.toast.quota_fail', '⚠️ Не вдалось — дані надто великі. Експортуй у JSON.'));
+  }
+}
+
+function openBackupListModal() {
+  const m = document.getElementById('backup-list-modal');
+  if (!m) return;
+  m.style.display = 'flex';
+  renderBackupList();
+}
+
+function closeBackupListModal() {
+  const m = document.getElementById('backup-list-modal');
+  if (m) m.style.display = 'none';
+}
+
+function renderBackupList() {
+  const container = document.getElementById('backup-list');
+  if (!container) return;
+  const keys = listBackups().slice().reverse(); // нові зверху
+  if (keys.length === 0) {
+    container.innerHTML = `<div style="padding:40px 16px;text-align:center;color:rgba(30,16,64,0.35);font-size:14px">${escapeHtml(t('backup.empty', 'Знімків поки немає. Натисни «Створити знімок» у Налаштуваннях.'))}</div>`;
+    return;
+  }
+  container.innerHTML = keys.map(k => {
+    const info = getBackupInfo(k);
+    if (!info) return '';
+    const ts = _formatBackupTs(info.ts);
+    const label = escapeHtml(info.label || 'backup');
+    const sizeKB = info.sizeKB || 0;
+    const keyCount = (info.keys || []).length;
+    return `<div style="padding:12px 14px;margin-bottom:8px;background:rgba(255,255,255,0.55);border-radius:14px;border:1px solid rgba(30,16,64,0.08)">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:14px;font-weight:700;color:#1e1040;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${label}</div>
+          <div style="font-size:11px;color:rgba(30,16,64,0.45);margin-top:2px">${ts} · ${sizeKB} KB · ${keyCount} ${escapeHtml(t('backup.keys_short', 'ключ'))}</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:6px">
+        <button data-action="backup-restore" data-key="${escapeHtml(k)}" style="flex:1;padding:8px;border-radius:10px;border:none;background:rgba(99,102,241,0.10);color:#6366f1;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">${escapeHtml(t('backup.btn.restore', '↻ Відновити'))}</button>
+        <button data-action="backup-download" data-key="${escapeHtml(k)}" style="flex:1;padding:8px;border-radius:10px;border:none;background:rgba(30,16,64,0.05);color:rgba(30,16,64,0.6);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">${escapeHtml(t('backup.btn.export', '↗ Експорт'))}</button>
+        <button data-action="backup-delete" data-key="${escapeHtml(k)}" style="padding:8px 12px;border-radius:10px;border:none;background:rgba(239,68,68,0.08);color:#dc2626;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">×</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function restoreBackupFromUI(backupKey) {
+  if (!backupKey) return;
+  if (!confirm(t('backup.confirm.restore', 'Відновити цей знімок? Поточні дані будуть замінені.'))) return;
+  const ok = restoreBackup(backupKey);
+  if (ok) {
+    showToast(t('backup.toast.restored', '✅ Знімок відновлено'));
+    closeBackupListModal();
+    closeSettings();
+    // nm-data-changed:'restore' вже dispатчений у backup.restoreBackup — UI оновиться.
+    setTimeout(() => location.reload(), 800); // надійніше за всі рендери — повний reload
+  } else {
+    showToast(t('backup.toast.restore_fail', '⚠️ Не вдалось відновити'));
+  }
+}
+
+function downloadBackupFromUI(backupKey) {
+  const result = downloadBackupAsJson(backupKey);
+  if (result === 'share') {
+    showToast(t('backup.toast.shared', '📤 Файл — у Share Sheet'));
+  } else if (result === 'download') {
+    showToast(t('backup.toast.downloaded', '📤 Файл збережено'));
+  } else {
+    showToast(t('backup.toast.export_fail', '⚠️ Не вдалось експортувати'));
+  }
+}
+
+function deleteBackupFromUI(backupKey) {
+  if (!backupKey) return;
+  if (!confirm(t('backup.confirm.delete', 'Видалити цей знімок?'))) return;
+  try { localStorage.removeItem(backupKey); } catch {}
+  renderBackupList();
+  showToast(t('backup.toast.deleted', '🗑 Знімок видалено'));
+}
+
+function importBackupFromFile() {
+  const input = document.getElementById('import-backup-input');
+  if (!input) return;
+  input.value = ''; // дозволити повторний імпорт того ж файлу
+  input.onchange = (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const key = importBackupJson(ev.target.result);
+      if (key) {
+        showToast(t('backup.toast.imported', '✅ Імпортовано як знімок'));
+      } else {
+        showToast(t('backup.toast.import_fail', '⚠️ Не вдалось — невірний формат'));
+      }
+    };
+    reader.onerror = () => showToast(t('backup.toast.import_fail', '⚠️ Не вдалось — невірний формат'));
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
+// --- Кошик UI (B-179) ---
+
+const TRASH_TYPE_ICONS = {
+  task: '📝', note: '📒', habit: '✓', inbox: '📥', finance: '💰',
+  event: '📅', project: '📁', health_card: '🏥', allergy: '⚠️',
+  folder: '🗂', medication: '💊',
+};
+
+function openTrashModal() {
+  // OBErR Pre-mortem fix #2: clear undo toast щоб уникнути race — юзер не
+  // може випадково «Відновити» одну й ту саму річ через toast і Кошик паралельно.
+  if (_undoData) {
+    if (_undoToastTimer) clearTimeout(_undoToastTimer);
+    setUndoData(null);
+    const t = document.getElementById('toast');
+    if (t) t.classList.remove('show');
+  }
+  const m = document.getElementById('trash-modal');
+  if (!m) return;
+  m.style.display = 'flex';
+  renderTrashList();
+}
+
+function closeTrashModal() {
+  const m = document.getElementById('trash-modal');
+  if (m) m.style.display = 'none';
+}
+
+function renderTrashList() {
+  const container = document.getElementById('trash-list');
+  if (!container) return;
+  const all = getTrash();
+  const now = Date.now();
+  const TTL = 7 * 24 * 60 * 60 * 1000;
+  const items = all
+    .filter(x => now - x.deletedAt < TTL)
+    .sort((a, b) => b.deletedAt - a.deletedAt);
+  // Оновлюємо badge у Settings одразу.
+  const badge = document.getElementById('trash-count-badge');
+  if (badge) {
+    if (items.length > 0) {
+      badge.textContent = String(items.length);
+      badge.style.display = 'inline-block';
+    } else {
+      badge.style.display = 'none';
+    }
+  }
+  if (items.length === 0) {
+    container.innerHTML = `<div style="padding:40px 16px;text-align:center;color:rgba(30,16,64,0.35);font-size:14px">${escapeHtml(t('trash.empty', 'Кошик порожній'))}</div>`;
+    return;
+  }
+  container.innerHTML = items.map(x => {
+    const icon = TRASH_TYPE_ICONS[x.type] || '📄';
+    const item = x.item || {};
+    // Label — текст / назва / тема / категорія залежно від типу.
+    let label = item.text || item.title || item.name || item.category || item.folder || '—';
+    if (typeof label !== 'string') label = String(label);
+    label = label.length > 80 ? label.slice(0, 80) + '…' : label;
+    // Backward compat: старі entries без id — використовуємо deletedAt як ID.
+    const id = x.id || x.deletedAt;
+    const idStr = String(id);
+    return `<div style="display:flex;align-items:center;gap:10px;padding:11px 14px;margin-bottom:6px;background:rgba(255,255,255,0.55);border-radius:12px;border:1px solid rgba(30,16,64,0.06)">
+      <span style="font-size:18px;flex-shrink:0">${icon}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:14px;font-weight:600;color:#1e1040;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(label)}</div>
+        <div style="font-size:11px;color:rgba(30,16,64,0.4)">${escapeHtml(_relativeTime(x.deletedAt))}</div>
+      </div>
+      <button data-action="trash-restore-item" data-trash-id="${escapeHtml(idStr)}" style="font-size:12px;font-weight:700;color:#16a34a;background:rgba(22,163,74,0.10);border:none;border-radius:9px;padding:6px 12px;cursor:pointer;font-family:inherit;flex-shrink:0">↻ ${escapeHtml(t('trash.btn.restore', 'Відновити'))}</button>
+    </div>`;
+  }).join('');
+}
+
+function restoreTrashItemFromUI(trashId) {
+  // trashId може бути UUID-рядком (нові) або числом deletedAt (legacy).
+  // restoreFromTrash приймає обидва через id||deletedAt поле.
+  const idForFind = isNaN(Number(trashId)) ? trashId : Number(trashId);
+  const ok = restoreFromTrash(idForFind);
+  if (ok) {
+    showToast(t('trash.toast.restored', '✅ Відновлено'));
+    renderTrashList();
+  } else {
+    showToast(t('trash.toast.restore_fail', '⚠️ Не вдалось відновити'));
+  }
+}
+
+// Bootstrap: при openSettings оновити badge кошика щоб юзер бачив скільки items.
+function _updateTrashBadge() {
+  const badge = document.getElementById('trash-count-badge');
+  if (!badge) return;
+  const now = Date.now();
+  const TTL = 7 * 24 * 60 * 60 * 1000;
+  const count = getTrash().filter(x => now - x.deletedAt < TTL).length;
+  if (count > 0) {
+    badge.textContent = String(count);
+    badge.style.display = 'inline-block';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+window.addEventListener('nm-data-changed', (e) => {
+  // При зміні nm_trash (через addToTrash → save) оновлюємо badge.
+  // detail-based filter не потрібен — operation дешева.
+  try { _updateTrashBadge(); } catch {}
+});
+
 // Functions called from HTML event handlers (onclick, oninput, etc.)
 Object.assign(window, {
   switchTab, showToast, closeSettings, openSettings, saveSettings,
@@ -1302,4 +1666,11 @@ Object.assign(window, {
   applyTabSelection, selectTabOrder, moveTabOrder,
   deleteMemoryCard, saveFinanceSettings, clearFinanceData, exportData,
   toggleTabSelection, showDeployInfo, closeDeployInfo,
+  // OBErR Phase 2: Backup UI
+  createFullBackupUI, openBackupListModal, closeBackupListModal,
+  restoreBackupFromUI, downloadBackupFromUI, deleteBackupFromUI, importBackupFromFile,
+  // OBErR B-179: Trash UI
+  openTrashModal, closeTrashModal, restoreTrashItemFromUI,
+  // OBErR EU Compliance pre-MVP: legal pages
+  openImpressum, closeLegal,
 });

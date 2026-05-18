@@ -4,11 +4,83 @@
 >
 > Старіші сесії (до 6GoDe 19.04) — в [`_archive/SESSION_STATE_archive.md`](../_archive/SESSION_STATE_archive.md).
 
-**Оновлено:** 2026-05-17 (сесія **JMQuT** — Health AI Isolation (EU AI Act compliance, 8 фаз) + Event Delegation refactor (4 файли = 44 onclick → 0) + EU Compliance research (brain-Claude передав, створено `docs/EU_COMPLIANCE.md` + ROADMAP Pre-EU-MVP блок). 14 комітів, 8 Council агентів Sonnet, 4 WebSearch.
+**Оновлено:** 2026-05-18 (сесія **OBErR** — Event Delegation Refactor (241 onclick → 0 у 5 файлах, 6 фаз) + Backup Phase 2 (createFullBackup + JSON export + Restore UI) + B-179 UI Кошика (модалка з 11 типів restore + race-fix) + EU Compliance pre-MVP (Impressum/Privacy/Terms DRAFT + EU_LAUNCH_CHECKLIST.md). 10 комітів, 11 Council агентів Sonnet (5 pre-Phase + 3 post-Phase Event Delegation + 3 pre-Backup/Trash/EU).
 
 ---
 
-## 🔧 Поточна сесія JMQuT — Health AI Isolation + Event Delegation +4 + EU Compliance (17.05.2026)
+## 🔧 Поточна сесія OBErR — Event Delegation Final + Backup P2 + Кошик + EU pre-MVP (18.05.2026)
+
+### Зроблено — 3 великі блоки
+
+#### A. Event Delegation Refactor — фінальні 241 onclick → 0 (Phase 0-6, 7 commits)
+
+Council 5 паралельних агентів Sonnet ПЕРЕД першим Edit — знайшли 4 архітектурні дірки (bfcache double-listener, stopPropagation antipattern, modal.setAttribute('onclick'), compound onclick). Усі закрито у Phase 0.
+
+**Phase 0 hardening** (`891b444`) — `initDelegation()` idempotency `_initialized` flag + UNIVERSAL `close-backdrop` action (data-fn) що замінює одночасно `onclick="closeX()"` на overlay + `onclick="event.stopPropagation()"` на content (через `e.target !== el` guard). 1 universal заміняє 17 backdrop'ів + 5 stopPropagation antipatterns.
+
+**Phase 1-5** (`11af95a` → `91cdf83`) — 5 файлів послідовно через checkpoint-комміти:
+- finance-analytics.js (9 onclick + 1 setAttribute('onclick') → close-backdrop)
+- finance-modals.js (34 onclick + критичний stopPropagation fix у category-picker)
+- finance.js (16 onclick + compound onclick fix + inline stopPropagation cleanup)
+- calendar.js (15 onclick + null reminderId edge case)
+- index.html (167 onclick: 17 backdrop'ів через sed → close-backdrop, 91 безаргументних → universal `call` data-fn, 59 з аргументами → 20 named actions з data-* attrs)
+
+**Phase 6 post-Phase audit** (`f2ea4f6`) — Council 3 паралельні агенти Sonnet (Regression Hunter + Cross-file + Pre-mortem) знайшли 1 реальну UX-дірку: 300мс iOS tap delay на ~119 нових delegation елементів. Фікс: глобальне CSS `[data-action] { touch-action: manipulation }`. Решта Pre-mortem знахідок — pre-existing або документовано (trust-model для `call` action, DETAIL_TO_KEY['finance']='nm_finance' семантика, 37 inline non-onclick handler'ів як окрема сесія).
+
+**Загалом Event Delegation у OBErR:** 241 onclick → 0. delegation registry 49 → 119 actions (+70 named + 2 universal). 0 регресій (Council post-audit verify).
+
+#### B. Backup Phase 2 + B-179 Кошик UI (3 commits)
+
+Council 3 паралельні агенти Sonnet (Strategist + Pre-mortem + Implementer) ПЕРЕД UI знайшли 2 критичні ризики — закрито на рівні backend.
+
+**`8f428ac` Backup backend + Trash UUID race fix:**
+- 🔴 iOS PWA `<a download>` silent fail — exportData() у nav.js + новий downloadBackupAsJson() у backup.js додано iOS PWA detection (display-mode: standalone + iPhone/iPad UA) + fallback на `navigator.share({ files: [File] })` → Share Sheet.
+- 🟡 trash.js Date.now() collision (B-171 клас) — addToTrash тепер додає `id: generateUUID()`. restoreFromTrash шукає по `id` АБО `deletedAt` (backward compat). Видалення через reference equality `t !== entry`.
+- createFullBackup(label) — обгортка над createSelectiveBackup з усіма NM_KEYS.data + .settings (window.NM_KEYS exposed у boot.js:1387). Quota check reused.
+- importBackupJson(jsonText) — підтримує native format (з ts/label/data) + legacy exportData (плоский об'єкт).
+
+**`3d85532` Backup + Trash UI:**
+- Settings → секція «Дані» розширена 5 рядками: 🗑 Кошик (badge з count), 💾 Створити знімок, 📋 Список знімків, ↗ Експорт JSON, ↙ Імпорт JSON.
+- 2 нові модалки у index.html: #trash-modal (z-index:520) з ↻Restore кнопкою кожного item, #backup-list-modal з ↻Restore / ↗Export / × кнопками кожного знімка.
+- nav.js +~200 рядків: _relativeTime, _formatBackupTs хелпери; 8 Backup UI handlers + 5 Trash UI handlers; live _updateTrashBadge через `nm-data-changed` listener.
+- 4 нові delegation actions: backup-restore, backup-download, backup-delete, trash-restore-item.
+- 🚨 Race fix (Pre-mortem #2): openTrashModal() скидає _undoData=null + clearTimeout щоб уникнути race з undo-toast (юзер не може випадково Restore одну річ через toast і Кошик паралельно).
+
+#### C. EU Compliance pre-MVP (1 commit)
+
+**`e32ecbe` Legal pages DRAFT + checklist:**
+- nav.js LEGAL_CONTENT константа з 3 секціями (impressum/privacy/terms) — inline HTML українською з [PLACEHOLDER] токенами для KvK/VAT/адреси/email. Червоний banner у кожній секції щоб Роман не випадково запустив без заповнення.
+- #legal-overlay модалка (z-index:530) з scrollable body, close-backdrop pattern.
+- Settings → «Інформація»: новий рядок «Юридична інформація» (Impressum). openPrivacyPolicy/openTerms замість stub'ів з toast 'незабаром' тепер реальні.
+- `docs/EU_LAUNCH_CHECKLIST.md` (новий, ~150 рядків) — покроковий чек-ліст для Романа: 🚨 КРИТИЧНІ кроки (VAT-стратегія Paddle vs OSS NL, KvK реєстрація, заповнити PLACEHOLDER, DPF status check) + 🟡 ВИСОКИЙ (квартальні звіти / Paddle checkout / ePrivacy checkbox) + ⚪ СЕРЕДНІЙ (CRA, Data Act ✅ JSON export, PLD).
+- НЕ зроблено (поза scope): Paddle SDK integration (потребує рішення Романа), 14-day checkbox у checkout (потребує payment flow), KvK реєстрація.
+
+### Гілка + контекст
+
+- Гілка: `claude/start-session-OBErR`
+- Коміти: 10 (Event Delegation Phase 0-6 = 7 + Backup backend + Backup/Trash UI + EU Compliance)
+- Council Sonnet: 11 (5 pre-Phase Event Delegation + 3 post-Phase + 3 pre-Backup/Trash/EU)
+- Bundle: перебудовано після кожної фази
+- CACHE_NAME: nm-20260518-1900 → nm-20260518-2230 (8 bumps)
+
+### Хвости (закриті у цій же сесії)
+
+- ✅ B-179 UI Кошика — реалізовано (модалка у Settings)
+- ✅ Backup Phase 2 — createFullBackup + JSON export/import + Restore UI
+- ✅ EU Compliance pre-MVP — legal DRAFT'и + checklist для Романа
+- 🟢 37 inline non-onclick handler'ів (ontouchstart/move/end, oninput, onblur contenteditable) — окрема сесія для повного strict CSP
+- 🟢 DETAIL_TO_KEY['finance']='nm_finance' семантична хибність (B-130/B-165 клас) — pre-existing, не наша задача
+- 🟢 src/core/diagnostics.js (3 onclick) + src/core/logger.js (1 onclick) — internal діагностика, окрема сесія
+
+### Що далі (для Романа поза кодом)
+
+1. **EU Compliance:** виконати `docs/EU_LAUNCH_CHECKLIST.md` — обрати Paddle vs OSS, зареєструвати KvK, заповнити PLACEHOLDER у `src/core/nav.js` LEGAL_CONTENT константі.
+2. **iPhone smoke test v932+** — перевірити 4 ключові flows: backup створення + restore + Кошик restore + iOS share (експорт JSON).
+3. **Supabase phase start** — після того як EU Compliance виконано (KvK + DPA з OpenAI/Anthropic) можна стартувати backend migration. Архітектурний refactor план готовий у `_archive/SESSION_STATE_archive.md` myshu (Сесії 4-8).
+
+---
+
+## 🔧 Сесія JMQuT — Health AI Isolation + Event Delegation +4 + EU Compliance (17.05.2026) — попередня
 
 ### Зроблено — 3 великі блоки
 
@@ -84,124 +156,11 @@ ROADMAP додано блок «🚨 Pre-EU-MVP Compliance» з 6 пунктам
 
 ---
 
-## 🔧 Сесія DGH6F — Pre-Supabase hardening: NM_KEYS audit + assertion (16.05.2026) — попередня
+## 🔧 Сесія DGH6F (16.05.2026) — архівовано OBErR 18.05 → [archive](../_archive/SESSION_STATE_archive.md#-сесія-dgh6f--pre-supabase-hardening-nm_keys-audit--backup-hardening--event-delegation-phase-1а-1д-16052026)
 
-### Зроблено — 1 великий блок (NM_KEYS audit) + 2 brain-задачі
+**Стислі метрики:** 26 комітів, ~7 годин, 13 Council Sonnet. NM_KEYS 50→94 + boot assertion (B-184). Backup hardening: 4 латентні дірки Pre-mortem + 7 self-аудит проблем (B-185). Event Delegation Phase 1а-1д: 40 inline handler'ів → 23 actions (334→296 onclick). pre-commit-onclick-freeze hook (9-й сторож).
 
-#### A. NM_KEYS audit — 50→94 ключів (+44) + boot-time assertion
-
-Council 5 паралельних агентів Sonnet (🕵️ Критик / 🌀 Стратег / 🚀 Оптиміст / 💎 Pre-mortem / 🛠 Виконавець) обговорювали Event Delegation + Backup. **Pre-mortem знайшов критичну дірку** у поточному реєстрі `NM_KEYS` (`boot.js:307`) — пропускав 5 юзерських даних:
-
-- **Активний баг (не лише ризик):** `clearAllData()` у `nav.js:1039` бере виключно з `NM_KEYS` → після «Видалити все» **залишались** `nm_events` (події календаря), `nm_reminders` (нагадування), `nm_routine` (розпорядок дня), `nm_allergies` (алергії у Health картках), `nm_action_log` (лог дій для undo).
-- **Ризик перед Supabase:** `createSelectiveBackup` у `backup.js` теж бере з `NM_KEYS` → перший backup перед міграцією пропустив би ті самі дані.
-
-Голова верифікувала через широкий grep (`'nm_*'` literal'и + константи + template literals) → 137 унікальних ключів у коді проти 50 у реєстрі.
-
-1. **`56f4d41`** — `src/core/boot.js` NM_KEYS розширено: data (+5), settings (+14), cache (+24), patterns (+1) → 94 ключі. Boot-time `_assertAllKeysKnown()` сканує localStorage у кінці `bootApp()` і console.warn якщо знайде nm_* поза реєстром. + `docs/DATA_SCHEMA.md` шапка оновлена з посиланням на NM_KEYS як джерело правди. + CACHE_NAME `nm-20260516-1830`.
-
-#### B. Backup механізм — 4 латентні дірки з Pre-mortem + 7 проблем самореалізації знайдено Council (6 комітів)
-
-⚠️ Сам процес став двоетапним: Pre-mortem знайшов корінь (4 дірки), Council аудит **МОЇХ власних фіксів** виявив 7 неочевидних проблем (5 критичних + 2 латентних). Корінь — я не верифікував список migration flags проти типу кожної міграції + сигнал window.__nm_restoring створив без listener-guards (мертвий lock). Council 3 паралельних агентів Sonnet (Verifier / Regression Hunter / Supabase Prep Auditor) — кожен підтвердив незалежно.
-
-
-
-Усі 4 знахідки Council 💎 Pre-mortem верифіковані Головою (читання реального коду в `backup.js` + `boot.js:1195`). Це **латентні дірки** — не зашкодили активно, але кожна спрацювала б при першому ризикованому Supabase backup. Закриті ДО Supabase сесії.
-
-2. **`bdc3aee`** — Quota check ПЕРЕД `setItem` у `createSelectiveBackup`. `_estimateUsedBytes()` рахує (key+value)×2 (UTF-16). Поріг `QUOTA_BUDGET_BYTES = 4 MB` (нижче iPhone Safari 5 MB ліміту). Якщо >поріг → спроба cleanup, потім якщо все одно >поріг → `console.warn` з конкретикою (MB payload + MB existing) замість тихого `return null`.
-3. **`5d52507`** — Race lock `window.__nm_restoring = true` + CustomEvent'и `nm-restore-start` / `nm-restore-end` у `restoreBackup`. Try/finally гарантує reset навіть при exception. Сигнал-інтерфейс для майбутніх listener'ів (OWL scheduler, restore UI) — `if (window.__nm_restoring) return` щоб не перезаписати restore-стан.
-4. **`91cfccc`** — Migration flag reset при `restoreBackup`. Константа `KEY_MIGRATION_FLAGS` (key → list of flags) зібрана grep'ом по `boot.js`. При restore ключа `nm_events` — видаляється `nm_events_uuid_migrated_v10` → наступний boot повторно мігрує відновлений старий формат → no mixed UUID/number state.
-5. **`9657117`** — `init() runMigrations` swallow → запис у `nm_error_log` + `console.error`. Прямий localStorage запис без import `logger.js` (циклічна залежність logger→nav→boot). Формат сумісний з `logger.saveErrorLog` (ts/type/msg/src/tab/stack/actions). CACHE bump `nm-20260516-1930`. Інші 7 `setupX()` catch залишені порожніми (некритичні + захист від крашу логування саме).
-
-6. **`727a5bb`** (Council self-аудит критичні фікси) — 5 критичних:
-   - `KEY_MIGRATION_FLAGS` ВИДАЛЕНО `nm_health_log_cleared_v6` (CLEANUP flag, не conversion — скидання = повторне видалення restored даних, анти-патерн)
-   - ДОДАНО v17 steps до tasks + projects (boot.js:1014-1075 мігрує `nm_tasks[].steps[].id` + `nm_projects[].steps[].id`)
-   - ДОДАНО `nm_habit_log2` (v9 cross-ref log keys = habit.id, boot.js:555,597)
-   - ДОДАНО `nm_allergies` (v16 мігрує allergies[].id, boot.js:852,994)
-   - 4 listener guards `if (window.__nm_restoring) return` у `proactive.js:1231`, `followups.js:81`, `brain-pulse.js:133`, `me.js:289` — сигнал з 5d52507 був мертвим без них
-   - `nm-data-changed` dispatch у `restoreBackup` finally → UI перерендериться після restore без F5
-   - CACHE bump `nm-20260516-2000`
-
-7. **`a031563`** (Council self-аудит latентні фікси) — 2 perf/safety:
-   - `_estimateUsedBytes` кеш (3×→2× O(n)) — на iPhone Safari з повним сховищем це до ~33% швидше у hot path
-   - Recursive quota fail guard у boot.js error logger — якщо `setItem(log.slice(-200))` падає через quota, fallback на мінімальний log (тільки поточний запис) → діагностика збережена саме у тій ситуації де log найпотрібніший
-
-#### C. Event Delegation Phase 1а — 16 header onclick + freeze hook (1 коміт)
-
-ROADMAP Security Hardening BLOCKER #1 (Event Delegation Refactor) перший крок з Strangler стратегії (Council Стратег: НЕ Big Bang, поступово файл-за-файлом). Static HTML headers — найпростіший підмножина (нема `stopPropagation` / `this.closest()` / template literal UUID). Council аудит підтвердив що 16 onclick у `index.html` headers (8 tabs × `openSettings`+`openHelp`) — оптимальний quick win.
-
-8. **`62183fc`** Phase 1а — header buttons (16 onclick):
-   - `src/core/delegation.js` (новий, ~71 рядок): ACTIONS registry через `Object.create(null)` (без prototype pollution), `reg(name, fn)` + `initDelegation()` один listener на `document.body`. `closest('[data-action]')` → handler `(dataset, el, ev)`. UUID-immune через `el.dataset.id` (string, не eval) — клас B-108/B-170 неможливий. Silent skip для невідомих actions. 2 базові actions: `open-settings` / `open-help`.
-   - `src/app.js` + `src/core/boot.js`: import + `initDelegation()` у `bootApp()` ПЕРЕД `showApp()` (Inversion: без цього перший клік до showApp був би mute).
-   - `index.html` — 16 onclick → data-action: 334→319.
-   - `.claude/hooks/pre-commit-onclick-freeze.js` (новий, 8-й сторож) + settings.json: net-rachet `+onclick= не > -onclick=` у diff. Дозволяє refactor, блокує regression. Smoke 3/3.
-   - CACHE bump `nm-20260516-2100`.
-
-**Phase 1б — JS файли (3 sub-комміти).** Council 3 паралельних агентів Sonnet (Onclick Mapper + Strangler Verifier + Pre-mortem) ПЕРЕД першим Edit (виконано урок DGH6F «Pre-mortem ≠ implementation verification»). Knock 1: Verifier коректував Strategist order — me.js простіший (1 onclick, складність 1) ніж inbox.js (4 onclick, daily flow), тому **me.js першим JS, не inbox.js**.
-
-9. **`cb97845`** Phase 1б1 — `me.js:185` `switchTab('projects')` → `data-action="switch-tab" data-tab="projects"`. + новий універсальний action `switch-tab` у delegation.js (reuse для ~30 інших `switchTab(...)` onclick у проекті). Onclick 319→318. CACHE 2130.
-10. **`cb5385d`** Phase 1б2 — `onboarding.js:616` `this.closest('#fv-tip').remove()` → `data-action="close-parent" data-parent="#fv-tip"`. + новий універсальний action `close-parent` (reuse для аналогічного `health.js:1333` коли мігруємо). Onclick 318→317. CACHE 2145.
-11. **`3bd2796`** Phase 1б3 — `inbox.js` 4 onclick: upcoming-картка (#1+#2 `switchTab('tasks')`/`openCalendarModal()`), inbox-картка (#3 `navigateInboxItem('${id}')`), clarify-модалка (#4 `selectClarifyOption(${i})`). + 3 нові actions: `open-calendar`, `navigate-inbox-item`, `select-clarify-option` (з `parseInt(data.idx, 10)` захистом — Pre-mortem 🔴 закрито). Onclick 317→313. CACHE 2200.
-
-**Загалом Phase 1б: 3 файли × 6 onclick → 0 у файлах + 6 нових actions у delegation.js registry (8 actions total). 0 регресій (Pre-mortem передбачив усі).**
-
-**Phase 1в — tasks.js (2 sub-комміти).** Council 3 паралельні агенти Sonnet (Handler Mapper + Pre-mortem + DRY Scanner). Знахідки: **5 inline handler'ів, не 3** (3 onclick + 1 ontouchend + 1 ontouchstart+ontouchend з координатами). **2 🔴:** iOS 300ms delay return + swipe-vs-tap координатна логіка.
-
-12. **`c8803c2`** Phase 1в-prep — `style.css` + `touch-action: manipulation` для `[data-task-check]` + `[data-step-check]`. Окремий коміт ПЕРЕД delegation refactor: fast-tap забезпечує CSS, не JS preventDefault. Закриває 🔴 #1 ДО будь-якої JS-зміни. CACHE 2215.
-13. **`36619be`** Phase 1в-a — 4 з 5 handler'ів tasks.js → delegation:
-    - `toggleTempStep` / `removeTempStep` (specific — edit-модалка контекст)
-    - `taskCardClick` (specific — передає event для guard `closest [data-task-check]`)
-    - `toggleTaskStatus` ontouchend → **UNIVERSAL `toggle-entity-done`** з `data-entity="task"`. DRY Scanner: при майбутній міграції habits.js (6 onclick) — НЕ створюємо нові actions, використовуємо цей з `data-entity="habit"`/`"habit-prod"` (fnMap у delegation.js).
-    - delegation.js registry зріс з 8 до 13 actions
-    - Phase 1в-b ВIДКЛАДЕНО: 5-й handler (step-check рядок 290) з координатною swipe-vs-tap логікою — потребує окремий `src/ui/touch-detect.js` helper.
-    - CACHE 2230.
-
-**Phase 1г — board.js + evening.js (1 коміт).** Council 3 паралельні агенти Sonnet (по файлу). 9 handler'ів мігровано одним коммітом.
-
-14. **`39224b4`** — board.js 3 onclick (toggle-owl-collapsed + scroll-owl-chips з parseInt захистом) + evening.js 6 onclick (open-moment-view, delete-moment, reschedule-task UNIVERSAL з data-days, hold-quit-habit, confirm-quit-relapse — cross-file: функції у habits.js). ⚠️ ontouchstart/move/end swipe (board.js:41) НЕ мігровано — Pre-mortem 🔴: triple-event state chain, окрема задача `src/ui/touch-detect.js` helper. Registry 13→18. CACHE 2300.
-
-**Phase 1д — projects.js (1 коміт).** Council Pre-mortem знайшов pre-existing fuzzy-match баг (`_syncProjectStepToTasks` substring 15 без project.id filter — може закрити чужу задачу). НЕ моя задача, окремий ticket.
-
-15. **`cd97c94`** — projects.js 5 onclick → 5 actions (open-project, close-project-workspace, toggle-project-timeline, toggle-project-step, open-notes-folder з інкапсульованим switchTab+setTimeout(150)). Cleanup: видалено unused escapeJsArg import. Registry 18→23. CACHE 2315.
-
-**Phase 1+ Council аудит власних фіксів (2 коміти hardening).** 2 паралельні агенти Sonnet (Regression Hunter + Cross-file Consistency) ПIСЛЯ всіх 5 фаз знайшли 4 неочевидні проблеми. Усі закриті:
-
-16. **`a42cb9a`** + **`85eb0e8`** — 4 hardening:
-    - 🟡 КРИТИЧНА UX: `[onclick]:active scale(0.87)` не працював для 26 мігрованих елементів (delegation замінив onclick → CSS selector не матчить → тап БЕЗ тактильного feedback). Додано `[data-action]` поруч у обох правилах style.css.
-    - 🟡 PRE-EXISTING: `renderEvening` НЕ був у `Object.assign(window)` у evening.js — старий `onclick="...renderEvening()"` теж не працював у IIFE bundle. Мій handler викликав window.renderEvening що undefined → typeof guard saved from crash але re-render не виконувався. Додано у window.
-    - 🟢 Pattern consistency: `if (!data.id) return` guards у navigate-inbox-item + open-project + toggle-project-timeline.
-    - 🟢 Документація: 3 projects.js actions коментар-тригери + warning у toggle-entity-done про прибирання inline stopPropagation при habits міграції.
-    - CACHE 2345.
-
-**Загалом Event Delegation у DGH6F: 40 inline handler'ів → 23 actions у delegation registry. Onclick total 334 → 296 (-38). 9-й pre-commit сторож (onclick-freeze net-rachet). 0 невиправлених регресій. 0 silent fails у проді (verified self-check).**
-
-#### D. Brain-задачі (моніторинг власної інфраструктури)
-
-17. **`ae96f1a`** — `.claude/hooks/pre-commit-screenshot.js` локальний guard (другий рівень після workflow): блокує commit якщо staged JSON містить `"screenshot_b64": "<base64>"`. Smoke 4/4 (no-commit/no-JSON/base64/null). + lessons урок «Workflow з зовнішнім API — спершу локальний міні-тест curl» з brain-спостереження про 3 невдалих запуски Claude Security Action у e9t3N.
-
-### Council висновки (відкладено на наступні сесії)
-
-- **Event Delegation Refactor (BLOCKER #1):** 334 onclick (185 HTML + 149 JS, не 300 як було записано у ROADMAP). Стратегія Strangler (Стратег), не Big Bang. Новий файл `src/core/delegation.js` (не event-bus, не nav.js). Flat контракт `data-action="X" data-id="Y"` — UUID-immune. Order: finance-chat → me → tasks → inbox → ... → finance-modals (35) → index.html (185) останнім. CSP enablement = коли `grep onclick src/` = 0 + Report-Only 24-48 год. Quick win Оптиміст: 16 onclick у `index.html` headers (`openSettings`/`openHelp`) — 30 хв роботи. Існуючі delegation patterns: `chips.js:356`, `nav.js:649`, `habits.js:239`.
-- **Backup Phase 2 (BLOCKER #4 повний):** ✅ латентні дірки закриті Phase 1 (4 коміти DGH6F). Залишилось для Supabase: full backup (зараз тільки selective) + Restore UI у Налаштуваннях («Відкат до знімка» + список з `listBackups()` + metadata `getBackupInfo()`) + JSON export (download файлом для перенесення поза localStorage перед великою міграцією).
-
-### Гілка + контекст
-
-- Гілка: `claude/start-session-DGH6F`
-- Council save: B-184 + B-185 + Council self-аудит 7 проблем у backup + Phase 1б+1в+1г+1д Council по 3 агенти на блок + ПIСЛЯ-Phase Council аудит 4 нові проблеми (CSS active, renderEvening, guards, docs) — усі закриті
-- Розмір сесії: 26 комітів (1 NM_KEYS + 4 backup hardening + 2 backup self-аудит fix + 1 Phase 1а + 3 Phase 1б + 1 Phase 1в-prep + 1 Phase 1в-a + 1 Phase 1г + 1 Phase 1д + 2 Phase 1+ hardening + 7 docs + 1 brain + 1 i18n baseline), ~7 годин
-- Pre-commit hooks тепер 9 (додано `pre-commit-onclick-freeze.js` — net-rachet для inline onclick)
-
-### Що далі (узгоджено з Романом)
-
-1. ✅ **NM_KEYS audit** (B-184).
-2. ✅ **Backup hardening Phase 1** — 4 латентні дірки закрито (B-185) + 7 self-аудит проблем виправлено.
-3. ✅ **Event Delegation Phase 1а** — `delegation.js` + 16 header onclick + freeze hook.
-4. ✅ **Event Delegation Phase 1а-1д** — header (16) + me (1) + onboarding (1) + inbox (4) + tasks (4/5) + board (3) + evening (6) + projects (5) = 40 handler'ів → delegation. 296 onclick залишилось.
-5. ✅ **Council hardening post-Phase** — 4 неочевидні проблеми закриті (CSS :active feedback, renderEvening window export, pattern guards, docs).
-6. 🚨 **СТРАТЕГІЧНЕ РIШЕННЯ Романа (передано з brain 15.05)** — спростити Health-вкладку: UI лишається, AI-доступ ПОВНIСТЮ видаляється (EU AI Act compliance — Health-AI = High-risk). Окрема велика сесія: видалити AI tools (create_medication/delete_medication/add_allergy etc) + Inbox-класифікація без Health + OWL prompts без health + чат-бар у Health + cross-tab links. **Перед стартом:** grep аудит + план + Inbox fallback варіант (A: Нотатки, B: Inbox без класифікації — рекомендую A). Деталі — інструкція у транскрипті DGH6F кінець.
-7. **Event Delegation Phase 1в-b** — `src/ui/touch-detect.js` helper для step-check координат swipe-vs-tap (Pre-mortem рекомендував окремий helper). Можна після Health.
-8. **Event Delegation Phase 1+ решта (~5 год)** — notes.js (10) → nav.js (9, ПРОПУЩЕНО Стратегом) → habits.js (12, reuse `toggle-entity-done`) → health.js (14, reuse `close-parent` для med-row) → calendar.js (15) → finance-analytics.js (9) → finance.js (16) → finance-modals.js (35) → index.html залишки (169). CSP Report-Only коли grep=0.
-9. **Backup Phase 2 (~3 год)** — `createFullBackup()` + JSON export + Restore UI. Перед Supabase сесією.
-
+**ПЕРЕНЕСЕНI ПIД-ПРОБЛЕМИ → JMQuT/OBErR:** ✅ Health AI Isolation (JMQuT) + ✅ Event Delegation залишок (OBErR 241→0) + ✅ Backup Phase 2 (OBErR) + ✅ B-179 UI Кошика (OBErR) + ✅ EU Compliance pre-MVP DRAFT (OBErR).
 ---
 
 ## 🔧 Сесія e9t3N (15-16.05.2026) — архівовано JMQuT 17.05 → [archive](../_archive/SESSION_STATE_archive.md#-сесія-e9t3n--ai-тестер-247--security-hardening-15-16052026)

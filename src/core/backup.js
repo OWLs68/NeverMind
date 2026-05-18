@@ -225,3 +225,119 @@ export function getBackupInfo(backupKey) {
     };
   } catch { return null; }
 }
+
+// === OBErR Phase 2 (18.05.2026) ===
+// Розширення для повного backup + JSON експорт/імпорт + Restore UI integration.
+
+// Створює ПОВНИЙ backup (всі data + settings ключі з NM_KEYS). Обгортка над
+// createSelectiveBackup. Quota check + cleanup автоматично — якщо повна
+// data > 4 MB, повертає null → UI має запропонувати JSON export як fallback.
+//
+// import { NM_KEYS } зробив через runtime require (boot.js імпортує backup
+// частково → циклічне import.statement, але runtime читання працює бо
+// NM_KEYS — це const export ініціалізований до bootApp).
+export function createFullBackup(label) {
+  const labelStr = label || 'manual';
+  // Запит NM_KEYS через window — глобально доступний після boot. Якщо backup
+  // викликається до boot (раннє завантаження) — fallback на мінімальний набір.
+  let keys;
+  try {
+    const nm = (typeof window !== 'undefined' && window.NM_KEYS) ? window.NM_KEYS : null;
+    if (nm && Array.isArray(nm.data) && Array.isArray(nm.settings)) {
+      keys = [...nm.data, ...nm.settings];
+    } else {
+      // Fallback (boot ще не закінчився): мінімальний набір з даних.
+      keys = ['nm_inbox','nm_tasks','nm_notes','nm_habits2','nm_finance',
+              'nm_health_cards','nm_projects','nm_events','nm_settings'];
+    }
+  } catch {
+    keys = ['nm_inbox','nm_tasks','nm_notes'];
+  }
+  return createSelectiveBackup(keys, 'full-' + labelStr);
+}
+
+// Експортує backup у JSON-файл (download). iOS PWA fallback через
+// navigator.share (Pre-mortem Council OBErR: <a download> ігнорується у
+// standalone-mode на iOS Safari — файл відкривається у новій вкладці без
+// download). На iOS PWA: navigator.share({ files: [File] }) → Share Sheet →
+// «Save to Files». На desktop / Chrome Android: звичайний download anchor.
+//
+// Returns: 'download' | 'share' | 'error'.
+export function downloadBackupAsJson(backupKey, filename) {
+  const raw = localStorage.getItem(backupKey);
+  if (!raw) return 'error';
+  const name = filename || ('nm-backup-' + backupKey.replace(/^nm_backup_/, '') + '.json');
+  try {
+    const blob = new Blob([raw], { type: 'application/json' });
+    const isIosPwa = /iP(hone|ad|od)/.test(navigator.userAgent || '') &&
+                     (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+    if (isIosPwa && typeof navigator.share === 'function' && typeof File === 'function') {
+      const file = new File([blob], name, { type: 'application/json' });
+      navigator.share({ files: [file], title: 'NeverMind backup' }).catch(() => {});
+      return 'share';
+    }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      try { document.body.removeChild(a); } catch {}
+      try { URL.revokeObjectURL(url); } catch {}
+    }, 500);
+    return 'download';
+  } catch (e) {
+    console.error('[backup] downloadBackupAsJson failed:', e);
+    return 'error';
+  }
+}
+
+// Імпорт JSON-файлу як backup. Валідує структуру (ts/label/data) і записує у
+// nm_backup_* з префіксом 'imported-'. Не виконує restore автоматично — юзер
+// після імпорту бачить новий backup у списку і вирішує сам.
+//
+// jsonText — рядок з вмістом файлу.
+// Returns: backupKey | null.
+export function importBackupJson(jsonText) {
+  if (typeof jsonText !== 'string' || jsonText.length === 0) return null;
+  try {
+    const parsed = JSON.parse(jsonText);
+    if (!parsed || typeof parsed !== 'object') return null;
+
+    // Підтримуємо 2 формати:
+    // (а) Native backup format: { ts, label, data: { ...keys } }
+    // (б) Legacy exportData format (nav.js:1019): { nm_inbox: [...], ... }
+    //     Загортаємо у native format.
+    let snapshot, sourceLabel, sourceTs;
+    if (parsed.data && typeof parsed.data === 'object') {
+      // Native format
+      snapshot = parsed.data;
+      sourceLabel = (typeof parsed.label === 'string' ? parsed.label : 'unknown');
+      sourceTs = (typeof parsed.ts === 'string' ? parsed.ts : new Date().toISOString());
+    } else {
+      // Legacy: object з nm_* ключами напряму
+      const keys = Object.keys(parsed).filter(k => k.startsWith('nm_') && !k.startsWith(BACKUP_PREFIX));
+      if (keys.length === 0) return null;
+      snapshot = {};
+      keys.forEach(k => {
+        const v = parsed[k];
+        snapshot[k] = typeof v === 'string' ? v : JSON.stringify(v);
+      });
+      sourceLabel = 'legacy-export';
+      sourceTs = new Date().toISOString();
+    }
+
+    const ts = new Date().toISOString();
+    const tsSlug = ts.slice(0, 16).replace(':', '-');
+    const safeLabel = ('imported-' + sourceLabel).replace(/[^a-z0-9-]/gi, '-').slice(0, 30);
+    const backupKey = BACKUP_PREFIX + safeLabel + '_' + tsSlug;
+    const payload = JSON.stringify({ ts: sourceTs, label: 'imported: ' + sourceLabel, data: snapshot });
+    localStorage.setItem(backupKey, payload);
+    cleanupOldBackups(MAX_BACKUPS);
+    return backupKey;
+  } catch (e) {
+    console.warn('[backup] importBackupJson failed:', e);
+    return null;
+  }
+}

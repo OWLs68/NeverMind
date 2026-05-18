@@ -1,4 +1,5 @@
 import { currentTab, _undoData, _undoToastTimer, setUndoData, setUndoTimer } from './nav.js';
+import { generateUUID } from './uuid.js';
 import { getInbox, saveInbox, renderInbox } from '../tabs/inbox.js';
 import { getTasks, saveTasks, renderTasks } from '../tabs/tasks.js';
 import { getNotes, saveNotes, renderNotes } from '../tabs/notes.js';
@@ -20,12 +21,18 @@ function saveTrash(arr) {
 }
 
 // Додати запис в кеш при видаленні
+//
+// OBErR 18.05.2026 (Council Pre-mortem): додано unique `id` (UUID) щоб уникнути
+// колізії `deletedAt` при batch-delete (Date.now() мс точність — 2 видалення за
+// 1 мс отримували один deletedAt → restoreFromTrash(deletedAt) повертав ТIЛЬКИ
+// перший; другий залишався у trash назавжди silent). Backward-compat: старі
+// записи без id шукаються по deletedAt.
 export function addToTrash(type, item, extra) {
   const trash = getTrash();
   // Прибираємо старіші за 7 днів
   const now = Date.now();
   const fresh = trash.filter(t => now - t.deletedAt < TRASH_TTL);
-  fresh.push({ type, item, extra: extra || null, deletedAt: now });
+  fresh.push({ id: generateUUID(), type, item, extra: extra || null, deletedAt: now });
   // Максимум 200 записів
   saveTrash(fresh.slice(-200));
 }
@@ -46,10 +53,13 @@ export function searchTrash(query) {
     .sort((a, b) => b.deletedAt - a.deletedAt);
 }
 
-// Відновити запис з кешу по id
+// Відновити запис з кешу по id.
+// OBErR 18.05.2026: шукає по `id` (UUID, нові записи) АБО `deletedAt`
+// (legacy без id). Це дозволяє Кошик UI використовувати UUID без втрати
+// сумісності з undo-toast'ом який все ще передає deletedAt.
 export function restoreFromTrash(trashId) {
   const trash = getTrash();
-  const entry = trash.find(t => t.deletedAt === trashId);
+  const entry = trash.find(t => t.id === trashId || t.deletedAt === trashId);
   if (!entry) return false;
   const { type, item, extra } = entry;
   if (type === 'task') {
@@ -130,8 +140,9 @@ export function restoreFromTrash(trashId) {
       if (currentTab === 'health') renderHealth();
     }
   }
-  // Прибираємо з кешу після відновлення
-  saveTrash(trash.filter(t => t.deletedAt !== trashId));
+  // Прибираємо з кешу після відновлення. OBErR: фільтр по id ТА deletedAt
+  // (той самий entry зі знайденого вище — обидва критерії гарантують exact match).
+  saveTrash(trash.filter(t => t !== entry));
   return true;
 }
 

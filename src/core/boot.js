@@ -1381,6 +1381,9 @@ function showApp() {
 // Загалом юзер чекає ~200мс замість 700-900мс раніше.
 function bootApp() {
   try { init(); } catch(e) { console.error('init error:', e); }
+  // OBErR 18.05.2026: NM_KEYS у window щоб backup.createFullBackup міг
+  // читати єдиний реєстр ключів без circular import (boot ↔ backup).
+  try { window.NM_KEYS = NM_KEYS; } catch {}
   // DGH6F 16.05.2026: event delegation listener реєструємо ПЕРЕД showApp щоб
   // header buttons (data-action="open-settings"/"open-help") працювали з
   // першого ж рендеру. ПIСЛЯ init() бо delegation imports nav (через app.js).

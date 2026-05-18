@@ -16448,12 +16448,12 @@ ${JSON.stringify(contextData, null, 2)}` : "";
     const trash = getTrash();
     const now = Date.now();
     const fresh = trash.filter((t2) => now - t2.deletedAt < TRASH_TTL);
-    fresh.push({ type, item, extra: extra || null, deletedAt: now });
+    fresh.push({ id: generateUUID(), type, item, extra: extra || null, deletedAt: now });
     saveTrash(fresh.slice(-200));
   }
   function restoreFromTrash(trashId) {
     const trash = getTrash();
-    const entry = trash.find((t2) => t2.deletedAt === trashId);
+    const entry = trash.find((t2) => t2.id === trashId || t2.deletedAt === trashId);
     if (!entry) return false;
     const { type, item, extra } = entry;
     if (type === "task") {
@@ -16518,7 +16518,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
         if (currentTab === "health") renderHealth();
       }
     }
-    saveTrash(trash.filter((t2) => t2.deletedAt !== trashId));
+    saveTrash(trash.filter((t2) => t2 !== entry));
     return true;
   }
   function cleanupTrash() {
@@ -16553,6 +16553,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
   var init_trash = __esm({
     "src/core/trash.js"() {
       init_nav();
+      init_uuid();
       init_inbox();
       init_tasks();
       init_notes();
@@ -19811,6 +19812,61 @@ ${logLines}
       }
     }
   }
+  function restoreBackup(backupKey) {
+    if (!backupKey || !backupKey.startsWith(BACKUP_PREFIX)) return false;
+    const raw = localStorage.getItem(backupKey);
+    if (!raw) return false;
+    try {
+      const parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed.data !== "object") return false;
+      try {
+        window.__nm_restoring = true;
+      } catch {
+      }
+      try {
+        window.dispatchEvent(new CustomEvent("nm-restore-start", { detail: { backupKey } }));
+      } catch {
+      }
+      try {
+        Object.entries(parsed.data).forEach(([k, v]) => {
+          try {
+            localStorage.setItem(k, v);
+          } catch {
+          }
+          const flags = KEY_MIGRATION_FLAGS[k];
+          if (flags) {
+            flags.forEach((flag) => {
+              try {
+                localStorage.removeItem(flag);
+              } catch {
+              }
+            });
+          }
+        });
+        return true;
+      } finally {
+        try {
+          window.__nm_restoring = false;
+        } catch {
+        }
+        try {
+          window.dispatchEvent(new CustomEvent("nm-restore-end", { detail: { backupKey } }));
+        } catch {
+        }
+        try {
+          window.dispatchEvent(new CustomEvent("nm-data-changed", { detail: "restore" }));
+        } catch {
+        }
+      }
+    } catch (e) {
+      try {
+        window.__nm_restoring = false;
+      } catch {
+      }
+      console.error("[backup] restore failed:", backupKey, e);
+      return false;
+    }
+  }
   function listBackups() {
     const result = [];
     for (let i = 0; i < localStorage.length; i++) {
@@ -19831,11 +19887,136 @@ ${logLines}
     });
     return toRemove.length;
   }
-  var BACKUP_PREFIX, MAX_BACKUPS, QUOTA_BUDGET_BYTES;
+  function getBackupInfo(backupKey) {
+    const raw = localStorage.getItem(backupKey);
+    if (!raw) return null;
+    try {
+      const parsed = JSON.parse(raw);
+      return {
+        key: backupKey,
+        ts: parsed.ts,
+        label: parsed.label,
+        keys: parsed.data ? Object.keys(parsed.data) : [],
+        sizeKB: Math.round(raw.length / 1024)
+      };
+    } catch {
+      return null;
+    }
+  }
+  function createFullBackup(label) {
+    const labelStr = label || "manual";
+    let keys;
+    try {
+      const nm = typeof window !== "undefined" && window.NM_KEYS ? window.NM_KEYS : null;
+      if (nm && Array.isArray(nm.data) && Array.isArray(nm.settings)) {
+        keys = [...nm.data, ...nm.settings];
+      } else {
+        keys = [
+          "nm_inbox",
+          "nm_tasks",
+          "nm_notes",
+          "nm_habits2",
+          "nm_finance",
+          "nm_health_cards",
+          "nm_projects",
+          "nm_events",
+          "nm_settings"
+        ];
+      }
+    } catch {
+      keys = ["nm_inbox", "nm_tasks", "nm_notes"];
+    }
+    return createSelectiveBackup(keys, "full-" + labelStr);
+  }
+  function downloadBackupAsJson(backupKey, filename) {
+    const raw = localStorage.getItem(backupKey);
+    if (!raw) return "error";
+    const name = filename || "nm-backup-" + backupKey.replace(/^nm_backup_/, "") + ".json";
+    try {
+      const blob = new Blob([raw], { type: "application/json" });
+      const isIosPwa = /iP(hone|ad|od)/.test(navigator.userAgent || "") && (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches);
+      if (isIosPwa && typeof navigator.share === "function" && typeof File === "function") {
+        const file = new File([blob], name, { type: "application/json" });
+        navigator.share({ files: [file], title: "NeverMind backup" }).catch(() => {
+        });
+        return "share";
+      }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = name;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        try {
+          document.body.removeChild(a);
+        } catch {
+        }
+        try {
+          URL.revokeObjectURL(url);
+        } catch {
+        }
+      }, 500);
+      return "download";
+    } catch (e) {
+      console.error("[backup] downloadBackupAsJson failed:", e);
+      return "error";
+    }
+  }
+  function importBackupJson(jsonText) {
+    if (typeof jsonText !== "string" || jsonText.length === 0) return null;
+    try {
+      const parsed = JSON.parse(jsonText);
+      if (!parsed || typeof parsed !== "object") return null;
+      let snapshot, sourceLabel, sourceTs;
+      if (parsed.data && typeof parsed.data === "object") {
+        snapshot = parsed.data;
+        sourceLabel = typeof parsed.label === "string" ? parsed.label : "unknown";
+        sourceTs = typeof parsed.ts === "string" ? parsed.ts : (/* @__PURE__ */ new Date()).toISOString();
+      } else {
+        const keys = Object.keys(parsed).filter((k) => k.startsWith("nm_") && !k.startsWith(BACKUP_PREFIX));
+        if (keys.length === 0) return null;
+        snapshot = {};
+        keys.forEach((k) => {
+          const v = parsed[k];
+          snapshot[k] = typeof v === "string" ? v : JSON.stringify(v);
+        });
+        sourceLabel = "legacy-export";
+        sourceTs = (/* @__PURE__ */ new Date()).toISOString();
+      }
+      const ts = (/* @__PURE__ */ new Date()).toISOString();
+      const tsSlug = ts.slice(0, 16).replace(":", "-");
+      const safeLabel = ("imported-" + sourceLabel).replace(/[^a-z0-9-]/gi, "-").slice(0, 30);
+      const backupKey = BACKUP_PREFIX + safeLabel + "_" + tsSlug;
+      const payload = JSON.stringify({ ts: sourceTs, label: "imported: " + sourceLabel, data: snapshot });
+      localStorage.setItem(backupKey, payload);
+      cleanupOldBackups(MAX_BACKUPS);
+      return backupKey;
+    } catch (e) {
+      console.warn("[backup] importBackupJson failed:", e);
+      return null;
+    }
+  }
+  var BACKUP_PREFIX, MAX_BACKUPS, KEY_MIGRATION_FLAGS, QUOTA_BUDGET_BYTES;
   var init_backup = __esm({
     "src/core/backup.js"() {
       BACKUP_PREFIX = "nm_backup_";
       MAX_BACKUPS = 3;
+      KEY_MIGRATION_FLAGS = {
+        "nm_tasks": ["nm_tasks_uuid_migrated_v8", "nm_steps_uuid_migrated_v17"],
+        "nm_habits2": ["nm_habits_uuid_migrated_v9"],
+        "nm_habit_log2": ["nm_habits_uuid_migrated_v9"],
+        // v9 cross-ref: log keys = habit.id
+        "nm_events": ["nm_events_uuid_migrated_v10"],
+        "nm_notes": ["nm_notes_uuid_migrated_v11"],
+        "nm_moments": ["nm_moments_uuid_migrated_v12"],
+        "nm_finance": ["nm_finance_uuid_migrated_v13"],
+        "nm_projects": ["nm_projects_uuid_migrated_v14", "nm_steps_uuid_migrated_v17"],
+        "nm_inbox": ["nm_inbox_uuid_migrated_v15"],
+        "nm_health_cards": ["nm_health_uuid_migrated_v16", "nm_health_migrated_v2", "nm_health_status_v2_done"],
+        "nm_allergies": ["nm_health_uuid_migrated_v16"]
+        // v16 cross-ref: allergies[].id
+      };
       QUOTA_BUDGET_BYTES = 4 * 1024 * 1024;
     }
   });
@@ -20574,6 +20755,30 @@ ${logLines}
         if (!data.msg) return;
         if (typeof window !== "undefined" && typeof window.showToast === "function") {
           window.showToast(data.msg);
+        }
+      });
+      reg("backup-restore", (data) => {
+        if (!data.key) return;
+        if (typeof window !== "undefined" && typeof window.restoreBackupFromUI === "function") {
+          window.restoreBackupFromUI(data.key);
+        }
+      });
+      reg("backup-download", (data) => {
+        if (!data.key) return;
+        if (typeof window !== "undefined" && typeof window.downloadBackupFromUI === "function") {
+          window.downloadBackupFromUI(data.key);
+        }
+      });
+      reg("backup-delete", (data) => {
+        if (!data.key) return;
+        if (typeof window !== "undefined" && typeof window.deleteBackupFromUI === "function") {
+          window.deleteBackupFromUI(data.key);
+        }
+      });
+      reg("trash-restore-item", (data) => {
+        if (!data.trashId) return;
+        if (typeof window !== "undefined" && typeof window.restoreTrashItemFromUI === "function") {
+          window.restoreTrashItemFromUI(data.trashId);
         }
       });
       reg("close-settings-open-slides-tour", () => {
@@ -22436,6 +22641,10 @@ ${logLines}
       console.error("init error:", e);
     }
     try {
+      window.NM_KEYS = NM_KEYS;
+    } catch {
+    }
+    try {
       initDelegation();
     } catch (e) {
       console.error("delegation init error:", e);
@@ -23440,11 +23649,26 @@ ${logLines}
     const tsEl = document.getElementById("memory-last-updated");
     if (tsEl) tsEl.textContent = t("nav.mem.saved_now", "\u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E \u0449\u043E\u0439\u043D\u043E");
   }
+  function _openLegal(page) {
+    const overlay = document.getElementById("legal-overlay");
+    const body = document.getElementById("legal-overlay-body");
+    if (!overlay || !body) return;
+    body.innerHTML = LEGAL_CONTENT[page] || "<p>\u041D\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E</p>";
+    body.scrollTop = 0;
+    overlay.style.display = "flex";
+  }
+  function closeLegal() {
+    const overlay = document.getElementById("legal-overlay");
+    if (overlay) overlay.style.display = "none";
+  }
   function openPrivacyPolicy() {
-    showToast(t("nav.toast.privacy_soon", "\u041A\u043E\u043D\u0444\u0456\u0434\u0435\u043D\u0446\u0456\u0439\u043D\u0456\u0441\u0442\u044C \u2014 \u043D\u0435\u0437\u0430\u0431\u0430\u0440\u043E\u043C"));
+    _openLegal("privacy");
   }
   function openTerms() {
-    showToast(t("nav.toast.terms_soon", "\u0423\u043C\u043E\u0432\u0438 \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u0430\u043D\u043D\u044F \u2014 \u043D\u0435\u0437\u0430\u0431\u0430\u0440\u043E\u043C"));
+    _openLegal("terms");
+  }
+  function openImpressum() {
+    _openLegal("impressum");
   }
   function openFeedback() {
     showToast(t("nav.toast.feedback_soon", "\u041D\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u0430\u0432\u0442\u043E\u0440\u0443 \u2014 \u043D\u0435\u0437\u0430\u0431\u0430\u0440\u043E\u043C"));
@@ -23497,11 +23721,19 @@ ${logLines}
       const v = localStorage.getItem(k);
       if (v) data[k] = JSON.parse(v);
     });
+    const filename = `nevermind-backup-${(/* @__PURE__ */ new Date()).toISOString().split("T")[0]}.json`;
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const isIosPwa = /iP(hone|ad|od)/.test(navigator.userAgent || "") && (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches);
+    if (isIosPwa && typeof navigator.share === "function" && typeof File === "function") {
+      const file = new File([blob], filename, { type: "application/json" });
+      navigator.share({ files: [file], title: "NeverMind backup" }).then(() => showToast(t("nav.toast.exported", "\u{1F4E4} \u0414\u0430\u043D\u0456 \u0435\u043A\u0441\u043F\u043E\u0440\u0442\u043E\u0432\u0430\u043D\u043E"))).catch(() => {
+      });
+      return;
+    }
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `nevermind-backup-${(/* @__PURE__ */ new Date()).toISOString().split("T")[0]}.json`;
+    a.download = filename;
     a.click();
     URL.revokeObjectURL(url);
     showToast(t("nav.toast.exported", "\u{1F4E4} \u0414\u0430\u043D\u0456 \u0435\u043A\u0441\u043F\u043E\u0440\u0442\u043E\u0432\u0430\u043D\u043E"));
@@ -23725,12 +23957,218 @@ ${legacy}`;
     modal.style.opacity = "0";
     setTimeout(() => modal.remove(), 200);
   }
-  var TAB_THEMES, currentTab, DEFAULT_TABS, ALL_TABS_CONFIG, _pendingTabs, _selectedOrderTab, _undoToastTimer, _undoData;
+  function _relativeTime2(ts) {
+    const diff = Date.now() - ts;
+    const sec = Math.floor(diff / 1e3);
+    if (sec < 60) return t("time.just_now", "\u0449\u043E\u0439\u043D\u043E");
+    const min = Math.floor(sec / 60);
+    if (min < 60) return t("time.minutes_ago", "{n} \u0445\u0432 \u0442\u043E\u043C\u0443", { n: min });
+    const hr = Math.floor(min / 60);
+    if (hr < 24) return t("time.hours_ago", "{n} \u0433\u043E\u0434 \u0442\u043E\u043C\u0443", { n: hr });
+    const day = Math.floor(hr / 24);
+    if (day < 7) return t("time.days_ago", "{n} \u0434\u043D \u0442\u043E\u043C\u0443", { n: day });
+    return new Date(ts).toLocaleDateString();
+  }
+  function _formatBackupTs(iso) {
+    try {
+      const d = new Date(iso);
+      if (isNaN(d.getTime())) return iso;
+      const dd = String(d.getDate()).padStart(2, "0");
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      const hh = String(d.getHours()).padStart(2, "0");
+      const mn = String(d.getMinutes()).padStart(2, "0");
+      return `${dd}.${mm} ${hh}:${mn}`;
+    } catch {
+      return iso;
+    }
+  }
+  function createFullBackupUI() {
+    const key = createFullBackup("manual");
+    if (key) {
+      showToast(t("backup.toast.created", "\u{1F4BE} \u0417\u043D\u0456\u043C\u043E\u043A \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E"));
+    } else {
+      showToast(t("backup.toast.quota_fail", "\u26A0\uFE0F \u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u2014 \u0434\u0430\u043D\u0456 \u043D\u0430\u0434\u0442\u043E \u0432\u0435\u043B\u0438\u043A\u0456. \u0415\u043A\u0441\u043F\u043E\u0440\u0442\u0443\u0439 \u0443 JSON."));
+    }
+  }
+  function openBackupListModal() {
+    const m = document.getElementById("backup-list-modal");
+    if (!m) return;
+    m.style.display = "flex";
+    renderBackupList();
+  }
+  function closeBackupListModal() {
+    const m = document.getElementById("backup-list-modal");
+    if (m) m.style.display = "none";
+  }
+  function renderBackupList() {
+    const container = document.getElementById("backup-list");
+    if (!container) return;
+    const keys = listBackups().slice().reverse();
+    if (keys.length === 0) {
+      container.innerHTML = `<div style="padding:40px 16px;text-align:center;color:rgba(30,16,64,0.35);font-size:14px">${escapeHtml(t("backup.empty", "\u0417\u043D\u0456\u043C\u043A\u0456\u0432 \u043F\u043E\u043A\u0438 \u043D\u0435\u043C\u0430\u0454. \u041D\u0430\u0442\u0438\u0441\u043D\u0438 \xAB\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u0437\u043D\u0456\u043C\u043E\u043A\xBB \u0443 \u041D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445."))}</div>`;
+      return;
+    }
+    container.innerHTML = keys.map((k) => {
+      const info = getBackupInfo(k);
+      if (!info) return "";
+      const ts = _formatBackupTs(info.ts);
+      const label = escapeHtml(info.label || "backup");
+      const sizeKB = info.sizeKB || 0;
+      const keyCount = (info.keys || []).length;
+      return `<div style="padding:12px 14px;margin-bottom:8px;background:rgba(255,255,255,0.55);border-radius:14px;border:1px solid rgba(30,16,64,0.08)">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:14px;font-weight:700;color:#1e1040;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${label}</div>
+          <div style="font-size:11px;color:rgba(30,16,64,0.45);margin-top:2px">${ts} \xB7 ${sizeKB} KB \xB7 ${keyCount} ${escapeHtml(t("backup.keys_short", "\u043A\u043B\u044E\u0447"))}</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:6px">
+        <button data-action="backup-restore" data-key="${escapeHtml(k)}" style="flex:1;padding:8px;border-radius:10px;border:none;background:rgba(99,102,241,0.10);color:#6366f1;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">${escapeHtml(t("backup.btn.restore", "\u21BB \u0412\u0456\u0434\u043D\u043E\u0432\u0438\u0442\u0438"))}</button>
+        <button data-action="backup-download" data-key="${escapeHtml(k)}" style="flex:1;padding:8px;border-radius:10px;border:none;background:rgba(30,16,64,0.05);color:rgba(30,16,64,0.6);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">${escapeHtml(t("backup.btn.export", "\u2197 \u0415\u043A\u0441\u043F\u043E\u0440\u0442"))}</button>
+        <button data-action="backup-delete" data-key="${escapeHtml(k)}" style="padding:8px 12px;border-radius:10px;border:none;background:rgba(239,68,68,0.08);color:#dc2626;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">\xD7</button>
+      </div>
+    </div>`;
+    }).join("");
+  }
+  function restoreBackupFromUI(backupKey) {
+    if (!backupKey) return;
+    if (!confirm(t("backup.confirm.restore", "\u0412\u0456\u0434\u043D\u043E\u0432\u0438\u0442\u0438 \u0446\u0435\u0439 \u0437\u043D\u0456\u043C\u043E\u043A? \u041F\u043E\u0442\u043E\u0447\u043D\u0456 \u0434\u0430\u043D\u0456 \u0431\u0443\u0434\u0443\u0442\u044C \u0437\u0430\u043C\u0456\u043D\u0435\u043D\u0456."))) return;
+    const ok = restoreBackup(backupKey);
+    if (ok) {
+      showToast(t("backup.toast.restored", "\u2705 \u0417\u043D\u0456\u043C\u043E\u043A \u0432\u0456\u0434\u043D\u043E\u0432\u043B\u0435\u043D\u043E"));
+      closeBackupListModal();
+      closeSettings();
+      setTimeout(() => location.reload(), 800);
+    } else {
+      showToast(t("backup.toast.restore_fail", "\u26A0\uFE0F \u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u0432\u0456\u0434\u043D\u043E\u0432\u0438\u0442\u0438"));
+    }
+  }
+  function downloadBackupFromUI(backupKey) {
+    const result = downloadBackupAsJson(backupKey);
+    if (result === "share") {
+      showToast(t("backup.toast.shared", "\u{1F4E4} \u0424\u0430\u0439\u043B \u2014 \u0443 Share Sheet"));
+    } else if (result === "download") {
+      showToast(t("backup.toast.downloaded", "\u{1F4E4} \u0424\u0430\u0439\u043B \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E"));
+    } else {
+      showToast(t("backup.toast.export_fail", "\u26A0\uFE0F \u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u0435\u043A\u0441\u043F\u043E\u0440\u0442\u0443\u0432\u0430\u0442\u0438"));
+    }
+  }
+  function deleteBackupFromUI(backupKey) {
+    if (!backupKey) return;
+    if (!confirm(t("backup.confirm.delete", "\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0446\u0435\u0439 \u0437\u043D\u0456\u043C\u043E\u043A?"))) return;
+    try {
+      localStorage.removeItem(backupKey);
+    } catch {
+    }
+    renderBackupList();
+    showToast(t("backup.toast.deleted", "\u{1F5D1} \u0417\u043D\u0456\u043C\u043E\u043A \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E"));
+  }
+  function importBackupFromFile() {
+    const input = document.getElementById("import-backup-input");
+    if (!input) return;
+    input.value = "";
+    input.onchange = (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const key = importBackupJson(ev.target.result);
+        if (key) {
+          showToast(t("backup.toast.imported", "\u2705 \u0406\u043C\u043F\u043E\u0440\u0442\u043E\u0432\u0430\u043D\u043E \u044F\u043A \u0437\u043D\u0456\u043C\u043E\u043A"));
+        } else {
+          showToast(t("backup.toast.import_fail", "\u26A0\uFE0F \u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u2014 \u043D\u0435\u0432\u0456\u0440\u043D\u0438\u0439 \u0444\u043E\u0440\u043C\u0430\u0442"));
+        }
+      };
+      reader.onerror = () => showToast(t("backup.toast.import_fail", "\u26A0\uFE0F \u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u2014 \u043D\u0435\u0432\u0456\u0440\u043D\u0438\u0439 \u0444\u043E\u0440\u043C\u0430\u0442"));
+      reader.readAsText(file);
+    };
+    input.click();
+  }
+  function openTrashModal() {
+    if (_undoData) {
+      if (_undoToastTimer) clearTimeout(_undoToastTimer);
+      setUndoData(null);
+      const t2 = document.getElementById("toast");
+      if (t2) t2.classList.remove("show");
+    }
+    const m = document.getElementById("trash-modal");
+    if (!m) return;
+    m.style.display = "flex";
+    renderTrashList();
+  }
+  function closeTrashModal() {
+    const m = document.getElementById("trash-modal");
+    if (m) m.style.display = "none";
+  }
+  function renderTrashList() {
+    const container = document.getElementById("trash-list");
+    if (!container) return;
+    const all = getTrash();
+    const now = Date.now();
+    const TTL = 7 * 24 * 60 * 60 * 1e3;
+    const items = all.filter((x) => now - x.deletedAt < TTL).sort((a, b) => b.deletedAt - a.deletedAt);
+    const badge = document.getElementById("trash-count-badge");
+    if (badge) {
+      if (items.length > 0) {
+        badge.textContent = String(items.length);
+        badge.style.display = "inline-block";
+      } else {
+        badge.style.display = "none";
+      }
+    }
+    if (items.length === 0) {
+      container.innerHTML = `<div style="padding:40px 16px;text-align:center;color:rgba(30,16,64,0.35);font-size:14px">${escapeHtml(t("trash.empty", "\u041A\u043E\u0448\u0438\u043A \u043F\u043E\u0440\u043E\u0436\u043D\u0456\u0439"))}</div>`;
+      return;
+    }
+    container.innerHTML = items.map((x) => {
+      const icon = TRASH_TYPE_ICONS[x.type] || "\u{1F4C4}";
+      const item = x.item || {};
+      let label = item.text || item.title || item.name || item.category || item.folder || "\u2014";
+      if (typeof label !== "string") label = String(label);
+      label = label.length > 80 ? label.slice(0, 80) + "\u2026" : label;
+      const id = x.id || x.deletedAt;
+      const idStr = String(id);
+      return `<div style="display:flex;align-items:center;gap:10px;padding:11px 14px;margin-bottom:6px;background:rgba(255,255,255,0.55);border-radius:12px;border:1px solid rgba(30,16,64,0.06)">
+      <span style="font-size:18px;flex-shrink:0">${icon}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:14px;font-weight:600;color:#1e1040;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(label)}</div>
+        <div style="font-size:11px;color:rgba(30,16,64,0.4)">${escapeHtml(_relativeTime2(x.deletedAt))}</div>
+      </div>
+      <button data-action="trash-restore-item" data-trash-id="${escapeHtml(idStr)}" style="font-size:12px;font-weight:700;color:#16a34a;background:rgba(22,163,74,0.10);border:none;border-radius:9px;padding:6px 12px;cursor:pointer;font-family:inherit;flex-shrink:0">\u21BB ${escapeHtml(t("trash.btn.restore", "\u0412\u0456\u0434\u043D\u043E\u0432\u0438\u0442\u0438"))}</button>
+    </div>`;
+    }).join("");
+  }
+  function restoreTrashItemFromUI(trashId) {
+    const idForFind = isNaN(Number(trashId)) ? trashId : Number(trashId);
+    const ok = restoreFromTrash(idForFind);
+    if (ok) {
+      showToast(t("trash.toast.restored", "\u2705 \u0412\u0456\u0434\u043D\u043E\u0432\u043B\u0435\u043D\u043E"));
+      renderTrashList();
+    } else {
+      showToast(t("trash.toast.restore_fail", "\u26A0\uFE0F \u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u0432\u0456\u0434\u043D\u043E\u0432\u0438\u0442\u0438"));
+    }
+  }
+  function _updateTrashBadge() {
+    const badge = document.getElementById("trash-count-badge");
+    if (!badge) return;
+    const now = Date.now();
+    const TTL = 7 * 24 * 60 * 60 * 1e3;
+    const count = getTrash().filter((x) => now - x.deletedAt < TTL).length;
+    if (count > 0) {
+      badge.textContent = String(count);
+      badge.style.display = "inline-block";
+    } else {
+      badge.style.display = "none";
+    }
+  }
+  var TAB_THEMES, currentTab, DEFAULT_TABS, ALL_TABS_CONFIG, _pendingTabs, _selectedOrderTab, LEGAL_CONTENT, _undoToastTimer, _undoData, TRASH_TYPE_ICONS;
   var init_nav = __esm({
     "src/core/nav.js"() {
       init_logger();
       init_utils();
       init_boot();
+      init_backup();
+      init_trash();
       init_tasks();
       init_core();
       init_memory();
@@ -23865,8 +24303,107 @@ ${legacy}`;
       ];
       _pendingTabs = null;
       _selectedOrderTab = null;
+      LEGAL_CONTENT = {
+        impressum: `
+    <h2 style="font-size:20px;font-weight:800;color:#1e1040;margin:0 0 16px">Impressum / Legal Notice</h2>
+    <div style="background:rgba(239,68,68,0.06);border-left:3px solid #ef4444;padding:10px 14px;margin-bottom:18px;border-radius:8px;font-size:13px;color:#dc2626;line-height:1.5">
+      \u26A0\uFE0F DRAFT \u2014 \u0420\u043E\u043C\u0430\u043D: \u0437\u0430\u043C\u0456\u043D\u0438\u0442\u0438 <code>[PLACEHOLDER]</code> \u0442\u043E\u043A\u0435\u043D\u0438 \u0440\u0435\u0430\u043B\u044C\u043D\u0438\u043C\u0438 \u0434\u0430\u043D\u0438\u043C\u0438 \u041F\u0415\u0420\u0415\u0414 \u043F\u0443\u0431\u043B\u0456\u0447\u043D\u0438\u043C \u0440\u0435\u043B\u0456\u0437\u043E\u043C. \u0411\u0435\u0437 \u0446\u044C\u043E\u0433\u043E \u043D\u0456\u043C\u0435\u0446\u044C\u043A\u0456 \u044E\u0440\u0438\u0441\u0442\u0438 \u043C\u043E\u0436\u0443\u0442\u044C \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u0442\u0438 Abmahnung \u20AC500-2000. \u0414\u0435\u0442\u0430\u043B\u0456: <code>docs/EU_LAUNCH_CHECKLIST.md</code>.
+    </div>
+    <p style="font-size:14px;line-height:1.55;color:#1e1040;margin:0 0 12px"><strong>\u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u043B\u044C\u043D\u0430 \u043E\u0441\u043E\u0431\u0430</strong> (Verantwortlich gem\xE4\xDF \xA7 5 TMG / \xA7 1 KvK):</p>
+    <div style="font-size:14px;line-height:1.7;color:#1e1040;background:rgba(255,255,255,0.5);border-radius:10px;padding:12px 14px;margin-bottom:16px">
+      [PLACEHOLDER: \u041F\u043E\u0432\u043D\u0435 \u0456\u043C'\u044F]<br>
+      [PLACEHOLDER: \u0410\u0434\u0440\u0435\u0441\u0430, NL]<br>
+      Email: [PLACEHOLDER: \u043A\u043E\u043D\u0442\u0430\u043A\u0442\u043D\u0438\u0439 email]<br>
+      KvK (Chamber of Commerce): [PLACEHOLDER: KvK \u043D\u043E\u043C\u0435\u0440]<br>
+      VAT / BTW: [PLACEHOLDER: VAT \u043D\u043E\u043C\u0435\u0440]
+    </div>
+    <p style="font-size:13px;line-height:1.55;color:rgba(30,16,64,0.7);margin:0">
+      NeverMind \u2014 \u043F\u0435\u0440\u0441\u043E\u043D\u0430\u043B\u044C\u043D\u0438\u0439 \u0437\u0430\u0441\u0442\u043E\u0441\u0443\u043D\u043E\u043A \u043F\u0440\u043E\u0434\u0443\u043A\u0442\u0438\u0432\u043D\u043E\u0441\u0442\u0456. \u0420\u043E\u0437\u0440\u043E\u0431\u043D\u0438\u043A: \u0441\u043E\u043B\u043E-\u043F\u0456\u0434\u043F\u0440\u0438\u0454\u043C\u0435\u0446\u044C, \u0440\u0435\u0454\u0441\u0442\u0440\u0430\u0446\u0456\u044F \u0443 \u041D\u0456\u0434\u0435\u0440\u043B\u0430\u043D\u0434\u0430\u0445. \u041F\u0438\u0442\u0430\u043D\u043D\u044F, \u0441\u043A\u0430\u0440\u0433\u0438 \u0442\u0430 DSGVO / GDPR \u0437\u0430\u043F\u0438\u0442\u0438 \u2014 \u043D\u0430 email \u0432\u0438\u0449\u0435.
+    </p>
+  `,
+        privacy: `
+    <h2 style="font-size:20px;font-weight:800;color:#1e1040;margin:0 0 16px">Privacy Policy / \u041F\u043E\u043B\u0456\u0442\u0438\u043A\u0430 \u043A\u043E\u043D\u0444\u0456\u0434\u0435\u043D\u0446\u0456\u0439\u043D\u043E\u0441\u0442\u0456</h2>
+    <div style="background:rgba(239,68,68,0.06);border-left:3px solid #ef4444;padding:10px 14px;margin-bottom:18px;border-radius:8px;font-size:13px;color:#dc2626;line-height:1.5">
+      \u26A0\uFE0F DRAFT \u2014 \u0420\u043E\u043C\u0430\u043D: \u043F\u0435\u0440\u0435\u0432\u0456\u0440\u0438\u0442\u0438 DPF \u0441\u0442\u0430\u0442\u0443\u0441 OpenAI/Anthropic \u043F\u0435\u0440\u0435\u0434 \u043F\u0443\u0431\u043B\u0456\u043A\u0430\u0446\u0456\u0454\u044E (FISA Section 702 \u043D\u0430 20.04.2026, \u043F\u043E\u0442\u043E\u0447\u043D\u0438\u0439 \u0441\u0442\u0430\u0442\u0443\u0441: dataprivacyframework.gov).
+    </div>
+    <p style="font-size:13px;color:rgba(30,16,64,0.55);margin:0 0 16px">\u041E\u0441\u0442\u0430\u043D\u043D\u0454 \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043D\u044F: 18.05.2026</p>
+    <h3 style="font-size:15px;font-weight:700;color:#1e1040;margin:16px 0 6px">1. \u0429\u043E \u0437\u0431\u0438\u0440\u0430\u0454\u043C\u043E</h3>
+    <p style="font-size:13.5px;line-height:1.55;color:#1e1040;margin:0 0 10px">
+      NeverMind \u0437\u0430\u0440\u0430\u0437 \u043F\u0440\u0430\u0446\u044E\u0454 <strong>\u043F\u043E\u0432\u043D\u0456\u0441\u0442\u044E \u043B\u043E\u043A\u0430\u043B\u044C\u043D\u043E</strong> \u0443 \u0442\u0432\u043E\u0454\u043C\u0443 \u0431\u0440\u0430\u0443\u0437\u0435\u0440\u0456 (localStorage). \u0416\u043E\u0434\u043D\u0438\u0445 \u0434\u0430\u043D\u0438\u0445 \u043D\u0435 \u043F\u0435\u0440\u0435\u0434\u0430\u0454\u043C\u043E \u043D\u0430 \u0432\u043B\u0430\u0441\u043D\u0456 \u0441\u0435\u0440\u0432\u0435\u0440\u0438 \u2014 \u0457\u0445 \u043F\u0440\u043E\u0441\u0442\u043E \u043D\u0435\u043C\u0430\u0454. \u041F\u0456\u0441\u043B\u044F \u043F\u0435\u0440\u0435\u0445\u043E\u0434\u0443 \u043D\u0430 Supabase backend (\u043F\u043B\u0430\u043D\u043E\u0432\u0430\u043D\u043E 2026) \u2014 \u0437\u0431\u0435\u0440\u0456\u0433\u0430\u0442\u0438\u043C\u0435\u043C\u043E \u0442\u0432\u043E\u0457 \u0437\u0430\u043F\u0438\u0441\u0438 \u0443 \u0431\u0430\u0437\u0456 \u0404\u0421-\u0440\u0435\u0433\u0456\u043E\u043D\u0443 (Frankfurt) \u043F\u0456\u0434 \u0442\u0432\u043E\u0457\u043C \u0430\u043A\u0430\u0443\u043D\u0442\u043E\u043C.
+    </p>
+    <h3 style="font-size:15px;font-weight:700;color:#1e1040;margin:16px 0 6px">2. \u041F\u0435\u0440\u0435\u0434\u0430\u0447\u0430 \u0434\u0430\u043D\u0438\u0445</h3>
+    <p style="font-size:13.5px;line-height:1.55;color:#1e1040;margin:0 0 10px">
+      \u0422\u0432\u043E\u0457 \u0437\u0430\u043F\u0438\u0441\u0438 \u0432 Inbox/\u0447\u0430\u0442\u0430\u0445 \u043E\u0431\u0440\u043E\u0431\u043B\u044F\u044E\u0442\u044C\u0441\u044F \u0447\u0435\u0440\u0435\u0437 OpenAI (\u0421\u0428\u0410) \u2014 \u0446\u0435 \u043D\u0435\u043E\u0431\u0445\u0456\u0434\u043D\u043E \u0434\u043B\u044F AI-\u0444\u0443\u043D\u043A\u0446\u0456\u0439 (\u0440\u043E\u0437\u043F\u0456\u0437\u043D\u0430\u0432\u0430\u043D\u043D\u044F \u0442\u0438\u043F\u0443 \u0437\u0430\u043F\u0438\u0441\u0443, \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456 \u0447\u0430\u0442\u0443). OpenAI <strong>DPF-certified</strong> (EU-US Data Privacy Framework). \u0414\u043E\u0442\u0440\u0438\u043C\u0443\u0454\u043C\u043E\u0441\u044C SCC Module 2/3 \u0443 Data Processing Agreement.
+    </p>
+    <h3 style="font-size:15px;font-weight:700;color:#1e1040;margin:16px 0 6px">3. \u0422\u0432\u043E\u0457 \u043F\u0440\u0430\u0432\u0430 (GDPR Art. 15-22)</h3>
+    <ul style="font-size:13.5px;line-height:1.7;color:#1e1040;margin:0 0 10px;padding-left:22px">
+      <li>\u041F\u0440\u0430\u0432\u043E \u0434\u043E\u0441\u0442\u0443\u043F\u0443 \u2014 \u041D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F \u2192 \xAB\u0415\u043A\u0441\u043F\u043E\u0440\u0442\u0443\u0432\u0430\u0442\u0438 JSON\xBB</li>
+      <li>\u041F\u0440\u0430\u0432\u043E \u043D\u0430 \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043D\u044F \u2014 \u041D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F \u2192 \xAB\u041E\u0447\u0438\u0441\u0442\u0438\u0442\u0438 \u0432\u0441\u0456 \u0434\u0430\u043D\u0456\xBB</li>
+      <li>\u041F\u0440\u0430\u0432\u043E \u043D\u0430 \u043F\u0435\u0440\u0435\u043D\u043E\u0441\u0438\u043C\u0456\u0441\u0442\u044C \u2014 JSON export \u0441\u0443\u043C\u0456\u0441\u043D\u0438\u0439 \u0437 \u0456\u043C\u043F\u043E\u0440\u0442\u043E\u043C</li>
+      <li>\u041F\u0440\u0430\u0432\u043E \u043D\u0430 \u0441\u043A\u0430\u0440\u0433\u0443 \u2014 DPA NL (Autoriteit Persoonsgegevens, autoriteitpersoonsgegevens.nl)</li>
+    </ul>
+    <h3 style="font-size:15px;font-weight:700;color:#1e1040;margin:16px 0 6px">4. Health-\u0434\u0430\u043D\u0456</h3>
+    <p style="font-size:13.5px;line-height:1.55;color:#1e1040;margin:0 0 10px">
+      \u0412\u043A\u043B\u0430\u0434\u043A\u0430 \xAB\u0417\u0434\u043E\u0440\u043E\u0432'\u044F\xBB <strong>\u0456\u0437\u043E\u043B\u044C\u043E\u0432\u0430\u043D\u0430 \u0432\u0456\u0434 AI</strong> (EU AI Act compliance) \u2014 \u0442\u0432\u043E\u0457 \u043C\u0435\u0434\u043A\u0430\u0440\u0442\u043A\u0438/\u0430\u043B\u0435\u0440\u0433\u0456\u0457/\u043B\u0456\u043A\u0438 AI <strong>\u041D\u0415 \u0447\u0438\u0442\u0430\u0454 \u0456 \u041D\u0415 \u043E\u0431\u0440\u043E\u0431\u043B\u044F\u0454</strong>. \u0422\u0438 \u0432\u0435\u0434\u0435\u0448 \u0457\u0445 \u0432\u0440\u0443\u0447\u043D\u0443.
+    </p>
+    <h3 style="font-size:15px;font-weight:700;color:#1e1040;margin:16px 0 6px">5. \u041A\u043E\u043D\u0442\u0430\u043A\u0442</h3>
+    <p style="font-size:13.5px;line-height:1.55;color:#1e1040;margin:0">
+      Email: [PLACEHOLDER: \u043A\u043E\u043D\u0442\u0430\u043A\u0442\u043D\u0438\u0439 email] \xB7 Impressum: \u0434\u0438\u0432. \u041D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F \u2192 \xAB\u042E\u0440\u0438\u0434\u0438\u0447\u043D\u0430 \u0456\u043D\u0444\u043E\u0440\u043C\u0430\u0446\u0456\u044F\xBB.
+    </p>
+  `,
+        terms: `
+    <h2 style="font-size:20px;font-weight:800;color:#1e1040;margin:0 0 16px">Terms of Service / \u0423\u043C\u043E\u0432\u0438 \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u0430\u043D\u043D\u044F</h2>
+    <div style="background:rgba(239,68,68,0.06);border-left:3px solid #ef4444;padding:10px 14px;margin-bottom:18px;border-radius:8px;font-size:13px;color:#dc2626;line-height:1.5">
+      \u26A0\uFE0F DRAFT \u2014 \u0420\u043E\u043C\u0430\u043D: 14-day withdrawal checkbox \u043F\u043E\u0442\u0440\u0435\u0431\u0443\u0454 \u044E\u0440\u0438\u0434\u0438\u0447\u043D\u043E\u0433\u043E \u043E\u0433\u043B\u044F\u0434\u0443 \u043F\u0435\u0440\u0435\u0434 \u043F\u043B\u0430\u0442\u043D\u0438\u043C \u0440\u0435\u043B\u0456\u0437\u043E\u043C. Paddle/Lemonsqueezy \u0431\u0435\u0440\u0443\u0442\u044C \u0446\u0435 \u043D\u0430 \u0441\u0435\u0431\u0435 \u0430\u0432\u0442\u043E\u043C\u0430\u0442\u0438\u0447\u043D\u043E.
+    </div>
+    <p style="font-size:13px;color:rgba(30,16,64,0.55);margin:0 0 16px">\u041E\u0441\u0442\u0430\u043D\u043D\u0454 \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043D\u044F: 18.05.2026</p>
+    <h3 style="font-size:15px;font-weight:700;color:#1e1040;margin:16px 0 6px">1. \u0429\u043E \u0446\u0435 \u0437\u0430 \u0441\u0435\u0440\u0432\u0456\u0441</h3>
+    <p style="font-size:13.5px;line-height:1.55;color:#1e1040;margin:0 0 10px">
+      NeverMind \u2014 \u043F\u0435\u0440\u0441\u043E\u043D\u0430\u043B\u044C\u043D\u0438\u0439 AI-\u0430\u0433\u0435\u043D\u0442 \u043F\u0440\u043E\u0434\u0443\u043A\u0442\u0438\u0432\u043D\u043E\u0441\u0442\u0456. \u0417\u0430\u0440\u0430\u0437 \u043F\u0440\u0430\u0446\u044E\u0454 \u043B\u043E\u043A\u0430\u043B\u044C\u043D\u043E (PWA + localStorage). \u041F\u043B\u0430\u0442\u043D\u0438\u0439 \u0434\u043E\u0441\u0442\u0443\u043F \u2014 \u043F\u0456\u0441\u043B\u044F \u043F\u0435\u0440\u0435\u0445\u043E\u0434\u0443 \u043D\u0430 Supabase backend.
+    </p>
+    <h3 style="font-size:15px;font-weight:700;color:#1e1040;margin:16px 0 6px">2. \u041F\u0440\u0430\u0432\u043E \u043D\u0430 14-\u0434\u0435\u043D\u043D\u0443 \u0432\u0456\u0434\u043C\u043E\u0432\u0443 (EU)</h3>
+    <p style="font-size:13.5px;line-height:1.55;color:#1e1040;margin:0 0 10px">
+      \u042F\u043A \u0441\u043F\u043E\u0436\u0438\u0432\u0430\u0447 \u0443 \u0404\u0421 \u043C\u0430\u0454\u0448 \u043F\u0440\u0430\u0432\u043E \u043F\u043E\u0432\u0435\u0440\u043D\u0443\u0442\u0438 \u0433\u0440\u043E\u0448\u0456 \u043F\u0440\u043E\u0442\u044F\u0433\u043E\u043C 14 \u0434\u043D\u0456\u0432. <strong>\u0412\u0438\u043D\u044F\u0442\u043E\u043A:</strong> \u043F\u0440\u0438 \u043E\u043F\u043B\u0430\u0442\u0456 \u0441\u0442\u0430\u0432\u043B\u044F\u0447\u0438 \u0433\u0430\u043B\u043E\u0447\u043A\u0443 \xAB\u042F \u043F\u043E\u0433\u043E\u0434\u0436\u0443\u044E\u0441\u044C \u043F\u043E\u0447\u0430\u0442\u0438 \u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u043D\u043D\u044F \u043E\u0434\u0440\u0430\u0437\u0443 \u0456 \u0437\u043D\u0430\u044E \u0449\u043E \u0432\u0442\u0440\u0430\u0447\u0430\u044E \u043F\u0440\u0430\u0432\u043E \u043D\u0430 14-\u0434\u0435\u043D\u043D\u0443 \u0432\u0456\u0434\u043C\u043E\u0432\u0443\xBB \u2014 \u0437\u0432\u0456\u043B\u044C\u043D\u044F\u0454\u0448 \u043D\u0430\u0441 \u0432\u0456\u0434 \u0446\u044C\u043E\u0433\u043E \u0437\u043E\u0431\u043E\u0432'\u044F\u0437\u0430\u043D\u043D\u044F.
+    </p>
+    <h3 style="font-size:15px;font-weight:700;color:#1e1040;margin:16px 0 6px">3. \u041E\u0431\u043C\u0435\u0436\u0435\u043D\u043D\u044F \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u043B\u044C\u043D\u043E\u0441\u0442\u0456 (PLD)</h3>
+    <p style="font-size:13.5px;line-height:1.55;color:#1e1040;margin:0 0 10px">
+      AI \u043C\u043E\u0436\u0435 \u043F\u043E\u043C\u0438\u043B\u044F\u0442\u0438\u0441\u044C. NeverMind \u2014 \u0456\u043D\u0441\u0442\u0440\u0443\u043C\u0435\u043D\u0442, \u043D\u0435 \u043C\u0435\u0434\u0438\u0447\u043D\u0438\u0439 / \u044E\u0440\u0438\u0434\u0438\u0447\u043D\u0438\u0439 / \u0444\u0456\u043D\u0430\u043D\u0441\u043E\u0432\u0438\u0439 \u0440\u0430\u0434\u043D\u0438\u043A. <strong>\u041D\u0435 \u043F\u043E\u043A\u043B\u0430\u0434\u0430\u0439\u0441\u044F \u043D\u0430 AI \u0434\u043B\u044F \u043A\u0440\u0438\u0442\u0438\u0447\u043D\u0438\u0445 \u0440\u0456\u0448\u0435\u043D\u044C</strong> (\u0442\u0435\u0440\u0430\u043F\u0456\u044F, \u0456\u043D\u0432\u0435\u0441\u0442\u0438\u0446\u0456\u0457, \u0434\u043E\u0433\u043E\u0432\u043E\u0440\u0438). \u041C\u0438 \u043E\u0431\u043C\u0435\u0436\u0443\u0454\u043C\u043E \u043D\u0430\u0448\u0443 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u043B\u044C\u043D\u0456\u0441\u0442\u044C \u0434\u043E \u0441\u0443\u043C\u0438 \u0442\u0432\u043E\u0454\u0457 \u043F\u0456\u0434\u043F\u0438\u0441\u043A\u0438 \u0437\u0430 12 \u043C\u0456\u0441\u044F\u0446\u0456\u0432.
+    </p>
+    <h3 style="font-size:15px;font-weight:700;color:#1e1040;margin:16px 0 6px">4. Acceptable use</h3>
+    <p style="font-size:13.5px;line-height:1.55;color:#1e1040;margin:0 0 10px">
+      \u041D\u0435 \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0434\u043B\u044F \u043D\u0435\u0437\u0430\u043A\u043E\u043D\u043D\u043E\u0457 \u0434\u0456\u044F\u043B\u044C\u043D\u043E\u0441\u0442\u0456. \u041D\u0435 \u0430\u0442\u0430\u043A\u0443\u0439 \u0441\u0435\u0440\u0432\u0456\u0441 (DoS, reverse-engineering \u043A\u043B\u044E\u0447\u0456\u0432). \u041F\u0456\u0434\u0442\u0440\u0438\u043C\u0430\u0439 \u043D\u0430\u0441 \u2014 \u0434\u0430\u0439 feedback \u043D\u0430 email \u043D\u0438\u0436\u0447\u0435.
+    </p>
+    <h3 style="font-size:15px;font-weight:700;color:#1e1040;margin:16px 0 6px">5. Governing law</h3>
+    <p style="font-size:13.5px;line-height:1.55;color:#1e1040;margin:0 0 10px">
+      \u041F\u0440\u0430\u0432\u043E \u041D\u0456\u0434\u0435\u0440\u043B\u0430\u043D\u0434\u0456\u0432. \u0421\u043F\u043E\u0440\u0438 \u2014 \u0443 \u043D\u0456\u0434\u0435\u0440\u043B\u0430\u043D\u0434\u0441\u044C\u043A\u0438\u0445 \u0441\u0443\u0434\u0430\u0445 (Amsterdam) \u0410\u0411\u041E \u0442\u0432\u043E\u0433\u043E \u0404\u0421-\u0440\u0435\u0433\u0456\u043E\u043D\u0443 (\u0437\u0430 \u0432\u0438\u0431\u043E\u0440\u043E\u043C \u0441\u043F\u043E\u0436\u0438\u0432\u0430\u0447\u0430, GDPR Art. 79).
+    </p>
+    <h3 style="font-size:15px;font-weight:700;color:#1e1040;margin:16px 0 6px">6. \u041A\u043E\u043D\u0442\u0430\u043A\u0442</h3>
+    <p style="font-size:13.5px;line-height:1.55;color:#1e1040;margin:0">
+      Email: [PLACEHOLDER: \u043A\u043E\u043D\u0442\u0430\u043A\u0442\u043D\u0438\u0439 email] \xB7 Impressum: \u0434\u0438\u0432. \u041D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F \u2192 \xAB\u042E\u0440\u0438\u0434\u0438\u0447\u043D\u0430 \u0456\u043D\u0444\u043E\u0440\u043C\u0430\u0446\u0456\u044F\xBB.
+    </p>
+  `
+      };
       _undoToastTimer = null;
       _undoData = null;
+      TRASH_TYPE_ICONS = {
+        task: "\u{1F4DD}",
+        note: "\u{1F4D2}",
+        habit: "\u2713",
+        inbox: "\u{1F4E5}",
+        finance: "\u{1F4B0}",
+        event: "\u{1F4C5}",
+        project: "\u{1F4C1}",
+        health_card: "\u{1F3E5}",
+        allergy: "\u26A0\uFE0F",
+        folder: "\u{1F5C2}",
+        medication: "\u{1F48A}"
+      };
+      window.addEventListener("nm-data-changed", (e) => {
+        try {
+          _updateTrashBadge();
+        } catch {
+        }
+      });
       Object.assign(window, {
         switchTab,
         showToast,
@@ -23895,7 +24432,22 @@ ${legacy}`;
         exportData,
         toggleTabSelection,
         showDeployInfo,
-        closeDeployInfo
+        closeDeployInfo,
+        // OBErR Phase 2: Backup UI
+        createFullBackupUI,
+        openBackupListModal,
+        closeBackupListModal,
+        restoreBackupFromUI,
+        downloadBackupFromUI,
+        deleteBackupFromUI,
+        importBackupFromFile,
+        // OBErR B-179: Trash UI
+        openTrashModal,
+        closeTrashModal,
+        restoreTrashItemFromUI,
+        // OBErR EU Compliance pre-MVP: legal pages
+        openImpressum,
+        closeLegal
       });
     }
   });
