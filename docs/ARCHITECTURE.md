@@ -72,7 +72,7 @@ graph TD
     NOTES --> AICORE
     FINANCE --> AICORE
     EVENING --> AICORE
-    HEALTH --> AICORE
+    %% HEALTH --> AICORE ВИДАЛЕНО JMQuT 17.05.2026 (EU AI Act compliance — AI ізольовано від health-даних). Деталі: docs/AI_ACT_COMPLIANCE.md
     PROJECTS --> AICORE
 
     OWLBOARD --> AICORE
