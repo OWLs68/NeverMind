@@ -10633,7 +10633,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
         <div style="font-size:36px;margin-bottom:10px">\u{1FAC0}</div>
         <div style="font-size:15px;font-weight:700;color:rgba(30,16,64,0.5)">${t("health.empty.title", "\u041D\u0435\u043C\u0430\u0454 \u043A\u0430\u0440\u0442\u043E\u043A \u0437\u0434\u043E\u0440\u043E\u0432'\u044F")}</div>
         <div style="font-size:13px;color:rgba(30,16,64,0.3);margin-top:4px">${t("health.empty.hint", "\u0414\u043E\u0434\u0430\u0439 \u043F\u0435\u0440\u0448\u0443 \u2014 \u0445\u0432\u043E\u0440\u043E\u0431\u0443, \u0441\u0442\u0430\u043D \u0430\u0431\u043E \u043C\u0435\u0442\u0443")}</div>
-        <button onclick="openAddHealthCard()" style="margin-top:14px;font-size:13px;font-weight:700;color:white;background:#1a5c2a;border:none;border-radius:12px;padding:10px 20px;cursor:pointer">${t("health.empty.add_btn", "+ \u0414\u043E\u0434\u0430\u0442\u0438 \u043A\u0430\u0440\u0442\u043A\u0443")}</button>
+        <button data-action="open-add-health-card" style="margin-top:14px;font-size:13px;font-weight:700;color:white;background:#1a5c2a;border:none;border-radius:12px;padding:10px 20px;cursor:pointer">${t("health.empty.add_btn", "+ \u0414\u043E\u0434\u0430\u0442\u0438 \u043A\u0430\u0440\u0442\u043A\u0443")}</button>
       </div>` : cards.map((card) => {
       const st = _statusDef(card.status);
       const pct = card.progress || 0;
@@ -10641,7 +10641,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
       const pills = (card.treatments || []).slice(0, 4);
       const isDone = card.status === "done";
       return `<div class="health-card-wrap" data-id="${card.id}" style="position:relative;overflow:hidden;border-radius:14px;margin-bottom:8px">
-        <div onclick="openHealthCard('${card.id}')" class="card-glass health-card-item" style="cursor:pointer;opacity:${st.opacity};margin-bottom:0">
+        <div data-action="open-health-card" data-id="${card.id}" class="card-glass health-card-item" style="cursor:pointer;opacity:${st.opacity};margin-bottom:0">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
             <div style="flex:1">
               <div style="font-size:15px;font-weight:900;color:#1e1040">${escapeHtml(card.name)}</div>
@@ -10977,8 +10977,8 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
         <div style="font-size:12px;font-weight:800;color:#1e1040">${escapeHtml(d.medName)}${d.dosage ? " " + escapeHtml(d.dosage) : ""}</div>
         <div style="font-size:10px;color:rgba(30,16,64,0.5);font-weight:600;margin-top:1px">${escapeHtml(d.cardName)} \xB7 ${escapeHtml(d.scheduledTime)}</div>
       </div>
-      <button onclick="logHealthMedDose('${d.cardId}','${d.medId}')" style="font-size:11px;font-weight:800;padding:5px 10px;border-radius:8px;border:none;background:#16a34a;color:white;cursor:pointer;white-space:nowrap">${t("health.dose.took_btn", "\u2713 \u041F\u0440\u0438\u0439\u043D\u044F\u0432")}</button>
-      <button onclick="skipHealthMedDose('${d.cardId}','${d.medId}','${escapeJsArg(d.scheduledTime)}')" style="font-size:11px;font-weight:700;padding:5px 10px;border-radius:8px;border:1.5px solid rgba(30,16,64,0.15);background:white;color:rgba(30,16,64,0.55);cursor:pointer;white-space:nowrap">${t("health.dose.skip_btn", "\u041F\u0440\u043E\u043F\u0443\u0449\u0443")}</button>
+      <button data-action="log-health-med-dose" data-card-id="${d.cardId}" data-med-id="${d.medId}" style="font-size:11px;font-weight:800;padding:5px 10px;border-radius:8px;border:none;background:#16a34a;color:white;cursor:pointer;white-space:nowrap">${t("health.dose.took_btn", "\u2713 \u041F\u0440\u0438\u0439\u043D\u044F\u0432")}</button>
+      <button data-action="skip-health-med-dose" data-card-id="${d.cardId}" data-med-id="${d.medId}" data-time="${escapeHtml(d.scheduledTime)}" style="font-size:11px;font-weight:700;padding:5px 10px;border-radius:8px;border:1.5px solid rgba(30,16,64,0.15);background:white;color:rgba(30,16,64,0.55);cursor:pointer;white-space:nowrap">${t("health.dose.skip_btn", "\u041F\u0440\u043E\u043F\u0443\u0449\u0443")}</button>
     </div>`).join("")}
     ${missed.length > 5 ? `<div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:600;text-align:center">${t("health.dose.more_missed", "+ \u0449\u0435 {n} \u043F\u0440\u043E\u043F\u0443\u0449\u0435\u043D\u0438\u0445", { n: missed.length - 5 })}</div>` : ""}
   </div>`;
@@ -11065,7 +11065,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
     const scrollEl = document.getElementById("health-scroll");
     if (scrollEl) scrollEl.innerHTML = `
     <!-- \u041D\u0430\u0437\u0430\u0434 -->
-    <div onclick="closeHealthCard()" style="display:flex;align-items:center;gap:6px;margin-bottom:12px;cursor:pointer">
+    <div data-action="close-health-card" style="display:flex;align-items:center;gap:6px;margin-bottom:12px;cursor:pointer">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1a5c2a" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
       <span style="font-size:13px;font-weight:700;color:#1a5c2a">${t("health.card.back", "\u041D\u0430\u0437\u0430\u0434")}</span>
     </div>
@@ -11078,7 +11078,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
           <div style="font-size:11px;color:rgba(30,16,64,0.4);font-weight:600;margin-top:2px">${escapeHtml(card.subtitle || "")}</div>
         </div>
         <div style="display:flex;align-items:center;gap:10px;flex-shrink:0">
-          <button onclick="openEditHealthCard('${id}')" title="${t("health.card.edit_title", "\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438")}" style="background:rgba(30,16,64,0.06);border:none;border-radius:8px;padding:6px 10px;font-size:11px;font-weight:700;color:rgba(30,16,64,0.65);cursor:pointer">${t("health.card.edit_btn", "\u0420\u0435\u0434.")}</button>
+          <button data-action="open-edit-health-card" data-id="${id}" title="${t("health.card.edit_title", "\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438")}" style="background:rgba(30,16,64,0.06);border:none;border-radius:8px;padding:6px 10px;font-size:11px;font-weight:700;color:rgba(30,16,64,0.65);cursor:pointer">${t("health.card.edit_btn", "\u0420\u0435\u0434.")}</button>
           <div style="font-size:20px;font-weight:900;color:${st.color};line-height:1">${pct}%</div>
         </div>
       </div>
@@ -11094,7 +11094,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
         ${HEALTH_STATUS_KEYS.map((s) => {
       const d = _statusDef(s);
       const on = s === card.status;
-      return `<button onclick="setHealthCardStatus('${id}','${s}')" style="font-size:10px;font-weight:700;padding:4px 9px;border-radius:8px;border:1px solid ${on ? d.color : "rgba(30,16,64,0.15)"};background:${on ? d.bg : "transparent"};color:${on ? d.color : "rgba(30,16,64,0.45)"};cursor:pointer;white-space:nowrap">${d.icon} ${d.label}</button>`;
+      return `<button data-action="set-health-card-status" data-card-id="${id}" data-status="${s}" style="font-size:10px;font-weight:700;padding:4px 9px;border-radius:8px;border:1px solid ${on ? d.color : "rgba(30,16,64,0.15)"};background:${on ? d.bg : "transparent"};color:${on ? d.color : "rgba(30,16,64,0.45)"};cursor:pointer;white-space:nowrap">${d.icon} ${d.label}</button>`;
     }).join("")}
       </div>
     </div>
@@ -11125,7 +11125,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
               <div style="font-size:13px;font-weight:700;color:#1e1040">${escapeHtml(m.name)}</div>
               <div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:600;margin-top:1px">${escapeHtml(m.dosage || "")}${course}${schedStr ? " \xB7 " + escapeHtml(schedStr) : ""}</div>
             </div>
-            <button onclick="logHealthMedDose('${id}','${m.id}')" style="font-size:10px;font-weight:800;padding:5px 10px;border-radius:8px;border:1.5px solid ${takenToday && todayDosesCount >= expectedToday ? "rgba(22,163,74,0.3)" : "#1a5c2a"};background:${takenToday && todayDosesCount >= expectedToday ? "rgba(22,163,74,0.08)" : "#1a5c2a"};color:${takenToday && todayDosesCount >= expectedToday ? "#16a34a" : "white"};cursor:pointer;white-space:nowrap">${takenToday && todayDosesCount >= expectedToday ? t("health.dose.taken_label", "\u2713 \u043F\u0440\u0438\u0439\u043D\u044F\u0442\u043E") : t("health.dose.take_now_btn", "+ \u041F\u0440\u0438\u0439\u043D\u044F\u0442\u0438")}</button>
+            <button data-action="log-health-med-dose" data-card-id="${id}" data-med-id="${m.id}" style="font-size:10px;font-weight:800;padding:5px 10px;border-radius:8px;border:1.5px solid ${takenToday && todayDosesCount >= expectedToday ? "rgba(22,163,74,0.3)" : "#1a5c2a"};background:${takenToday && todayDosesCount >= expectedToday ? "rgba(22,163,74,0.08)" : "#1a5c2a"};color:${takenToday && todayDosesCount >= expectedToday ? "#16a34a" : "white"};cursor:pointer;white-space:nowrap">${takenToday && todayDosesCount >= expectedToday ? t("health.dose.taken_label", "\u2713 \u043F\u0440\u0438\u0439\u043D\u044F\u0442\u043E") : t("health.dose.take_now_btn", "+ \u041F\u0440\u0438\u0439\u043D\u044F\u0442\u0438")}</button>
           </div>
           ${schedArr.length > 0 ? `<div style="display:flex;align-items:center;gap:8px;padding-left:38px">
             <div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:700">${t("health.dose.today_label", "\u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456:")}</div>
@@ -11179,7 +11179,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
     </div>` : ""}
 
     <!-- \u041D\u043E\u0442\u0430\u0442\u043A\u0438 \u2192 \u043F\u0430\u043F\u043A\u0430 (B-29 fix: switchTab + delayed openNotesFolder) -->
-    <div onclick="openHealthCardNote('${card.id}')" style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.55);border:1.5px dashed rgba(30,16,64,0.14);border-radius:12px;padding:10px 12px;margin-bottom:10px;cursor:pointer">
+    <div data-action="open-health-card-note" data-id="${card.id}" style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.55);border:1.5px dashed rgba(30,16,64,0.14);border-radius:12px;padding:10px 12px;margin-bottom:10px;cursor:pointer">
       <div class="icon-circle" style="width:30px;height:30px">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1a5c2a" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
       </div>
@@ -11416,7 +11416,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
     <div style="display:flex;gap:6px;align-items:center">
       <input type="text" class="med-name" placeholder="${escapeHtml(t("health.med.name_placeholder", "\u041D\u0430\u0437\u0432\u0430 (\u041E\u043C\u0435\u0437)"))}" value="${escapeHtml(m.name || "")}"
         style="flex:1;border:1px solid rgba(30,16,64,0.1);border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;outline:none;background:white">
-      <button type="button" onclick="this.closest('.health-med-row').remove()" style="background:none;border:none;font-size:20px;color:rgba(30,16,64,0.3);cursor:pointer;padding:0 4px">\xD7</button>
+      <button type="button" data-action="close-parent" data-parent=".health-med-row" style="background:none;border:none;font-size:20px;color:rgba(30,16,64,0.3);cursor:pointer;padding:0 4px">\xD7</button>
     </div>
     <div style="display:flex;gap:6px">
       <input type="text" class="med-dosage" placeholder="${escapeHtml(t("health.med.dosage_placeholder", "\u0414\u043E\u0437\u0443\u0432\u0430\u043D\u043D\u044F (20\u043C\u0433)"))}" value="${escapeHtml(m.dosage || "")}"
@@ -11678,13 +11678,13 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
         <div style="font-size:10px;font-weight:800;color:${coralText};text-transform:uppercase;letter-spacing:0.08em;margin-bottom:2px">${t("health.allergy.label", "\u0410\u043B\u0435\u0440\u0433\u0456\u0457")}</div>
         <div style="font-size:11px;color:rgba(30,16,64,0.5);font-weight:600">${t("health.allergy.empty_hint", "\u041D\u0435\u043C\u0430\u0454 \u0437\u0430\u043F\u0438\u0441\u0430\u043D\u0438\u0445. OWL \u043D\u0435 \u0437\u043D\u0430\u0454 \u043F\u0440\u043E \u0449\u043E \u043F\u043E\u043F\u0435\u0440\u0435\u0434\u0436\u0430\u0442\u0438.")}</div>
       </div>
-      <button onclick="openAddAllergy()" style="font-size:11px;font-weight:800;padding:6px 11px;border-radius:8px;border:1.5px solid ${coralBorder};background:white;color:${coralText};cursor:pointer;white-space:nowrap;flex-shrink:0">${t("health.allergy.add_btn", "+ \u0414\u043E\u0434\u0430\u0442\u0438")}</button>
+      <button data-action="open-add-allergy" style="font-size:11px;font-weight:800;padding:6px 11px;border-radius:8px;border:1.5px solid ${coralBorder};background:white;color:${coralText};cursor:pointer;white-space:nowrap;flex-shrink:0">${t("health.allergy.add_btn", "+ \u0414\u043E\u0434\u0430\u0442\u0438")}</button>
     </div>`;
     }
     return `<div style="background:${coralBg};border:1.5px solid ${coralBorder};border-radius:12px;padding:10px 12px;margin-bottom:10px">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px">
       <div style="font-size:10px;font-weight:800;color:${coralText};text-transform:uppercase;letter-spacing:0.08em">${t("health.allergy.label_with_count", "\u{1F6A8} \u0410\u043B\u0435\u0440\u0433\u0456\u0457 ({n})", { n: allergies.length })}</div>
-      <button onclick="openAddAllergy()" style="font-size:10px;font-weight:800;padding:4px 10px;border-radius:7px;border:1.5px solid ${coralBorder};background:white;color:${coralText};cursor:pointer">${t("health.allergy.add_btn", "+ \u0414\u043E\u0434\u0430\u0442\u0438")}</button>
+      <button data-action="open-add-allergy" style="font-size:10px;font-weight:800;padding:4px 10px;border-radius:7px;border:1.5px solid ${coralBorder};background:white;color:${coralText};cursor:pointer">${t("health.allergy.add_btn", "+ \u0414\u043E\u0434\u0430\u0442\u0438")}</button>
     </div>
     <div style="display:flex;flex-wrap:wrap;gap:6px">
       ${allergies.map((a) => `<div style="background:white;border:1.5px solid ${coralBorder};border-radius:8px;padding:5px 8px 5px 10px;display:flex;align-items:center;gap:8px">
@@ -11692,7 +11692,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
           <div style="font-size:12px;font-weight:800;color:${coralText};line-height:1.2">${escapeHtml(a.name)}</div>
           ${a.notes ? `<div style="font-size:9px;color:rgba(30,16,64,0.45);font-weight:600;margin-top:1px">${escapeHtml(a.notes)}</div>` : ""}
         </div>
-        <div onclick="deleteAllergyById('${a.id}')" style="cursor:pointer;font-size:16px;color:rgba(30,16,64,0.35);line-height:1;padding:0 2px" title="${t("health.allergy.delete_title", "\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438")}">\xD7</div>
+        <div data-action="delete-allergy-by-id" data-id="${a.id}" style="cursor:pointer;font-size:16px;color:rgba(30,16,64,0.35);line-height:1;padding:0 2px" title="${t("health.allergy.delete_title", "\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438")}">\xD7</div>
       </div>`).join("")}
     </div>
   </div>`;
@@ -20099,6 +20099,63 @@ ${logLines}
         if (!data.id) return;
         if (typeof window !== "undefined" && typeof window.prodHabitCardClick === "function") {
           window.prodHabitCardClick(data.id, ev);
+        }
+      });
+      reg("open-add-health-card", () => {
+        if (typeof window !== "undefined" && typeof window.openAddHealthCard === "function") {
+          window.openAddHealthCard();
+        }
+      });
+      reg("open-health-card", (data) => {
+        if (!data.id) return;
+        if (typeof window !== "undefined" && typeof window.openHealthCard === "function") {
+          window.openHealthCard(data.id);
+        }
+      });
+      reg("close-health-card", () => {
+        if (typeof window !== "undefined" && typeof window.closeHealthCard === "function") {
+          window.closeHealthCard();
+        }
+      });
+      reg("open-edit-health-card", (data) => {
+        if (!data.id) return;
+        if (typeof window !== "undefined" && typeof window.openEditHealthCard === "function") {
+          window.openEditHealthCard(data.id);
+        }
+      });
+      reg("set-health-card-status", (data) => {
+        if (!data.cardId || !data.status) return;
+        if (typeof window !== "undefined" && typeof window.setHealthCardStatus === "function") {
+          window.setHealthCardStatus(data.cardId, data.status);
+        }
+      });
+      reg("log-health-med-dose", (data) => {
+        if (!data.cardId || !data.medId) return;
+        if (typeof window !== "undefined" && typeof window.logHealthMedDose === "function") {
+          window.logHealthMedDose(data.cardId, data.medId);
+        }
+      });
+      reg("skip-health-med-dose", (data) => {
+        if (!data.cardId || !data.medId) return;
+        if (typeof window !== "undefined" && typeof window.skipHealthMedDose === "function") {
+          window.skipHealthMedDose(data.cardId, data.medId, data.time || "");
+        }
+      });
+      reg("open-health-card-note", (data) => {
+        if (!data.id) return;
+        if (typeof window !== "undefined" && typeof window.openHealthCardNote === "function") {
+          window.openHealthCardNote(data.id);
+        }
+      });
+      reg("open-add-allergy", () => {
+        if (typeof window !== "undefined" && typeof window.openAddAllergy === "function") {
+          window.openAddAllergy();
+        }
+      });
+      reg("delete-allergy-by-id", (data) => {
+        if (!data.id) return;
+        if (typeof window !== "undefined" && typeof window.deleteAllergyById === "function") {
+          window.deleteAllergyById(data.id);
         }
       });
     }

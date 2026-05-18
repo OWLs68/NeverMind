@@ -37,6 +37,20 @@
 
 **Версія:** CACHE_NAME `nm-20260517-2245`, commit `JMQuT Phase 2+3`.
 
+### v936+ Event Delegation: health.js (13 onclick → delegation)
+
+- [ ] Empty state у Здоровʼї → «+ Додати картку» → відкриває модалку.
+- [ ] Тап на картку → відкриває workspace.
+- [ ] «← Назад» з workspace → закриває (state reset).
+- [ ] «Ред.» біля картки → відкриває edit-modal.
+- [ ] Тап на статус кнопку → змінює статус картки.
+- [ ] «+ Прийняти» у missed doses banner → лог дози.
+- [ ] «Пропущу» у missed doses banner → skip.
+- [ ] Тап на блок «Нотатки картки» → відкриває нотатку.
+- [ ] У edit-modal: × біля med-row → видаляє рядок (reuse close-parent).
+- [ ] «+ Додати» алергію → відкриває модалку (2 точки — список + empty state).
+- [ ] × на алергії → видаляє з confirm.
+
 ### v935+ Event Delegation: habits.js (12 onclick → delegation, 3 reuse universal)
 
 - [ ] Me-tab: тап на checkbox звички → toggle (✓/empty) працює.

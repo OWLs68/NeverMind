@@ -389,3 +389,72 @@ reg('prod-habit-card-click', (data, el, ev) => {
     window.prodHabitCardClick(data.id, ev);
   }
 });
+// === Phase 1+ (JMQuT) health.js actions — UI CRUD only (AI ізольовано, EU AI Act compliance) ===
+// open-add-health-card — кнопка «+ Додати картку» у empty state.
+reg('open-add-health-card', () => {
+  if (typeof window !== 'undefined' && typeof window.openAddHealthCard === 'function') {
+    window.openAddHealthCard();
+  }
+});
+// open-health-card — тап на картку health у списку. data-id = UUID картки.
+reg('open-health-card', (data) => {
+  if (!data.id) return;
+  if (typeof window !== 'undefined' && typeof window.openHealthCard === 'function') {
+    window.openHealthCard(data.id);
+  }
+});
+// close-health-card — «← Назад» у workspace картки. JS state reset (activeHealthCardId=null).
+reg('close-health-card', () => {
+  if (typeof window !== 'undefined' && typeof window.closeHealthCard === 'function') {
+    window.closeHealthCard();
+  }
+});
+// open-edit-health-card — кнопка «Ред.» біля картки. data-id.
+reg('open-edit-health-card', (data) => {
+  if (!data.id) return;
+  if (typeof window !== 'undefined' && typeof window.openEditHealthCard === 'function') {
+    window.openEditHealthCard(data.id);
+  }
+});
+// set-health-card-status — кнопка статусу у workspace. data-card-id + data-status.
+reg('set-health-card-status', (data) => {
+  if (!data.cardId || !data.status) return;
+  if (typeof window !== 'undefined' && typeof window.setHealthCardStatus === 'function') {
+    window.setHealthCardStatus(data.cardId, data.status);
+  }
+});
+// log-health-med-dose — «+ Прийняти» або «✓ Прийняв» (банер missed doses + workspace).
+// data-card-id + data-med-id.
+reg('log-health-med-dose', (data) => {
+  if (!data.cardId || !data.medId) return;
+  if (typeof window !== 'undefined' && typeof window.logHealthMedDose === 'function') {
+    window.logHealthMedDose(data.cardId, data.medId);
+  }
+});
+// skip-health-med-dose — «Пропущу» у банері missed doses. data-card-id + data-med-id + data-time (scheduledTime).
+reg('skip-health-med-dose', (data) => {
+  if (!data.cardId || !data.medId) return;
+  if (typeof window !== 'undefined' && typeof window.skipHealthMedDose === 'function') {
+    window.skipHealthMedDose(data.cardId, data.medId, data.time || '');
+  }
+});
+// open-health-card-note — клік на блок «Нотатки картки» у workspace. data-id = UUID картки.
+reg('open-health-card-note', (data) => {
+  if (!data.id) return;
+  if (typeof window !== 'undefined' && typeof window.openHealthCardNote === 'function') {
+    window.openHealthCardNote(data.id);
+  }
+});
+// open-add-allergy — кнопка «+ Додати» алергію (2 точки рендеру).
+reg('open-add-allergy', () => {
+  if (typeof window !== 'undefined' && typeof window.openAddAllergy === 'function') {
+    window.openAddAllergy();
+  }
+});
+// delete-allergy-by-id — × на картці алергії. data-id = UUID алергії.
+reg('delete-allergy-by-id', (data) => {
+  if (!data.id) return;
+  if (typeof window !== 'undefined' && typeof window.deleteAllergyById === 'function') {
+    window.deleteAllergyById(data.id);
+  }
+});
