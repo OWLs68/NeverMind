@@ -19847,8 +19847,10 @@ ${logLines}
     ACTIONS[name] = fn;
   }
   function initDelegation() {
+    if (_initialized) return;
     if (typeof document === "undefined") return;
     document.body.addEventListener("click", _handleClick);
+    _initialized = true;
   }
   function _handleClick(e) {
     const el = e.target && e.target.closest ? e.target.closest("[data-action]") : null;
@@ -19863,10 +19865,11 @@ ${logLines}
       console.error("[delegation] action \xAB" + action + "\xBB handler failed:", err);
     }
   }
-  var ACTIONS;
+  var ACTIONS, _initialized;
   var init_delegation = __esm({
     "src/core/delegation.js"() {
       ACTIONS = /* @__PURE__ */ Object.create(null);
+      _initialized = false;
       reg("open-settings", () => {
         if (typeof window !== "undefined" && typeof window.openSettings === "function") {
           window.openSettings();
@@ -19887,6 +19890,12 @@ ${logLines}
         if (!sel || !el || typeof el.closest !== "function") return;
         const parent = el.closest(sel);
         if (parent && typeof parent.remove === "function") parent.remove();
+      });
+      reg("close-backdrop", (data, el, e) => {
+        if (e.target !== el) return;
+        const fn = data.fn;
+        if (typeof window === "undefined" || !fn) return;
+        if (typeof window[fn] === "function") window[fn]();
       });
       reg("open-calendar", () => {
         if (typeof window !== "undefined" && typeof window.openCalendarModal === "function") {

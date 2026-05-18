@@ -27,6 +27,11 @@
 
 const ACTIONS = Object.create(null);
 
+// Idempotency guard (OBErR Phase 0 — Council Pre-mortem): без нього повторний
+// bootApp() (наприклад при iOS bfcache restore чи помилкове ручне виклик)
+// додав би другий listener → подвійні дії на кожен тап (deleteMoment ×2).
+let _initialized = false;
+
 // Реєструє handler для `data-action="name"`. Викликається з tabs/modules.
 // fn signature: (dataset, el, ev) => void. dataset — DOMStringMap з data-* атрибутів.
 export function reg(name, fn) {
@@ -37,8 +42,10 @@ export function reg(name, fn) {
 
 // Один listener на body. Викликається з boot.js init() ПIСЛЯ DOMContentLoaded.
 export function initDelegation() {
+  if (_initialized) return;
   if (typeof document === 'undefined') return;
   document.body.addEventListener('click', _handleClick);
+  _initialized = true;
 }
 
 function _handleClick(e) {
@@ -83,6 +90,27 @@ reg('close-parent', (data, el) => {
   if (!sel || !el || typeof el.closest !== 'function') return;
   const parent = el.closest(sel);
   if (parent && typeof parent.remove === 'function') parent.remove();
+});
+// close-backdrop — UNIVERSAL для overlay-кліку поза модалкою (OBErR Phase 0).
+// Замінює одночасно ДВА antipattern'и:
+//   ❌ inline `<div onclick="closeX()">backdrop</div>` + дочірній
+//   ❌ `<div onclick="event.stopPropagation()">content</div>` (захист від
+//      закриття при кліку всередині — блокує delegation нащадків)
+// Замість цього:
+//   ✅ `<div data-action="close-backdrop" data-fn="closeX">backdrop</div>`
+//   ✅ content БЕЗ stopPropagation, БЕЗ data-action (якщо нема власних кнопок)
+//
+// Працює бо closest('[data-action]') від реального target піднімається до
+// overlay (бо content не має data-action). Якщо клік на самому overlay:
+// e.target === el (overlay) → викликаємо fn. Якщо клік на content:
+// e.target = content, el = overlay → НЕ викликаємо fn. Якщо content має
+// власну кнопку з data-action → closest повертає кнопку (не overlay),
+// delegation викликає handler кнопки, close-backdrop не triggered.
+reg('close-backdrop', (data, el, e) => {
+  if (e.target !== el) return;
+  const fn = data.fn;
+  if (typeof window === 'undefined' || !fn) return;
+  if (typeof window[fn] === 'function') window[fn]();
 });
 // open-calendar — обгортка для window.openCalendarModal() (calendar.js export).
 reg('open-calendar', () => {
