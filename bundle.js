@@ -20058,7 +20058,12 @@ ${logLines}
       console.error("[delegation] action \xAB" + action + "\xBB handler failed:", err);
     }
   }
-  var ACTIONS, _initialized;
+  function _isCallAllowed(fn) {
+    if (typeof fn !== "string" || !fn) return false;
+    if (CALL_BLACKLIST.has(fn)) return false;
+    return CALL_PREFIX_WHITELIST.some((p) => fn.startsWith(p));
+  }
+  var ACTIONS, _initialized, CALL_PREFIX_WHITELIST, CALL_BLACKLIST;
   var init_delegation = __esm({
     "src/core/delegation.js"() {
       ACTIONS = /* @__PURE__ */ Object.create(null);
@@ -20086,8 +20091,12 @@ ${logLines}
       });
       reg("close-backdrop", (data, el, e) => {
         if (e.target !== el) return;
+        if (typeof window === "undefined") return;
         const fn = data.fn;
-        if (typeof window === "undefined" || !fn) return;
+        if (!_isCallAllowed(fn)) {
+          if (fn) console.warn("[delegation] `close-backdrop` rejected \u2014 fn not in whitelist:", fn);
+          return;
+        }
         if (typeof window[fn] === "function") window[fn]();
       });
       reg("open-calendar", () => {
@@ -20654,10 +20663,75 @@ ${logLines}
           window.routineAddBlock();
         }
       });
+      CALL_PREFIX_WHITELIST = [
+        "close",
+        "open",
+        "save",
+        "delete",
+        "clear",
+        "set",
+        "send",
+        "show",
+        "add",
+        "remove",
+        "select",
+        "scroll",
+        "toggle",
+        "move",
+        "apply",
+        "switch",
+        "adjust",
+        "skip",
+        "log",
+        "sync",
+        "route",
+        "note",
+        "copy",
+        "export",
+        "import",
+        "refresh",
+        "slides",
+        "undo",
+        "calendar",
+        "routine",
+        "create",
+        "ob",
+        "reset",
+        "restore",
+        "cancel",
+        "confirm",
+        "edit",
+        "tap",
+        "hold",
+        "navigate",
+        "finCalc",
+        "addHealth",
+        "addMemory",
+        "shift",
+        "navigate"
+      ];
+      CALL_BLACKLIST = /* @__PURE__ */ new Set([
+        "eval",
+        "Function",
+        "setTimeout",
+        "setInterval",
+        "setImmediate",
+        "fetch",
+        "XMLHttpRequest",
+        "WebSocket",
+        "EventSource",
+        "postMessage",
+        "importScripts",
+        "open"
+        // window.open — phishing
+      ]);
       reg("call", (data) => {
         if (typeof window === "undefined") return;
         const fn = data.fn;
-        if (!fn) return;
+        if (!_isCallAllowed(fn)) {
+          if (fn) console.warn("[delegation] `call` action rejected \u2014 fn not in whitelist:", fn);
+          return;
+        }
         if (typeof window[fn] === "function") window[fn]();
       });
       reg("close-chat-bar", (data) => {
