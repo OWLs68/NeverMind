@@ -69,6 +69,23 @@
 | План закриття дірок | `docs/SECURITY.md` § «План закриття» + `ROADMAP.md` § «🛡️ Security Hardening» |
 | Звіт Council аудиту 15.05.2026 | `_ai-tools/SECURITY_AUDIT_e9t3N_2026-05-15.md` |
 
+### EU Compliance (юридичне + податкове, JMQuT 17.05.2026)
+
+| Питання | Файл / секція |
+|---|---|
+| **Зонтичний документ — всі EU compliance шари** | `docs/EU_COMPLIANCE.md` |
+| VAT OSS (Paddle vs Belastingdienst) | `docs/EU_COMPLIANCE.md` § «🚨 КРИТИЧНЕ — VAT OSS» |
+| Impressum / Legal Notice (Abmahnung захист) | `docs/EU_COMPLIANCE.md` § «Impressum» |
+| 14-day withdrawal checkbox | `docs/EU_COMPLIANCE.md` § «14-day withdrawal» |
+| DPF / Schrems II у Privacy Policy (OpenAI + Anthropic США) | `docs/EU_COMPLIANCE.md` § «Privacy Policy DPF» |
+| CRA (Cyber Resilience Act з 11.09.2026) | `docs/EU_COMPLIANCE.md` § «Cyber Resilience Act» |
+| Data Act (Export my data функція) | `docs/EU_COMPLIANCE.md` § «Data Act» |
+| PLD (Product Liability Directive з 09.12.2026) | `docs/EU_COMPLIANCE.md` § «Product Liability» |
+| ePrivacy (marketing email + tracking pixels consent) | `docs/EU_COMPLIANCE.md` § «ePrivacy» |
+| Що НЕ стосується (EAA/NIS2/DSA/AI Code of Practice) | `docs/EU_COMPLIANCE.md` § «🟢 НЕ СТОСУЄТЬСЯ» |
+| AI Act compliance (Health Isolation — ✅ завершено) | `docs/AI_ACT_COMPLIANCE.md` |
+| Активний блок ROADMAP | `ROADMAP.md` § «🚨 Pre-EU-MVP Compliance» |
+
 ### AI-тестер 24/7 (Hetzner, e9t3N 15.05.2026)
 
 | Питання | Файл / секція |
@@ -155,15 +172,18 @@
 
 ### `docs/`
 
+- `AI_ACT_COMPLIANCE.md` — Health AI Isolation (JMQuT 17.05.2026)
 - `AI_TOOLS.md` — довідник tools (JSON-definitions, промпт-правила, історія змін)
 - `ARCHITECTURE.md` — діаграми потоків даних
 - `CHANGES.md` — хронологічний журнал усіх сесій з комітами
 - `DESIGN_SYSTEM.md` — стилі, кольори, модалки, помилки
 - `DO_NOT_TOUCH.md` — священні корови (не чіпати без обговорення)
+- `EU_COMPLIANCE.md` — зонтичний документ всіх EU compliance шарів (VAT/Impressum/14-day/DPF/CRA/Data Act/PLD/ePrivacy)
 - `EVENING_2.0_PLAN.md` — план Вечора 2.0 (8 фаз)
 - `FILE_STRUCTURE.md` — таблиця всіх файлів з відповідальністю
 - `FINANCE_V2_PLAN.md` — план Фінансів v2 (6 фаз + Аналітика)
 - `GIT_EMERGENCY.md` — процедура скиду + історія v54-v130
+- `SECURITY.md` — класифікація даних + поточний стан безпеки
 - `TECHNICAL_REFERENCE.md` — деплой / AI-логіка / дані / структури / залежності
 
 ### `_ai-tools/`
