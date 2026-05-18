@@ -6,7 +6,7 @@
 
 import { showToast } from '../core/nav.js';
 import { generateUUID } from '../core/uuid.js';
-import { escapeHtml, escapeJsArg, t } from '../core/utils.js';
+import { escapeHtml, t } from '../core/utils.js';
 import { addToTrash, showUndoToast } from '../core/trash.js';
 import { tryBoardUpdate } from '../owl/proactive.js';
 import { setupModalSwipeClose } from './tasks.js';
@@ -218,7 +218,7 @@ function _renderTransactionModalBody() {
       <div style="display:flex;flex-wrap:wrap;gap:6px">
         ${catList.map(c => {
           const active = c.name === _finTxCategory;
-          return `<button onclick="selectFinTxMainCat('${escapeJsArg(c.name)}')" style="padding:7px 14px;border-radius:18px;font-size:13.5px;font-weight:800;cursor:pointer;font-family:inherit;border:2px solid ${active ? '#c2410c' : 'rgba(30,16,64,0.12)'};background:${active ? 'rgba(194,65,12,0.14)' : 'white'};color:${active ? '#c2410c' : '#1e1040'}">${escapeHtml(c.name)}</button>`;
+          return `<button data-action="select-fin-tx-main-cat" data-name="${escapeHtml(c.name)}" style="padding:7px 14px;border-radius:18px;font-size:13.5px;font-weight:800;cursor:pointer;font-family:inherit;border:2px solid ${active ? '#c2410c' : 'rgba(30,16,64,0.12)'};background:${active ? 'rgba(194,65,12,0.14)' : 'white'};color:${active ? '#c2410c' : '#1e1040'}">${escapeHtml(c.name)}</button>`;
         }).join('')}
       </div>
     </div>` : '';
@@ -229,46 +229,51 @@ function _renderTransactionModalBody() {
       <div style="display:flex;flex-wrap:wrap;gap:4px">
         ${subcats.map(s => {
           const active = s === _finTxSubcategory;
-          return `<button onclick="selectFinTxSubcat('${escapeJsArg(s)}')" style="padding:3px 9px;border-radius:12px;font-size:11.5px;font-weight:500;cursor:pointer;font-family:inherit;border:1px solid ${active ? '#c2410c' : 'rgba(30,16,64,0.08)'};background:${active ? 'rgba(194,65,12,0.06)' : 'rgba(30,16,64,0.02)'};color:${active ? '#c2410c' : 'rgba(30,16,64,0.5)'}">${escapeHtml(s)}</button>`;
+          return `<button data-action="select-fin-tx-subcat" data-name="${escapeHtml(s)}" style="padding:3px 9px;border-radius:12px;font-size:11.5px;font-weight:500;cursor:pointer;font-family:inherit;border:1px solid ${active ? '#c2410c' : 'rgba(30,16,64,0.08)'};background:${active ? 'rgba(194,65,12,0.06)' : 'rgba(30,16,64,0.02)'};color:${active ? '#c2410c' : 'rgba(30,16,64,0.5)'}">${escapeHtml(s)}</button>`;
         }).join('')}
       </div>
     </div>` : '';
 
-  const calcBtn = (label, action, opts = {}) => {
+  // OBErR Phase 2: calcBtn API змінено — 2-й параметр тепер data-attrs рядок,
+  // не JS-код. Для append: `data-action="fin-calc-append" data-val="X"`,
+  // для backspace: `data-action="fin-calc-backspace"`. Helper нижче інкапсулює
+  // append-форму. Backspace передається явно.
+  const calcBtn = (label, dataAttrs, opts = {}) => {
     const bg = opts.bg || 'rgba(30,16,64,0.04)';
     const col = opts.col || '#1e1040';
     const fontSize = opts.fontSize || '20px';
     const fontWeight = opts.fontWeight || '600';
-    return `<button onclick="${action}" style="padding:14px 0;border-radius:12px;border:none;background:${bg};color:${col};font-size:${fontSize};font-weight:${fontWeight};cursor:pointer;font-family:inherit;touch-action:manipulation">${label}</button>`;
+    return `<button ${dataAttrs} style="padding:14px 0;border-radius:12px;border:none;background:${bg};color:${col};font-size:${fontSize};font-weight:${fontWeight};cursor:pointer;font-family:inherit;touch-action:manipulation">${label}</button>`;
   };
+  const append = (v) => `data-action="fin-calc-append" data-val="${v}"`;
   const opStyle = { bg: 'rgba(194,65,12,0.06)', col: '#c2410c', fontWeight: '700' };
   const calcGrid = `<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px">
-    ${calcBtn('7', "finCalcAppend('7')")}
-    ${calcBtn('8', "finCalcAppend('8')")}
-    ${calcBtn('9', "finCalcAppend('9')")}
-    ${calcBtn('÷', "finCalcAppend('÷')", opStyle)}
-    ${calcBtn('4', "finCalcAppend('4')")}
-    ${calcBtn('5', "finCalcAppend('5')")}
-    ${calcBtn('6', "finCalcAppend('6')")}
-    ${calcBtn('×', "finCalcAppend('×')", opStyle)}
-    ${calcBtn('1', "finCalcAppend('1')")}
-    ${calcBtn('2', "finCalcAppend('2')")}
-    ${calcBtn('3', "finCalcAppend('3')")}
-    ${calcBtn('−', "finCalcAppend('-')", opStyle)}
-    ${calcBtn(',', "finCalcAppend(',')")}
-    ${calcBtn('0', "finCalcAppend('0')")}
-    ${calcBtn('⌫', 'finCalcBackspace()', { bg: 'rgba(239,68,68,0.06)', col: '#dc2626', fontSize: '18px' })}
-    ${calcBtn('+', "finCalcAppend('+')", opStyle)}
+    ${calcBtn('7', append('7'))}
+    ${calcBtn('8', append('8'))}
+    ${calcBtn('9', append('9'))}
+    ${calcBtn('÷', append('÷'), opStyle)}
+    ${calcBtn('4', append('4'))}
+    ${calcBtn('5', append('5'))}
+    ${calcBtn('6', append('6'))}
+    ${calcBtn('×', append('×'), opStyle)}
+    ${calcBtn('1', append('1'))}
+    ${calcBtn('2', append('2'))}
+    ${calcBtn('3', append('3'))}
+    ${calcBtn('−', append('-'), opStyle)}
+    ${calcBtn(',', append(','))}
+    ${calcBtn('0', append('0'))}
+    ${calcBtn('⌫', 'data-action="fin-calc-backspace"', { bg: 'rgba(239,68,68,0.06)', col: '#dc2626', fontSize: '18px' })}
+    ${calcBtn('+', append('+'), opStyle)}
   </div>`;
 
-  return `<div onclick="closeFinTxModal()" style="position:absolute;inset:0;background:rgba(0,0,0,0.35);backdrop-filter:blur(4px)"></div>
+  return `<div data-action="close-backdrop" data-fn="closeFinTxModal" style="position:absolute;inset:0;background:rgba(0,0,0,0.35);backdrop-filter:blur(4px)"></div>
   <div style="position:relative;width:100%;max-width:480px;background:rgba(255,255,255,0.30);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border-radius:24px;overflow:hidden;z-index:1;max-height:85vh;border:1.5px solid rgba(255,255,255,0.5);padding:0 20px">
     <div style="overflow-y:auto;max-height:85vh;padding:18px 0 calc(env(safe-area-inset-bottom) + 18px);box-sizing:border-box">
     <div style="width:36px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 14px"></div>
     <div style="font-size:14px;font-weight:800;color:${calcCol};text-align:center;margin-bottom:6px">${escapeHtml(title)}</div>
     ${isEdit ? '' : `<div style="display:flex;gap:6px;margin-bottom:10px;background:rgba(30,16,64,0.06);border-radius:12px;padding:3px">
-      <button onclick="setFinTxType('expense')" style="flex:1;padding:8px;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;border:none;background:${isExpense ? 'white' : 'transparent'};color:${isExpense ? '#c2410c' : 'rgba(30,16,64,0.5)'};box-shadow:${isExpense ? '0 2px 6px rgba(30,16,64,0.08)' : 'none'}">${t('finance.tx.toggle_expense', 'Витрата')}</button>
-      <button onclick="setFinTxType('income')" style="flex:1;padding:8px;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;border:none;background:${!isExpense ? 'white' : 'transparent'};color:${!isExpense ? '#16a34a' : 'rgba(30,16,64,0.5)'};box-shadow:${!isExpense ? '0 2px 6px rgba(30,16,64,0.08)' : 'none'}">${t('finance.tx.toggle_income', 'Дохід')}</button>
+      <button data-action="set-fin-tx-type" data-type="expense" style="flex:1;padding:8px;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;border:none;background:${isExpense ? 'white' : 'transparent'};color:${isExpense ? '#c2410c' : 'rgba(30,16,64,0.5)'};box-shadow:${isExpense ? '0 2px 6px rgba(30,16,64,0.08)' : 'none'}">${t('finance.tx.toggle_expense', 'Витрата')}</button>
+      <button data-action="set-fin-tx-type" data-type="income" style="flex:1;padding:8px;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;border:none;background:${!isExpense ? 'white' : 'transparent'};color:${!isExpense ? '#16a34a' : 'rgba(30,16,64,0.5)'};box-shadow:${!isExpense ? '0 2px 6px rgba(30,16,64,0.08)' : 'none'}">${t('finance.tx.toggle_income', 'Дохід')}</button>
     </div>`}
     <div style="text-align:center;margin-bottom:10px">
       <div style="font-size:32px;font-weight:900;color:${calcCol};line-height:1.1;font-variant-numeric:tabular-nums">${escapeHtml(displayAmount)} ${getCurrency()}</div>
@@ -276,7 +281,7 @@ function _renderTransactionModalBody() {
     </div>
     ${catPickerHtml}
     ${subcatsHtml}
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:rgba(255,255,255,0.5);border:1.5px solid rgba(30,16,64,0.08);border-radius:12px;margin-bottom:10px;cursor:pointer" onclick="openFinDateModal()">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:rgba(255,255,255,0.5);border:1.5px solid rgba(30,16,64,0.08);border-radius:12px;margin-bottom:10px;cursor:pointer" data-action="open-fin-date-modal">
       <div style="display:flex;align-items:center;gap:8px">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.5)" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
         <span style="font-size:13px;font-weight:600;color:#1e1040">${escapeHtml(dateLabel)}</span>
@@ -288,9 +293,9 @@ function _renderTransactionModalBody() {
       style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:10px 14px;font-size:14px;font-family:inherit;color:#1e1040;outline:none;margin-bottom:10px;box-sizing:border-box;background:rgba(255,255,255,0.7)">
     ${calcGrid}
     <div style="display:flex;gap:6px">
-      ${isEdit ? `<button onclick="deleteFinTransaction()" style="padding:13px 14px;border-radius:12px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);font-size:13px;font-weight:700;color:#dc2626;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>${t('finance.tx.btn_delete', 'Видалити')}</button>` : ''}
-      <button onclick="closeFinTxModal()" class="btn-cancel" style="flex:1">${t('common.btn_cancel', 'Скасувати')}</button>
-      <button onclick="saveFinTransaction()" class="btn-save-primary" style="flex:1.5">${isEdit ? t('common.btn_save', 'Зберегти') : t('finance.tx.btn_add', '✓ Додати')}</button>
+      ${isEdit ? `<button data-action="delete-fin-transaction" style="padding:13px 14px;border-radius:12px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);font-size:13px;font-weight:700;color:#dc2626;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>${t('finance.tx.btn_delete', 'Видалити')}</button>` : ''}
+      <button data-action="close-fin-tx-modal" class="btn-cancel" style="flex:1">${t('common.btn_cancel', 'Скасувати')}</button>
+      <button data-action="save-fin-transaction" class="btn-save-primary" style="flex:1.5">${isEdit ? t('common.btn_save', 'Зберегти') : t('finance.tx.btn_add', '✓ Додати')}</button>
     </div>
     </div>
   </div>`;
@@ -351,22 +356,22 @@ export function openFinDateModal() {
   modal.id = 'fin-date-modal';
   modal.style.cssText = 'position:fixed;inset:0;z-index:600;display:flex;align-items:flex-end;justify-content:center;padding:0 16px 16px';
   modal.innerHTML = `
-    <div onclick="closeFinDateModal()" style="position:absolute;inset:0;background:rgba(0,0,0,0.35);backdrop-filter:blur(4px)"></div>
+    <div data-action="close-backdrop" data-fn="closeFinDateModal" style="position:absolute;inset:0;background:rgba(0,0,0,0.35);backdrop-filter:blur(4px)"></div>
     <div style="position:relative;width:100%;max-width:420px;background:rgba(255,255,255,0.30);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border-radius:24px;overflow:hidden;z-index:1;max-height:80vh;border:1.5px solid rgba(255,255,255,0.5);padding:0 20px">
       <div style="overflow-y:auto;max-height:80vh;padding:28px 0 calc(env(safe-area-inset-bottom) + 28px);box-sizing:border-box">
       <div style="width:36px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 18px"></div>
       <div style="font-family:var(--font-display);font-size:18px;font-weight:700;color:#1e1040;margin-bottom:14px">${t('finance.date.modal_title', 'Дата операції')}</div>
       <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px">
-        <button onclick="setFinTxDateOffset(0)" style="padding:13px 14px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.12);background:rgba(255,255,255,0.7);font-size:14px;font-weight:600;color:#1e1040;cursor:pointer;font-family:inherit;text-align:left">${t('finance.date.today', 'Сьогодні')} · ${fmt(0)}</button>
-        <button onclick="setFinTxDateOffset(-1)" style="padding:13px 14px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.12);background:rgba(255,255,255,0.7);font-size:14px;font-weight:600;color:#1e1040;cursor:pointer;font-family:inherit;text-align:left">${t('finance.date.yesterday', 'Вчора')} · ${fmt(-1)}</button>
-        <button onclick="setFinTxDateOffset(-2)" style="padding:13px 14px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.12);background:rgba(255,255,255,0.7);font-size:14px;font-weight:600;color:#1e1040;cursor:pointer;font-family:inherit;text-align:left">${t('finance.date.day_before_yesterday', 'Позавчора')} · ${fmt(-2)}</button>
-        <button onclick="setFinTxDateOffset(-7)" style="padding:13px 14px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.12);background:rgba(255,255,255,0.7);font-size:14px;font-weight:600;color:#1e1040;cursor:pointer;font-family:inherit;text-align:left">${t('finance.date.week_ago', 'Тиждень тому')} · ${fmt(-7)}</button>
+        <button data-action="set-fin-tx-date-offset" data-days="0" style="padding:13px 14px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.12);background:rgba(255,255,255,0.7);font-size:14px;font-weight:600;color:#1e1040;cursor:pointer;font-family:inherit;text-align:left">${t('finance.date.today', 'Сьогодні')} · ${fmt(0)}</button>
+        <button data-action="set-fin-tx-date-offset" data-days="-1" style="padding:13px 14px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.12);background:rgba(255,255,255,0.7);font-size:14px;font-weight:600;color:#1e1040;cursor:pointer;font-family:inherit;text-align:left">${t('finance.date.yesterday', 'Вчора')} · ${fmt(-1)}</button>
+        <button data-action="set-fin-tx-date-offset" data-days="-2" style="padding:13px 14px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.12);background:rgba(255,255,255,0.7);font-size:14px;font-weight:600;color:#1e1040;cursor:pointer;font-family:inherit;text-align:left">${t('finance.date.day_before_yesterday', 'Позавчора')} · ${fmt(-2)}</button>
+        <button data-action="set-fin-tx-date-offset" data-days="-7" style="padding:13px 14px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.12);background:rgba(255,255,255,0.7);font-size:14px;font-weight:600;color:#1e1040;cursor:pointer;font-family:inherit;text-align:left">${t('finance.date.week_ago', 'Тиждень тому')} · ${fmt(-7)}</button>
       </div>
       <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">${t('finance.date.choose_day', 'Виберіть день')}</div>
       <input id="fin-date-input" type="date" value="${currentYmd}" max="${new Date().toISOString().slice(0,10)}"
         onchange="setFinTxDateFromInput(this.value)"
         style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:11px 40px 11px 14px;font-size:15px;font-weight:600;font-family:inherit;color:#1e1040;outline:none;margin-bottom:14px;box-sizing:border-box;background:rgba(255,255,255,0.7);text-align:left;-webkit-appearance:none;appearance:none;min-height:44px">
-      <button onclick="closeFinDateModal()" class="btn-cancel" style="width:100%">${t('common.close', 'Закрити')}</button>
+      <button data-action="close-fin-date-modal" class="btn-cancel" style="width:100%">${t('common.close', 'Закрити')}</button>
       </div>
     </div>`;
   document.body.appendChild(modal);
@@ -400,7 +405,7 @@ export function openFinBudgetModal() {
   modal.id = 'fin-budget-modal';
   modal.style.cssText = 'position:fixed;inset:0;z-index:500;display:flex;align-items:flex-end;justify-content:center';
   modal.innerHTML = `
-    <div onclick="closeFinBudgetModal()" class="modal-backdrop"></div>
+    <div data-action="close-backdrop" data-fn="closeFinBudgetModal" class="modal-backdrop"></div>
     <div style="position:relative;width:100%;max-width:480px;background:rgba(255,255,255,0.88);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-radius:24px;margin:0 16px 16px;z-index:1;border:1.5px solid rgba(255,255,255,0.6);padding:16px 20px calc(env(safe-area-inset-bottom) + 24px);max-height:80vh;overflow-y:auto;box-sizing:border-box">
       <div class="modal-handle"></div>
       <div class="modal-title">${t('finance.budget.modal_title', 'Бюджет на місяць')}</div>
@@ -419,8 +424,8 @@ export function openFinBudgetModal() {
           </div>`).join('')}
       </div>
       <div style="display:flex;gap:8px">
-        <button onclick="closeFinBudgetModal()" class="btn-cancel">${t('common.cancel', 'Скасувати')}</button>
-        <button onclick="saveFinBudgetFromModal()" class="btn-save-primary">${t('common.save', 'Зберегти')}</button>
+        <button data-action="close-fin-budget-modal" class="btn-cancel">${t('common.cancel', 'Скасувати')}</button>
+        <button data-action="save-fin-budget" class="btn-save-primary">${t('common.save', 'Зберегти')}</button>
       </div>
     </div>`;
   document.body.appendChild(modal);
@@ -479,7 +484,7 @@ function _renderCatEditModalBody() {
   const isNew = _finEditingCatId === 'new';
   const chev = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="flex-shrink:0"><polyline points="6 9 12 15 18 9"/></svg>`;
   // Два компактних inline-тригери поряд (замість двох повних рядків з inline-grid).
-  const iconTrigger = `<button onclick="toggleCatModalIcons()" style="flex:1;display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.08);background:rgba(255,255,255,0.6);cursor:pointer;font-family:inherit;min-width:0">
+  const iconTrigger = `<button data-action="toggle-cat-modal-icons" style="flex:1;display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.08);background:rgba(255,255,255,0.6);cursor:pointer;font-family:inherit;min-width:0">
     <div style="width:32px;height:32px;border-radius:50%;background:${d.color}20;display:flex;align-items:center;justify-content:center;flex-shrink:0">${finCatIcon(d.icon, d.color, 18)}</div>
     <div style="flex:1;text-align:left;min-width:0">
       <div style="font-size:9px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em">${t('finance.cat.icon_label', 'Іконка')}</div>
@@ -487,7 +492,7 @@ function _renderCatEditModalBody() {
     </div>
     <div style="color:rgba(30,16,64,0.45)">${chev}</div>
   </button>`;
-  const colorTrigger = `<button onclick="toggleCatModalColors()" style="flex:1;display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.08);background:rgba(255,255,255,0.6);cursor:pointer;font-family:inherit;min-width:0">
+  const colorTrigger = `<button data-action="toggle-cat-modal-colors" style="flex:1;display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.08);background:rgba(255,255,255,0.6);cursor:pointer;font-family:inherit;min-width:0">
     <div style="width:32px;height:32px;border-radius:50%;background:${d.color};border:2px solid rgba(255,255,255,0.8);flex-shrink:0;box-shadow:0 1px 3px rgba(0,0,0,0.08)"></div>
     <div style="flex:1;text-align:left;min-width:0">
       <div style="font-size:9px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em">${t('finance.cat.color_label', 'Колір')}</div>
@@ -497,14 +502,14 @@ function _renderCatEditModalBody() {
   </button>`;
   // Nested popup — маленька модалка поверх (position:fixed). Тап на backdrop закриває.
   const pickerPopup = (_catModalIconExpanded || _catModalColorExpanded) ? `
-    <div onclick="closeCatPicker()" style="position:fixed;inset:0;background:rgba(0,0,0,0.4);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px">
-      <div onclick="event.stopPropagation()" style="width:100%;max-width:340px;background:rgba(255,255,255,0.95);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border-radius:22px;padding:18px;max-height:70vh;overflow-y:auto;border:1.5px solid rgba(255,255,255,0.6);box-shadow:0 20px 60px rgba(0,0,0,0.18);box-sizing:border-box">
+    <div data-action="close-backdrop" data-fn="closeCatPicker" style="position:fixed;inset:0;background:rgba(0,0,0,0.4);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px">
+      <div style="width:100%;max-width:340px;background:rgba(255,255,255,0.95);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border-radius:22px;padding:18px;max-height:70vh;overflow-y:auto;border:1.5px solid rgba(255,255,255,0.6);box-shadow:0 20px 60px rgba(0,0,0,0.18);box-sizing:border-box">
         ${_catModalIconExpanded ? `
           <div style="font-size:15px;font-weight:800;color:#1e1040;text-align:center;margin-bottom:14px">${t('finance.cat.choose_icon', 'Обери іконку')}</div>
           <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px">
             ${FIN_CAT_ICON_NAMES.map(name => {
               const active = name === d.icon;
-              return `<button onclick="selectCatModalIcon('${name}')" style="aspect-ratio:1;border-radius:50%;border:2px solid ${active ? d.color : 'rgba(30,16,64,0.08)'};background:${active ? d.color + '20' : 'white'};display:flex;align-items:center;justify-content:center;cursor:pointer;font-family:inherit;padding:0">${finCatIcon(name, active ? d.color : 'rgba(30,16,64,0.55)', 20)}</button>`;
+              return `<button data-action="select-cat-modal-icon" data-icon="${name}" style="aspect-ratio:1;border-radius:50%;border:2px solid ${active ? d.color : 'rgba(30,16,64,0.08)'};background:${active ? d.color + '20' : 'white'};display:flex;align-items:center;justify-content:center;cursor:pointer;font-family:inherit;padding:0">${finCatIcon(name, active ? d.color : 'rgba(30,16,64,0.55)', 20)}</button>`;
             }).join('')}
           </div>
         ` : ''}
@@ -513,7 +518,7 @@ function _renderCatEditModalBody() {
           <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;justify-items:center">
             ${FIN_CAT_PALETTE.map(c => {
               const active = c === d.color;
-              return `<button onclick="selectCatModalColor('${c}')" style="width:42px;height:42px;border-radius:50%;border:3px solid ${active ? '#1e1040' : 'transparent'};background:${c};cursor:pointer;font-family:inherit;padding:0"></button>`;
+              return `<button data-action="select-cat-modal-color" data-color="${c}" style="width:42px;height:42px;border-radius:50%;border:3px solid ${active ? '#1e1040' : 'transparent'};background:${c};cursor:pointer;font-family:inherit;padding:0"></button>`;
             }).join('')}
           </div>
         ` : ''}
@@ -522,18 +527,18 @@ function _renderCatEditModalBody() {
   const subcatsHtml = d.subcategories.map((s, i) =>
     `<div style="display:flex;align-items:center;gap:6px">
       <input type="text" value="${escapeHtml(s)}" onchange="updateCatModalSubcat(${i}, this.value)" style="flex:1;border:1.5px solid rgba(30,16,64,0.1);border-radius:8px;padding:6px 10px;font-size:13px;font-family:inherit;color:#1e1040;outline:none;background:rgba(255,255,255,0.7)">
-      <button onclick="removeCatModalSubcat(${i})" style="width:28px;height:28px;border-radius:8px;border:none;background:rgba(239,68,68,0.08);color:#dc2626;font-size:14px;cursor:pointer;font-family:inherit">×</button>
+      <button data-action="remove-cat-modal-subcat" data-idx="${i}" style="width:28px;height:28px;border-radius:8px;border:none;background:rgba(239,68,68,0.08);color:#dc2626;font-size:14px;cursor:pointer;font-family:inherit">×</button>
     </div>`
   ).join('');
 
-  return `<div onclick="closeCategoryEditModal()" style="position:absolute;inset:0;background:rgba(0,0,0,0.35);backdrop-filter:blur(4px)"></div>
+  return `<div data-action="close-backdrop" data-fn="closeCategoryEditModal" style="position:absolute;inset:0;background:rgba(0,0,0,0.35);backdrop-filter:blur(4px)"></div>
   <div style="position:relative;width:100%;max-width:480px;background:rgba(255,255,255,0.30);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border-radius:24px;overflow:hidden;z-index:1;max-height:85vh;border:1.5px solid rgba(255,255,255,0.5);padding:0 20px">
     <div style="overflow-y:auto;max-height:85vh;padding:28px 0 calc(env(safe-area-inset-bottom) + 28px);box-sizing:border-box">
     <div style="width:36px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 18px"></div>
     <div style="font-family:var(--font-display);font-size:18px;font-weight:700;color:#1e1040;margin-bottom:14px">${isNew ? t('finance.cat.new_title', 'Нова категорія') : t('finance.cat.edit_title', 'Редагувати категорію')}</div>
     ${isNew ? `<div style="display:flex;gap:6px;margin-bottom:12px">
-      <button onclick="setCatModalType('expense')" style="flex:1;padding:8px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;border:1.5px solid ${d.type === 'expense' ? '#c2410c' : 'rgba(30,16,64,0.1)'};background:${d.type === 'expense' ? 'rgba(194,65,12,0.08)' : 'white'};color:${d.type === 'expense' ? '#c2410c' : 'rgba(30,16,64,0.4)'}">${t('finance.tx.toggle_expense', 'Витрата')}</button>
-      <button onclick="setCatModalType('income')" style="flex:1;padding:8px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;border:1.5px solid ${d.type === 'income' ? '#16a34a' : 'rgba(30,16,64,0.1)'};background:${d.type === 'income' ? 'rgba(22,163,74,0.08)' : 'white'};color:${d.type === 'income' ? '#16a34a' : 'rgba(30,16,64,0.4)'}">${t('finance.tx.toggle_income', 'Дохід')}</button>
+      <button data-action="set-cat-modal-type" data-type="expense" style="flex:1;padding:8px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;border:1.5px solid ${d.type === 'expense' ? '#c2410c' : 'rgba(30,16,64,0.1)'};background:${d.type === 'expense' ? 'rgba(194,65,12,0.08)' : 'white'};color:${d.type === 'expense' ? '#c2410c' : 'rgba(30,16,64,0.4)'}">${t('finance.tx.toggle_expense', 'Витрата')}</button>
+      <button data-action="set-cat-modal-type" data-type="income" style="flex:1;padding:8px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;border:1.5px solid ${d.type === 'income' ? '#16a34a' : 'rgba(30,16,64,0.1)'};background:${d.type === 'income' ? 'rgba(22,163,74,0.08)' : 'white'};color:${d.type === 'income' ? '#16a34a' : 'rgba(30,16,64,0.4)'}">${t('finance.tx.toggle_income', 'Дохід')}</button>
     </div>` : ''}
     <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">${t('finance.cat.name_label', 'Назва')}</div>
     <input id="cat-modal-name" type="text" value="${escapeHtml(d.name)}" oninput="_finCatModalDraft.name = this.value" placeholder="${t('finance.cat.name_placeholder', 'напр. Подорожі')}"
@@ -542,20 +547,20 @@ function _renderCatEditModalBody() {
     <div style="display:flex;gap:8px;margin-bottom:14px">${iconTrigger}${colorTrigger}</div>
     <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">${t('finance.cat.subcats_label', 'Підкатегорії')}</div>
     <div id="cat-modal-subcats" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px">${subcatsHtml}</div>
-    <button onclick="addCatModalSubcat()" style="width:100%;padding:8px;border-radius:10px;border:1.5px dashed rgba(30,16,64,0.15);background:transparent;color:rgba(30,16,64,0.5);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;margin-bottom:14px">${t('finance.cat.add_subcat', '+ підкатегорія')}</button>
+    <button data-action="add-cat-modal-subcat" style="width:100%;padding:8px;border-radius:10px;border:1.5px dashed rgba(30,16,64,0.15);background:transparent;color:rgba(30,16,64,0.5);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;margin-bottom:14px">${t('finance.cat.add_subcat', '+ підкатегорія')}</button>
     ${!isNew ? `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-top:1px solid rgba(30,16,64,0.06);margin-bottom:8px">
       <div>
         <div style="font-size:13px;font-weight:700;color:#1e1040">${t('finance.cat.archive', 'Архівувати')}</div>
         <div style="font-size:11px;color:rgba(30,16,64,0.45);margin-top:2px">${t('finance.cat.archive_hint', 'Сховати з сітки, дані зберігаються')}</div>
       </div>
-      <button onclick="toggleCatModalArchive()" style="width:44px;height:24px;border-radius:14px;border:none;background:${d.archived ? '#c2410c' : 'rgba(30,16,64,0.12)'};position:relative;cursor:pointer;font-family:inherit">
+      <button data-action="toggle-cat-modal-archive" style="width:44px;height:24px;border-radius:14px;border:none;background:${d.archived ? '#c2410c' : 'rgba(30,16,64,0.12)'};position:relative;cursor:pointer;font-family:inherit">
         <div style="width:18px;height:18px;border-radius:50%;background:white;position:absolute;top:3px;${d.archived ? 'right:3px' : 'left:3px'};transition:all 0.2s"></div>
       </button>
     </div>` : ''}
     <div style="display:flex;gap:8px;margin-top:14px">
-      ${!isNew ? `<button onclick="deleteCategoryFromModal()" style="padding:13px 16px;border-radius:12px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);font-size:14px;font-weight:700;color:#dc2626;cursor:pointer;font-family:inherit">${t('common.delete', 'Видалити')}</button>` : ''}
-      <button onclick="closeCategoryEditModal()" class="btn-cancel">${t('common.cancel', 'Скасувати')}</button>
-      <button onclick="saveCategoryFromModal()" class="btn-save-primary">${isNew ? t('common.create', 'Створити') : t('common.save', 'Зберегти')}</button>
+      ${!isNew ? `<button data-action="delete-category-from-modal" style="padding:13px 16px;border-radius:12px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);font-size:14px;font-weight:700;color:#dc2626;cursor:pointer;font-family:inherit">${t('common.delete', 'Видалити')}</button>` : ''}
+      <button data-action="close-category-edit-modal" class="btn-cancel">${t('common.cancel', 'Скасувати')}</button>
+      <button data-action="save-category-from-modal" class="btn-save-primary">${isNew ? t('common.create', 'Створити') : t('common.save', 'Зберегти')}</button>
     </div>
     </div>
   </div>

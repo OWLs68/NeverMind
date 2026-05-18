@@ -525,3 +525,148 @@ reg('reset-benchmark-config', () => {
     window.resetBenchmarkConfig();
   }
 });
+// === Phase 2 (OBErR) finance-modals.js actions ===
+// Транзакція — модалка додавання/редагування.
+reg('select-fin-tx-main-cat', (data) => {
+  if (!data.name) return;
+  if (typeof window !== 'undefined' && typeof window.selectFinTxMainCat === 'function') {
+    window.selectFinTxMainCat(data.name);
+  }
+});
+reg('select-fin-tx-subcat', (data) => {
+  if (!data.name) return;
+  if (typeof window !== 'undefined' && typeof window.selectFinTxSubcat === 'function') {
+    window.selectFinTxSubcat(data.name);
+  }
+});
+// fin-calc-append / fin-calc-backspace — кнопки калькулятора (16 шт).
+// data-val для append: цифра 0-9, кома, оператори +/-/×/÷.
+reg('fin-calc-append', (data) => {
+  if (!data.val) return;
+  if (typeof window !== 'undefined' && typeof window.finCalcAppend === 'function') {
+    window.finCalcAppend(data.val);
+  }
+});
+reg('fin-calc-backspace', () => {
+  if (typeof window !== 'undefined' && typeof window.finCalcBackspace === 'function') {
+    window.finCalcBackspace();
+  }
+});
+// set-fin-tx-type — Витрата / Дохід toggle у tx-модалці. data-type="expense"|"income".
+reg('set-fin-tx-type', (data) => {
+  if (!data.type) return;
+  if (typeof window !== 'undefined' && typeof window.setFinTxType === 'function') {
+    window.setFinTxType(data.type);
+  }
+});
+// open-fin-date-modal — клік на рядок дати у tx-модалці (відкриває picker).
+reg('open-fin-date-modal', () => {
+  if (typeof window !== 'undefined' && typeof window.openFinDateModal === 'function') {
+    window.openFinDateModal();
+  }
+});
+// set-fin-tx-date-offset — пресети «Сьогодні/Вчора/Позавчора/Тиждень тому».
+// data-days = 0 / -1 / -2 / -7 (parseInt захист).
+reg('set-fin-tx-date-offset', (data) => {
+  if (typeof window === 'undefined') return;
+  if (typeof window.setFinTxDateOffset !== 'function') return;
+  const days = parseInt(data.days, 10);
+  if (Number.isNaN(days)) return;
+  window.setFinTxDateOffset(days);
+});
+// close-fin-tx-modal / close-fin-date-modal / close-fin-budget-modal — кнопки
+// закриття (НЕ backdrop). Окремі actions від close-backdrop бо це не overlay-клік.
+reg('close-fin-tx-modal', () => {
+  if (typeof window !== 'undefined' && typeof window.closeFinTxModal === 'function') {
+    window.closeFinTxModal();
+  }
+});
+reg('close-fin-date-modal', () => {
+  if (typeof window !== 'undefined' && typeof window.closeFinDateModal === 'function') {
+    window.closeFinDateModal();
+  }
+});
+reg('close-fin-budget-modal', () => {
+  if (typeof window !== 'undefined' && typeof window.closeFinBudgetModal === 'function') {
+    window.closeFinBudgetModal();
+  }
+});
+// save/delete для tx + budget.
+reg('save-fin-transaction', () => {
+  if (typeof window !== 'undefined' && typeof window.saveFinTransaction === 'function') {
+    window.saveFinTransaction();
+  }
+});
+reg('delete-fin-transaction', () => {
+  if (typeof window !== 'undefined' && typeof window.deleteFinTransaction === 'function') {
+    window.deleteFinTransaction();
+  }
+});
+reg('save-fin-budget', () => {
+  if (typeof window !== 'undefined' && typeof window.saveFinBudgetFromModal === 'function') {
+    window.saveFinBudgetFromModal();
+  }
+});
+// Category Edit Modal: трігери icon/color picker + select + remove subcat.
+reg('toggle-cat-modal-icons', () => {
+  if (typeof window !== 'undefined' && typeof window.toggleCatModalIcons === 'function') {
+    window.toggleCatModalIcons();
+  }
+});
+reg('toggle-cat-modal-colors', () => {
+  if (typeof window !== 'undefined' && typeof window.toggleCatModalColors === 'function') {
+    window.toggleCatModalColors();
+  }
+});
+reg('select-cat-modal-icon', (data) => {
+  if (!data.icon) return;
+  if (typeof window !== 'undefined' && typeof window.selectCatModalIcon === 'function') {
+    window.selectCatModalIcon(data.icon);
+  }
+});
+reg('select-cat-modal-color', (data) => {
+  if (!data.color) return;
+  if (typeof window !== 'undefined' && typeof window.selectCatModalColor === 'function') {
+    window.selectCatModalColor(data.color);
+  }
+});
+reg('remove-cat-modal-subcat', (data) => {
+  if (typeof window === 'undefined') return;
+  if (typeof window.removeCatModalSubcat !== 'function') return;
+  const idx = parseInt(data.idx, 10);
+  if (Number.isNaN(idx)) return;
+  window.removeCatModalSubcat(idx);
+});
+// set-cat-modal-type — Витрата/Дохід у Category Edit Modal. Аналогічно
+// set-fin-tx-type, але інша функція (data.type="expense"|"income").
+reg('set-cat-modal-type', (data) => {
+  if (!data.type) return;
+  if (typeof window !== 'undefined' && typeof window.setCatModalType === 'function') {
+    window.setCatModalType(data.type);
+  }
+});
+reg('add-cat-modal-subcat', () => {
+  if (typeof window !== 'undefined' && typeof window.addCatModalSubcat === 'function') {
+    window.addCatModalSubcat();
+  }
+});
+reg('toggle-cat-modal-archive', () => {
+  if (typeof window !== 'undefined' && typeof window.toggleCatModalArchive === 'function') {
+    window.toggleCatModalArchive();
+  }
+});
+reg('delete-category-from-modal', () => {
+  if (typeof window !== 'undefined' && typeof window.deleteCategoryFromModal === 'function') {
+    window.deleteCategoryFromModal();
+  }
+});
+reg('close-category-edit-modal', () => {
+  if (typeof window !== 'undefined' && typeof window.closeCategoryEditModal === 'function') {
+    window.closeCategoryEditModal();
+  }
+});
+reg('save-category-from-modal', () => {
+  if (typeof window !== 'undefined' && typeof window.saveCategoryFromModal === 'function') {
+    window.saveCategoryFromModal();
+  }
+});
