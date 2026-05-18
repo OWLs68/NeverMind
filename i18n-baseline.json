@@ -1,7 +1,7 @@
 {
   "src/core/diagnostics.js": 4,
   "src/core/logger.js": 16,
-  "src/core/nav.js": 25,
+  "src/core/nav.js": 29,
   "src/core/usage-meter.js": 2,
   "src/tabs/calendar.js": 21,
   "src/tabs/evening-actions.js": 3,
@@ -13,7 +13,7 @@
   "src/tabs/finance-modals.js": 1,
   "src/tabs/finance.js": 6,
   "src/tabs/habits.js": 46,
-  "src/tabs/health.js": 31,
+  "src/tabs/health.js": 10,
   "src/tabs/inbox.js": 38,
   "src/tabs/me.js": 18,
   "src/tabs/notes.js": 6,

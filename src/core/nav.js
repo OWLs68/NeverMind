@@ -963,13 +963,114 @@ function saveMemoryCards() {
   if (tsEl) tsEl.textContent = t('nav.mem.saved_now', 'Збережено щойно');
 }
 
-function openPrivacyPolicy() {
-  showToast(t('nav.toast.privacy_soon', 'Конфіденційність — незабаром'));
+// === OBErR 18.05.2026 — EU Compliance pre-MVP legal pages ===
+// Це DRAFTS з [PLACEHOLDER] токенами які Роман має замінити реальними даними
+// (KvK, VAT, адреса) ПЕРЕД першим €. Без цього публічний релиз =
+// (а) Abmahnung-ризик у DE (Impressum без реквізитів),
+// (б) GDPR порушення (Privacy Policy без правових засад).
+// Повний контекст: docs/EU_COMPLIANCE.md + docs/EU_LAUNCH_CHECKLIST.md.
+//
+// Контент рендериться у #legal-overlay. Українською — інша мова буде через
+// i18n після Supabase (правило 11 CLAUDE.md). Тут промпт-стиль HTML — не
+// обгортаємо у t() для зменшення розміру bundle.
+const LEGAL_CONTENT = {
+  impressum: `
+    <h2 style="font-size:20px;font-weight:800;color:#1e1040;margin:0 0 16px">Impressum / Legal Notice</h2>
+    <div style="background:rgba(239,68,68,0.06);border-left:3px solid #ef4444;padding:10px 14px;margin-bottom:18px;border-radius:8px;font-size:13px;color:#dc2626;line-height:1.5">
+      ⚠️ DRAFT — Роман: замінити <code>[PLACEHOLDER]</code> токени реальними даними ПЕРЕД публічним релізом. Без цього німецькі юристи можуть надіслати Abmahnung €500-2000. Деталі: <code>docs/EU_LAUNCH_CHECKLIST.md</code>.
+    </div>
+    <p style="font-size:14px;line-height:1.55;color:#1e1040;margin:0 0 12px"><strong>Відповідальна особа</strong> (Verantwortlich gemäß § 5 TMG / § 1 KvK):</p>
+    <div style="font-size:14px;line-height:1.7;color:#1e1040;background:rgba(255,255,255,0.5);border-radius:10px;padding:12px 14px;margin-bottom:16px">
+      [PLACEHOLDER: Повне ім'я]<br>
+      [PLACEHOLDER: Адреса, NL]<br>
+      Email: [PLACEHOLDER: контактний email]<br>
+      KvK (Chamber of Commerce): [PLACEHOLDER: KvK номер]<br>
+      VAT / BTW: [PLACEHOLDER: VAT номер]
+    </div>
+    <p style="font-size:13px;line-height:1.55;color:rgba(30,16,64,0.7);margin:0">
+      NeverMind — персональний застосунок продуктивності. Розробник: соло-підприємець, реєстрація у Нідерландах. Питання, скарги та DSGVO / GDPR запити — на email вище.
+    </p>
+  `,
+  privacy: `
+    <h2 style="font-size:20px;font-weight:800;color:#1e1040;margin:0 0 16px">Privacy Policy / Політика конфіденційності</h2>
+    <div style="background:rgba(239,68,68,0.06);border-left:3px solid #ef4444;padding:10px 14px;margin-bottom:18px;border-radius:8px;font-size:13px;color:#dc2626;line-height:1.5">
+      ⚠️ DRAFT — Роман: перевірити DPF статус OpenAI/Anthropic перед публікацією (FISA Section 702 на 20.04.2026, поточний статус: dataprivacyframework.gov).
+    </div>
+    <p style="font-size:13px;color:rgba(30,16,64,0.55);margin:0 0 16px">Останнє оновлення: 18.05.2026</p>
+    <h3 style="font-size:15px;font-weight:700;color:#1e1040;margin:16px 0 6px">1. Що збираємо</h3>
+    <p style="font-size:13.5px;line-height:1.55;color:#1e1040;margin:0 0 10px">
+      NeverMind зараз працює <strong>повністю локально</strong> у твоєму браузері (localStorage). Жодних даних не передаємо на власні сервери — їх просто немає. Після переходу на Supabase backend (плановано 2026) — зберігатимемо твої записи у базі ЄС-регіону (Frankfurt) під твоїм акаунтом.
+    </p>
+    <h3 style="font-size:15px;font-weight:700;color:#1e1040;margin:16px 0 6px">2. Передача даних</h3>
+    <p style="font-size:13.5px;line-height:1.55;color:#1e1040;margin:0 0 10px">
+      Твої записи в Inbox/чатах обробляються через OpenAI (США) — це необхідно для AI-функцій (розпізнавання типу запису, відповіді чату). OpenAI <strong>DPF-certified</strong> (EU-US Data Privacy Framework). Дотримуємось SCC Module 2/3 у Data Processing Agreement.
+    </p>
+    <h3 style="font-size:15px;font-weight:700;color:#1e1040;margin:16px 0 6px">3. Твої права (GDPR Art. 15-22)</h3>
+    <ul style="font-size:13.5px;line-height:1.7;color:#1e1040;margin:0 0 10px;padding-left:22px">
+      <li>Право доступу — Налаштування → «Експортувати JSON»</li>
+      <li>Право на видалення — Налаштування → «Очистити всі дані»</li>
+      <li>Право на переносимість — JSON export сумісний з імпортом</li>
+      <li>Право на скаргу — DPA NL (Autoriteit Persoonsgegevens, autoriteitpersoonsgegevens.nl)</li>
+    </ul>
+    <h3 style="font-size:15px;font-weight:700;color:#1e1040;margin:16px 0 6px">4. Health-дані</h3>
+    <p style="font-size:13.5px;line-height:1.55;color:#1e1040;margin:0 0 10px">
+      Вкладка «Здоров'я» <strong>ізольована від AI</strong> (EU AI Act compliance) — твої медкартки/алергії/ліки AI <strong>НЕ читає і НЕ обробляє</strong>. Ти ведеш їх вручну.
+    </p>
+    <h3 style="font-size:15px;font-weight:700;color:#1e1040;margin:16px 0 6px">5. Контакт</h3>
+    <p style="font-size:13.5px;line-height:1.55;color:#1e1040;margin:0">
+      Email: [PLACEHOLDER: контактний email] · Impressum: див. Налаштування → «Юридична інформація».
+    </p>
+  `,
+  terms: `
+    <h2 style="font-size:20px;font-weight:800;color:#1e1040;margin:0 0 16px">Terms of Service / Умови використання</h2>
+    <div style="background:rgba(239,68,68,0.06);border-left:3px solid #ef4444;padding:10px 14px;margin-bottom:18px;border-radius:8px;font-size:13px;color:#dc2626;line-height:1.5">
+      ⚠️ DRAFT — Роман: 14-day withdrawal checkbox потребує юридичного огляду перед платним релізом. Paddle/Lemonsqueezy беруть це на себе автоматично.
+    </div>
+    <p style="font-size:13px;color:rgba(30,16,64,0.55);margin:0 0 16px">Останнє оновлення: 18.05.2026</p>
+    <h3 style="font-size:15px;font-weight:700;color:#1e1040;margin:16px 0 6px">1. Що це за сервіс</h3>
+    <p style="font-size:13.5px;line-height:1.55;color:#1e1040;margin:0 0 10px">
+      NeverMind — персональний AI-агент продуктивності. Зараз працює локально (PWA + localStorage). Платний доступ — після переходу на Supabase backend.
+    </p>
+    <h3 style="font-size:15px;font-weight:700;color:#1e1040;margin:16px 0 6px">2. Право на 14-денну відмову (EU)</h3>
+    <p style="font-size:13.5px;line-height:1.55;color:#1e1040;margin:0 0 10px">
+      Як споживач у ЄС маєш право повернути гроші протягом 14 днів. <strong>Виняток:</strong> при оплаті ставлячи галочку «Я погоджуюсь почати користування одразу і знаю що втрачаю право на 14-денну відмову» — звільняєш нас від цього зобов'язання.
+    </p>
+    <h3 style="font-size:15px;font-weight:700;color:#1e1040;margin:16px 0 6px">3. Обмеження відповідальності (PLD)</h3>
+    <p style="font-size:13.5px;line-height:1.55;color:#1e1040;margin:0 0 10px">
+      AI може помилятись. NeverMind — інструмент, не медичний / юридичний / фінансовий радник. <strong>Не покладайся на AI для критичних рішень</strong> (терапія, інвестиції, договори). Ми обмежуємо нашу відповідальність до суми твоєї підписки за 12 місяців.
+    </p>
+    <h3 style="font-size:15px;font-weight:700;color:#1e1040;margin:16px 0 6px">4. Acceptable use</h3>
+    <p style="font-size:13.5px;line-height:1.55;color:#1e1040;margin:0 0 10px">
+      Не використовуй для незаконної діяльності. Не атакуй сервіс (DoS, reverse-engineering ключів). Підтримай нас — дай feedback на email нижче.
+    </p>
+    <h3 style="font-size:15px;font-weight:700;color:#1e1040;margin:16px 0 6px">5. Governing law</h3>
+    <p style="font-size:13.5px;line-height:1.55;color:#1e1040;margin:0 0 10px">
+      Право Нідерландів. Спори — у нідерландських судах (Amsterdam) АБО твого ЄС-регіону (за вибором споживача, GDPR Art. 79).
+    </p>
+    <h3 style="font-size:15px;font-weight:700;color:#1e1040;margin:16px 0 6px">6. Контакт</h3>
+    <p style="font-size:13.5px;line-height:1.55;color:#1e1040;margin:0">
+      Email: [PLACEHOLDER: контактний email] · Impressum: див. Налаштування → «Юридична інформація».
+    </p>
+  `,
+};
+
+function _openLegal(page) {
+  const overlay = document.getElementById('legal-overlay');
+  const body = document.getElementById('legal-overlay-body');
+  if (!overlay || !body) return;
+  body.innerHTML = LEGAL_CONTENT[page] || '<p>Не знайдено</p>';
+  body.scrollTop = 0;
+  overlay.style.display = 'flex';
 }
 
-function openTerms() {
-  showToast(t('nav.toast.terms_soon', 'Умови використання — незабаром'));
+function closeLegal() {
+  const overlay = document.getElementById('legal-overlay');
+  if (overlay) overlay.style.display = 'none';
 }
+
+function openPrivacyPolicy() { _openLegal('privacy'); }
+function openTerms() { _openLegal('terms'); }
+function openImpressum() { _openLegal('impressum'); }
 
 function openFeedback() {
   showToast(t('nav.toast.feedback_soon', 'Написати автору — незабаром'));
@@ -1570,4 +1671,6 @@ Object.assign(window, {
   restoreBackupFromUI, downloadBackupFromUI, deleteBackupFromUI, importBackupFromFile,
   // OBErR B-179: Trash UI
   openTrashModal, closeTrashModal, restoreTrashItemFromUI,
+  // OBErR EU Compliance pre-MVP: legal pages
+  openImpressum, closeLegal,
 });
