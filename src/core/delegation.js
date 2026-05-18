@@ -851,13 +851,19 @@ reg('routine-add-block', () => {
 });
 // === Phase 5 (OBErR) — UNIVERSAL для тривіальних close*/open*/save* без аргументів ===
 // data-action="call" data-fn="closeX" → window.closeX().
-// Покриває ~30 точок index.html (закриті/відкриті кнопки модалок, save/delete
-// без аргументів). Економить ~30 named actions у registry без втрати безпеки —
-// у IIFE bundle всі window-функції наші, а CSP блокує eval/inline JS на рівні
-// CSP-headers (не data-attr контракту).
+// Покриває ~91 точку index.html (закриті/відкриті кнопки модалок, save/delete
+// без аргументів). Економить named actions у registry.
 //
 // Аргумент-функції лишаються named (open-fin-category, set-fin-tx-type тощо)
 // бо вимагають parsing/validation data-* attrs.
+//
+// 🔒 SECURITY (Council Pre-mortem post-Phase, 18.05.2026): `call` викликає
+// window[data.fn]() без whitelist. Цe trust-based — у IIFE bundle window
+// містить ТIЛЬКИ наші exports (Object.assign(window, {...})). DevTools-доступ
+// дає юзеру можливість викликати window.clearAllData() напряму у консолі —
+// data-fn whitelist не закриває цю поверхню (pre-existing root-access).
+// Якщо у майбутньому додамо public-facing JS injection через chips/comments —
+// тоді whitelist стає реальним hardening. Поки що документую trust-модель.
 reg('call', (data) => {
   if (typeof window === 'undefined') return;
   const fn = data.fn;

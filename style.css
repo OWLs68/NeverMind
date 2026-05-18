@@ -1700,3 +1700,13 @@ button:active,
      iOS 300мс delay після onclick → delegation `click` міграції. */
   touch-action: manipulation;
 }
+
+/* OBErR 18.05.2026 Phase 6 (Council Pre-mortem #5): глобальний fast-tap для
+   ВСIХ delegation-елементів. Без цього після міграції 241 onclick → data-action
+   юзер отримує 300мс delay на iOS Safari для div/button з data-action але
+   без специфічного `touch-action` (наприклад #fv-calendar-btn у header,
+   tx-row, cat-tile, ‹/› стрілки фінансів, set-evening-mood картки тощо).
+   Покриває 119 actions у registry одним правилом. */
+[data-action] {
+  touch-action: manipulation;
+}
