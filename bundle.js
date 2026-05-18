@@ -20058,7 +20058,12 @@ ${logLines}
       console.error("[delegation] action \xAB" + action + "\xBB handler failed:", err);
     }
   }
-  var ACTIONS, _initialized;
+  function _isCallAllowed(fn) {
+    if (typeof fn !== "string" || !fn) return false;
+    if (CALL_BLACKLIST.has(fn)) return false;
+    return CALL_PREFIX_WHITELIST.some((p) => fn.startsWith(p));
+  }
+  var ACTIONS, _initialized, CALL_PREFIX_WHITELIST, CALL_BLACKLIST;
   var init_delegation = __esm({
     "src/core/delegation.js"() {
       ACTIONS = /* @__PURE__ */ Object.create(null);
@@ -20086,8 +20091,12 @@ ${logLines}
       });
       reg("close-backdrop", (data, el, e) => {
         if (e.target !== el) return;
+        if (typeof window === "undefined") return;
         const fn = data.fn;
-        if (typeof window === "undefined" || !fn) return;
+        if (!_isCallAllowed(fn)) {
+          if (fn) console.warn("[delegation] `close-backdrop` rejected \u2014 fn not in whitelist:", fn);
+          return;
+        }
         if (typeof window[fn] === "function") window[fn]();
       });
       reg("open-calendar", () => {
@@ -20654,10 +20663,75 @@ ${logLines}
           window.routineAddBlock();
         }
       });
+      CALL_PREFIX_WHITELIST = [
+        "close",
+        "open",
+        "save",
+        "delete",
+        "clear",
+        "set",
+        "send",
+        "show",
+        "add",
+        "remove",
+        "select",
+        "scroll",
+        "toggle",
+        "move",
+        "apply",
+        "switch",
+        "adjust",
+        "skip",
+        "log",
+        "sync",
+        "route",
+        "note",
+        "copy",
+        "export",
+        "import",
+        "refresh",
+        "slides",
+        "undo",
+        "calendar",
+        "routine",
+        "create",
+        "ob",
+        "reset",
+        "restore",
+        "cancel",
+        "confirm",
+        "edit",
+        "tap",
+        "hold",
+        "navigate",
+        "finCalc",
+        "addHealth",
+        "addMemory",
+        "shift",
+        "navigate"
+      ];
+      CALL_BLACKLIST = /* @__PURE__ */ new Set([
+        "eval",
+        "Function",
+        "setTimeout",
+        "setInterval",
+        "setImmediate",
+        "fetch",
+        "XMLHttpRequest",
+        "WebSocket",
+        "EventSource",
+        "postMessage",
+        "importScripts",
+        "open"
+        // window.open — phishing
+      ]);
       reg("call", (data) => {
         if (typeof window === "undefined") return;
         const fn = data.fn;
-        if (!fn) return;
+        if (!_isCallAllowed(fn)) {
+          if (fn) console.warn("[delegation] `call` action rejected \u2014 fn not in whitelist:", fn);
+          return;
+        }
         if (typeof window[fn] === "function") window[fn]();
       });
       reg("close-chat-bar", (data) => {
@@ -24051,9 +24125,9 @@ ${legacy}`;
         </div>
       </div>
       <div style="display:flex;gap:6px">
-        <button data-action="backup-restore" data-key="${escapeHtml(k)}" style="flex:1;padding:8px;border-radius:10px;border:none;background:rgba(99,102,241,0.10);color:#6366f1;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">${escapeHtml(t("backup.btn.restore", "\u21BB \u0412\u0456\u0434\u043D\u043E\u0432\u0438\u0442\u0438"))}</button>
-        <button data-action="backup-download" data-key="${escapeHtml(k)}" style="flex:1;padding:8px;border-radius:10px;border:none;background:rgba(30,16,64,0.05);color:rgba(30,16,64,0.6);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">${escapeHtml(t("backup.btn.export", "\u2197 \u0415\u043A\u0441\u043F\u043E\u0440\u0442"))}</button>
-        <button data-action="backup-delete" data-key="${escapeHtml(k)}" style="padding:8px 12px;border-radius:10px;border:none;background:rgba(239,68,68,0.08);color:#dc2626;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">\xD7</button>
+        <button data-action="backup-restore" data-key="${escapeHtml(k)}" style="flex:1;padding:11px 8px;min-height:44px;border-radius:11px;border:none;background:rgba(99,102,241,0.10);color:#6366f1;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">${escapeHtml(t("backup.btn.restore", "\u21BB \u0412\u0456\u0434\u043D\u043E\u0432\u0438\u0442\u0438"))}</button>
+        <button data-action="backup-download" data-key="${escapeHtml(k)}" style="flex:1;padding:11px 8px;min-height:44px;border-radius:11px;border:none;background:rgba(30,16,64,0.05);color:rgba(30,16,64,0.6);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">${escapeHtml(t("backup.btn.export", "\u2197 \u0415\u043A\u0441\u043F\u043E\u0440\u0442"))}</button>
+        <button data-action="backup-delete" data-key="${escapeHtml(k)}" style="padding:11px 16px;min-height:44px;min-width:44px;border-radius:11px;border:none;background:rgba(239,68,68,0.08);color:#dc2626;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">\xD7</button>
       </div>
     </div>`;
     }).join("");
@@ -24099,6 +24173,11 @@ ${legacy}`;
     input.onchange = (e) => {
       const file = e.target.files && e.target.files[0];
       if (!file) return;
+      const MAX_IMPORT_BYTES = 10 * 1024 * 1024;
+      if (file.size > MAX_IMPORT_BYTES) {
+        showToast(t("backup.toast.import_too_big", "\u26A0\uFE0F \u0424\u0430\u0439\u043B > 10 MB \u2014 \u0437\u0430\u043D\u0430\u0434\u0442\u043E \u0432\u0435\u043B\u0438\u043A\u0438\u0439"));
+        return;
+      }
       const reader = new FileReader();
       reader.onload = (ev) => {
         const key = importBackupJson(ev.target.result);
@@ -24134,8 +24213,7 @@ ${legacy}`;
     if (!container) return;
     const all = getTrash();
     const now = Date.now();
-    const TTL = 7 * 24 * 60 * 60 * 1e3;
-    const items = all.filter((x) => now - x.deletedAt < TTL).sort((a, b) => b.deletedAt - a.deletedAt);
+    const items = all.filter((x) => now - x.deletedAt < TRASH_TTL).sort((a, b) => b.deletedAt - a.deletedAt);
     const badge = document.getElementById("trash-count-badge");
     if (badge) {
       if (items.length > 0) {
@@ -24163,7 +24241,7 @@ ${legacy}`;
         <div style="font-size:14px;font-weight:600;color:#1e1040;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(label)}</div>
         <div style="font-size:11px;color:rgba(30,16,64,0.4)">${escapeHtml(_relativeTime2(x.deletedAt))}</div>
       </div>
-      <button data-action="trash-restore-item" data-trash-id="${escapeHtml(idStr)}" style="font-size:12px;font-weight:700;color:#16a34a;background:rgba(22,163,74,0.10);border:none;border-radius:9px;padding:6px 12px;cursor:pointer;font-family:inherit;flex-shrink:0">\u21BB ${escapeHtml(t("trash.btn.restore", "\u0412\u0456\u0434\u043D\u043E\u0432\u0438\u0442\u0438"))}</button>
+      <button data-action="trash-restore-item" data-trash-id="${escapeHtml(idStr)}" style="font-size:13px;font-weight:700;color:#16a34a;background:rgba(22,163,74,0.10);border:none;border-radius:11px;padding:11px 14px;min-height:44px;cursor:pointer;font-family:inherit;flex-shrink:0">\u21BB ${escapeHtml(t("trash.btn.restore", "\u0412\u0456\u0434\u043D\u043E\u0432\u0438\u0442\u0438"))}</button>
     </div>`;
     }).join("");
   }
@@ -24181,8 +24259,7 @@ ${legacy}`;
     const badge = document.getElementById("trash-count-badge");
     if (!badge) return;
     const now = Date.now();
-    const TTL = 7 * 24 * 60 * 60 * 1e3;
-    const count = getTrash().filter((x) => now - x.deletedAt < TTL).length;
+    const count = getTrash().filter((x) => now - x.deletedAt < TRASH_TTL).length;
     if (count > 0) {
       badge.textContent = String(count);
       badge.style.display = "inline-block";

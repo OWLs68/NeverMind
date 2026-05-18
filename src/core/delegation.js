@@ -108,8 +108,16 @@ reg('close-parent', (data, el) => {
 // delegation викликає handler кнопки, close-backdrop не triggered.
 reg('close-backdrop', (data, el, e) => {
   if (e.target !== el) return;
+  // OBErR audit fix: whitelist gate — та сама поверхня атаки що `call`
+  // (Forward Architecture Auditor). Хоча контент data-fn у backdrop'ах
+  // створює тільки наш код, hardening для майбутнього public-facing JS
+  // injection через AI-rendered HTML / sharing features.
+  if (typeof window === 'undefined') return;
   const fn = data.fn;
-  if (typeof window === 'undefined' || !fn) return;
+  if (!_isCallAllowed(fn)) {
+    if (fn) console.warn('[delegation] `close-backdrop` rejected — fn not in whitelist:', fn);
+    return;
+  }
   if (typeof window[fn] === 'function') window[fn]();
 });
 // open-calendar — обгортка для window.openCalendarModal() (calendar.js export).
@@ -857,17 +865,40 @@ reg('routine-add-block', () => {
 // Аргумент-функції лишаються named (open-fin-category, set-fin-tx-type тощо)
 // бо вимагають parsing/validation data-* attrs.
 //
-// 🔒 SECURITY (Council Pre-mortem post-Phase, 18.05.2026): `call` викликає
-// window[data.fn]() без whitelist. Цe trust-based — у IIFE bundle window
-// містить ТIЛЬКИ наші exports (Object.assign(window, {...})). DevTools-доступ
-// дає юзеру можливість викликати window.clearAllData() напряму у консолі —
-// data-fn whitelist не закриває цю поверхню (pre-existing root-access).
-// Якщо у майбутньому додамо public-facing JS injection через chips/comments —
-// тоді whitelist стає реальним hardening. Поки що документую trust-модель.
+// 🔒 SECURITY HARDENING (audit fixes 19.05.2026, Council post-Phase + Forward
+// Architecture Auditor): pattern-based whitelist для `call` + `close-backdrop`.
+// Без цього юзер з DevTools (root-access) АБО майбутній XSS через AI-rendered
+// HTML міг би створити `<button data-action="call" data-fn="eval">` тощо.
+// Pattern-based замість 105-функцій вручну (maintenance борг): дозволяємо
+// тільки ті префікси що матчать UI-handlers нашого коду. Внутрішні «небезпечні»
+// функції (eval / Function / setTimeout / fetch / setInterval) → blacklist.
+const CALL_PREFIX_WHITELIST = [
+  'close', 'open', 'save', 'delete', 'clear', 'set', 'send', 'show',
+  'add', 'remove', 'select', 'scroll', 'toggle', 'move', 'apply', 'switch',
+  'adjust', 'skip', 'log', 'sync', 'route', 'note', 'copy', 'export',
+  'import', 'refresh', 'slides', 'undo', 'calendar', 'routine', 'create',
+  'ob', 'reset', 'restore', 'cancel', 'confirm', 'edit', 'tap', 'hold',
+  'navigate', 'finCalc', 'addHealth', 'addMemory', 'shift', 'navigate',
+];
+// Жорсткий чорний список (наказово блокується незалежно від whitelist).
+// Це функції які небезпечні незалежно від наміру виклику.
+const CALL_BLACKLIST = new Set([
+  'eval', 'Function', 'setTimeout', 'setInterval', 'setImmediate',
+  'fetch', 'XMLHttpRequest', 'WebSocket', 'EventSource',
+  'postMessage', 'importScripts', 'open', // window.open — phishing
+]);
+function _isCallAllowed(fn) {
+  if (typeof fn !== 'string' || !fn) return false;
+  if (CALL_BLACKLIST.has(fn)) return false;
+  return CALL_PREFIX_WHITELIST.some(p => fn.startsWith(p));
+}
 reg('call', (data) => {
   if (typeof window === 'undefined') return;
   const fn = data.fn;
-  if (!fn) return;
+  if (!_isCallAllowed(fn)) {
+    if (fn) console.warn('[delegation] `call` action rejected — fn not in whitelist:', fn);
+    return;
+  }
   if (typeof window[fn] === 'function') window[fn]();
 });
 // === Phase 5 (OBErR) — index.html named actions (string/enum arguments) ===

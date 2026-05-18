@@ -11,7 +11,9 @@ import { getProjects, saveProjects, renderProjects } from '../tabs/projects.js';
 
 // === TRASH CACHE (кеш видалених — 7 днів) ===
 const NM_TRASH_KEY = 'nm_trash';
-const TRASH_TTL = 7 * 24 * 60 * 60 * 1000; // 7 днів
+// OBErR audit fix: export — щоб UI helper'и (nav.js _updateTrashBadge,
+// renderTrashList) не дублювали константу (DRY-агент знахідка).
+export const TRASH_TTL = 7 * 24 * 60 * 60 * 1000; // 7 днів
 
 export function getTrash() {
   try { return JSON.parse(localStorage.getItem(NM_TRASH_KEY) || '[]'); } catch { return []; }
