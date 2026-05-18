@@ -4,11 +4,83 @@
 >
 > Старіші сесії (до 6GoDe 19.04) — в [`_archive/SESSION_STATE_archive.md`](../_archive/SESSION_STATE_archive.md).
 
-**Оновлено:** 2026-05-17 (сесія **JMQuT** — Health AI Isolation (EU AI Act compliance, 8 фаз) + Event Delegation refactor (4 файли = 44 onclick → 0) + EU Compliance research (brain-Claude передав, створено `docs/EU_COMPLIANCE.md` + ROADMAP Pre-EU-MVP блок). 14 комітів, 8 Council агентів Sonnet, 4 WebSearch.
+**Оновлено:** 2026-05-18 (сесія **OBErR** — Event Delegation Refactor (241 onclick → 0 у 5 файлах, 6 фаз) + Backup Phase 2 (createFullBackup + JSON export + Restore UI) + B-179 UI Кошика (модалка з 11 типів restore + race-fix) + EU Compliance pre-MVP (Impressum/Privacy/Terms DRAFT + EU_LAUNCH_CHECKLIST.md). 10 комітів, 11 Council агентів Sonnet (5 pre-Phase + 3 post-Phase Event Delegation + 3 pre-Backup/Trash/EU).
 
 ---
 
-## 🔧 Поточна сесія JMQuT — Health AI Isolation + Event Delegation +4 + EU Compliance (17.05.2026)
+## 🔧 Поточна сесія OBErR — Event Delegation Final + Backup P2 + Кошик + EU pre-MVP (18.05.2026)
+
+### Зроблено — 3 великі блоки
+
+#### A. Event Delegation Refactor — фінальні 241 onclick → 0 (Phase 0-6, 7 commits)
+
+Council 5 паралельних агентів Sonnet ПЕРЕД першим Edit — знайшли 4 архітектурні дірки (bfcache double-listener, stopPropagation antipattern, modal.setAttribute('onclick'), compound onclick). Усі закрито у Phase 0.
+
+**Phase 0 hardening** (`891b444`) — `initDelegation()` idempotency `_initialized` flag + UNIVERSAL `close-backdrop` action (data-fn) що замінює одночасно `onclick="closeX()"` на overlay + `onclick="event.stopPropagation()"` на content (через `e.target !== el` guard). 1 universal заміняє 17 backdrop'ів + 5 stopPropagation antipatterns.
+
+**Phase 1-5** (`11af95a` → `91cdf83`) — 5 файлів послідовно через checkpoint-комміти:
+- finance-analytics.js (9 onclick + 1 setAttribute('onclick') → close-backdrop)
+- finance-modals.js (34 onclick + критичний stopPropagation fix у category-picker)
+- finance.js (16 onclick + compound onclick fix + inline stopPropagation cleanup)
+- calendar.js (15 onclick + null reminderId edge case)
+- index.html (167 onclick: 17 backdrop'ів через sed → close-backdrop, 91 безаргументних → universal `call` data-fn, 59 з аргументами → 20 named actions з data-* attrs)
+
+**Phase 6 post-Phase audit** (`f2ea4f6`) — Council 3 паралельні агенти Sonnet (Regression Hunter + Cross-file + Pre-mortem) знайшли 1 реальну UX-дірку: 300мс iOS tap delay на ~119 нових delegation елементів. Фікс: глобальне CSS `[data-action] { touch-action: manipulation }`. Решта Pre-mortem знахідок — pre-existing або документовано (trust-model для `call` action, DETAIL_TO_KEY['finance']='nm_finance' семантика, 37 inline non-onclick handler'ів як окрема сесія).
+
+**Загалом Event Delegation у OBErR:** 241 onclick → 0. delegation registry 49 → 119 actions (+70 named + 2 universal). 0 регресій (Council post-audit verify).
+
+#### B. Backup Phase 2 + B-179 Кошик UI (3 commits)
+
+Council 3 паралельні агенти Sonnet (Strategist + Pre-mortem + Implementer) ПЕРЕД UI знайшли 2 критичні ризики — закрито на рівні backend.
+
+**`8f428ac` Backup backend + Trash UUID race fix:**
+- 🔴 iOS PWA `<a download>` silent fail — exportData() у nav.js + новий downloadBackupAsJson() у backup.js додано iOS PWA detection (display-mode: standalone + iPhone/iPad UA) + fallback на `navigator.share({ files: [File] })` → Share Sheet.
+- 🟡 trash.js Date.now() collision (B-171 клас) — addToTrash тепер додає `id: generateUUID()`. restoreFromTrash шукає по `id` АБО `deletedAt` (backward compat). Видалення через reference equality `t !== entry`.
+- createFullBackup(label) — обгортка над createSelectiveBackup з усіма NM_KEYS.data + .settings (window.NM_KEYS exposed у boot.js:1387). Quota check reused.
+- importBackupJson(jsonText) — підтримує native format (з ts/label/data) + legacy exportData (плоский об'єкт).
+
+**`3d85532` Backup + Trash UI:**
+- Settings → секція «Дані» розширена 5 рядками: 🗑 Кошик (badge з count), 💾 Створити знімок, 📋 Список знімків, ↗ Експорт JSON, ↙ Імпорт JSON.
+- 2 нові модалки у index.html: #trash-modal (z-index:520) з ↻Restore кнопкою кожного item, #backup-list-modal з ↻Restore / ↗Export / × кнопками кожного знімка.
+- nav.js +~200 рядків: _relativeTime, _formatBackupTs хелпери; 8 Backup UI handlers + 5 Trash UI handlers; live _updateTrashBadge через `nm-data-changed` listener.
+- 4 нові delegation actions: backup-restore, backup-download, backup-delete, trash-restore-item.
+- 🚨 Race fix (Pre-mortem #2): openTrashModal() скидає _undoData=null + clearTimeout щоб уникнути race з undo-toast (юзер не може випадково Restore одну річ через toast і Кошик паралельно).
+
+#### C. EU Compliance pre-MVP (1 commit)
+
+**`e32ecbe` Legal pages DRAFT + checklist:**
+- nav.js LEGAL_CONTENT константа з 3 секціями (impressum/privacy/terms) — inline HTML українською з [PLACEHOLDER] токенами для KvK/VAT/адреси/email. Червоний banner у кожній секції щоб Роман не випадково запустив без заповнення.
+- #legal-overlay модалка (z-index:530) з scrollable body, close-backdrop pattern.
+- Settings → «Інформація»: новий рядок «Юридична інформація» (Impressum). openPrivacyPolicy/openTerms замість stub'ів з toast 'незабаром' тепер реальні.
+- `docs/EU_LAUNCH_CHECKLIST.md` (новий, ~150 рядків) — покроковий чек-ліст для Романа: 🚨 КРИТИЧНІ кроки (VAT-стратегія Paddle vs OSS NL, KvK реєстрація, заповнити PLACEHOLDER, DPF status check) + 🟡 ВИСОКИЙ (квартальні звіти / Paddle checkout / ePrivacy checkbox) + ⚪ СЕРЕДНІЙ (CRA, Data Act ✅ JSON export, PLD).
+- НЕ зроблено (поза scope): Paddle SDK integration (потребує рішення Романа), 14-day checkbox у checkout (потребує payment flow), KvK реєстрація.
+
+### Гілка + контекст
+
+- Гілка: `claude/start-session-OBErR`
+- Коміти: 10 (Event Delegation Phase 0-6 = 7 + Backup backend + Backup/Trash UI + EU Compliance)
+- Council Sonnet: 11 (5 pre-Phase Event Delegation + 3 post-Phase + 3 pre-Backup/Trash/EU)
+- Bundle: перебудовано після кожної фази
+- CACHE_NAME: nm-20260518-1900 → nm-20260518-2230 (8 bumps)
+
+### Хвости (закриті у цій же сесії)
+
+- ✅ B-179 UI Кошика — реалізовано (модалка у Settings)
+- ✅ Backup Phase 2 — createFullBackup + JSON export/import + Restore UI
+- ✅ EU Compliance pre-MVP — legal DRAFT'и + checklist для Романа
+- 🟢 37 inline non-onclick handler'ів (ontouchstart/move/end, oninput, onblur contenteditable) — окрема сесія для повного strict CSP
+- 🟢 DETAIL_TO_KEY['finance']='nm_finance' семантична хибність (B-130/B-165 клас) — pre-existing, не наша задача
+- 🟢 src/core/diagnostics.js (3 onclick) + src/core/logger.js (1 onclick) — internal діагностика, окрема сесія
+
+### Що далі (для Романа поза кодом)
+
+1. **EU Compliance:** виконати `docs/EU_LAUNCH_CHECKLIST.md` — обрати Paddle vs OSS, зареєструвати KvK, заповнити PLACEHOLDER у `src/core/nav.js` LEGAL_CONTENT константі.
+2. **iPhone smoke test v932+** — перевірити 4 ключові flows: backup створення + restore + Кошик restore + iOS share (експорт JSON).
+3. **Supabase phase start** — після того як EU Compliance виконано (KvK + DPA з OpenAI/Anthropic) можна стартувати backend migration. Архітектурний refactor план готовий у `_archive/SESSION_STATE_archive.md` myshu (Сесії 4-8).
+
+---
+
+## 🔧 Сесія JMQuT — Health AI Isolation + Event Delegation +4 + EU Compliance (17.05.2026) — попередня
 
 ### Зроблено — 3 великі блоки
 
