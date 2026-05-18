@@ -486,3 +486,42 @@ reg('delete-allergy-by-id', (data) => {
     window.deleteAllergyById(data.id);
   }
 });
+// === Phase 1 (OBErR) finance-analytics.js actions ===
+// set-analytics-chart-mode — перемикач 3 режимів графіку (balance / expenses-weekly / income-vs-expense).
+// data-mode = id режиму. Fixed strings (не UUID/user input).
+reg('set-analytics-chart-mode', (data) => {
+  if (!data.mode) return;
+  if (typeof window !== 'undefined' && typeof window.setAnalyticsChartMode === 'function') {
+    window.setAnalyticsChartMode(data.mode);
+  }
+});
+// set-analytics-granularity — перемикач Тижні / Дні. data-gran="weekly"|"daily".
+reg('set-analytics-granularity', (data) => {
+  if (!data.gran) return;
+  if (typeof window !== 'undefined' && typeof window.setAnalyticsGranularity === 'function') {
+    window.setAnalyticsGranularity(data.gran);
+  }
+});
+// shift-analytics-mini — стрілки ‹/› для перемикання міні-блоків аналітики.
+// data-block-idx = індекс блоку (число), data-dir = -1/1.
+reg('shift-analytics-mini', (data) => {
+  if (typeof window === 'undefined') return;
+  if (typeof window.shiftAnalyticsMini !== 'function') return;
+  const idx = parseInt(data.blockIdx, 10);
+  const dir = parseInt(data.dir, 10);
+  if (Number.isNaN(idx) || Number.isNaN(dir)) return;
+  window.shiftAnalyticsMini(idx, dir);
+});
+// toggle-analytics-benchmark-edit — олівець «Редагувати» benchmark (50/30/20) +
+// кнопка «Готово» у edit-mode (3 точки рендеру, одна action).
+reg('toggle-analytics-benchmark-edit', () => {
+  if (typeof window !== 'undefined' && typeof window.toggleAnalyticsBenchmarkEdit === 'function') {
+    window.toggleAnalyticsBenchmarkEdit();
+  }
+});
+// reset-benchmark-config — «Скинути до 50/30/20» у edit-mode.
+reg('reset-benchmark-config', () => {
+  if (typeof window !== 'undefined' && typeof window.resetBenchmarkConfig === 'function') {
+    window.resetBenchmarkConfig();
+  }
+});

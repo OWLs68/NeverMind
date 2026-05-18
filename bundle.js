@@ -20166,6 +20166,36 @@ ${logLines}
           window.deleteAllergyById(data.id);
         }
       });
+      reg("set-analytics-chart-mode", (data) => {
+        if (!data.mode) return;
+        if (typeof window !== "undefined" && typeof window.setAnalyticsChartMode === "function") {
+          window.setAnalyticsChartMode(data.mode);
+        }
+      });
+      reg("set-analytics-granularity", (data) => {
+        if (!data.gran) return;
+        if (typeof window !== "undefined" && typeof window.setAnalyticsGranularity === "function") {
+          window.setAnalyticsGranularity(data.gran);
+        }
+      });
+      reg("shift-analytics-mini", (data) => {
+        if (typeof window === "undefined") return;
+        if (typeof window.shiftAnalyticsMini !== "function") return;
+        const idx = parseInt(data.blockIdx, 10);
+        const dir = parseInt(data.dir, 10);
+        if (Number.isNaN(idx) || Number.isNaN(dir)) return;
+        window.shiftAnalyticsMini(idx, dir);
+      });
+      reg("toggle-analytics-benchmark-edit", () => {
+        if (typeof window !== "undefined" && typeof window.toggleAnalyticsBenchmarkEdit === "function") {
+          window.toggleAnalyticsBenchmarkEdit();
+        }
+      });
+      reg("reset-benchmark-config", () => {
+        if (typeof window !== "undefined" && typeof window.resetBenchmarkConfig === "function") {
+          window.resetBenchmarkConfig();
+        }
+      });
     }
   });
 
@@ -24013,12 +24043,12 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
     const modeToggleHtml = `<div style="display:flex;gap:4px;background:rgba(30,16,64,0.04);border-radius:10px;padding:3px;margin-bottom:8px">
     ${modes.map((m) => {
       const active = m.id === _analyticsChartMode;
-      return `<button onclick="setAnalyticsChartMode('${m.id}')" style="flex:1;padding:6px;border-radius:8px;border:none;background:${active ? "white" : "transparent"};color:${active ? "#c2410c" : "rgba(30,16,64,0.5)"};font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;box-shadow:${active ? "0 2px 6px rgba(30,16,64,0.08)" : "none"}">${m.label}</button>`;
+      return `<button data-action="set-analytics-chart-mode" data-mode="${m.id}" style="flex:1;padding:6px;border-radius:8px;border:none;background:${active ? "white" : "transparent"};color:${active ? "#c2410c" : "rgba(30,16,64,0.5)"};font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;box-shadow:${active ? "0 2px 6px rgba(30,16,64,0.08)" : "none"}">${m.label}</button>`;
     }).join("")}
   </div>`;
     const granToggleHtml = `<div style="display:flex;gap:6px;justify-content:flex-end;margin-bottom:6px">
-    <button onclick="setAnalyticsGranularity('weekly')" style="padding:4px 10px;border-radius:7px;border:none;background:${!isDaily ? "#1e1040" : "rgba(30,16,64,0.06)"};color:${!isDaily ? "white" : "rgba(30,16,64,0.5)"};font-size:10px;font-weight:700;cursor:pointer;font-family:inherit">${t("finstat.gran.weekly", "\u0422\u0438\u0436\u043D\u0456")}</button>
-    <button onclick="setAnalyticsGranularity('daily')" style="padding:4px 10px;border-radius:7px;border:none;background:${isDaily ? "#1e1040" : "rgba(30,16,64,0.06)"};color:${isDaily ? "white" : "rgba(30,16,64,0.5)"};font-size:10px;font-weight:700;cursor:pointer;font-family:inherit">${t("finstat.gran.daily", "\u0414\u043D\u0456")}</button>
+    <button data-action="set-analytics-granularity" data-gran="weekly" style="padding:4px 10px;border-radius:7px;border:none;background:${!isDaily ? "#1e1040" : "rgba(30,16,64,0.06)"};color:${!isDaily ? "white" : "rgba(30,16,64,0.5)"};font-size:10px;font-weight:700;cursor:pointer;font-family:inherit">${t("finstat.gran.weekly", "\u0422\u0438\u0436\u043D\u0456")}</button>
+    <button data-action="set-analytics-granularity" data-gran="daily" style="padding:4px 10px;border-radius:7px;border:none;background:${isDaily ? "#1e1040" : "rgba(30,16,64,0.06)"};color:${isDaily ? "white" : "rgba(30,16,64,0.5)"};font-size:10px;font-weight:700;cursor:pointer;font-family:inherit">${t("finstat.gran.daily", "\u0414\u043D\u0456")}</button>
   </div>`;
     const modeObj = modes.find((m) => m.id === _analyticsChartMode) || modes[1];
     const subtitle = _analyticsChartMode === "expenses-weekly" ? isDaily ? modeObj.descD : modeObj.descW : modeObj.desc;
@@ -24176,9 +24206,9 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
       <div style="font-size:${typeof m.value === "string" && m.value.length > 6 ? "15px" : "19px"};font-weight:900;color:${m.color};line-height:1.1;margin:6px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(String(m.value))}</div>
       <div style="font-size:9px;color:rgba(30,16,64,0.45);line-height:1.3;min-height:24px">${escapeHtml(m.desc)}</div>
       <div style="display:flex;gap:4px;margin-top:6px">
-        <button onclick="shiftAnalyticsMini(${blockIdx}, -1)" aria-label="\u041F\u043E\u043F\u0435\u0440\u0435\u0434\u043D\u044F" style="flex:1;padding:6px;border-radius:8px;border:none;background:linear-gradient(135deg,#a67c52,#7a4e2d);color:white;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;box-shadow:0 2px 6px rgba(122,78,45,0.25)">\u2039</button>
+        <button data-action="shift-analytics-mini" data-block-idx="${blockIdx}" data-dir="-1" aria-label="\u041F\u043E\u043F\u0435\u0440\u0435\u0434\u043D\u044F" style="flex:1;padding:6px;border-radius:8px;border:none;background:linear-gradient(135deg,#a67c52,#7a4e2d);color:white;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;box-shadow:0 2px 6px rgba(122,78,45,0.25)">\u2039</button>
         <div style="font-size:9px;color:rgba(30,16,64,0.3);align-self:center">${idx + 1}/${metrics.length}</div>
-        <button onclick="shiftAnalyticsMini(${blockIdx}, 1)" aria-label="\u041D\u0430\u0441\u0442\u0443\u043F\u043D\u0430" style="flex:1;padding:6px;border-radius:8px;border:none;background:linear-gradient(135deg,#a67c52,#7a4e2d);color:white;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;box-shadow:0 2px 6px rgba(122,78,45,0.25)">\u203A</button>
+        <button data-action="shift-analytics-mini" data-block-idx="${blockIdx}" data-dir="1" aria-label="\u041D\u0430\u0441\u0442\u0443\u043F\u043D\u0430" style="flex:1;padding:6px;border-radius:8px;border:none;background:linear-gradient(135deg,#a67c52,#7a4e2d);color:white;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;box-shadow:0 2px 6px rgba(122,78,45,0.25)">\u203A</button>
       </div>
     </div>`;
     };
@@ -24209,7 +24239,7 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
       return `<div style="background:white;border-radius:20px;box-shadow:0 2px 12px rgba(30,16,64,0.06);padding:16px;margin-bottom:12px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
         <div class="fin-section-label">${t("finstat.bench.title", "\u0420\u043E\u0437\u043F\u043E\u0434\u0456\u043B \u0434\u043E\u0445\u043E\u0434\u0443")}</div>
-        <button onclick="toggleAnalyticsBenchmarkEdit()" aria-label="\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438" style="width:28px;height:28px;border-radius:50%;border:none;background:rgba(30,16,64,0.05);color:rgba(30,16,64,0.5);cursor:pointer;font-family:inherit"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></button>
+        <button data-action="toggle-analytics-benchmark-edit" aria-label="\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438" style="width:28px;height:28px;border-radius:50%;border:none;background:rgba(30,16,64,0.05);color:rgba(30,16,64,0.5);cursor:pointer;font-family:inherit"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></button>
       </div>
       <div style="font-size:13px;color:rgba(30,16,64,0.45)">${t("finstat.bench.no_income", "\u0414\u043E\u0434\u0430\u0439 \u0434\u043E\u0445\u0456\u0434 \u0449\u043E\u0431 \u043F\u043E\u0431\u0430\u0447\u0438\u0442\u0438 \u0440\u043E\u0437\u043F\u043E\u0434\u0456\u043B")}</div>
     </div>`;
@@ -24242,13 +24272,13 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
       return `<div style="background:white;border-radius:20px;box-shadow:0 2px 12px rgba(30,16,64,0.06);padding:16px;margin-bottom:12px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
         <div class="fin-section-label">${t("finstat.bench.title_edit", "\u0420\u043E\u0437\u043F\u043E\u0434\u0456\u043B \u0434\u043E\u0445\u043E\u0434\u0443 \xB7 \u0440\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u043D\u043D\u044F")}</div>
-        <button onclick="toggleAnalyticsBenchmarkEdit()" style="padding:5px 12px;border-radius:10px;border:none;background:#c2410c;color:white;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">${t("finstat.bench.done_btn", "\u0413\u043E\u0442\u043E\u0432\u043E")}</button>
+        <button data-action="toggle-analytics-benchmark-edit" style="padding:5px 12px;border-radius:10px;border:none;background:#c2410c;color:white;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">${t("finstat.bench.done_btn", "\u0413\u043E\u0442\u043E\u0432\u043E")}</button>
       </div>
       ${sumWarning}
       ${editRow("needs", needsPct, "#f97316")}
       ${editRow("wants", wantsPct, "#0ea5e9")}
       ${editRow("savings", savedPct, "#22c55e")}
-      <button onclick="resetBenchmarkConfig()" style="width:100%;padding:8px;border-radius:10px;border:1.5px dashed rgba(30,16,64,0.15);background:transparent;color:rgba(30,16,64,0.5);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">${t("finstat.bench.reset_btn", "\u0421\u043A\u0438\u043D\u0443\u0442\u0438 \u0434\u043E 50/30/20")}</button>
+      <button data-action="reset-benchmark-config" style="width:100%;padding:8px;border-radius:10px;border:1.5px dashed rgba(30,16,64,0.15);background:transparent;color:rgba(30,16,64,0.5);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">${t("finstat.bench.reset_btn", "\u0421\u043A\u0438\u043D\u0443\u0442\u0438 \u0434\u043E 50/30/20")}</button>
     </div>`;
     }
     const bar = (cfgItem, realPct, color) => {
@@ -24269,7 +24299,7 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
     return `<div style="background:white;border-radius:20px;box-shadow:0 2px 12px rgba(30,16,64,0.06);padding:16px;margin-bottom:12px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
       <div class="fin-section-label">${t("finstat.bench.title", "\u0420\u043E\u0437\u043F\u043E\u0434\u0456\u043B \u0434\u043E\u0445\u043E\u0434\u0443")}</div>
-      <button onclick="toggleAnalyticsBenchmarkEdit()" aria-label="\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438" style="width:28px;height:28px;border-radius:50%;border:none;background:rgba(30,16,64,0.05);color:rgba(30,16,64,0.5);cursor:pointer;font-family:inherit"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></button>
+      <button data-action="toggle-analytics-benchmark-edit" aria-label="\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438" style="width:28px;height:28px;border-radius:50%;border:none;background:rgba(30,16,64,0.05);color:rgba(30,16,64,0.5);cursor:pointer;font-family:inherit"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></button>
     </div>
     ${bar(cfg.needs, needsPct, "#f97316")}
     ${bar(cfg.wants, wantsPct, "#0ea5e9")}
@@ -24322,7 +24352,8 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
     document.body.appendChild(overlay);
     const modal = document.createElement("div");
     modal.id = "fin-analytics-modal";
-    modal.setAttribute("onclick", "if(event.target===this)closeFinAnalytics()");
+    modal.setAttribute("data-action", "close-backdrop");
+    modal.setAttribute("data-fn", "closeFinAnalytics");
     modal.style.cssText = "position:fixed;inset:0;z-index:500;display:flex;align-items:flex-end;justify-content:center";
     const allTxs = getFinance();
     const content = _buildAnalyticsContent(allTxs);

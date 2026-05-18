@@ -77,13 +77,13 @@ function _analyticsChart(allTxs) {
   const modeToggleHtml = `<div style="display:flex;gap:4px;background:rgba(30,16,64,0.04);border-radius:10px;padding:3px;margin-bottom:8px">
     ${modes.map(m => {
       const active = m.id === _analyticsChartMode;
-      return `<button onclick="setAnalyticsChartMode('${m.id}')" style="flex:1;padding:6px;border-radius:8px;border:none;background:${active ? 'white' : 'transparent'};color:${active ? '#c2410c' : 'rgba(30,16,64,0.5)'};font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;box-shadow:${active ? '0 2px 6px rgba(30,16,64,0.08)' : 'none'}">${m.label}</button>`;
+      return `<button data-action="set-analytics-chart-mode" data-mode="${m.id}" style="flex:1;padding:6px;border-radius:8px;border:none;background:${active ? 'white' : 'transparent'};color:${active ? '#c2410c' : 'rgba(30,16,64,0.5)'};font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;box-shadow:${active ? '0 2px 6px rgba(30,16,64,0.08)' : 'none'}">${m.label}</button>`;
     }).join('')}
   </div>`;
   // Перемикач Тижні / Дні — спільний для всіх 3 режимів
   const granToggleHtml = `<div style="display:flex;gap:6px;justify-content:flex-end;margin-bottom:6px">
-    <button onclick="setAnalyticsGranularity('weekly')" style="padding:4px 10px;border-radius:7px;border:none;background:${!isDaily ? '#1e1040' : 'rgba(30,16,64,0.06)'};color:${!isDaily ? 'white' : 'rgba(30,16,64,0.5)'};font-size:10px;font-weight:700;cursor:pointer;font-family:inherit">${t('finstat.gran.weekly', 'Тижні')}</button>
-    <button onclick="setAnalyticsGranularity('daily')" style="padding:4px 10px;border-radius:7px;border:none;background:${isDaily ? '#1e1040' : 'rgba(30,16,64,0.06)'};color:${isDaily ? 'white' : 'rgba(30,16,64,0.5)'};font-size:10px;font-weight:700;cursor:pointer;font-family:inherit">${t('finstat.gran.daily', 'Дні')}</button>
+    <button data-action="set-analytics-granularity" data-gran="weekly" style="padding:4px 10px;border-radius:7px;border:none;background:${!isDaily ? '#1e1040' : 'rgba(30,16,64,0.06)'};color:${!isDaily ? 'white' : 'rgba(30,16,64,0.5)'};font-size:10px;font-weight:700;cursor:pointer;font-family:inherit">${t('finstat.gran.weekly', 'Тижні')}</button>
+    <button data-action="set-analytics-granularity" data-gran="daily" style="padding:4px 10px;border-radius:7px;border:none;background:${isDaily ? '#1e1040' : 'rgba(30,16,64,0.06)'};color:${isDaily ? 'white' : 'rgba(30,16,64,0.5)'};font-size:10px;font-weight:700;cursor:pointer;font-family:inherit">${t('finstat.gran.daily', 'Дні')}</button>
   </div>`;
   const modeObj = modes.find(m => m.id === _analyticsChartMode) || modes[1];
   const subtitle = _analyticsChartMode === 'expenses-weekly'
@@ -237,9 +237,9 @@ function _analyticsMiniMetrics(allTxs) {
       <div style="font-size:${typeof m.value === 'string' && m.value.length > 6 ? '15px' : '19px'};font-weight:900;color:${m.color};line-height:1.1;margin:6px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(String(m.value))}</div>
       <div style="font-size:9px;color:rgba(30,16,64,0.45);line-height:1.3;min-height:24px">${escapeHtml(m.desc)}</div>
       <div style="display:flex;gap:4px;margin-top:6px">
-        <button onclick="shiftAnalyticsMini(${blockIdx}, -1)" aria-label="Попередня" style="flex:1;padding:6px;border-radius:8px;border:none;background:linear-gradient(135deg,#a67c52,#7a4e2d);color:white;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;box-shadow:0 2px 6px rgba(122,78,45,0.25)">‹</button>
+        <button data-action="shift-analytics-mini" data-block-idx="${blockIdx}" data-dir="-1" aria-label="Попередня" style="flex:1;padding:6px;border-radius:8px;border:none;background:linear-gradient(135deg,#a67c52,#7a4e2d);color:white;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;box-shadow:0 2px 6px rgba(122,78,45,0.25)">‹</button>
         <div style="font-size:9px;color:rgba(30,16,64,0.3);align-self:center">${idx + 1}/${metrics.length}</div>
-        <button onclick="shiftAnalyticsMini(${blockIdx}, 1)" aria-label="Наступна" style="flex:1;padding:6px;border-radius:8px;border:none;background:linear-gradient(135deg,#a67c52,#7a4e2d);color:white;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;box-shadow:0 2px 6px rgba(122,78,45,0.25)">›</button>
+        <button data-action="shift-analytics-mini" data-block-idx="${blockIdx}" data-dir="1" aria-label="Наступна" style="flex:1;padding:6px;border-radius:8px;border:none;background:linear-gradient(135deg,#a67c52,#7a4e2d);color:white;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;box-shadow:0 2px 6px rgba(122,78,45,0.25)">›</button>
       </div>
     </div>`;
   };
@@ -272,7 +272,7 @@ function _analyticsBenchmark(allTxs) {
     return `<div style="background:white;border-radius:20px;box-shadow:0 2px 12px rgba(30,16,64,0.06);padding:16px;margin-bottom:12px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
         <div class="fin-section-label">${t('finstat.bench.title', 'Розподіл доходу')}</div>
-        <button onclick="toggleAnalyticsBenchmarkEdit()" aria-label="Редагувати" style="width:28px;height:28px;border-radius:50%;border:none;background:rgba(30,16,64,0.05);color:rgba(30,16,64,0.5);cursor:pointer;font-family:inherit"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></button>
+        <button data-action="toggle-analytics-benchmark-edit" aria-label="Редагувати" style="width:28px;height:28px;border-radius:50%;border:none;background:rgba(30,16,64,0.05);color:rgba(30,16,64,0.5);cursor:pointer;font-family:inherit"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></button>
       </div>
       <div style="font-size:13px;color:rgba(30,16,64,0.45)">${t('finstat.bench.no_income', 'Додай дохід щоб побачити розподіл')}</div>
     </div>`;
@@ -310,13 +310,13 @@ function _analyticsBenchmark(allTxs) {
     return `<div style="background:white;border-radius:20px;box-shadow:0 2px 12px rgba(30,16,64,0.06);padding:16px;margin-bottom:12px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
         <div class="fin-section-label">${t('finstat.bench.title_edit', 'Розподіл доходу · редагування')}</div>
-        <button onclick="toggleAnalyticsBenchmarkEdit()" style="padding:5px 12px;border-radius:10px;border:none;background:#c2410c;color:white;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">${t('finstat.bench.done_btn', 'Готово')}</button>
+        <button data-action="toggle-analytics-benchmark-edit" style="padding:5px 12px;border-radius:10px;border:none;background:#c2410c;color:white;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">${t('finstat.bench.done_btn', 'Готово')}</button>
       </div>
       ${sumWarning}
       ${editRow('needs', needsPct, '#f97316')}
       ${editRow('wants', wantsPct, '#0ea5e9')}
       ${editRow('savings', savedPct, '#22c55e')}
-      <button onclick="resetBenchmarkConfig()" style="width:100%;padding:8px;border-radius:10px;border:1.5px dashed rgba(30,16,64,0.15);background:transparent;color:rgba(30,16,64,0.5);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">${t('finstat.bench.reset_btn', 'Скинути до 50/30/20')}</button>
+      <button data-action="reset-benchmark-config" style="width:100%;padding:8px;border-radius:10px;border:1.5px dashed rgba(30,16,64,0.15);background:transparent;color:rgba(30,16,64,0.5);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">${t('finstat.bench.reset_btn', 'Скинути до 50/30/20')}</button>
     </div>`;
   }
 
@@ -339,7 +339,7 @@ function _analyticsBenchmark(allTxs) {
   return `<div style="background:white;border-radius:20px;box-shadow:0 2px 12px rgba(30,16,64,0.06);padding:16px;margin-bottom:12px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
       <div class="fin-section-label">${t('finstat.bench.title', 'Розподіл доходу')}</div>
-      <button onclick="toggleAnalyticsBenchmarkEdit()" aria-label="Редагувати" style="width:28px;height:28px;border-radius:50%;border:none;background:rgba(30,16,64,0.05);color:rgba(30,16,64,0.5);cursor:pointer;font-family:inherit"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></button>
+      <button data-action="toggle-analytics-benchmark-edit" aria-label="Редагувати" style="width:28px;height:28px;border-radius:50%;border:none;background:rgba(30,16,64,0.05);color:rgba(30,16,64,0.5);cursor:pointer;font-family:inherit"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></button>
     </div>
     ${bar(cfg.needs, needsPct, '#f97316')}
     ${bar(cfg.wants, wantsPct, '#0ea5e9')}
@@ -402,7 +402,12 @@ export function openFinAnalytics() {
 
   const modal = document.createElement('div');
   modal.id = 'fin-analytics-modal';
-  modal.setAttribute('onclick', 'if(event.target===this)closeFinAnalytics()');
+  // OBErR Phase 1: setAttribute('onclick', ...) → delegation close-backdrop.
+  // Click на сам modal-container (поза content card) → закриваємо. Content має
+  // pointer-events:auto і власні data-action кнопки → перехоплюються до
+  // close-backdrop через closest('[data-action]').
+  modal.setAttribute('data-action', 'close-backdrop');
+  modal.setAttribute('data-fn', 'closeFinAnalytics');
   modal.style.cssText = 'position:fixed;inset:0;z-index:500;display:flex;align-items:flex-end;justify-content:center';
   const allTxs = getFinance();
   const content = _buildAnalyticsContent(allTxs);
