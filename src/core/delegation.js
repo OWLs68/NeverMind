@@ -258,3 +258,203 @@ reg('open-notes-folder', (data) => {
     setTimeout(() => window.openNotesFolder(data.folder), 150);
   }
 });
+// === Phase 1+ (JMQuT) notes.js actions ===
+// open-notes-folder-local — INTRA-tab версія (юзер вже на Notes). Без switchTab
+// + setTimeout — миттєвий рендер. Розрізнення з open-notes-folder вище: cross-tab
+// версія має 150ms лаг бо чекає на рендер вкладки.
+reg('open-notes-folder-local', (data) => {
+  if (typeof window !== 'undefined' && typeof window.openNotesFolder === 'function') {
+    window.openNotesFolder(data.folder);
+  }
+});
+// close-notes-folder — кнопка «← Назад» з folder-view. JS state reset
+// (currentNotesFolder=parent|null + renderNotes()), не DOM-remove.
+reg('close-notes-folder', () => {
+  if (typeof window !== 'undefined' && typeof window.closeNotesFolder === 'function') {
+    window.closeNotesFolder();
+  }
+});
+// open-folder-edit-modal — ··· на картці папки (відкриває модалку редагування).
+// Inline `event.stopPropagation()` ВИДАЛЕНО при міграції: delegation closest()
+// бере найближчий data-action = цей ···, батьківський open-notes-folder-local
+// НЕ triggered (один listener на body — той самий патерн що delete-moment).
+reg('open-folder-edit-modal', (data) => {
+  if (typeof window !== 'undefined' && typeof window.openFolderEditModal === 'function') {
+    window.openFolderEditModal(data.folder);
+  }
+});
+// open-note — тап на тіло нотатки → openNoteView. UUID-immune (data-id string).
+reg('open-note', (data) => {
+  if (!data.id) return;
+  if (typeof window !== 'undefined' && typeof window.openNoteView === 'function') {
+    window.openNoteView(data.id);
+  }
+});
+// open-note-menu — ··· на нотатці. stopPropagation НЕ потрібен (closest бере
+// найближчий = ···, не батьківський open-note).
+reg('open-note-menu', (data) => {
+  if (!data.id) return;
+  if (typeof window !== 'undefined' && typeof window.openNoteMenu === 'function') {
+    window.openNoteMenu(data.id);
+  }
+});
+// select-folder-icon — picker іконки у folder-edit-modal. data-icon = ключ з ALL_FOLDER_ICONS.
+reg('select-folder-icon', (data) => {
+  if (typeof window !== 'undefined' && typeof window.selectFolderIcon === 'function') {
+    window.selectFolderIcon(data.icon);
+  }
+});
+// select-folder-color — picker кольору. data-color = ключ з FOLDER_COLOR_PALETTE.
+reg('select-folder-color', (data) => {
+  if (typeof window !== 'undefined' && typeof window.selectFolderColor === 'function') {
+    window.selectFolderColor(data.color);
+  }
+});
+// open-note-from-search — chat-bubble результат пошуку: 2 виклики поспіль.
+// addNotesChatMsg показує empty user-message (візуально «це твій запит»), потім openNoteView.
+reg('open-note-from-search', (data) => {
+  if (!data.id) return;
+  if (typeof window === 'undefined') return;
+  if (typeof window.addNotesChatMsg === 'function') window.addNotesChatMsg('user', '');
+  if (typeof window.openNoteView === 'function') window.openNoteView(data.id);
+});
+// === Phase 1+ (JMQuT) nav.js actions ===
+// toggle-tab-selection — клік на картку вибору вкладки у tab-selector модалці.
+reg('toggle-tab-selection', (data) => {
+  if (typeof window !== 'undefined' && typeof window.toggleTabSelection === 'function') {
+    window.toggleTabSelection(data.tab);
+  }
+});
+// apply-tab-selection — кнопка «Готово» у tab-selector.
+reg('apply-tab-selection', () => {
+  if (typeof window !== 'undefined' && typeof window.applyTabSelection === 'function') {
+    window.applyTabSelection();
+  }
+});
+// move-tab-order — кнопки ‹/› біля рядка вкладки у порядку. data-tab-id + data-dir='-1'/'1'.
+// stopPropagation видалено — delegation closest() бере найближчий = button, не батьківський select-tab-order.
+reg('move-tab-order', (data) => {
+  if (typeof window === 'undefined') return;
+  if (typeof window.moveTabOrder !== 'function') return;
+  const dir = parseInt(data.dir, 10);
+  if (Number.isNaN(dir)) return;
+  window.moveTabOrder(data.tabId, dir);
+});
+// select-tab-order — клік на сам рядок вкладки (всередині drum) → вибір цієї вкладки активною.
+reg('select-tab-order', (data) => {
+  if (typeof window !== 'undefined' && typeof window.selectTabOrder === 'function') {
+    window.selectTabOrder(data.tabId);
+  }
+});
+// delete-memory-card — × на картці памʼяті у Налаштуваннях. data-id = factId (через escapeHtml).
+reg('delete-memory-card', (data) => {
+  if (!data.id) return;
+  if (typeof window !== 'undefined' && typeof window.deleteMemoryCard === 'function') {
+    window.deleteMemoryCard(data.id);
+  }
+});
+// close-deploy-info — × у модалці «Інфо про деплой».
+reg('close-deploy-info', () => {
+  if (typeof window !== 'undefined' && typeof window.closeDeployInfo === 'function') {
+    window.closeDeployInfo();
+  }
+});
+// === Phase 1+ (JMQuT) habits.js actions ===
+// tap-habit-square — клік на існуючий квадратик у прогрес-стрічці звички.
+// data-entity='habit' (Me-tab tapHabitSquareMe) | 'habit-prod' (Prod-tab tapHabitSquare).
+// data-idx — позиція квадратика (parseInt). stopPropagation видалено — closest бере найближчий.
+reg('tap-habit-square', (data) => {
+  if (typeof window === 'undefined') return;
+  const idx = parseInt(data.idx, 10);
+  if (Number.isNaN(idx) || !data.id) return;
+  if (data.entity === 'habit' && typeof window.tapHabitSquareMe === 'function') {
+    window.tapHabitSquareMe(data.id, idx);
+  } else if (data.entity === 'habit-prod' && typeof window.tapHabitSquare === 'function') {
+    window.tapHabitSquare(data.id, idx);
+  }
+});
+// open-edit-habit — клік на картку звички (Me-tab + Prod-tab + quit-habit).
+// Сам обробник toggle-entity-done на checkbox блокує bubble через closest().
+reg('open-edit-habit', (data) => {
+  if (!data.id) return;
+  if (typeof window !== 'undefined' && typeof window.openEditHabit === 'function') {
+    window.openEditHabit(data.id);
+  }
+});
+// prod-habit-card-click — клік на картку Prod-habit. Як task-card-click (передаємо event).
+// Функція сама перевіряє event.target.closest для guard'а (checkbox/squares).
+reg('prod-habit-card-click', (data, el, ev) => {
+  if (!data.id) return;
+  if (typeof window !== 'undefined' && typeof window.prodHabitCardClick === 'function') {
+    window.prodHabitCardClick(data.id, ev);
+  }
+});
+// === Phase 1+ (JMQuT) health.js actions — UI CRUD only (AI ізольовано, EU AI Act compliance) ===
+// open-add-health-card — кнопка «+ Додати картку» у empty state.
+reg('open-add-health-card', () => {
+  if (typeof window !== 'undefined' && typeof window.openAddHealthCard === 'function') {
+    window.openAddHealthCard();
+  }
+});
+// open-health-card — тап на картку health у списку. data-id = UUID картки.
+reg('open-health-card', (data) => {
+  if (!data.id) return;
+  if (typeof window !== 'undefined' && typeof window.openHealthCard === 'function') {
+    window.openHealthCard(data.id);
+  }
+});
+// close-health-card — «← Назад» у workspace картки. JS state reset (activeHealthCardId=null).
+reg('close-health-card', () => {
+  if (typeof window !== 'undefined' && typeof window.closeHealthCard === 'function') {
+    window.closeHealthCard();
+  }
+});
+// open-edit-health-card — кнопка «Ред.» біля картки. data-id.
+reg('open-edit-health-card', (data) => {
+  if (!data.id) return;
+  if (typeof window !== 'undefined' && typeof window.openEditHealthCard === 'function') {
+    window.openEditHealthCard(data.id);
+  }
+});
+// set-health-card-status — кнопка статусу у workspace. data-card-id + data-status.
+reg('set-health-card-status', (data) => {
+  if (!data.cardId || !data.status) return;
+  if (typeof window !== 'undefined' && typeof window.setHealthCardStatus === 'function') {
+    window.setHealthCardStatus(data.cardId, data.status);
+  }
+});
+// log-health-med-dose — «+ Прийняти» або «✓ Прийняв» (банер missed doses + workspace).
+// data-card-id + data-med-id.
+reg('log-health-med-dose', (data) => {
+  if (!data.cardId || !data.medId) return;
+  if (typeof window !== 'undefined' && typeof window.logHealthMedDose === 'function') {
+    window.logHealthMedDose(data.cardId, data.medId);
+  }
+});
+// skip-health-med-dose — «Пропущу» у банері missed doses. data-card-id + data-med-id + data-time (scheduledTime).
+reg('skip-health-med-dose', (data) => {
+  if (!data.cardId || !data.medId) return;
+  if (typeof window !== 'undefined' && typeof window.skipHealthMedDose === 'function') {
+    window.skipHealthMedDose(data.cardId, data.medId, data.time || '');
+  }
+});
+// open-health-card-note — клік на блок «Нотатки картки» у workspace. data-id = UUID картки.
+reg('open-health-card-note', (data) => {
+  if (!data.id) return;
+  if (typeof window !== 'undefined' && typeof window.openHealthCardNote === 'function') {
+    window.openHealthCardNote(data.id);
+  }
+});
+// open-add-allergy — кнопка «+ Додати» алергію (2 точки рендеру).
+reg('open-add-allergy', () => {
+  if (typeof window !== 'undefined' && typeof window.openAddAllergy === 'function') {
+    window.openAddAllergy();
+  }
+});
+// delete-allergy-by-id — × на картці алергії. data-id = UUID алергії.
+reg('delete-allergy-by-id', (data) => {
+  if (!data.id) return;
+  if (typeof window !== 'undefined' && typeof window.deleteAllergyById === 'function') {
+    window.deleteAllergyById(data.id);
+  }
+});

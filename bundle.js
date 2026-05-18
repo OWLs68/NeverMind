@@ -8662,7 +8662,7 @@ ${recent}`;
       if (header) {
         header.style.display = "flex";
         header.innerHTML = `
-        <button onclick="closeNotesFolder()" style="background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:6px;padding:0;font-size:15px;font-weight:700;color:#1e1040">
+        <button data-action="close-notes-folder" style="background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:6px;padding:0;font-size:15px;font-weight:700;color:#1e1040">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1e1040" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
           ${t("common.back", "\u041D\u0430\u0437\u0430\u0434")}
         </button>
@@ -8680,7 +8680,7 @@ ${recent}`;
           const colorDef = meta.colorKey && FOLDER_COLOR_PALETTE[meta.colorKey] ? FOLDER_COLOR_PALETTE[meta.colorKey] : null;
           const fc = colorDef ? { bg: colorDef.bg, border: "rgba(255,255,255,0.5)" } : getFolderColor(child);
           return `<div class="folder-item-wrap" data-folder="${safeChild}" data-nested="1" style="position:relative;overflow:hidden;border-radius:18px;margin-bottom:var(--card-gap)">
-          <div onclick="openNotesFolder('${safeChild}')" style="cursor:pointer;border-radius:18px;padding:var(--card-pad-y) var(--card-pad-x);background:${fc.bg};border:1.5px solid ${fc.border};box-shadow:0 2px 12px rgba(0,0,0,0.05);display:flex;align-items:center;gap:14px;position:relative;z-index:1">
+          <div data-action="open-notes-folder-local" data-folder="${escapeHtml(child)}" style="cursor:pointer;border-radius:18px;padding:var(--card-pad-y) var(--card-pad-x);background:${fc.bg};border:1.5px solid ${fc.border};box-shadow:0 2px 12px rgba(0,0,0,0.05);display:flex;align-items:center;gap:14px;position:relative;z-index:1">
             <div style="width:42px;height:42px;border-radius:12px;background:rgba(255,255,255,0.4);display:flex;align-items:center;justify-content:center;flex-shrink:0">${getFolderIcon(child)}</div>
             <div style="flex:1;min-width:0;font-size:15px;font-weight:700;color:#1e1040;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(child)}</div>
             <div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex-shrink:0;min-width:36px">
@@ -8737,7 +8737,7 @@ ${recent}`;
       const pinBadge = meta.pinned ? '<div style="position:absolute;top:8px;right:8px;font-size:10px;opacity:0.4">\u{1F4CC}</div>' : "";
       const desc = meta.desc ? `<div style="font-size:11px;color:rgba(30,16,64,0.38);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(meta.desc)}</div>` : `<div style="font-size:12px;color:rgba(30,16,64,0.45);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(preview)}</div>`;
       return `<div class="folder-item-wrap" data-folder="${safeFolder}" style="position:relative;overflow:hidden;border-radius:18px">
-        <div id="folder-item-${key}" onclick="openNotesFolder('${safeFolder}')"
+        <div id="folder-item-${key}" data-action="open-notes-folder-local" data-folder="${escapeHtml(folder)}"
           style="cursor:pointer;border-radius:18px;padding:var(--card-pad-y) var(--card-pad-x);background:${fc.bg};border:1.5px solid ${fc.border};box-shadow:0 2px 12px rgba(0,0,0,0.05);display:flex;align-items:center;gap:14px;position:relative;z-index:1">
           ${pinBadge}
           <div style="width:48px;height:48px;border-radius:14px;background:rgba(255,255,255,0.4);display:flex;align-items:center;justify-content:center;flex-shrink:0">${getFolderIcon(folder)}</div>
@@ -8749,7 +8749,7 @@ ${recent}`;
             <div style="font-size:20px;font-weight:900;color:#1e1040;line-height:1">${items.length}</div>
             <div style="font-size:10px;font-weight:600;color:rgba(30,16,64,0.4)">${t("notes.folder.entries", "\u0437\u0430\u043F\u0438\u0441\u0456\u0432")}</div>
           </div>
-          <div onclick="event.stopPropagation();openFolderEditModal('${safeFolder}')" style="position:absolute;top:8px;right:8px;padding:6px 8px;cursor:pointer;color:rgba(30,16,64,0.35);font-size:18px;line-height:1;border-radius:8px;-webkit-tap-highlight-color:transparent;min-width:32px;text-align:center">\xB7\xB7\xB7</div>
+          <div data-action="open-folder-edit-modal" data-folder="${escapeHtml(folder)}" style="position:absolute;top:8px;right:8px;padding:6px 8px;cursor:pointer;color:rgba(30,16,64,0.35);font-size:18px;line-height:1;border-radius:8px;-webkit-tap-highlight-color:transparent;min-width:32px;text-align:center">\xB7\xB7\xB7</div>
         </div>
       </div>`;
     }).join("") + "</div>";
@@ -8764,11 +8764,11 @@ ${recent}`;
       <div class="note-item-wrap" id="note-wrap-${n.id}" data-id="${n.id}" style="position:relative;overflow:hidden;border-radius:var(--card-radius);margin-bottom:var(--card-gap)">
         <div id="note-item-${n.id}" class="inbox-item"
           style="cursor:default;padding:var(--card-pad-y) var(--card-pad-x);width:100%;box-sizing:border-box;background:${fc.bg};border-color:${fc.border};">
-          <div onclick="openNoteView('${n.id}')" style="cursor:pointer">
+          <div data-action="open-note" data-id="${n.id}" style="cursor:pointer">
             <div style="font-size:15px;line-height:1.55;color:#1e1040;font-weight:500;margin-bottom:5px">${escapeHtml(preview)}</div>
             <div style="display:flex;align-items:center;justify-content:space-between">
               <div style="font-size:12px;color:rgba(30,16,64,0.3)">${formatTime(n.ts)}${n.source === "inbox" ? t("notes.source.from_inbox", " \xB7 \u0437 Inbox") : n.source === "agent" ? t("notes.source.from_owl", " \xB7 \u0447\u0435\u0440\u0435\u0437 OWL") : ""}</div>
-              <div onclick="event.stopPropagation();openNoteMenu('${n.id}')" style="padding:4px 8px;cursor:pointer;color:rgba(30,16,64,0.4);font-size:22px;line-height:1;min-width:32px;text-align:center">\xB7\xB7\xB7</div>
+              <div data-action="open-note-menu" data-id="${n.id}" style="padding:4px 8px;cursor:pointer;color:rgba(30,16,64,0.4);font-size:22px;line-height:1;min-width:32px;text-align:center">\xB7\xB7\xB7</div>
             </div>
           </div>
         </div>
@@ -9211,7 +9211,7 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
     if (!grid) return;
     grid.innerHTML = ALL_FOLDER_ICONS.map((key) => {
       const isActive = key === activeKey;
-      return `<div onclick="selectFolderIcon('${key}')" id="ficon-${key}" style="width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;cursor:pointer;background:${isActive ? "rgba(30,16,64,0.1)" : "rgba(30,16,64,0.03)"};border:1.5px solid ${isActive ? "rgba(30,16,64,0.25)" : "transparent"};transition:all 0.15s">
+      return `<div data-action="select-folder-icon" data-icon="${key}" id="ficon-${key}" style="width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;cursor:pointer;background:${isActive ? "rgba(30,16,64,0.1)" : "rgba(30,16,64,0.03)"};border:1.5px solid ${isActive ? "rgba(30,16,64,0.25)" : "transparent"};transition:all 0.15s">
       ${ICON_SVG[key]}
     </div>`;
     }).join("");
@@ -9231,7 +9231,7 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
     if (!grid) return;
     grid.innerHTML = Object.entries(FOLDER_COLOR_PALETTE).map(([key, val]) => {
       const isActive = key === activeKey;
-      return `<div onclick="selectFolderColor('${key}')" id="fcolor-${key}" title="${val.label}" style="width:36px;height:36px;border-radius:10px;cursor:pointer;background:${val.bg};border:2.5px solid ${isActive ? "rgba(30,16,64,0.4)" : "transparent"};transition:all 0.15s"></div>`;
+      return `<div data-action="select-folder-color" data-color="${key}" id="fcolor-${key}" title="${val.label}" style="width:36px;height:36px;border-radius:10px;cursor:pointer;background:${val.bg};border:2.5px solid ${isActive ? "rgba(30,16,64,0.4)" : "transparent"};transition:all 0.15s"></div>`;
     }).join("");
   }
   function selectFolderColor(key) {
@@ -9418,7 +9418,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
               if (!el) return;
               const div = document.createElement("div");
               div.style.cssText = "display:flex";
-              div.innerHTML = `<div onclick="addNotesChatMsg('user','');openNoteView('${n.id}')" style="max-width:85%;background:rgba(255,255,255,0.12);color:white;border-radius:4px 12px 12px 12px;padding:8px 11px;font-size:14px;line-height:1.5;font-weight:500;cursor:pointer;border:1px solid rgba(255,255,255,0.15)">
+              div.innerHTML = `<div data-action="open-note-from-search" data-id="${n.id}" style="max-width:85%;background:rgba(255,255,255,0.12);color:white;border-radius:4px 12px 12px 12px;padding:8px 11px;font-size:14px;line-height:1.5;font-weight:500;cursor:pointer;border:1px solid rgba(255,255,255,0.15)">
               <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.45);margin-bottom:3px">${escapeHtml(n.folder || t("notes.default_folder", "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435"))}</div>
               ${escapeHtml(preview)}
             </div>`;
@@ -10633,7 +10633,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
         <div style="font-size:36px;margin-bottom:10px">\u{1FAC0}</div>
         <div style="font-size:15px;font-weight:700;color:rgba(30,16,64,0.5)">${t("health.empty.title", "\u041D\u0435\u043C\u0430\u0454 \u043A\u0430\u0440\u0442\u043E\u043A \u0437\u0434\u043E\u0440\u043E\u0432'\u044F")}</div>
         <div style="font-size:13px;color:rgba(30,16,64,0.3);margin-top:4px">${t("health.empty.hint", "\u0414\u043E\u0434\u0430\u0439 \u043F\u0435\u0440\u0448\u0443 \u2014 \u0445\u0432\u043E\u0440\u043E\u0431\u0443, \u0441\u0442\u0430\u043D \u0430\u0431\u043E \u043C\u0435\u0442\u0443")}</div>
-        <button onclick="openAddHealthCard()" style="margin-top:14px;font-size:13px;font-weight:700;color:white;background:#1a5c2a;border:none;border-radius:12px;padding:10px 20px;cursor:pointer">${t("health.empty.add_btn", "+ \u0414\u043E\u0434\u0430\u0442\u0438 \u043A\u0430\u0440\u0442\u043A\u0443")}</button>
+        <button data-action="open-add-health-card" style="margin-top:14px;font-size:13px;font-weight:700;color:white;background:#1a5c2a;border:none;border-radius:12px;padding:10px 20px;cursor:pointer">${t("health.empty.add_btn", "+ \u0414\u043E\u0434\u0430\u0442\u0438 \u043A\u0430\u0440\u0442\u043A\u0443")}</button>
       </div>` : cards.map((card) => {
       const st = _statusDef(card.status);
       const pct = card.progress || 0;
@@ -10641,7 +10641,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
       const pills = (card.treatments || []).slice(0, 4);
       const isDone = card.status === "done";
       return `<div class="health-card-wrap" data-id="${card.id}" style="position:relative;overflow:hidden;border-radius:14px;margin-bottom:8px">
-        <div onclick="openHealthCard('${card.id}')" class="card-glass health-card-item" style="cursor:pointer;opacity:${st.opacity};margin-bottom:0">
+        <div data-action="open-health-card" data-id="${card.id}" class="card-glass health-card-item" style="cursor:pointer;opacity:${st.opacity};margin-bottom:0">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
             <div style="flex:1">
               <div style="font-size:15px;font-weight:900;color:#1e1040">${escapeHtml(card.name)}</div>
@@ -10977,8 +10977,8 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
         <div style="font-size:12px;font-weight:800;color:#1e1040">${escapeHtml(d.medName)}${d.dosage ? " " + escapeHtml(d.dosage) : ""}</div>
         <div style="font-size:10px;color:rgba(30,16,64,0.5);font-weight:600;margin-top:1px">${escapeHtml(d.cardName)} \xB7 ${escapeHtml(d.scheduledTime)}</div>
       </div>
-      <button onclick="logHealthMedDose('${d.cardId}','${d.medId}')" style="font-size:11px;font-weight:800;padding:5px 10px;border-radius:8px;border:none;background:#16a34a;color:white;cursor:pointer;white-space:nowrap">${t("health.dose.took_btn", "\u2713 \u041F\u0440\u0438\u0439\u043D\u044F\u0432")}</button>
-      <button onclick="skipHealthMedDose('${d.cardId}','${d.medId}','${escapeJsArg(d.scheduledTime)}')" style="font-size:11px;font-weight:700;padding:5px 10px;border-radius:8px;border:1.5px solid rgba(30,16,64,0.15);background:white;color:rgba(30,16,64,0.55);cursor:pointer;white-space:nowrap">${t("health.dose.skip_btn", "\u041F\u0440\u043E\u043F\u0443\u0449\u0443")}</button>
+      <button data-action="log-health-med-dose" data-card-id="${d.cardId}" data-med-id="${d.medId}" style="font-size:11px;font-weight:800;padding:5px 10px;border-radius:8px;border:none;background:#16a34a;color:white;cursor:pointer;white-space:nowrap">${t("health.dose.took_btn", "\u2713 \u041F\u0440\u0438\u0439\u043D\u044F\u0432")}</button>
+      <button data-action="skip-health-med-dose" data-card-id="${d.cardId}" data-med-id="${d.medId}" data-time="${escapeHtml(d.scheduledTime)}" style="font-size:11px;font-weight:700;padding:5px 10px;border-radius:8px;border:1.5px solid rgba(30,16,64,0.15);background:white;color:rgba(30,16,64,0.55);cursor:pointer;white-space:nowrap">${t("health.dose.skip_btn", "\u041F\u0440\u043E\u043F\u0443\u0449\u0443")}</button>
     </div>`).join("")}
     ${missed.length > 5 ? `<div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:600;text-align:center">${t("health.dose.more_missed", "+ \u0449\u0435 {n} \u043F\u0440\u043E\u043F\u0443\u0449\u0435\u043D\u0438\u0445", { n: missed.length - 5 })}</div>` : ""}
   </div>`;
@@ -11065,7 +11065,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
     const scrollEl = document.getElementById("health-scroll");
     if (scrollEl) scrollEl.innerHTML = `
     <!-- \u041D\u0430\u0437\u0430\u0434 -->
-    <div onclick="closeHealthCard()" style="display:flex;align-items:center;gap:6px;margin-bottom:12px;cursor:pointer">
+    <div data-action="close-health-card" style="display:flex;align-items:center;gap:6px;margin-bottom:12px;cursor:pointer">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1a5c2a" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
       <span style="font-size:13px;font-weight:700;color:#1a5c2a">${t("health.card.back", "\u041D\u0430\u0437\u0430\u0434")}</span>
     </div>
@@ -11078,7 +11078,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
           <div style="font-size:11px;color:rgba(30,16,64,0.4);font-weight:600;margin-top:2px">${escapeHtml(card.subtitle || "")}</div>
         </div>
         <div style="display:flex;align-items:center;gap:10px;flex-shrink:0">
-          <button onclick="openEditHealthCard('${id}')" title="${t("health.card.edit_title", "\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438")}" style="background:rgba(30,16,64,0.06);border:none;border-radius:8px;padding:6px 10px;font-size:11px;font-weight:700;color:rgba(30,16,64,0.65);cursor:pointer">${t("health.card.edit_btn", "\u0420\u0435\u0434.")}</button>
+          <button data-action="open-edit-health-card" data-id="${id}" title="${t("health.card.edit_title", "\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438")}" style="background:rgba(30,16,64,0.06);border:none;border-radius:8px;padding:6px 10px;font-size:11px;font-weight:700;color:rgba(30,16,64,0.65);cursor:pointer">${t("health.card.edit_btn", "\u0420\u0435\u0434.")}</button>
           <div style="font-size:20px;font-weight:900;color:${st.color};line-height:1">${pct}%</div>
         </div>
       </div>
@@ -11094,7 +11094,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
         ${HEALTH_STATUS_KEYS.map((s) => {
       const d = _statusDef(s);
       const on = s === card.status;
-      return `<button onclick="setHealthCardStatus('${id}','${s}')" style="font-size:10px;font-weight:700;padding:4px 9px;border-radius:8px;border:1px solid ${on ? d.color : "rgba(30,16,64,0.15)"};background:${on ? d.bg : "transparent"};color:${on ? d.color : "rgba(30,16,64,0.45)"};cursor:pointer;white-space:nowrap">${d.icon} ${d.label}</button>`;
+      return `<button data-action="set-health-card-status" data-card-id="${id}" data-status="${s}" style="font-size:10px;font-weight:700;padding:4px 9px;border-radius:8px;border:1px solid ${on ? d.color : "rgba(30,16,64,0.15)"};background:${on ? d.bg : "transparent"};color:${on ? d.color : "rgba(30,16,64,0.45)"};cursor:pointer;white-space:nowrap">${d.icon} ${d.label}</button>`;
     }).join("")}
       </div>
     </div>
@@ -11125,7 +11125,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
               <div style="font-size:13px;font-weight:700;color:#1e1040">${escapeHtml(m.name)}</div>
               <div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:600;margin-top:1px">${escapeHtml(m.dosage || "")}${course}${schedStr ? " \xB7 " + escapeHtml(schedStr) : ""}</div>
             </div>
-            <button onclick="logHealthMedDose('${id}','${m.id}')" style="font-size:10px;font-weight:800;padding:5px 10px;border-radius:8px;border:1.5px solid ${takenToday && todayDosesCount >= expectedToday ? "rgba(22,163,74,0.3)" : "#1a5c2a"};background:${takenToday && todayDosesCount >= expectedToday ? "rgba(22,163,74,0.08)" : "#1a5c2a"};color:${takenToday && todayDosesCount >= expectedToday ? "#16a34a" : "white"};cursor:pointer;white-space:nowrap">${takenToday && todayDosesCount >= expectedToday ? t("health.dose.taken_label", "\u2713 \u043F\u0440\u0438\u0439\u043D\u044F\u0442\u043E") : t("health.dose.take_now_btn", "+ \u041F\u0440\u0438\u0439\u043D\u044F\u0442\u0438")}</button>
+            <button data-action="log-health-med-dose" data-card-id="${id}" data-med-id="${m.id}" style="font-size:10px;font-weight:800;padding:5px 10px;border-radius:8px;border:1.5px solid ${takenToday && todayDosesCount >= expectedToday ? "rgba(22,163,74,0.3)" : "#1a5c2a"};background:${takenToday && todayDosesCount >= expectedToday ? "rgba(22,163,74,0.08)" : "#1a5c2a"};color:${takenToday && todayDosesCount >= expectedToday ? "#16a34a" : "white"};cursor:pointer;white-space:nowrap">${takenToday && todayDosesCount >= expectedToday ? t("health.dose.taken_label", "\u2713 \u043F\u0440\u0438\u0439\u043D\u044F\u0442\u043E") : t("health.dose.take_now_btn", "+ \u041F\u0440\u0438\u0439\u043D\u044F\u0442\u0438")}</button>
           </div>
           ${schedArr.length > 0 ? `<div style="display:flex;align-items:center;gap:8px;padding-left:38px">
             <div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:700">${t("health.dose.today_label", "\u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456:")}</div>
@@ -11179,7 +11179,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
     </div>` : ""}
 
     <!-- \u041D\u043E\u0442\u0430\u0442\u043A\u0438 \u2192 \u043F\u0430\u043F\u043A\u0430 (B-29 fix: switchTab + delayed openNotesFolder) -->
-    <div onclick="openHealthCardNote('${card.id}')" style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.55);border:1.5px dashed rgba(30,16,64,0.14);border-radius:12px;padding:10px 12px;margin-bottom:10px;cursor:pointer">
+    <div data-action="open-health-card-note" data-id="${card.id}" style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.55);border:1.5px dashed rgba(30,16,64,0.14);border-radius:12px;padding:10px 12px;margin-bottom:10px;cursor:pointer">
       <div class="icon-circle" style="width:30px;height:30px">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1a5c2a" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
       </div>
@@ -11416,7 +11416,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
     <div style="display:flex;gap:6px;align-items:center">
       <input type="text" class="med-name" placeholder="${escapeHtml(t("health.med.name_placeholder", "\u041D\u0430\u0437\u0432\u0430 (\u041E\u043C\u0435\u0437)"))}" value="${escapeHtml(m.name || "")}"
         style="flex:1;border:1px solid rgba(30,16,64,0.1);border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;outline:none;background:white">
-      <button type="button" onclick="this.closest('.health-med-row').remove()" style="background:none;border:none;font-size:20px;color:rgba(30,16,64,0.3);cursor:pointer;padding:0 4px">\xD7</button>
+      <button type="button" data-action="close-parent" data-parent=".health-med-row" style="background:none;border:none;font-size:20px;color:rgba(30,16,64,0.3);cursor:pointer;padding:0 4px">\xD7</button>
     </div>
     <div style="display:flex;gap:6px">
       <input type="text" class="med-dosage" placeholder="${escapeHtml(t("health.med.dosage_placeholder", "\u0414\u043E\u0437\u0443\u0432\u0430\u043D\u043D\u044F (20\u043C\u0433)"))}" value="${escapeHtml(m.dosage || "")}"
@@ -11678,13 +11678,13 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
         <div style="font-size:10px;font-weight:800;color:${coralText};text-transform:uppercase;letter-spacing:0.08em;margin-bottom:2px">${t("health.allergy.label", "\u0410\u043B\u0435\u0440\u0433\u0456\u0457")}</div>
         <div style="font-size:11px;color:rgba(30,16,64,0.5);font-weight:600">${t("health.allergy.empty_hint", "\u041D\u0435\u043C\u0430\u0454 \u0437\u0430\u043F\u0438\u0441\u0430\u043D\u0438\u0445. OWL \u043D\u0435 \u0437\u043D\u0430\u0454 \u043F\u0440\u043E \u0449\u043E \u043F\u043E\u043F\u0435\u0440\u0435\u0434\u0436\u0430\u0442\u0438.")}</div>
       </div>
-      <button onclick="openAddAllergy()" style="font-size:11px;font-weight:800;padding:6px 11px;border-radius:8px;border:1.5px solid ${coralBorder};background:white;color:${coralText};cursor:pointer;white-space:nowrap;flex-shrink:0">${t("health.allergy.add_btn", "+ \u0414\u043E\u0434\u0430\u0442\u0438")}</button>
+      <button data-action="open-add-allergy" style="font-size:11px;font-weight:800;padding:6px 11px;border-radius:8px;border:1.5px solid ${coralBorder};background:white;color:${coralText};cursor:pointer;white-space:nowrap;flex-shrink:0">${t("health.allergy.add_btn", "+ \u0414\u043E\u0434\u0430\u0442\u0438")}</button>
     </div>`;
     }
     return `<div style="background:${coralBg};border:1.5px solid ${coralBorder};border-radius:12px;padding:10px 12px;margin-bottom:10px">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px">
       <div style="font-size:10px;font-weight:800;color:${coralText};text-transform:uppercase;letter-spacing:0.08em">${t("health.allergy.label_with_count", "\u{1F6A8} \u0410\u043B\u0435\u0440\u0433\u0456\u0457 ({n})", { n: allergies.length })}</div>
-      <button onclick="openAddAllergy()" style="font-size:10px;font-weight:800;padding:4px 10px;border-radius:7px;border:1.5px solid ${coralBorder};background:white;color:${coralText};cursor:pointer">${t("health.allergy.add_btn", "+ \u0414\u043E\u0434\u0430\u0442\u0438")}</button>
+      <button data-action="open-add-allergy" style="font-size:10px;font-weight:800;padding:4px 10px;border-radius:7px;border:1.5px solid ${coralBorder};background:white;color:${coralText};cursor:pointer">${t("health.allergy.add_btn", "+ \u0414\u043E\u0434\u0430\u0442\u0438")}</button>
     </div>
     <div style="display:flex;flex-wrap:wrap;gap:6px">
       ${allergies.map((a) => `<div style="background:white;border:1.5px solid ${coralBorder};border-radius:8px;padding:5px 8px 5px 10px;display:flex;align-items:center;gap:8px">
@@ -11692,7 +11692,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
           <div style="font-size:12px;font-weight:800;color:${coralText};line-height:1.2">${escapeHtml(a.name)}</div>
           ${a.notes ? `<div style="font-size:9px;color:rgba(30,16,64,0.45);font-weight:600;margin-top:1px">${escapeHtml(a.notes)}</div>` : ""}
         </div>
-        <div onclick="deleteAllergyById('${a.id}')" style="cursor:pointer;font-size:16px;color:rgba(30,16,64,0.35);line-height:1;padding:0 2px" title="${t("health.allergy.delete_title", "\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438")}">\xD7</div>
+        <div data-action="delete-allergy-by-id" data-id="${a.id}" style="cursor:pointer;font-size:16px;color:rgba(30,16,64,0.35);line-height:1;padding:0 2px" title="${t("health.allergy.delete_title", "\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438")}">\xD7</div>
       </div>`).join("")}
     </div>
   </div>`;
@@ -13525,15 +13525,15 @@ ${CHIP_PROMPT_RULES}`;
           const isBonus = i >= target;
           const bg = filled ? isBonus ? "#fbbf24" : "#16a34a" : "rgba(30,16,64,0.08)";
           const border = filled ? "none" : "1.5px solid rgba(30,16,64,0.12)";
-          squaresHtml += `<div onclick="event.stopPropagation();tapHabitSquareMe('${h.id}',${i})" style="width:13px;height:13px;border-radius:3px;background:${bg};border:${border};cursor:pointer;transition:all 0.15s;display:flex;align-items:center;justify-content:center">`;
+          squaresHtml += `<div data-action="tap-habit-square" data-entity="habit" data-id="${h.id}" data-idx="${i}" style="width:13px;height:13px;border-radius:3px;background:${bg};border:${border};cursor:pointer;transition:all 0.15s;display:flex;align-items:center;justify-content:center">`;
           if (filled) squaresHtml += `<svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg>`;
           squaresHtml += "</div>";
         }
-        if (cur < 20) squaresHtml += `<div onclick="event.stopPropagation();toggleHabitToday('${h.id}')" style="width:13px;height:13px;border-radius:3px;background:rgba(30,16,64,0.04);border:1.5px dashed rgba(30,16,64,0.15);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:9px;color:rgba(30,16,64,0.3)">+</div>`;
+        if (cur < 20) squaresHtml += `<div data-action="toggle-entity-done" data-entity="habit" data-id="${h.id}" style="width:13px;height:13px;border-radius:3px;background:rgba(30,16,64,0.04);border:1.5px dashed rgba(30,16,64,0.15);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:9px;color:rgba(30,16,64,0.3)">+</div>`;
         squaresHtml += "</div>";
       }
       const countLabel = target > 1 ? `<span style="font-size:11px;font-weight:700;color:${cur >= target ? "#16a34a" : "rgba(30,16,64,0.4)"};margin-left:4px">${cur}/${target}</span>` : "";
-      return '<div class="habit-me-item-wrap" data-id="' + h.id + '" style="position:relative;overflow:hidden;border-radius:14px;margin-bottom:6px"><div id="habit-me-item-' + h.id + `" class="inbox-item" style="padding:10px 12px;cursor:pointer;width:100%;box-sizing:border-box;-webkit-tap-highlight-color:transparent" onclick="openEditHabit('` + h.id + `')"><div style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><div onclick="event.stopPropagation();toggleHabitToday('` + h.id + `')" data-habit-check="1" style="width:36px;height:36px;border-radius:50%;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.25s;-webkit-tap-highlight-color:transparent;` + checkBg + `"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${checkStroke}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></div><div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:6px"><span style="font-size:15px;font-weight:700;color:#1e1040">` + escapeHtml(shortName) + "</span>" + countLabel + streakHtml + '</div><div style="font-size:11px;font-weight:600;color:' + pctColor + ';margin-top:1px">' + t("habits.stat.pct_30d", "{pct}% \u0437\u0430 30 \u0434\u043D\u0456\u0432", { pct }) + "</div></div></div>" + squaresHtml + '<div style="display:flex;gap:4px;padding-left:46px">' + dayDots + "</div></div></div>";
+      return '<div class="habit-me-item-wrap" data-id="' + h.id + '" style="position:relative;overflow:hidden;border-radius:14px;margin-bottom:6px"><div id="habit-me-item-' + h.id + '" class="inbox-item" data-action="open-edit-habit" data-id="' + h.id + '" style="padding:10px 12px;cursor:pointer;width:100%;box-sizing:border-box;-webkit-tap-highlight-color:transparent"><div style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><div data-action="toggle-entity-done" data-entity="habit" data-id="' + h.id + '" data-habit-check="1" style="width:36px;height:36px;border-radius:50%;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.25s;-webkit-tap-highlight-color:transparent;' + checkBg + `"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${checkStroke}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></div><div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:6px"><span style="font-size:15px;font-weight:700;color:#1e1040">` + escapeHtml(shortName) + "</span>" + countLabel + streakHtml + '</div><div style="font-size:11px;font-weight:600;color:' + pctColor + ';margin-top:1px">' + t("habits.stat.pct_30d", "{pct}% \u0437\u0430 30 \u0434\u043D\u0456\u0432", { pct }) + "</div></div></div>" + squaresHtml + '<div style="display:flex;gap:4px;padding-left:46px">' + dayDots + "</div></div></div>";
     }).join("");
     _attachHabitsSwipeDelete();
   }
@@ -13764,15 +13764,15 @@ ${CHIP_PROMPT_RULES}`;
           const isBonus = i >= target;
           const bg = filled ? isBonus ? "#fbbf24" : "#16a34a" : "rgba(30,16,64,0.08)";
           const border = filled ? "none" : "1.5px solid rgba(30,16,64,0.12)";
-          squaresHtml += `<div onclick="event.stopPropagation();tapHabitSquare('${h.id}',${i})" style="width:14px;height:14px;border-radius:4px;background:${bg};border:${border};cursor:pointer;transition:all 0.15s;display:flex;align-items:center;justify-content:center">`;
+          squaresHtml += `<div data-action="tap-habit-square" data-entity="habit-prod" data-id="${h.id}" data-idx="${i}" style="width:14px;height:14px;border-radius:4px;background:${bg};border:${border};cursor:pointer;transition:all 0.15s;display:flex;align-items:center;justify-content:center">`;
           if (filled) squaresHtml += `<svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg>`;
           squaresHtml += "</div>";
         }
-        if (cur < 20) squaresHtml += `<div onclick="event.stopPropagation();toggleProdHabitToday('${h.id}')" style="width:14px;height:14px;border-radius:4px;background:rgba(30,16,64,0.04);border:1.5px dashed rgba(30,16,64,0.15);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:10px;color:rgba(30,16,64,0.3);line-height:1">+</div>`;
+        if (cur < 20) squaresHtml += `<div data-action="toggle-entity-done" data-entity="habit-prod" data-id="${h.id}" style="width:14px;height:14px;border-radius:4px;background:rgba(30,16,64,0.04);border:1.5px dashed rgba(30,16,64,0.15);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:10px;color:rgba(30,16,64,0.3);line-height:1">+</div>`;
         squaresHtml += "</div>";
       }
       const countLabel = target > 1 ? `<span style="font-size:11px;font-weight:700;color:${cur >= target ? "#16a34a" : "rgba(30,16,64,0.4)"};margin-left:4px">${cur}/${target}</span>` : "";
-      return '<div class="prod-habit-item-wrap" id="prod-habit-wrap-' + h.id + '" data-id="' + h.id + '" style="position:relative;border-radius:16px;margin-bottom:var(--card-gap);overflow:hidden"><div id="prod-habit-item-' + h.id + `" onclick="prodHabitCardClick('` + h.id + `', event)" style="background:rgba(255,255,255,0.6);border:1.5px solid rgba(255,255,255,0.85);border-radius:16px;padding:var(--card-pad-y) var(--card-pad-x);box-shadow:var(--card-shadow);position:relative;z-index:1;will-change:transform;cursor:pointer;-webkit-tap-highlight-color:transparent"><div style="display:flex;align-items:center;gap:12px;margin-bottom:8px"><div onclick="event.stopPropagation();toggleProdHabitToday('` + h.id + `')" data-habit-check="1" style="width:40px;height:40px;border-radius:12px;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.25s;-webkit-tap-highlight-color:transparent;` + checkBg + `"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${checkStroke}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></div><div style="flex:1;min-width:0"><div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px;margin-bottom:1px"><span style="font-size:16px;font-weight:700;color:#1e1040">` + escapeHtml(shortName2) + "</span>" + countLabel + '</div><div style="font-size:11px;font-weight:600;color:' + pctColor2 + '">' + streakTxt + habitPct + "% \u0437\u0430 30 \u0434\u043D\u0456\u0432</div></div></div>" + squaresHtml + '<div style="display:flex;gap:4px;padding-left:52px;margin-top:6px">' + dayDots2 + "</div></div></div>";
+      return '<div class="prod-habit-item-wrap" id="prod-habit-wrap-' + h.id + '" data-id="' + h.id + '" style="position:relative;border-radius:16px;margin-bottom:var(--card-gap);overflow:hidden"><div id="prod-habit-item-' + h.id + '" data-action="prod-habit-card-click" data-id="' + h.id + '" style="background:rgba(255,255,255,0.6);border:1.5px solid rgba(255,255,255,0.85);border-radius:16px;padding:var(--card-pad-y) var(--card-pad-x);box-shadow:var(--card-shadow);position:relative;z-index:1;will-change:transform;cursor:pointer;-webkit-tap-highlight-color:transparent"><div style="display:flex;align-items:center;gap:12px;margin-bottom:8px"><div data-action="toggle-entity-done" data-entity="habit-prod" data-id="' + h.id + '" data-habit-check="1" style="width:40px;height:40px;border-radius:12px;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.25s;-webkit-tap-highlight-color:transparent;' + checkBg + `"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${checkStroke}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></div><div style="flex:1;min-width:0"><div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px;margin-bottom:1px"><span style="font-size:16px;font-weight:700;color:#1e1040">` + escapeHtml(shortName2) + "</span>" + countLabel + '</div><div style="font-size:11px;font-weight:600;color:' + pctColor2 + '">' + streakTxt + habitPct + "% \u0437\u0430 30 \u0434\u043D\u0456\u0432</div></div></div>" + squaresHtml + '<div style="display:flex;gap:4px;padding-left:52px;margin-top:6px">' + dayDots2 + "</div></div></div>";
     }).join("");
     if (quitHabits.length > 0) {
       html += '<div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.08em;margin:14px 14px 8px">' + t("habits.quit.section_title", "\u{1F6AB} \u0427\u0435\u043B\u0435\u043D\u0434\u0436\u0456") + "</div>";
@@ -13815,7 +13815,7 @@ ${CHIP_PROMPT_RULES}`;
     const cardBg = relapses30 === 0 && streak > 0 ? "background:rgba(232,240,232,0.8);border-color:rgba(22,163,74,0.2)" : relapses30 >= 6 ? "background:rgba(255,235,235,0.85);border-color:rgba(220,38,38,0.2)" : "background:rgba(255,248,240,0.85);border-color:rgba(234,88,12,0.15)";
     const streakColor = streak > 0 ? "#16a34a" : "rgba(30,16,64,0.3)";
     const lampHtml = '<div style="flex-shrink:0;width:14px;height:14px;border-radius:50%;background:' + lamp.color + ";box-shadow:0 0 8px 3px " + lamp.glow + ';margin-top:3px"></div>';
-    return '<div class="prod-habit-item-wrap" id="quit-wrap-' + h.id + '" data-id="' + h.id + '" style="position:relative;border-radius:16px;margin-bottom:var(--card-gap);overflow:hidden"><div id="prod-habit-item-' + h.id + `" onclick="openEditHabit('` + h.id + `')" style="` + cardBg + ';border:1.5px solid;border-radius:16px;padding:var(--card-pad-y) var(--card-pad-x);position:relative;z-index:1;cursor:pointer;-webkit-tap-highlight-color:transparent"><div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px">' + lampHtml + '<div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:700;color:#1e1040;line-height:1.2">' + escapeHtml(shortName) + '</div><div style="font-size:11px;color:' + lamp.color + ';font-weight:600;margin-top:1px">' + lamp.label + '</div></div><div style="text-align:right;flex-shrink:0"><div style="font-size:16px;font-weight:700;color:' + trend.color + ';line-height:1">' + trend.arrow + '</div><div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:500">' + trend.text + '</div></div></div><div style="display:flex;align-items:baseline;gap:10px;margin-bottom:8px"><div><span style="font-size:26px;font-weight:800;color:#1e1040;line-height:1">' + freedomDays + '</span><span style="font-size:12px;font-weight:600;color:rgba(30,16,64,0.5);margin-left:4px">' + t("habits.quit.label.free_days", "\u0432\u0456\u043B\u044C\u043D\u0438\u0445 {word}", { word: _dayWord(freedomDays) }) + "</span></div>" + (streak > 0 ? '<div style="font-size:11px;font-weight:600;color:' + streakColor + ';margin-left:auto">' + t("habits.quit.label.streak", "\u{1F525} \u0441\u0435\u0440\u0456\u044F {n} {word}", { n: streak, word: _dayWord(streak) }) + (longest > streak ? t("habits.quit.label.record_inline", " \xB7 \u0440\u0435\u043A\u043E\u0440\u0434 {n}", { n: longest }) : "") + "</div>" : longest > 0 ? '<div style="font-size:11px;font-weight:500;color:rgba(30,16,64,0.35);margin-left:auto">' + t("habits.quit.label.record", "\u0440\u0435\u043A\u043E\u0440\u0434 {n} {word}", { n: longest, word: _dayWord(longest) }) + "</div>" : "") + `</div><div style="display:flex;gap:8px" onclick="event.stopPropagation()"><button ontouchend="event.preventDefault();event.stopPropagation();holdQuitHabit('` + h.id + `')" onclick="holdQuitHabit('` + h.id + `')" style="flex:2;padding:10px;border-radius:12px;border:none;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;` + (heldToday ? "background:rgba(22,163,74,0.15);color:#16a34a" : "background:rgba(22,163,74,0.1);color:#16a34a") + '">' + (heldToday ? t("habits.quit.btn.held_today", "\u2705 \u0422\u0440\u0438\u043C\u0430\u044E\u0441\u044C \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456") : t("habits.quit.btn.hold", "\u2713 \u0422\u0440\u0438\u043C\u0430\u044E\u0441\u044C")) + `</button><button ontouchend="event.preventDefault();event.stopPropagation();confirmQuitRelapse('` + h.id + `')" onclick="confirmQuitRelapse('` + h.id + `')" style="flex:1;padding:10px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.1);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;background:rgba(30,16,64,0.03);color:rgba(30,16,64,0.35)">` + t("habits.quit.btn.relapse", "\u0417\u0456\u0440\u0432\u0430\u0432\u0441\u044F") + "</button></div></div></div>";
+    return '<div class="prod-habit-item-wrap" id="quit-wrap-' + h.id + '" data-id="' + h.id + '" style="position:relative;border-radius:16px;margin-bottom:var(--card-gap);overflow:hidden"><div id="prod-habit-item-' + h.id + '" data-action="open-edit-habit" data-id="' + h.id + '" style="' + cardBg + ';border:1.5px solid;border-radius:16px;padding:var(--card-pad-y) var(--card-pad-x);position:relative;z-index:1;cursor:pointer;-webkit-tap-highlight-color:transparent"><div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px">' + lampHtml + '<div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:700;color:#1e1040;line-height:1.2">' + escapeHtml(shortName) + '</div><div style="font-size:11px;color:' + lamp.color + ';font-weight:600;margin-top:1px">' + lamp.label + '</div></div><div style="text-align:right;flex-shrink:0"><div style="font-size:16px;font-weight:700;color:' + trend.color + ';line-height:1">' + trend.arrow + '</div><div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:500">' + trend.text + '</div></div></div><div style="display:flex;align-items:baseline;gap:10px;margin-bottom:8px"><div><span style="font-size:26px;font-weight:800;color:#1e1040;line-height:1">' + freedomDays + '</span><span style="font-size:12px;font-weight:600;color:rgba(30,16,64,0.5);margin-left:4px">' + t("habits.quit.label.free_days", "\u0432\u0456\u043B\u044C\u043D\u0438\u0445 {word}", { word: _dayWord(freedomDays) }) + "</span></div>" + (streak > 0 ? '<div style="font-size:11px;font-weight:600;color:' + streakColor + ';margin-left:auto">' + t("habits.quit.label.streak", "\u{1F525} \u0441\u0435\u0440\u0456\u044F {n} {word}", { n: streak, word: _dayWord(streak) }) + (longest > streak ? t("habits.quit.label.record_inline", " \xB7 \u0440\u0435\u043A\u043E\u0440\u0434 {n}", { n: longest }) : "") + "</div>" : longest > 0 ? '<div style="font-size:11px;font-weight:500;color:rgba(30,16,64,0.35);margin-left:auto">' + t("habits.quit.label.record", "\u0440\u0435\u043A\u043E\u0440\u0434 {n} {word}", { n: longest, word: _dayWord(longest) }) + "</div>" : "") + '</div><div style="display:flex;gap:8px"><button data-action="hold-quit-habit" data-id="' + h.id + '" style="flex:2;padding:10px;border-radius:12px;border:none;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;touch-action:manipulation;' + (heldToday ? "background:rgba(22,163,74,0.15);color:#16a34a" : "background:rgba(22,163,74,0.1);color:#16a34a") + '">' + (heldToday ? t("habits.quit.btn.held_today", "\u2705 \u0422\u0440\u0438\u043C\u0430\u044E\u0441\u044C \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456") : t("habits.quit.btn.hold", "\u2713 \u0422\u0440\u0438\u043C\u0430\u044E\u0441\u044C")) + '</button><button data-action="confirm-quit-relapse" data-id="' + h.id + '" style="flex:1;padding:10px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.1);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;background:rgba(30,16,64,0.03);color:rgba(30,16,64,0.35);touch-action:manipulation">' + t("habits.quit.btn.relapse", "\u0417\u0456\u0440\u0432\u0430\u0432\u0441\u044F") + "</button></div></div></div>";
   }
   function confirmQuitRelapse(habitId) {
     const s = getQuitStatus(habitId);
@@ -20003,6 +20003,161 @@ ${logLines}
           setTimeout(() => window.openNotesFolder(data.folder), 150);
         }
       });
+      reg("open-notes-folder-local", (data) => {
+        if (typeof window !== "undefined" && typeof window.openNotesFolder === "function") {
+          window.openNotesFolder(data.folder);
+        }
+      });
+      reg("close-notes-folder", () => {
+        if (typeof window !== "undefined" && typeof window.closeNotesFolder === "function") {
+          window.closeNotesFolder();
+        }
+      });
+      reg("open-folder-edit-modal", (data) => {
+        if (typeof window !== "undefined" && typeof window.openFolderEditModal === "function") {
+          window.openFolderEditModal(data.folder);
+        }
+      });
+      reg("open-note", (data) => {
+        if (!data.id) return;
+        if (typeof window !== "undefined" && typeof window.openNoteView === "function") {
+          window.openNoteView(data.id);
+        }
+      });
+      reg("open-note-menu", (data) => {
+        if (!data.id) return;
+        if (typeof window !== "undefined" && typeof window.openNoteMenu === "function") {
+          window.openNoteMenu(data.id);
+        }
+      });
+      reg("select-folder-icon", (data) => {
+        if (typeof window !== "undefined" && typeof window.selectFolderIcon === "function") {
+          window.selectFolderIcon(data.icon);
+        }
+      });
+      reg("select-folder-color", (data) => {
+        if (typeof window !== "undefined" && typeof window.selectFolderColor === "function") {
+          window.selectFolderColor(data.color);
+        }
+      });
+      reg("open-note-from-search", (data) => {
+        if (!data.id) return;
+        if (typeof window === "undefined") return;
+        if (typeof window.addNotesChatMsg === "function") window.addNotesChatMsg("user", "");
+        if (typeof window.openNoteView === "function") window.openNoteView(data.id);
+      });
+      reg("toggle-tab-selection", (data) => {
+        if (typeof window !== "undefined" && typeof window.toggleTabSelection === "function") {
+          window.toggleTabSelection(data.tab);
+        }
+      });
+      reg("apply-tab-selection", () => {
+        if (typeof window !== "undefined" && typeof window.applyTabSelection === "function") {
+          window.applyTabSelection();
+        }
+      });
+      reg("move-tab-order", (data) => {
+        if (typeof window === "undefined") return;
+        if (typeof window.moveTabOrder !== "function") return;
+        const dir = parseInt(data.dir, 10);
+        if (Number.isNaN(dir)) return;
+        window.moveTabOrder(data.tabId, dir);
+      });
+      reg("select-tab-order", (data) => {
+        if (typeof window !== "undefined" && typeof window.selectTabOrder === "function") {
+          window.selectTabOrder(data.tabId);
+        }
+      });
+      reg("delete-memory-card", (data) => {
+        if (!data.id) return;
+        if (typeof window !== "undefined" && typeof window.deleteMemoryCard === "function") {
+          window.deleteMemoryCard(data.id);
+        }
+      });
+      reg("close-deploy-info", () => {
+        if (typeof window !== "undefined" && typeof window.closeDeployInfo === "function") {
+          window.closeDeployInfo();
+        }
+      });
+      reg("tap-habit-square", (data) => {
+        if (typeof window === "undefined") return;
+        const idx = parseInt(data.idx, 10);
+        if (Number.isNaN(idx) || !data.id) return;
+        if (data.entity === "habit" && typeof window.tapHabitSquareMe === "function") {
+          window.tapHabitSquareMe(data.id, idx);
+        } else if (data.entity === "habit-prod" && typeof window.tapHabitSquare === "function") {
+          window.tapHabitSquare(data.id, idx);
+        }
+      });
+      reg("open-edit-habit", (data) => {
+        if (!data.id) return;
+        if (typeof window !== "undefined" && typeof window.openEditHabit === "function") {
+          window.openEditHabit(data.id);
+        }
+      });
+      reg("prod-habit-card-click", (data, el, ev) => {
+        if (!data.id) return;
+        if (typeof window !== "undefined" && typeof window.prodHabitCardClick === "function") {
+          window.prodHabitCardClick(data.id, ev);
+        }
+      });
+      reg("open-add-health-card", () => {
+        if (typeof window !== "undefined" && typeof window.openAddHealthCard === "function") {
+          window.openAddHealthCard();
+        }
+      });
+      reg("open-health-card", (data) => {
+        if (!data.id) return;
+        if (typeof window !== "undefined" && typeof window.openHealthCard === "function") {
+          window.openHealthCard(data.id);
+        }
+      });
+      reg("close-health-card", () => {
+        if (typeof window !== "undefined" && typeof window.closeHealthCard === "function") {
+          window.closeHealthCard();
+        }
+      });
+      reg("open-edit-health-card", (data) => {
+        if (!data.id) return;
+        if (typeof window !== "undefined" && typeof window.openEditHealthCard === "function") {
+          window.openEditHealthCard(data.id);
+        }
+      });
+      reg("set-health-card-status", (data) => {
+        if (!data.cardId || !data.status) return;
+        if (typeof window !== "undefined" && typeof window.setHealthCardStatus === "function") {
+          window.setHealthCardStatus(data.cardId, data.status);
+        }
+      });
+      reg("log-health-med-dose", (data) => {
+        if (!data.cardId || !data.medId) return;
+        if (typeof window !== "undefined" && typeof window.logHealthMedDose === "function") {
+          window.logHealthMedDose(data.cardId, data.medId);
+        }
+      });
+      reg("skip-health-med-dose", (data) => {
+        if (!data.cardId || !data.medId) return;
+        if (typeof window !== "undefined" && typeof window.skipHealthMedDose === "function") {
+          window.skipHealthMedDose(data.cardId, data.medId, data.time || "");
+        }
+      });
+      reg("open-health-card-note", (data) => {
+        if (!data.id) return;
+        if (typeof window !== "undefined" && typeof window.openHealthCardNote === "function") {
+          window.openHealthCardNote(data.id);
+        }
+      });
+      reg("open-add-allergy", () => {
+        if (typeof window !== "undefined" && typeof window.openAddAllergy === "function") {
+          window.openAddAllergy();
+        }
+      });
+      reg("delete-allergy-by-id", (data) => {
+        if (!data.id) return;
+        if (typeof window !== "undefined" && typeof window.deleteAllergyById === "function") {
+          window.deleteAllergyById(data.id);
+        }
+      });
     }
   });
 
@@ -22201,11 +22356,11 @@ ${logLines}
       var iconBg = isActive ? cfg.accent : "rgba(30,16,64,0.06)";
       var iconColor = isActive ? "white" : "rgba(30,16,64,0.4)";
       var labelColor = isActive ? cfg.accent : "rgba(30,16,64,0.45)";
-      var onclickAttr = isLocked ? "" : "toggleTabSelection('" + cfg.id + "')";
+      var actionAttr = isLocked ? "" : ' data-action="toggle-tab-selection" data-tab="' + cfg.id + '"';
       var checkHtml = isLocked ? '<div style="position:absolute;top:10px;right:10px;font-size:10px;font-weight:700;color:rgba(30,16,64,0.3);background:rgba(30,16,64,0.06);padding:2px 7px;border-radius:6px">' + t("nav.tabsel.always", "\u0437\u0430\u0432\u0436\u0434\u0438") + "</div>" : '<div id="tab-sel-check-' + cfg.id + '" style="position:absolute;top:10px;right:10px;width:20px;height:20px;border-radius:6px;border:2px solid ' + (isActive ? cfg.accent : "rgba(30,16,64,0.15)") + ";background:" + (isActive ? cfg.accent : "transparent") + ';display:flex;align-items:center;justify-content:center;transition:all 0.18s">' + (isActive ? '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg>' : "") + "</div>";
-      return '<div id="tab-sel-card-' + cfg.id + '" onclick="' + onclickAttr + '" style="border-radius:18px;padding:14px;background:' + cardBg + ";border:2px solid " + borderColor + ";cursor:" + (isLocked ? "default" : "pointer") + ';transition:all 0.18s;position:relative;-webkit-tap-highlight-color:transparent"><div style="width:40px;height:40px;border-radius:12px;background:' + iconBg + ";display:flex;align-items:center;justify-content:center;margin-bottom:8px;color:" + iconColor + ';transition:all 0.18s">' + cfg.svg + '</div><div style="font-size:14px;font-weight:700;color:' + labelColor + ';line-height:1.2">' + t("tab." + cfg.id, cfg.label) + "</div>" + checkHtml + "</div>";
+      return '<div id="tab-sel-card-' + cfg.id + '"' + actionAttr + ' style="border-radius:18px;padding:14px;background:' + cardBg + ";border:2px solid " + borderColor + ";cursor:" + (isLocked ? "default" : "pointer") + ';transition:all 0.18s;position:relative;-webkit-tap-highlight-color:transparent"><div style="width:40px;height:40px;border-radius:12px;background:' + iconBg + ";display:flex;align-items:center;justify-content:center;margin-bottom:8px;color:" + iconColor + ';transition:all 0.18s">' + cfg.svg + '</div><div style="font-size:14px;font-weight:700;color:' + labelColor + ';line-height:1.2">' + t("tab." + cfg.id, cfg.label) + "</div>" + checkHtml + "</div>";
     }).join("");
-    overlay.innerHTML = '<div onclick="event.stopPropagation()" id="tab-sel-sheet" style="width:100%;max-width:480px;background:rgba(250,249,255,0.97);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border-radius:28px 28px 0 0;padding:0 0 calc(env(safe-area-inset-bottom) + 20px);border-top:1.5px solid rgba(255,255,255,0.8);box-shadow:0 -8px 40px rgba(0,0,0,0.15);transform:translateY(100%);transition:transform 0.35s cubic-bezier(0.32,0.72,0,1)"><div style="padding:14px 20px 10px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(30,16,64,0.06)"><div><div class="modal-handle"></div><div style="font-size:18px;font-weight:800;color:#1e1040">' + t("nav.tabsel.title", "\u0412\u043A\u043B\u0430\u0434\u043A\u0438") + '</div><div style="font-size:12px;color:rgba(30,16,64,0.38);font-weight:500;margin-top:2px">' + t("nav.tabsel.subtitle", "\u0412\u0438\u0431\u0435\u0440\u0438 \u0449\u043E \u043F\u043E\u043A\u0430\u0437\u0443\u0432\u0430\u0442\u0438 \u0432 \u0431\u0430\u0440\u0430\u0431\u0430\u043D\u0456") + '</div></div><button onclick="applyTabSelection()" style="background:#1e1040;border:none;border-radius:14px;padding:9px 18px;font-size:14px;font-weight:700;color:white;cursor:pointer">' + t("nav.tabsel.done", "\u0413\u043E\u0442\u043E\u0432\u043E") + '</button></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:16px 16px 8px">' + cardsHtml + '</div><div style="padding:0 16px 8px"><div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">' + t("nav.tabsel.order", "\u041F\u043E\u0440\u044F\u0434\u043E\u043A") + '</div><div id="tab-order-list" style="display:flex;flex-direction:row;gap:8px;overflow-x:auto;padding:4px 0 8px;-webkit-overflow-scrolling:touch;scrollbar-width:none"></div><div style="font-size:12px;color:rgba(30,16,64,0.3);font-weight:500;text-align:center">' + t("nav.tabsel.hint", "\u0422\u0430\u043F\u043D\u0438 \u0432\u043A\u043B\u0430\u0434\u043A\u0443 \u2192 \u2039 \u203A \u0434\u043B\u044F \u043F\u0435\u0440\u0435\u043C\u0456\u0449\u0435\u043D\u043D\u044F") + "</div></div></div>";
+    overlay.innerHTML = '<div id="tab-sel-sheet" style="width:100%;max-width:480px;background:rgba(250,249,255,0.97);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border-radius:28px 28px 0 0;padding:0 0 calc(env(safe-area-inset-bottom) + 20px);border-top:1.5px solid rgba(255,255,255,0.8);box-shadow:0 -8px 40px rgba(0,0,0,0.15);transform:translateY(100%);transition:transform 0.35s cubic-bezier(0.32,0.72,0,1)"><div style="padding:14px 20px 10px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(30,16,64,0.06)"><div><div class="modal-handle"></div><div style="font-size:18px;font-weight:800;color:#1e1040">' + t("nav.tabsel.title", "\u0412\u043A\u043B\u0430\u0434\u043A\u0438") + '</div><div style="font-size:12px;color:rgba(30,16,64,0.38);font-weight:500;margin-top:2px">' + t("nav.tabsel.subtitle", "\u0412\u0438\u0431\u0435\u0440\u0438 \u0449\u043E \u043F\u043E\u043A\u0430\u0437\u0443\u0432\u0430\u0442\u0438 \u0432 \u0431\u0430\u0440\u0430\u0431\u0430\u043D\u0456") + '</div></div><button data-action="apply-tab-selection" style="background:#1e1040;border:none;border-radius:14px;padding:9px 18px;font-size:14px;font-weight:700;color:white;cursor:pointer">' + t("nav.tabsel.done", "\u0413\u043E\u0442\u043E\u0432\u043E") + '</button></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:16px 16px 8px">' + cardsHtml + '</div><div style="padding:0 16px 8px"><div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">' + t("nav.tabsel.order", "\u041F\u043E\u0440\u044F\u0434\u043E\u043A") + '</div><div id="tab-order-list" style="display:flex;flex-direction:row;gap:8px;overflow-x:auto;padding:4px 0 8px;-webkit-overflow-scrolling:touch;scrollbar-width:none"></div><div style="font-size:12px;color:rgba(30,16,64,0.3);font-weight:500;text-align:center">' + t("nav.tabsel.hint", "\u0422\u0430\u043F\u043D\u0438 \u0432\u043A\u043B\u0430\u0434\u043A\u0443 \u2192 \u2039 \u203A \u0434\u043B\u044F \u043F\u0435\u0440\u0435\u043C\u0456\u0449\u0435\u043D\u043D\u044F") + "</div></div></div>";
     overlay.addEventListener("click", (e) => {
       if (e.target === overlay) closeTabSelector();
     });
@@ -22324,18 +22479,18 @@ ${logLines}
         const leftDisabled = idx <= 1 ? "opacity:0.25;pointer-events:none;" : "";
         const rightDisabled = idx >= tabs.length - 1 ? "opacity:0.25;pointer-events:none;" : "";
         return `<div style="display:flex;align-items:center;gap:3px;flex-shrink:0">
-        <button onclick="event.stopPropagation();moveTabOrder('${id}',-1)" style="${btnBase};${leftDisabled}">
+        <button data-action="move-tab-order" data-tab-id="${id}" data-dir="-1" style="${btnBase};${leftDisabled}">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1e1040" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
         </button>
-        <div onclick="selectTabOrder('${id}')" style="display:flex;align-items:center;gap:6px;padding:8px 10px;border-radius:20px;background:${bg};border:1.5px solid ${accent};flex-shrink:0;cursor:pointer;-webkit-tap-highlight-color:transparent">
+        <div data-action="select-tab-order" data-tab-id="${id}" style="display:flex;align-items:center;gap:6px;padding:8px 10px;border-radius:20px;background:${bg};border:1.5px solid ${accent};flex-shrink:0;cursor:pointer;-webkit-tap-highlight-color:transparent">
           ${dot}${label}
         </div>
-        <button onclick="event.stopPropagation();moveTabOrder('${id}',1)" style="${btnBase};${rightDisabled}">
+        <button data-action="move-tab-order" data-tab-id="${id}" data-dir="1" style="${btnBase};${rightDisabled}">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1e1040" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
         </button>
       </div>`;
       }
-      return `<div id="tab-order-row-${id}" onclick="selectTabOrder('${id}')"
+      return `<div id="tab-order-row-${id}" data-action="select-tab-order" data-tab-id="${id}"
       style="display:flex;align-items:center;gap:6px;padding:8px 10px;border-radius:20px;background:rgba(30,16,64,0.04);border:1.5px solid transparent;flex-shrink:0;cursor:pointer;transition:all 0.18s;-webkit-tap-highlight-color:transparent">
       ${dot}${label}
     </div>`;
@@ -22813,7 +22968,7 @@ ${logLines}
             <div contenteditable="true" data-fact-edit="${escId}" onblur="saveMemoryFactEdit('${escId}', this.textContent)" style="font-size:15px;color:#1e1040;line-height:1.4;outline:none;word-break:break-word">${escapeHtml(f.text)}</div>
             <div style="font-size:11px;color:rgba(30,16,64,0.4);margin-top:4px">${ago}${sourceLabel ? " \xB7 " + sourceLabel : ""}${ttlNote}</div>
           </div>
-          <button onclick="deleteMemoryCard('${escId}')" style="background:none;border:none;cursor:pointer;color:rgba(30,16,64,0.25);font-size:18px;line-height:1;padding:2px;flex-shrink:0;margin-top:1px">\xD7</button>
+          <button data-action="delete-memory-card" data-id="${escId}" style="background:none;border:none;cursor:pointer;color:rgba(30,16,64,0.25);font-size:18px;line-height:1;padding:2px;flex-shrink:0;margin-top:1px">\xD7</button>
         </div>`);
       }
     }
@@ -23106,7 +23261,7 @@ ${legacy}`;
     <div style="background:#fef8ec;border-radius:22px;padding:22px 20px 18px;width:100%;max-width:380px;box-shadow:0 20px 60px rgba(30,16,64,0.3)">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
         <div style="font-size:17px;font-weight:800;color:#1e1040">${t("nav.deploy.title", "\u0406\u043D\u0444\u043E \u043F\u0440\u043E \u0434\u0435\u043F\u043B\u043E\u0439")}</div>
-        <button onclick="closeDeployInfo()" style="background:none;border:none;font-size:22px;line-height:1;color:rgba(30,16,64,0.5);cursor:pointer;padding:4px 8px">\xD7</button>
+        <button data-action="close-deploy-info" style="background:none;border:none;font-size:22px;line-height:1;color:rgba(30,16,64,0.5);cursor:pointer;padding:4px 8px">\xD7</button>
       </div>
       <div style="display:flex;flex-direction:column;gap:10px;font-size:13px">
         <div style="display:flex;justify-content:space-between;gap:12px;padding:8px 12px;background:rgba(139,105,20,0.08);border-radius:10px">

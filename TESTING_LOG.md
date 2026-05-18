@@ -37,6 +37,50 @@
 
 **Версія:** CACHE_NAME `nm-20260517-2245`, commit `JMQuT Phase 2+3`.
 
+### v936+ Event Delegation: health.js (13 onclick → delegation)
+
+- [ ] Empty state у Здоровʼї → «+ Додати картку» → відкриває модалку.
+- [ ] Тап на картку → відкриває workspace.
+- [ ] «← Назад» з workspace → закриває (state reset).
+- [ ] «Ред.» біля картки → відкриває edit-modal.
+- [ ] Тап на статус кнопку → змінює статус картки.
+- [ ] «+ Прийняти» у missed doses banner → лог дози.
+- [ ] «Пропущу» у missed doses banner → skip.
+- [ ] Тап на блок «Нотатки картки» → відкриває нотатку.
+- [ ] У edit-modal: × біля med-row → видаляє рядок (reuse close-parent).
+- [ ] «+ Додати» алергію → відкриває модалку (2 точки — список + empty state).
+- [ ] × на алергії → видаляє з confirm.
+
+### v935+ Event Delegation: habits.js (12 onclick → delegation, 3 reuse universal)
+
+- [ ] Me-tab: тап на checkbox звички → toggle (✓/empty) працює.
+- [ ] Me-tab: тап на квадратик у progress-bar → toggle цього square.
+- [ ] Me-tab: тап на «+» квадрат → +1 до прогресу.
+- [ ] Me-tab: тап на текст картки звички (не на checkbox) → відкриває редактор.
+- [ ] Prod-tab: тап на checkbox prod-звички → toggle.
+- [ ] Prod-tab: тап на саму картку (не на checkbox/квадратики) → prodHabitCardClick (відкриває редактор з guard'ом).
+- [ ] Quit-habit картка: «Тримаюсь» / «Зірвався» — швидкий tap без 300мс делею (CSS `touch-action:manipulation`).
+- [ ] Quit-habit картка: тап на саму картку (не на кнопки) → редактор.
+
+### v934+ Event Delegation: nav.js (9 onclick → delegation)
+
+- [ ] Налаштування → tab-selector модалка → тап на картку вкладки → toggle active state.
+- [ ] У tab-selector кнопка «Готово» → застосовує вибір, закриває.
+- [ ] Drum (рядок вкладок) у налаштуваннях → стрілки ‹/› переміщують позицію вкладки (з click guard через closest — не активують select-tab-order).
+- [ ] Картка факту у Памʼяті → × кнопка → видаляє факт.
+- [ ] Модалка «Інфо про деплой» → × кнопка → закриває.
+
+### v933+ Event Delegation: notes.js (10 onclick → delegation)
+
+- [ ] Notes-tab → тап на картку папки → відкриває папку (intra-tab без лагу 150мс).
+- [ ] Тап на «···» картки папки → відкриває modal редагування папки (батьківський open-folder не тригериться).
+- [ ] Тап на нотатку → відкриває view-modal.
+- [ ] Тап на «···» нотатки → меню (батьківський open-note не тригериться).
+- [ ] У folder-edit-modal: тап на іконку → виділення активної іконки. Тап на колір → виділення.
+- [ ] Назад з folder-view → закриває папку, рендериться список папок.
+- [ ] **CRITICAL** Папка з апострофом (наприклад «Roman's notes») → відкривається коректно. (Pre-mortem: data-folder тепер `escapeHtml` а не `escapeJsArg` → нема \\' literal у dataset).
+- [ ] Пошук → результат у чаті → тап → відкриває нотатку.
+
 ### v932+ Phase 8 — Council post-audit hardening
 
 - [ ] Видалено мертві функції з health.js (-138 рядків).

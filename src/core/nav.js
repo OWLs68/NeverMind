@@ -210,24 +210,25 @@ function openTabSelector() {
     var iconBg = isActive ? cfg.accent : 'rgba(30,16,64,0.06)';
     var iconColor = isActive ? 'white' : 'rgba(30,16,64,0.4)';
     var labelColor = isActive ? cfg.accent : 'rgba(30,16,64,0.45)';
-    var onclickAttr = isLocked ? '' : "toggleTabSelection('" + cfg.id + "')";
+    var actionAttr = isLocked ? '' : ' data-action="toggle-tab-selection" data-tab="' + cfg.id + '"';
     var checkHtml = isLocked
       ? '<div style="position:absolute;top:10px;right:10px;font-size:10px;font-weight:700;color:rgba(30,16,64,0.3);background:rgba(30,16,64,0.06);padding:2px 7px;border-radius:6px">' + t('nav.tabsel.always', 'завжди') + '</div>'
       : '<div id="tab-sel-check-' + cfg.id + '" style="position:absolute;top:10px;right:10px;width:20px;height:20px;border-radius:6px;border:2px solid ' + (isActive ? cfg.accent : 'rgba(30,16,64,0.15)') + ';background:' + (isActive ? cfg.accent : 'transparent') + ';display:flex;align-items:center;justify-content:center;transition:all 0.18s">'
         + (isActive ? '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg>' : '')
         + '</div>';
-    return '<div id="tab-sel-card-' + cfg.id + '" onclick="' + onclickAttr + '" style="border-radius:18px;padding:14px;background:' + cardBg + ';border:2px solid ' + borderColor + ';cursor:' + (isLocked ? 'default' : 'pointer') + ';transition:all 0.18s;position:relative;-webkit-tap-highlight-color:transparent">'
+    return '<div id="tab-sel-card-' + cfg.id + '"' + actionAttr + ' style="border-radius:18px;padding:14px;background:' + cardBg + ';border:2px solid ' + borderColor + ';cursor:' + (isLocked ? 'default' : 'pointer') + ';transition:all 0.18s;position:relative;-webkit-tap-highlight-color:transparent">'
       + '<div style="width:40px;height:40px;border-radius:12px;background:' + iconBg + ';display:flex;align-items:center;justify-content:center;margin-bottom:8px;color:' + iconColor + ';transition:all 0.18s">' + cfg.svg + '</div>'
       + '<div style="font-size:14px;font-weight:700;color:' + labelColor + ';line-height:1.2">' + t('tab.' + cfg.id, cfg.label) + '</div>'
       + checkHtml + '</div>';
   }).join('');
 
-  overlay.innerHTML = '<div onclick="event.stopPropagation()" id="tab-sel-sheet" style="width:100%;max-width:480px;background:rgba(250,249,255,0.97);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border-radius:28px 28px 0 0;padding:0 0 calc(env(safe-area-inset-bottom) + 20px);border-top:1.5px solid rgba(255,255,255,0.8);box-shadow:0 -8px 40px rgba(0,0,0,0.15);transform:translateY(100%);transition:transform 0.35s cubic-bezier(0.32,0.72,0,1)">'
+  // sheet БЕЗ onclick — overlay listener (нижче) фільтрує e.target===overlay для clickaway.
+  overlay.innerHTML = '<div id="tab-sel-sheet" style="width:100%;max-width:480px;background:rgba(250,249,255,0.97);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border-radius:28px 28px 0 0;padding:0 0 calc(env(safe-area-inset-bottom) + 20px);border-top:1.5px solid rgba(255,255,255,0.8);box-shadow:0 -8px 40px rgba(0,0,0,0.15);transform:translateY(100%);transition:transform 0.35s cubic-bezier(0.32,0.72,0,1)">'
     + '<div style="padding:14px 20px 10px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(30,16,64,0.06)">'
     + '<div><div class="modal-handle"></div>'
     + '<div style="font-size:18px;font-weight:800;color:#1e1040">' + t('nav.tabsel.title', 'Вкладки') + '</div>'
     + '<div style="font-size:12px;color:rgba(30,16,64,0.38);font-weight:500;margin-top:2px">' + t('nav.tabsel.subtitle', 'Вибери що показувати в барабані') + '</div></div>'
-    + '<button onclick="applyTabSelection()" style="background:#1e1040;border:none;border-radius:14px;padding:9px 18px;font-size:14px;font-weight:700;color:white;cursor:pointer">' + t('nav.tabsel.done', 'Готово') + '</button>'
+    + '<button data-action="apply-tab-selection" style="background:#1e1040;border:none;border-radius:14px;padding:9px 18px;font-size:14px;font-weight:700;color:white;cursor:pointer">' + t('nav.tabsel.done', 'Готово') + '</button>'
     + '</div>'
     + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:16px 16px 8px">' + cardsHtml + '</div>'
     + '<div style="padding:0 16px 8px">'
@@ -364,18 +365,18 @@ function renderTabOrderList() {
       const leftDisabled = idx <= 1 ? 'opacity:0.25;pointer-events:none;' : '';
       const rightDisabled = idx >= tabs.length - 1 ? 'opacity:0.25;pointer-events:none;' : '';
       return `<div style="display:flex;align-items:center;gap:3px;flex-shrink:0">
-        <button onclick="event.stopPropagation();moveTabOrder('${id}',-1)" style="${btnBase};${leftDisabled}">
+        <button data-action="move-tab-order" data-tab-id="${id}" data-dir="-1" style="${btnBase};${leftDisabled}">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1e1040" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
         </button>
-        <div onclick="selectTabOrder('${id}')" style="display:flex;align-items:center;gap:6px;padding:8px 10px;border-radius:20px;background:${bg};border:1.5px solid ${accent};flex-shrink:0;cursor:pointer;-webkit-tap-highlight-color:transparent">
+        <div data-action="select-tab-order" data-tab-id="${id}" style="display:flex;align-items:center;gap:6px;padding:8px 10px;border-radius:20px;background:${bg};border:1.5px solid ${accent};flex-shrink:0;cursor:pointer;-webkit-tap-highlight-color:transparent">
           ${dot}${label}
         </div>
-        <button onclick="event.stopPropagation();moveTabOrder('${id}',1)" style="${btnBase};${rightDisabled}">
+        <button data-action="move-tab-order" data-tab-id="${id}" data-dir="1" style="${btnBase};${rightDisabled}">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1e1040" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
         </button>
       </div>`;
     }
-    return `<div id="tab-order-row-${id}" onclick="selectTabOrder('${id}')"
+    return `<div id="tab-order-row-${id}" data-action="select-tab-order" data-tab-id="${id}"
       style="display:flex;align-items:center;gap:6px;padding:8px 10px;border-radius:20px;background:rgba(30,16,64,0.04);border:1.5px solid transparent;flex-shrink:0;cursor:pointer;transition:all 0.18s;-webkit-tap-highlight-color:transparent">
       ${dot}${label}
     </div>`;
@@ -904,7 +905,7 @@ function renderMemoryCards() {
             <div contenteditable="true" data-fact-edit="${escId}" onblur="saveMemoryFactEdit('${escId}', this.textContent)" style="font-size:15px;color:#1e1040;line-height:1.4;outline:none;word-break:break-word">${escapeHtml(f.text)}</div>
             <div style="font-size:11px;color:rgba(30,16,64,0.4);margin-top:4px">${ago}${sourceLabel ? ' · ' + sourceLabel : ''}${ttlNote}</div>
           </div>
-          <button onclick="deleteMemoryCard('${escId}')" style="background:none;border:none;cursor:pointer;color:rgba(30,16,64,0.25);font-size:18px;line-height:1;padding:2px;flex-shrink:0;margin-top:1px">×</button>
+          <button data-action="delete-memory-card" data-id="${escId}" style="background:none;border:none;cursor:pointer;color:rgba(30,16,64,0.25);font-size:18px;line-height:1;padding:2px;flex-shrink:0;margin-top:1px">×</button>
         </div>`);
     }
   }
@@ -1256,7 +1257,7 @@ export function showDeployInfo() {
     <div style="background:#fef8ec;border-radius:22px;padding:22px 20px 18px;width:100%;max-width:380px;box-shadow:0 20px 60px rgba(30,16,64,0.3)">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
         <div style="font-size:17px;font-weight:800;color:#1e1040">${t('nav.deploy.title', 'Інфо про деплой')}</div>
-        <button onclick="closeDeployInfo()" style="background:none;border:none;font-size:22px;line-height:1;color:rgba(30,16,64,0.5);cursor:pointer;padding:4px 8px">×</button>
+        <button data-action="close-deploy-info" style="background:none;border:none;font-size:22px;line-height:1;color:rgba(30,16,64,0.5);cursor:pointer;padding:4px 8px">×</button>
       </div>
       <div style="display:flex;flex-direction:column;gap:10px;font-size:13px">
         <div style="display:flex;justify-content:space-between;gap:12px;padding:8px 12px;background:rgba(139,105,20,0.08);border-radius:10px">
