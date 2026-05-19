@@ -57,12 +57,19 @@ EAA (мікро-виняток), NIS2 (мікро-виняток), DSA (особ
    - **Загалом:** 334 → 0 inline `onclick` у production коді (excludes diagnostics.js 3 + logger.js 1 internal). delegation registry 0 → 119 actions (+1 universal `call`, +1 universal `close-backdrop`). pre-commit-onclick-freeze hook (9-й сторож, net-rachet).
    - **Security hardening (OBErR audit fix 19.05):** CALL_PREFIX_WHITELIST + BLACKLIST у `delegation.js` блокує `eval`/`Function`/`setTimeout`/`fetch`/`open` (window.open phishing). 43 префікси покривають 105/105 поточних data-fn (0 регресій).
 
-2. **🟡 CSP Enablement Phase 2 — 55 inline non-onclick handlers** (нова після OBErR, ~4-6 год)
-   - Залишок: ontouchstart/end (15) + oninput (15) + onkeydown (11) + onfocus (7) + onblur (2) + onchange (2) + ontouchmove (2) + onmousedown (1).
-   - **Найскладніше:** swipe-handlers з координатами — `board.js:41` (owlTabSwipe ×3) + `index.html:274` (owlTabSwipe ×3) + `tasks.js:290` (step-check swipe-vs-tap). Потребує `src/ui/touch-detect.js` helper з pointer events delegation.
-   - **Дешеві wins (1 год):** 6× `ontouchend="this.focus()"` — iOS клавіатура hack що став зайвим на iOS 15+. Видалити + перевірити tap → keyboard на iPhone. Якщо OK — gone.
-   - **DRY групи:** 15 `oninput` patterns у Settings + finance-modals → global `input` listener з data-* attributes. 11 `onkeydown="if(Enter)..."` → 1 global keydown listener з data-action handlers.
-   - **Після цього:** strict CSP `script-src 'self'` без `unsafe-inline` — блокує 95% XSS. UUID завжди безпечні у атрибутах (B-108/B-170 клас зник назавжди).
+2. **🟡 CSP Enablement Phase 2 — 12 inline non-onclick залишилось** (OBErR закрив 43 з 55, ~2 год)
+   - **OBErR прогрес 18-19.05:** 5 нових event listeners + новий модуль `src/ui/touch-detect.js`. Закрито: onkeydown ×11 ✅, oninput ×11 ✅, onfocus ×7 ✅, onblur ×2 ✅, onchange ×2 ✅, swipe touchstart/move/end ×8 ✅ (touch-detect.js Phase 2.5).
+   - **Залишок (12 inline):**
+     - 6× `ontouchend="this.focus()"` — iOS клавіатура hack, потребує iPhone test перед видаленням.
+     - 4× oninput closure-state — `_finTxComment = this.value`, `_finCatModalDraft.name = this.value`, 2× `setBenchmarkField('${key}',...)`. Refactor через helper functions у finance модулях.
+     - 1× ontouchend + 1× onmousedown `event.preventDefault();addTaskStep()` — preventDefault sync. Через addEventListener у JS.
+   - **Після цього:** strict CSP `script-src 'self'` без `unsafe-inline` — блокує 95% XSS.
+
+5. **🚀 AI-Tester Hetzner deploy** (нова OBErR 19.05.2026 — скрипти готові, чекає Романа)
+   - **Готово (NM-Claude):** `scripts/hetzner-setup.sh` + `ai-tester.py` + `setup-cron.sh` + `health-check.py` + `docs/HETZNER_TESTER_SETUP.md` + tester-config.json (Claude Haiku 4.5).
+   - **Готово (Roman):** Anthropic API key створено, сервер 94.130.25.22 з Chrome + browser-harness стоїть з 14.05.
+   - **Залишок (Roman, ~10 хв):** SSH на сервер → git clone NM → `sudo bash hetzner-setup.sh "PAT" "key"` → ручний `--smoke --force` → `setup-cron.sh`. Покроково у HETZNER_TESTER_SETUP.md.
+   - **Після deploy:** 3 запуски/день о 03/11/19 UTC з push звітів у claude/ai-tester-{ts} гілки. 12 регресійних команд OBErR у tester-commands.md чекають.
 
 2. **🔴 OpenAI ключ → Supabase Edge Function** (під час Supabase міграції)
    - Зараз `nm_gemini_key` у localStorage видно через DevTools
