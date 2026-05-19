@@ -45,7 +45,49 @@ export function initDelegation() {
   if (_initialized) return;
   if (typeof document === 'undefined') return;
   document.body.addEventListener('click', _handleClick);
+  // OBErR CSP Phase 2 quick win (19.05.2026): global keydown listener для
+  // input/textarea з `data-on-enter="windowFnName"`. Замінює 11 inline
+  // `onkeydown="if(event.key==='Enter'&&!event.shiftKey){...sendX()}"`.
+  // CSP-friendly + DRY. Whitelist gate (_isCallAllowed) той самий що `call`.
+  //
+  // Patterns supported:
+  //   data-on-enter="sendFooMessage"           — Enter (без модифікаторів)
+  //   data-on-enter-mod="cmd"                  — додаткова вимога Cmd/Ctrl+Enter
+  //                                              (для NoteChat де Enter = новий
+  //                                              рядок, Cmd+Enter = send)
+  document.body.addEventListener('keydown', _handleKeyDown);
+  // Global input listener для data-on-input="fn" (11 точок: 10×
+  // autoResizeTextarea + 1× autoSaveNoteView). Handler передає element як
+  // arg — функції що не очікують просто ігнорують. Whitelist через
+  // _isCallAllowed (auto/refresh префікси).
+  document.body.addEventListener('input', _handleInput);
+  // Global focus + blur listeners для data-on-focus / data-on-blur — reuse
+  // named actions з registry (`data-on-focus="open-chat-bar" data-tab="X"`
+  // викликає ACTIONS['open-chat-bar'] з тим самим API що click). 7 onfocus
+  // (chat-bars) + 1 onblur (saveSettings) → 0. focus подія не bubbles за
+  // дефолтом — використовуємо capture phase + closest().
+  document.body.addEventListener('focus', _handleFocusOrBlur, true);
+  document.body.addEventListener('blur', _handleFocusOrBlur, true);
   _initialized = true;
+}
+
+// OBErR CSP Phase 2.3 (19.05.2026): unified focus/blur handler через
+// data-on-focus / data-on-blur. Делегує до named action у ACTIONS registry
+// (той самий API що click) — щоб не дублювати logic. focus bubbles=false →
+// use capture phase щоб піймати focus на input/textarea descendants.
+function _handleFocusOrBlur(e) {
+  const attr = e.type === 'focus' ? 'data-on-focus' : 'data-on-blur';
+  const el = e.target && e.target.closest ? e.target.closest('[' + attr + ']') : null;
+  if (!el) return;
+  const action = e.type === 'focus' ? el.dataset.onFocus : el.dataset.onBlur;
+  if (!action) return;
+  const fn = ACTIONS[action];
+  if (!fn) return;
+  try {
+    fn(el.dataset, el, e);
+  } catch (err) {
+    console.error('[delegation] ' + e.type + ' action «' + action + '» failed:', err);
+  }
 }
 
 function _handleClick(e) {
@@ -59,6 +101,48 @@ function _handleClick(e) {
     fn(el.dataset, el, e);
   } catch (err) {
     console.error('[delegation] action «' + action + '» handler failed:', err);
+  }
+}
+
+// OBErR CSP Phase 2 (19.05.2026): global input listener для input/textarea
+// з data-on-input="fn". Передає element як arg (функції що не очікують —
+// ігнорують). Whitelist gate.
+function _handleInput(e) {
+  const el = e.target && e.target.closest ? e.target.closest('[data-on-input]') : null;
+  if (!el) return;
+  const fn = el.dataset.onInput;
+  if (!_isCallAllowed(fn)) {
+    if (fn) console.warn('[delegation] `on-input` rejected — fn not in whitelist:', fn);
+    return;
+  }
+  if (typeof window !== 'undefined' && typeof window[fn] === 'function') {
+    try { window[fn](el); } catch (err) {
+      console.error('[delegation] on-input «' + fn + '» failed:', err);
+    }
+  }
+}
+
+// OBErR CSP Phase 2 (19.05.2026): global keydown listener для input/textarea
+// з data-on-enter. Замінює inline onkeydown patterns.
+function _handleKeyDown(e) {
+  if (e.key !== 'Enter') return;
+  const el = e.target && e.target.closest ? e.target.closest('[data-on-enter]') : null;
+  if (!el) return;
+  // Shift+Enter — НЕ trigger (стандарт для multiline textarea = новий рядок)
+  if (e.shiftKey) return;
+  // Якщо data-on-enter-mod="cmd" — потрібен meta або ctrl (Mac/Win/Linux)
+  const requireMod = el.dataset.onEnterMod === 'cmd';
+  if (requireMod && !(e.metaKey || e.ctrlKey)) return;
+  const fn = el.dataset.onEnter;
+  if (!_isCallAllowed(fn)) {
+    if (fn) console.warn('[delegation] `on-enter` rejected — fn not in whitelist:', fn);
+    return;
+  }
+  e.preventDefault();
+  if (typeof window !== 'undefined' && typeof window[fn] === 'function') {
+    try { window[fn](); } catch (err) {
+      console.error('[delegation] on-enter «' + fn + '» failed:', err);
+    }
   }
 }
 
@@ -878,7 +962,10 @@ const CALL_PREFIX_WHITELIST = [
   'adjust', 'skip', 'log', 'sync', 'route', 'note', 'copy', 'export',
   'import', 'refresh', 'slides', 'undo', 'calendar', 'routine', 'create',
   'ob', 'reset', 'restore', 'cancel', 'confirm', 'edit', 'tap', 'hold',
-  'navigate', 'finCalc', 'addHealth', 'addMemory', 'shift', 'navigate',
+  'navigate', 'finCalc', 'addHealth', 'addMemory', 'shift',
+  // OBErR CSP Phase 2.2 (19.05.2026): auto* для autoResizeTextarea +
+  // autoSaveNoteView (data-on-input handlers).
+  'auto',
 ];
 // Жорсткий чорний список (наказово блокується незалежно від whitelist).
 // Це функції які небезпечні незалежно від наміру виклику.
@@ -907,6 +994,29 @@ reg('close-chat-bar', (data) => {
   if (!data.tab) return;
   if (typeof window !== 'undefined' && typeof window.closeChatBar === 'function') {
     window.closeChatBar(data.tab);
+  }
+});
+// OBErR CSP Phase 2.3 (19.05.2026) — open-chat-bar (data-tab) ×7 — onfocus
+// handler. Симетрично до close-chat-bar.
+reg('open-chat-bar', (data) => {
+  if (!data.tab) return;
+  if (typeof window !== 'undefined' && typeof window.openChatBar === 'function') {
+    window.openChatBar(data.tab);
+  }
+});
+// save-settings — onblur handler для input API key.
+reg('save-settings', () => {
+  if (typeof window !== 'undefined' && typeof window.saveSettings === 'function') {
+    window.saveSettings();
+  }
+});
+// save-memory-fact-edit — onblur handler для contenteditable у memory cards.
+// data-fact-edit = factId (вже є у HTML). Читає el.textContent безпосередньо.
+reg('save-memory-fact-edit', (data, el) => {
+  const factId = data.factEdit;
+  if (!factId || !el) return;
+  if (typeof window !== 'undefined' && typeof window.saveMemoryFactEdit === 'function') {
+    window.saveMemoryFactEdit(factId, el.textContent);
   }
 });
 // set-evening-mood — кнопки 5 настроїв (😄😊😐😟😢).

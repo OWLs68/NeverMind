@@ -705,9 +705,9 @@
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.55)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
     </button>
     <textarea id="inbox-input" rows="1" placeholder="Напиши що завгодно — Агент розбереться…"
-      onfocus="openChatBar('inbox')"
-      maxlength="500" oninput="autoResizeTextarea(this)"
-      onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendToAI()}"></textarea>
+      data-on-focus="open-chat-bar" data-tab="inbox"
+      maxlength="500" data-on-input="autoResizeTextarea"
+      data-on-enter="sendToAI"></textarea>
     <!-- Мікрофон (неактивний) -->
     <button style="width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,0.12);border:none;display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;-webkit-tap-highlight-color:transparent;opacity:0.5" disabled>
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.55)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
@@ -725,9 +725,9 @@
   </div>
   <div class="ai-bar-input-box">
     <textarea id="finance-bar-input" rows="1" placeholder="Витратив, отримав, запитай агента…"
-      maxlength="500" oninput="autoResizeTextarea(this)"
-      onfocus="openChatBar('finance')"
-      onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendFinanceBarMessage()}"></textarea>
+      maxlength="500" data-on-input="autoResizeTextarea"
+      data-on-focus="open-chat-bar" data-tab="finance"
+      data-on-enter="sendFinanceBarMessage"></textarea>
     <button class="ai-bar-send-btn" id="finance-send-btn" data-action="call" data-fn="sendFinanceBarMessage">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1e1040" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
     </button>
@@ -740,9 +740,9 @@
   </div>
   <div class="ai-bar-input-box">
     <textarea id="notes-bar-input" rows="1" placeholder="Створи нотатку, запитай агента…"
-      maxlength="500" oninput="autoResizeTextarea(this)"
-      onfocus="openChatBar('notes')"
-      onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendNotesBarMessage()}"></textarea>
+      maxlength="500" data-on-input="autoResizeTextarea"
+      data-on-focus="open-chat-bar" data-tab="notes"
+      data-on-enter="sendNotesBarMessage"></textarea>
     <button class="ai-bar-send-btn" id="notes-send-btn" data-action="call" data-fn="sendNotesBarMessage">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1e1040" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
     </button>
@@ -757,9 +757,9 @@
   <!-- Поле вводу -->
   <div class="ai-bar-input-box">
     <textarea id="tasks-chat-input" rows="1" placeholder="Запитай або скажи Агенту про задачі…"
-      maxlength="500" oninput="autoResizeTextarea(this)"
-      onfocus="openChatBar('tasks')"
-      onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendTasksBarMessage()}"></textarea>
+      maxlength="500" data-on-input="autoResizeTextarea"
+      data-on-focus="open-chat-bar" data-tab="tasks"
+      data-on-enter="sendTasksBarMessage"></textarea>
     <button class="ai-bar-send-btn" id="tasks-send-btn" data-action="call" data-fn="sendTasksBarMessage">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1e1040" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
     </button>
@@ -772,9 +772,9 @@
       </div>
       <div class="ai-bar-input-box">
         <textarea id="me-chat-input" rows="1" placeholder="Запитай агента про себе…"
-          maxlength="500" oninput="autoResizeTextarea(this)"
-          onfocus="openChatBar('me')"
-          onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMeChatMessage()}"></textarea>
+          maxlength="500" data-on-input="autoResizeTextarea"
+          data-on-focus="open-chat-bar" data-tab="me"
+          data-on-enter="sendMeChatMessage"></textarea>
         <button class="ai-bar-send-btn" id="me-send-btn" data-action="call" data-fn="sendMeChatMessage">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1e1040" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
         </button>
@@ -787,9 +787,9 @@
       </div>
       <div class="ai-bar-input-box">
         <textarea id="evening-bar-input" rows="1" placeholder="Поговори з агентом про день…"
-          maxlength="500" oninput="autoResizeTextarea(this)"
-          onfocus="openChatBar('evening')"
-          onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendEveningBarMessage()}"></textarea>
+          maxlength="500" data-on-input="autoResizeTextarea"
+          data-on-focus="open-chat-bar" data-tab="evening"
+          data-on-enter="sendEveningBarMessage"></textarea>
         <button class="ai-bar-send-btn" id="evening-send-btn" data-action="call" data-fn="sendEveningBarMessage">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1e1040" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
         </button>
@@ -880,9 +880,9 @@
   </div>
   <div class="ai-bar-input-box">
     <textarea id="projects-bar-input" rows="1" placeholder="Виконав крок, питання, редагувати план…"
-      maxlength="500" oninput="autoResizeTextarea(this)"
-      onfocus="openChatBar('projects')"
-      onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendProjectsBarMessage()}"></textarea>
+      maxlength="500" data-on-input="autoResizeTextarea"
+      data-on-focus="open-chat-bar" data-tab="projects"
+      data-on-enter="sendProjectsBarMessage"></textarea>
     <button class="ai-bar-send-btn" id="projects-send-btn" data-action="call" data-fn="sendProjectsBarMessage">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1e1040" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
     </button>
@@ -1203,7 +1203,7 @@
     <div style="font-size:14px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">Кроки</div>
     <div id="task-steps-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px"></div>
     <div style="display:flex;gap:8px;margin-bottom:16px">
-      <input id="task-step-input" type="text" style="flex:1;border:1.5px solid rgba(30,16,64,0.1);border-radius:10px;padding:9px 12px;font-size:15px;font-family:inherit;color:#1e1040;outline:none" placeholder="Додати крок…" ontouchend="this.focus()" onkeydown="if(event.key==='Enter'){event.preventDefault();addTaskStep();}">
+      <input id="task-step-input" type="text" style="flex:1;border:1.5px solid rgba(30,16,64,0.1);border-radius:10px;padding:9px 12px;font-size:15px;font-family:inherit;color:#1e1040;outline:none" placeholder="Додати крок…" ontouchend="this.focus()" data-on-enter="addTaskStep">
       <button onmousedown="event.preventDefault();addTaskStep()" ontouchend="event.preventDefault();addTaskStep()" style="background:rgba(234,88,12,0.1);border:none;border-radius:10px;padding:9px 14px;font-size:15px;font-weight:700;color:#ea580c;cursor:pointer;-webkit-tap-highlight-color:transparent">+</button>
     </div>
     <div style="display:flex;gap:8px">
@@ -1522,7 +1522,7 @@
     <div class="s-group-label" style="padding:4px 14px;font-size:11px;font-weight:700;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.09em">Розробник</div>
     <div class="s-group">
       <div class="s-row" style="cursor:default;flex-direction:column;align-items:stretch;gap:8px;padding:14px">
-        <input class="settings-input" type="password" id="input-api-key" placeholder="sk-proj-..." autocomplete="off" autocorrect="off" spellcheck="false" onblur="saveSettings()" style="padding:10px 14px;font-size:15px;border-radius:12px;background:rgba(255,255,255,0.7);border:1px solid rgba(30,16,64,0.1)">
+        <input class="settings-input" type="password" id="input-api-key" placeholder="sk-proj-..." autocomplete="off" autocorrect="off" spellcheck="false" data-on-blur="save-settings" style="padding:10px 14px;font-size:15px;border-radius:12px;background:rgba(255,255,255,0.7);border:1px solid rgba(30,16,64,0.1)">
         <button data-action="call" data-fn="saveSettings" style="padding:10px 14px;font-size:14px;font-weight:700;border-radius:10px;background:rgba(194,121,10,0.12);border:1.5px solid rgba(194,121,10,0.35);color:#c2790a;cursor:pointer;font-family:inherit">Зберегти ключ</button>
         <div id="key-status" class="key-status no-key">⚠️ Ключ не встановлено</div>
       </div>
@@ -1641,8 +1641,8 @@
   <div id="task-chat-messages" style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px;"></div>
   <div style="padding:12px 16px;border-top:1px solid rgba(30,16,64,0.08);flex-shrink:0;display:flex;gap:8px;align-items:flex-end;">
     <textarea id="task-chat-input" rows="1" placeholder="Запитай або розкажи деталі…"
-      maxlength="500" oninput="autoResizeTextarea(this)"
-      onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendTaskChatMessage();}"
+      maxlength="500" data-on-input="autoResizeTextarea"
+      data-on-enter="sendTaskChatMessage"
       style="flex:1;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:10px 12px;font-size:16px;font-family:inherit;color:#1e1040;outline:none;resize:none;max-height:100px;"></textarea>
     <button data-action="call" data-fn="sendTaskChatMessage" id="task-chat-send" style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#f97316,#ea580c);border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1e1040" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
@@ -1674,7 +1674,7 @@
   <div id="note-view-panel-note" style="flex:1;overflow-y:auto;padding:12px;">
     <div id="note-view-text"
       contenteditable="true"
-      oninput="autoSaveNoteView()"
+      data-on-input="autoSaveNoteView"
       style="background:linear-gradient(135deg,#f5ede0,#ede0cc);border:1.5px solid rgba(255,255,255,0.6);border-radius:16px;padding:16px;font-size:17px;line-height:1.8;color:#1e1040;font-weight:400;white-space:pre-wrap;word-break:break-word;outline:none;min-height:calc(100% - 8px);caret-color:#c2620a;-webkit-user-select:text;user-select:text;box-shadow:0 2px 12px rgba(194,98,10,0.06);box-sizing:border-box;"></div>
   </div>
 
@@ -1686,8 +1686,8 @@
   <!-- Chat input -->
   <div id="note-chat-input-area" style="display:none;padding:12px 16px;border-top:1px solid rgba(194,98,10,0.1);flex-shrink:0;gap:8px;align-items:flex-end;background:rgba(254,215,170,0.5);">
     <textarea id="note-chat-input" rows="1" placeholder="Запитай про цю нотатку…"
-      maxlength="500" oninput="autoResizeTextarea(this)"
-      onkeydown="if(event.key==='Enter'&&(event.metaKey||event.ctrlKey)){event.preventDefault();sendNoteChatMessage();}"
+      maxlength="500" data-on-input="autoResizeTextarea"
+      data-on-enter="sendNoteChatMessage" data-on-enter-mod="cmd"
       style="flex:1;border:1.5px solid rgba(194,98,10,0.15);border-radius:12px;padding:10px 12px;font-size:16px;font-family:inherit;color:#1e1040;outline:none;resize:none;max-height:100px;background:rgba(255,255,255,0.7);"></textarea>
     <button data-action="call" data-fn="sendNoteChatMessage" id="note-chat-send" style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#f97316,#c2410c);border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
@@ -1864,8 +1864,8 @@
     <div style="height:1px;background:rgba(30,16,64,0.06);margin-bottom:12px"></div>
     <div style="display:flex;gap:8px">
       <textarea id="clarify-input" rows="1" placeholder="Або напиши свій варіант…"
-        maxlength="500" oninput="autoResizeTextarea(this)"
-        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendClarifyText()}"
+        maxlength="500" data-on-input="autoResizeTextarea"
+        data-on-enter="sendClarifyText"
         style="flex:1;border:1.5px solid rgba(194,121,10,0.20);border-radius:13px;padding:10px 13px;font-size:14px;font-family:inherit;color:#1e1040;outline:none;resize:none;max-height:80px;box-sizing:border-box;"></textarea>
       <button data-action="call" data-fn="sendClarifyText" style="width:42px;height:42px;border-radius:13px;background:#c2790a;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
