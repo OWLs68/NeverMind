@@ -4,79 +4,178 @@
 >
 > Старіші сесії (до 6GoDe 19.04) — в [`_archive/SESSION_STATE_archive.md`](../_archive/SESSION_STATE_archive.md).
 
-**Оновлено:** 2026-05-18 (сесія **OBErR** — Event Delegation Refactor (241 onclick → 0 у 5 файлах, 6 фаз) + Backup Phase 2 (createFullBackup + JSON export + Restore UI) + B-179 UI Кошика (модалка з 11 типів restore + race-fix) + EU Compliance pre-MVP (Impressum/Privacy/Terms DRAFT + EU_LAUNCH_CHECKLIST.md). 10 комітів, 11 Council агентів Sonnet (5 pre-Phase + 3 post-Phase Event Delegation + 3 pre-Backup/Trash/EU).
+**Оновлено:** 2026-05-19 (сесія **OBErR** — 26 commits, 7 великих блоків: Event Delegation 241→0 + Backup Phase 2 + B-179 Кошик + EU Compliance pre-MVP + Audit fixes 9 bugs + Security CALL_WHITELIST + CSP Phase 2 (43/55 inline non-onclick) + AI-Tester Hetzner повний комплект. ~20 Council Sonnet, 14 CACHE bumps.
 
 ---
 
-## 🔧 Поточна сесія OBErR — Event Delegation Final + Backup P2 + Кошик + EU pre-MVP (18.05.2026)
+## 🔧 Поточна сесія OBErR — Event Delegation 241→0 + Backup+Кошик + CSP P2 + AI-Tester (18-19.05.2026)
 
-### Зроблено — 3 великі блоки
+### Зроблено — 7 великих блоків, 26 commits
 
-#### A. Event Delegation Refactor — фінальні 241 onclick → 0 (Phase 0-6, 7 commits)
+#### A. Event Delegation Refactor — 241 onclick → 0 (Phase 0-6, 7 commits)
 
-Council 5 паралельних агентів Sonnet ПЕРЕД першим Edit — знайшли 4 архітектурні дірки (bfcache double-listener, stopPropagation antipattern, modal.setAttribute('onclick'), compound onclick). Усі закрито у Phase 0.
+Council 5 паралельних агентів Sonnet ПЕРЕД першим Edit знайшли 4 архітектурні дірки. Закрито у Phase 0.
 
-**Phase 0 hardening** (`891b444`) — `initDelegation()` idempotency `_initialized` flag + UNIVERSAL `close-backdrop` action (data-fn) що замінює одночасно `onclick="closeX()"` на overlay + `onclick="event.stopPropagation()"` на content (через `e.target !== el` guard). 1 universal заміняє 17 backdrop'ів + 5 stopPropagation antipatterns.
+**Phase 0 hardening** (`891b444`) — `initDelegation()` idempotency `_initialized` flag + UNIVERSAL `close-backdrop` action (data-fn) що замінює одночасно `onclick="closeX()"` на overlay + `onclick="event.stopPropagation()"` на content. 1 universal заміняє 17 backdrop'ів + 5 stopPropagation antipatterns.
 
 **Phase 1-5** (`11af95a` → `91cdf83`) — 5 файлів послідовно через checkpoint-комміти:
 - finance-analytics.js (9 onclick + 1 setAttribute('onclick') → close-backdrop)
 - finance-modals.js (34 onclick + критичний stopPropagation fix у category-picker)
 - finance.js (16 onclick + compound onclick fix + inline stopPropagation cleanup)
 - calendar.js (15 onclick + null reminderId edge case)
-- index.html (167 onclick: 17 backdrop'ів через sed → close-backdrop, 91 безаргументних → universal `call` data-fn, 59 з аргументами → 20 named actions з data-* attrs)
+- index.html (167 onclick: 17 backdrop'ів → close-backdrop, 91 безаргументних → universal `call` data-fn, 59 з аргументами → 20 named actions)
 
-**Phase 6 post-Phase audit** (`f2ea4f6`) — Council 3 паралельні агенти Sonnet (Regression Hunter + Cross-file + Pre-mortem) знайшли 1 реальну UX-дірку: 300мс iOS tap delay на ~119 нових delegation елементів. Фікс: глобальне CSS `[data-action] { touch-action: manipulation }`. Решта Pre-mortem знахідок — pre-existing або документовано (trust-model для `call` action, DETAIL_TO_KEY['finance']='nm_finance' семантика, 37 inline non-onclick handler'ів як окрема сесія).
+**Phase 6 post-Phase audit** (`f2ea4f6`) — Council 3 агенти знайшли 1 UX-дірку: 300мс iOS tap delay на 119 нових delegation елементів. Фікс: глобальне CSS `[data-action] { touch-action: manipulation }`.
 
-**Загалом Event Delegation у OBErR:** 241 onclick → 0. delegation registry 49 → 119 actions (+70 named + 2 universal). 0 регресій (Council post-audit verify).
+**Загалом Event Delegation у OBErR:** 241 onclick → 0. delegation registry 49 → 119 actions (+70 named + 2 universal `call` + `close-backdrop`).
 
 #### B. Backup Phase 2 + B-179 Кошик UI (3 commits)
 
-Council 3 паралельні агенти Sonnet (Strategist + Pre-mortem + Implementer) ПЕРЕД UI знайшли 2 критичні ризики — закрито на рівні backend.
+Council 3 паралельні агенти Sonnet (Strategist + Pre-mortem + Implementer) ПЕРЕД UI знайшли 2 критичні ризики.
 
 **`8f428ac` Backup backend + Trash UUID race fix:**
-- 🔴 iOS PWA `<a download>` silent fail — exportData() у nav.js + новий downloadBackupAsJson() у backup.js додано iOS PWA detection (display-mode: standalone + iPhone/iPad UA) + fallback на `navigator.share({ files: [File] })` → Share Sheet.
-- 🟡 trash.js Date.now() collision (B-171 клас) — addToTrash тепер додає `id: generateUUID()`. restoreFromTrash шукає по `id` АБО `deletedAt` (backward compat). Видалення через reference equality `t !== entry`.
-- createFullBackup(label) — обгортка над createSelectiveBackup з усіма NM_KEYS.data + .settings (window.NM_KEYS exposed у boot.js:1387). Quota check reused.
-- importBackupJson(jsonText) — підтримує native format (з ts/label/data) + legacy exportData (плоский об'єкт).
+- 🔴 iOS PWA `<a download>` silent fail — exportData() + downloadBackupAsJson() додано iOS PWA detection + fallback на `navigator.share({ files: [File] })` → Share Sheet.
+- 🟡 trash.js Date.now() collision (B-171 клас) — addToTrash тепер `id: generateUUID()`. restoreFromTrash backward compat через id||deletedAt.
+- createFullBackup(label) — обгортка з NM_KEYS.data + .settings. Quota check reused.
+- importBackupJson(jsonText) — native + legacy exportData format.
 
 **`3d85532` Backup + Trash UI:**
-- Settings → секція «Дані» розширена 5 рядками: 🗑 Кошик (badge з count), 💾 Створити знімок, 📋 Список знімків, ↗ Експорт JSON, ↙ Імпорт JSON.
-- 2 нові модалки у index.html: #trash-modal (z-index:520) з ↻Restore кнопкою кожного item, #backup-list-modal з ↻Restore / ↗Export / × кнопками кожного знімка.
-- nav.js +~200 рядків: _relativeTime, _formatBackupTs хелпери; 8 Backup UI handlers + 5 Trash UI handlers; live _updateTrashBadge через `nm-data-changed` listener.
-- 4 нові delegation actions: backup-restore, backup-download, backup-delete, trash-restore-item.
-- 🚨 Race fix (Pre-mortem #2): openTrashModal() скидає _undoData=null + clearTimeout щоб уникнути race з undo-toast (юзер не може випадково Restore одну річ через toast і Кошик паралельно).
+- Settings → секція «Дані» 5 нових рядків: 🗑 Кошик (badge), 💾 Створити знімок, 📋 Список знімків, ↗ Експорт, ↙ Імпорт.
+- 2 нові модалки: #trash-modal (z-index:520), #backup-list-modal (з Restore/Export/Delete кнопками).
+- nav.js +~200 рядків: helpers + 8 Backup UI + 5 Trash UI handlers + live _updateTrashBadge через nm-data-changed listener.
+- 4 delegation actions: backup-restore, backup-download, backup-delete, trash-restore-item.
+- 🚨 Race fix: openTrashModal() скидає _undoData=null (уникає race з undo-toast).
 
 #### C. EU Compliance pre-MVP (1 commit)
 
 **`e32ecbe` Legal pages DRAFT + checklist:**
-- nav.js LEGAL_CONTENT константа з 3 секціями (impressum/privacy/terms) — inline HTML українською з [PLACEHOLDER] токенами для KvK/VAT/адреси/email. Червоний banner у кожній секції щоб Роман не випадково запустив без заповнення.
-- #legal-overlay модалка (z-index:530) з scrollable body, close-backdrop pattern.
-- Settings → «Інформація»: новий рядок «Юридична інформація» (Impressum). openPrivacyPolicy/openTerms замість stub'ів з toast 'незабаром' тепер реальні.
-- `docs/EU_LAUNCH_CHECKLIST.md` (новий, ~150 рядків) — покроковий чек-ліст для Романа: 🚨 КРИТИЧНІ кроки (VAT-стратегія Paddle vs OSS NL, KvK реєстрація, заповнити PLACEHOLDER, DPF status check) + 🟡 ВИСОКИЙ (квартальні звіти / Paddle checkout / ePrivacy checkbox) + ⚪ СЕРЕДНІЙ (CRA, Data Act ✅ JSON export, PLD).
-- НЕ зроблено (поза scope): Paddle SDK integration (потребує рішення Романа), 14-day checkbox у checkout (потребує payment flow), KvK реєстрація.
+- LEGAL_CONTENT константа з impressum/privacy/terms — inline HTML з [PLACEHOLDER] токенами + червоним banner у кожній секції.
+- #legal-overlay модалка (z-index:530).
+- Settings → «Юридична інформація». openPrivacyPolicy/openTerms — реальні.
+- `docs/EU_LAUNCH_CHECKLIST.md` ~150 рядків покроковий чек-ліст для Романа.
+
+#### D. Audit fixes — Council 5 агентів post-Phase знайшли 9 проблем (3 commits)
+
+**`c7446e8` Round 1 — 6 critical bugs:**
+- Trash badge не оновлюється при openSettings → `_updateTrashBadge()` у openSettings
+- iOS share silent fail → await Promise + AbortError → 'cancelled' (mute) + canShare feature-detect
+- Chat історія НЕ у createFullBackup → додано `...nm.chat`
+- 14-day withdrawal текст юридично зайвий для безкоштовного PWA → переписано (Art. 9-16 НЕ застосовується без оплати)
+- time.minutes_ago concat vs interpolation → utils.js приведено до nav.js pattern ({n} interpolation)
+- PLACEHOLDER runtime warning у _openLegal + whitelist (impressum/privacy/terms) — захист від випадкового deploy
+
+**`b9a2bdb` Round 2 — DRY + UX + DoS:**
+- TRASH_TTL винесено у export з trash.js (DRY — nav.js більше не дублює константу)
+- importBackupFromFile size check 10 MB (Pre-mortem DoS)
+- Touch targets 44px (WCAG 2.5.5): ↻ Відновити у Кошику 32→44px, backup-list 3 кнопки 30→44px
+
+#### E. Security hardening — CALL_PREFIX_WHITELIST + BLACKLIST (1 commit)
+
+**`756b720` Forward Architecture Auditor рекомендація:**
+- 43 prefix whitelist (close|open|save|delete|clear|set|send|show|add|...|auto)
+- 12 BLACKLIST exact-match (eval|Function|setTimeout|setInterval|fetch|XMLHttpRequest|...|`open`)
+- Покриває `call` + `close-backdrop` actions
+- 105/105 поточних data-fn проходять (0 регресій)
+- `open` у blacklist (window.open phishing) vs `open` префікс у whitelist (openSettings etc) — exact-match miss дає prefix-check → працює
+
+#### F. CSP Phase 2 — 55 inline non-onclick → 12 (43 closed, 5 commits)
+
+**`5815eed` Phase 2 inventory + tiny win** — calendar.js inline ontouch scale feedback видалено (CSS `[data-action]:active scale(0.87)` працює globally). ROADMAP Security Hardening пункт #1 ✅ ЗАВЕРШЕНО + новий пункт #2 CSP Enablement Phase 2 (~4-6 год).
+
+**`35fcda9` Phase 2.1 onkeydown ×11 → 0** — global keydown listener у delegation.js + data-on-enter attribute. Shift+Enter = новий рядок (стандарт), data-on-enter-mod="cmd" для NoteChat (Cmd+Enter=send). 4 sed patterns, whitelist gate.
+
+**`0dd33f3` Phase 2.2 oninput ×11 → 4** — global input listener + data-on-input. 10× autoResizeTextarea + 1× autoSaveNoteView мігровано. 4 залишку — closure-state assignments (_finTxComment, setBenchmarkField з ${key}) — окремий refactor.
+
+**`6c3ced8` Phase 2.3 onfocus ×7 + onblur ×2 → 0** — global focus/blur listeners (capture phase бо focus не bubbles). Reuse named actions з ACTIONS registry. 3 нові actions: open-chat-bar, save-settings, save-memory-fact-edit.
+
+**`cc7bd78` Phase 2.4 onchange ×2 → 0** — global change listener + data-on-change. 2 actions: set-fin-tx-date-from-input, update-cat-modal-subcat (parseInt захист).
+
+**`e7f9952` Phase 2.5 touch-detect.js — НОВИЙ модуль** — `src/ui/touch-detect.js` (~140 рядків). Council 2 агенти Sonnet pre-Edit (Implementer + Pre-mortem). 5 iOS quirks враховано:
+- Pre-mortem #1: touchend {passive:false} + preventDefault у tap branch → блокує synthetic click → toggleTaskStep тільки 1 раз
+- Pre-mortem #2: touchmove БЕЗ глобального preventDefault — нативний scroll чіпів збережено
+- Pre-mortem #3: `_touchInitialized` guard (bfcache idempotency)
+- Pre-mortem #4: bubble phase (не capture) — не конфліктує з inline handlers
+- Pre-mortem #5: touchend читає changedTouches[0] (не touches[0])
+
+API: `data-swipe-detect` + `data-swipe-action="X"` + `data-swipe-axis="y"/"x"` + `data-swipe-threshold="40"` АБО `data-tap-detect` + `data-tap-action="X"` + `data-tap-threshold="10"`. Окремий TOUCH_ACTIONS registry (інша signature `(dataset, delta, el)`).
+
+Мігровано 8 inline handlers: board.js owl-tab swipe (3) + index.html static owl-speech (3) + tasks.js step-check (2).
+
+Загалом CSP-блокер за OBErR: **351 → 12 inline** (-97%). Залишок 12: 6× `this.focus()` iOS keyboard hack (потребує iPhone test перед видаленням) + 4× oninput closure-state + 1× onmousedown preventDefault + 1× ontouchend addTaskStep.
+
+#### G. AI-Tester Hetzner Setup — повний комплект (3 commits)
+
+Council 2 паралельні агенти Sonnet (Implementer + Pre-mortem) знайшли 8 серверних ризиків — закриті у скриптах.
+
+**`04e951e` Skeleton + ai-tester.py + hetzner-setup.sh:**
+- `scripts/hetzner-setup.sh` (~150 рядків) — bash setup від root:
+  - nmtester user + перенесення browser-harness + chrome-profile
+  - uv venv + anthropic SDK pre-install
+  - git clone NM через credential.helper store (chmod 600)
+  - .env з ANTHROPIC_API_KEY + GITHUB_PAT (chmod 600)
+  - systemd chrome-tester.service (Restart=on-failure + OOMScoreAdjust=500)
+  - fail2ban (3 fails / 1h ban)
+  - SSH PasswordAuthentication = TODO (ВРУЧНУ після SSH ключа)
+- `scripts/ai-tester.py` (~400 рядків) — серце тестера:
+  - preflight() Chrome CDP перевірка
+  - bh() subprocess до browser-harness CLI з BU_CDP_URL=127.0.0.1:9222
+  - 10 готових сценаріїв @scenario декоратор: boot-health, nav-8tabs, create-task+persist, backup-create (OBErR), trash-modal (B-179), owl-swipe (touch-detect Phase 2.5), close-backdrop, clearAllData guard, B-180 finance whitelist, B-115 task classification
+  - run_ai_command() — Claude Haiku 4.5 + prompt caching (90% economy)
+  - assert_provider() — Pre-mortem #4 guard (model/provider mismatch)
+  - git_commit_push() — окрема branch claude/ai-tester-{ts}, explicit returncode
+  - cleanup_old_screenshots() — TTL 7 днів
+  - _read_app_version() — CACHE_NAME з sw.js для звіту
+
+**`22de0fa` setup-cron + health-check + Claude Haiku 4.5 config:**
+- `scripts/setup-cron.sh` (~40 рядків) — crontab для nmtester: 0 * * * * щогодини tester + */15 * * * * health-check + 0 4 * * 0 log rotation
+- `scripts/health-check.py` (~100 рядків) — watchdog: Chrome CDP + browser-harness CLI + диск <80% + cleanup screenshots
+- tester-config.json: gpt-4o-mini → claude-haiku-4-5-20251001 + ai_provider: "anthropic"
+- `docs/HETZNER_TESTER_SETUP.md` ~200 рядків покроково для Романа: PAT створення + Anthropic key + 4 команди SSH
+
+**`6b090d7` chore:** gitignore __pycache__ (py_compile artifact)
+
+Усе залишилось Романа: SSH на сервер, 4 команди, ~10 хв.
+
+#### H. ROADMAP + докси (2 commits)
+
+- **`470b6e3`** ROADMAP i18n language order: UK + EN перше → NL → решта (зафіксовано рішення Романа)
+- **`e927345`** ROADMAP Tester Strategy Decision: Hetzner (НЕ Managed Agents, НЕ Playwright Skill локально). Причини: якість 24/7 без Mac залежності + AI-planning + persistent profile.
 
 ### Гілка + контекст
 
 - Гілка: `claude/start-session-OBErR`
-- Коміти: 10 (Event Delegation Phase 0-6 = 7 + Backup backend + Backup/Trash UI + EU Compliance)
-- Council Sonnet: 11 (5 pre-Phase Event Delegation + 3 post-Phase + 3 pre-Backup/Trash/EU)
-- Bundle: перебудовано після кожної фази
-- CACHE_NAME: nm-20260518-1900 → nm-20260518-2230 (8 bumps)
+- Коміти: 26 (від `891b444` Phase 0 до `6b090d7` gitignore)
+- Council Sonnet: ~20 агентів (5 pre-Phase ED + 3 post-Phase + 3 pre-Backup + 5 post-audit + 2 pre-touch-detect + 2 pre-tester)
+- CACHE_NAME: nm-20260518-1900 → nm-20260519-0300 (14 bumps)
+
+### Метрики
+
+- **Inline handlers:** onclick 296→0 ✅ + non-onclick 55→12 (-78%). Загалом 351→12 (-97%).
+- **delegation registry:** 0 → 119 actions + 2 universal (`call` + `close-backdrop`) + 4 event listeners (click/keydown/input/focus+blur/change) + окремий TOUCH_ACTIONS.
+- **NEW модуль:** `src/ui/touch-detect.js`.
+- **NEW файли:** 6 (touch-detect.js + 4 scripts/ + HETZNER_TESTER_SETUP.md + EU_LAUNCH_CHECKLIST.md).
+
+### Інциденти
+
+Без інцидентів.
 
 ### Хвости (закриті у цій же сесії)
 
-- ✅ B-179 UI Кошика — реалізовано (модалка у Settings)
-- ✅ Backup Phase 2 — createFullBackup + JSON export/import + Restore UI
-- ✅ EU Compliance pre-MVP — legal DRAFT'и + checklist для Романа
-- 🟢 37 inline non-onclick handler'ів (ontouchstart/move/end, oninput, onblur contenteditable) — окрема сесія для повного strict CSP
-- 🟢 DETAIL_TO_KEY['finance']='nm_finance' семантична хибність (B-130/B-165 клас) — pre-existing, не наша задача
-- 🟢 src/core/diagnostics.js (3 onclick) + src/core/logger.js (1 onclick) — internal діагностика, окрема сесія
+- ✅ B-179 UI Кошика — модалка у Settings + race fix
+- ✅ Backup Phase 2 — createFullBackup + JSON exp/imp + Restore UI + iOS share
+- ✅ EU Compliance pre-MVP — legal DRAFT'и + checklist
+- ✅ CSP Enablement (Phase 2.1-2.5) — 43 з 55 inline non-onclick мігровано
+- ✅ Security hardening — CALL_PREFIX_WHITELIST + BLACKLIST
+- ✅ AI-Tester скрипти готові — Hetzner setup поза кодом (Роман)
 
 ### Що далі (для Романа поза кодом)
 
-1. **EU Compliance:** виконати `docs/EU_LAUNCH_CHECKLIST.md` — обрати Paddle vs OSS, зареєструвати KvK, заповнити PLACEHOLDER у `src/core/nav.js` LEGAL_CONTENT константі.
-2. **iPhone smoke test v932+** — перевірити 4 ключові flows: backup створення + restore + Кошик restore + iOS share (експорт JSON).
-3. **Supabase phase start** — після того як EU Compliance виконано (KvK + DPA з OpenAI/Anthropic) можна стартувати backend migration. Архітектурний refactor план готовий у `_archive/SESSION_STATE_archive.md` myshu (Сесії 4-8).
+1. **AI-Tester deploy** — `docs/HETZNER_TESTER_SETUP.md`: PAT створити + 4 команди SSH на 94.130.25.22 (~10 хв). Анта Anthropic ключ створив.
+2. **iPhone smoke test v932+** — 9 ключових flows за шпаргалкою (Backup/Restore, Кошик, OWL swipe, step-check, calc grid, close-backdrop, Enter chat-bars, save-settings onblur, Legal).
+3. **EU Compliance:** виконати `docs/EU_LAUNCH_CHECKLIST.md` — Paddle vs OSS, KvK реєстрація, заповнити PLACEHOLDER.
+4. **CSP Phase 2 завершити (~2 год)** — 6× `this.focus()` видалити (iPhone test), 4× oninput closure-state refactor, 1× addTaskStep preventDefault.
+5. **i18n UK+EN блок** (3-4 сесії одним фокусом) — `src/core/i18n.js` real + EN dictionary + setLanguage wire.
+6. **Supabase phase start** — після EU Compliance + KvK + DPA.
 
 ---
 
