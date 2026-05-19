@@ -12,3 +12,7 @@ bundle.js.map
 _ai-tools/tester-screenshots/*.png
 _ai-tools/tester-screenshots/*.jpg
 _ai-tools/tester-screenshots/*.jpeg
+
+# Python bytecode (scripts/ai-tester.py compiles during syntax check)
+scripts/__pycache__/
+**/__pycache__/
