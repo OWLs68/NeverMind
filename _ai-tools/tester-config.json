@@ -21,8 +21,11 @@
   "max_retries": 3,
   "_retries_help": "Якщо тест падає (selector not found, timeout) — спробувати N раз і здатися.",
 
-  "ai_model": "gpt-4o-mini",
-  "_model_help": "Модель для планування дій з commands.md. gpt-4o-mini дешева і працює. Можна спробувати claude-haiku-4-5 якщо буде SDK.",
+  "ai_provider": "anthropic",
+  "_provider_help": "OBErR 19.05.2026: переключено на Anthropic. Pre-mortem #4 guard у ai-tester.py перевіряє model/provider пару.",
+
+  "ai_model": "claude-haiku-4-5-20251001",
+  "_model_help": "Claude Haiku 4.5 (latest 25.10.01). Дешева, швидка, native у нашій екосистемі. Альтернатива: 'claude-sonnet-4-6' (3x ціна, якісніша) для складних сценаріїв.",
 
   "viewport": {
     "width": 390,

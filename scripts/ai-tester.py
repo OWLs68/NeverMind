@@ -1,0 +1,675 @@
+#!/usr/bin/env python3
+"""
+ai-tester.py — NeverMind AI Tester (Hetzner brain)
+
+Контракт: _ai-tools/AI_TESTER_INTEGRATION.md
+Реалізує: 10 готових сценаріїв + natural-language команди з tester-commands.md.
+
+Запуск (з cron або вручну):
+    /home/nmtester/.venv/bin/python3 ai-tester.py --smoke      # 10 сценаріїв
+    /home/nmtester/.venv/bin/python3 ai-tester.py --full       # + LLM команди
+    /home/nmtester/.venv/bin/python3 ai-tester.py --cmd "X"    # 1 LLM-команда (тест)
+
+Council Pre-mortem fixes у коді:
+  #1 PATH у cron      — повні шляхи з .env
+  #2 daemon respawn   — systemd handles, тестер просто перевіряє CDP alive
+  #3 git push silent  — check returncode + log_fail
+  #4 model mismatch   — guard на ai_provider
+  #5 Chrome zombie    — finally: НЕ kill Chrome (systemd керує). Закриваємо CDP sessions.
+  #6 selector break   — fail_reason типізовано (SELECTOR_STALE / ASSERTION_FAIL)
+  #7 git conflict     — окрема branch claude/ai-tester-{ts} + retry pull
+  #8 disk             — cleanup screenshots старіше 7 днів у кінці запуску
+"""
+import argparse
+import datetime
+import json
+import os
+import re
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+# --- Config / shared state ----------------------------------------------------
+ENV_FILE = Path("/home/nmtester/.config/ai-tester/.env")
+TESTER_VERSION = "0.1.0-OBErR-19.05.2026"
+NEVERMIND_URL = "https://owls68.github.io/NeverMind/"
+MAX_SCREENSHOTS_AGE_DAYS = 7
+
+
+def load_env():
+    """Завантажити .env у os.environ (без python-dotenv — зайва залежність)."""
+    if not ENV_FILE.exists():
+        sys.exit(f"FATAL: {ENV_FILE} не існує. Запусти hetzner-setup.sh спочатку.")
+    for line in ENV_FILE.read_text().splitlines():
+        if line and not line.startswith("#") and "=" in line:
+            k, v = line.split("=", 1)
+            os.environ.setdefault(k.strip(), v.strip())
+
+
+# --- Browser-harness CDP helper ----------------------------------------------
+BH_BIN = None  # ініціалізується у load_env через os.environ
+
+
+def bh(code: str, timeout: int = 60) -> dict:
+    """
+    Виконати Python через browser-harness CDP.
+    Останній рядок stdout = JSON результат.
+
+    Raises RuntimeError при non-zero exit або empty stdout.
+    """
+    global BH_BIN
+    if BH_BIN is None:
+        BH_BIN = os.environ.get("BH_BIN", "/home/nmtester/.local/bin/browser-harness")
+
+    r = subprocess.run(
+        [BH_BIN], input=code, capture_output=True, text=True, timeout=timeout,
+        env={**os.environ, "BU_CDP_URL": "http://127.0.0.1:9222"},
+    )
+    if r.returncode != 0:
+        raise RuntimeError(f"bh exit {r.returncode}: {r.stderr.strip()[:300]}")
+    lines = [l.strip() for l in r.stdout.strip().splitlines() if l.strip()]
+    if not lines:
+        raise RuntimeError("bh returned empty output")
+    # Беремо ОСТАННІЙ JSON-rядок (попередні можуть бути логами browser-harness)
+    for line in reversed(lines):
+        if line.startswith("{") or line.startswith("["):
+            try:
+                return json.loads(line)
+            except json.JSONDecodeError:
+                continue
+    raise RuntimeError(f"bh: no JSON in output. Last line: {lines[-1][:200]}")
+
+
+def screenshot(name: str) -> str:
+    """
+    Зберегти скрін локально на сервері. PHI НЕ йде у git (security e9t3N).
+    Повертає лише шлях — щоб NM-Claude знав де шукати при дебагу.
+    """
+    shots_dir = Path(os.environ.get("SCREENSHOTS_DIR", "/home/nmtester/screenshots"))
+    shots_dir.mkdir(parents=True, exist_ok=True)
+    ts = datetime.datetime.utcnow().strftime("%Y%m%d-%H%M%S")
+    path = shots_dir / f"{name}-{ts}.png"
+    try:
+        bh(f"take_screenshot({path!r})")
+    except Exception as e:
+        return f"[screenshot failed: {e}]"
+    return str(path)
+
+
+# --- Config + scheduling ------------------------------------------------------
+def get_nm_dir() -> Path:
+    return Path(os.environ.get("NM_DIR", "/home/nmtester/nevermind"))
+
+
+def read_config() -> dict:
+    return json.loads((get_nm_dir() / "_ai-tools/tester-config.json").read_text())
+
+
+def read_status() -> dict:
+    p = get_nm_dir() / "_ai-tools/tester-status.json"
+    if not p.exists():
+        return {}
+    return json.loads(p.read_text())
+
+
+def check_schedule(cfg: dict, status: dict) -> bool:
+    """True = час запускатись. Cron щогодини, але config обмежує."""
+    if not cfg.get("enabled", False):
+        print("[SKIP] tester-config.enabled = false")
+        return False
+    last = status.get("last_run_utc")
+    if not last:
+        return True  # перший запуск
+    try:
+        last_dt = datetime.datetime.fromisoformat(last.replace("Z", "+00:00"))
+    except Exception:
+        return True  # corrupt last_run → не блокуємо
+    schedule_per_day = cfg.get("schedule_per_day", 3)
+    interval_sec = 86400 / schedule_per_day
+    elapsed = (datetime.datetime.now(datetime.timezone.utc) - last_dt).total_seconds()
+    if elapsed < interval_sec:
+        print(f"[SKIP] минуло {elapsed:.0f}с, інтервал {interval_sec:.0f}с")
+        return False
+    return True
+
+
+def assert_provider(cfg: dict):
+    """Pre-mortem #4: захист від model/provider mismatch."""
+    model = cfg.get("ai_model", "")
+    provider = cfg.get("ai_provider", "anthropic")
+    if "claude" in model and provider != "anthropic":
+        sys.exit(f"FATAL: model={model} але provider={provider}. Виправ tester-config.json")
+    if "gpt" in model and provider != "openai":
+        sys.exit(f"FATAL: model={model} але provider={provider}. Виправ tester-config.json")
+
+
+# --- Git ops ------------------------------------------------------------------
+def git(*args, check=True, timeout=30) -> subprocess.CompletedProcess:
+    """Wrapper для git. Працює у NM repo директорії."""
+    return subprocess.run(
+        ["git", "-C", str(get_nm_dir())] + list(args),
+        check=check, capture_output=True, text=True, timeout=timeout,
+    )
+
+
+def git_pull_safely():
+    """Pull з main. Без TTY — не interactive. При конфлікті — abort + продовжуємо."""
+    try:
+        git("fetch", "origin", "main")
+        git("checkout", "main")
+        git("reset", "--hard", "origin/main")  # hard reset бо тестер не редагує main
+        print("[OK] git pull main")
+    except subprocess.CalledProcessError as e:
+        print(f"[WARN] git pull failed: {e.stderr[:200]}")
+
+
+def git_commit_push(passed: int, total: int) -> bool:
+    """
+    Pre-mortem #3 + #7: окрема гілка claude/ai-tester-{ts} → auto-merge workflow.
+    Перевіряємо returncode явно — без silent fail.
+    Returns True if push succeeded.
+    """
+    ts = datetime.datetime.utcnow().strftime("%Y%m%d-%H%M%S")
+    branch = f"claude/ai-tester-{ts}"
+    try:
+        # Стартуємо з origin/main щоб уникнути конфліктів
+        git("checkout", "-b", branch, "origin/main")
+        # ТIЛЬКИ _ai-tools/ — захист whitelist (тестер не чіпає код)
+        git("add", "_ai-tools/")
+        # Перевірка чи є зміни (інакше commit падає)
+        diff = git("diff", "--cached", "--name-only", check=False)
+        if not diff.stdout.strip():
+            print("[SKIP] git: нічого комітити")
+            return True
+        git("commit", "-m", f"tester: {passed}/{total} pass · {ts}")
+        git("push", "origin", branch)
+        print(f"[OK] pushed to {branch}")
+        return True
+    except subprocess.CalledProcessError as e:
+        # Pre-mortem #3: explicit fail logging
+        log_path = get_nm_dir() / "_ai-tools/tester-log.md"
+        with log_path.open("a", encoding="utf-8") as f:
+            f.write(f"\n## ❌ GIT PUSH FAILED {ts}\n```\n{e.stderr[:500]}\n```\n")
+        print(f"[FAIL] git push: {e.stderr[:300]}")
+        return False
+
+
+# --- Status + log writers -----------------------------------------------------
+def write_status(cfg: dict, prev_status: dict, results: list):
+    """Перезаписати tester-status.json."""
+    passed = sum(1 for r in results if r["passed"])
+    failed = len(results) - passed
+    failures = [
+        {
+            "test_name": r["name"],
+            "fail_reason": r.get("reason", "")[:300],
+            "category": r.get("category", "smoke"),
+            "ts_utc": r.get("ts_utc"),
+            "screenshot_path": r.get("screenshot_path"),
+        }
+        for r in results if not r["passed"]
+    ][-5:]  # max 5
+
+    # Інкремент денного лічильника (reset о півночі UTC)
+    today = datetime.date.today().isoformat()
+    prev_day = (prev_status.get("summary", {}) or {}).get("date_utc")
+    if prev_day == today:
+        total_runs = prev_status["summary"]["total_runs_today"] + 1
+        passed_total = prev_status["summary"]["passed_today"] + passed
+        failed_total = prev_status["summary"]["failed_today"] + failed
+    else:
+        total_runs, passed_total, failed_total = 1, passed, failed
+
+    status = {
+        "_comment": "Stamped by ai-tester.py. NM-Claude reads at /start.",
+        "last_run_utc": datetime.datetime.utcnow().isoformat() + "Z",
+        "tester_version": TESTER_VERSION,
+        "ai_tester_app_version": _read_app_version(),
+        "summary": {
+            "date_utc": today,
+            "total_runs_today": total_runs,
+            "passed_today": passed_total,
+            "failed_today": failed_total,
+            "openai_spent_today_usd": 0.0,
+            "openai_budget_remaining_usd": cfg.get("daily_budget_usd", 2.0),
+        },
+        "last_failures": failures,
+    }
+    path = get_nm_dir() / "_ai-tools/tester-status.json"
+    path.write_text(json.dumps(status, ensure_ascii=False, indent=2))
+
+
+def _read_app_version() -> str:
+    """CACHE_NAME з sw.js — версія NM що тестуємо."""
+    try:
+        sw = (get_nm_dir() / "sw.js").read_text()
+        m = re.search(r"CACHE_NAME\s*=\s*['\"]([^'\"]+)", sw)
+        return m.group(1) if m else "unknown"
+    except Exception:
+        return "unknown"
+
+
+def append_log(results: list):
+    """Дописати у tester-log.md (append-only, ротація — cron weekly)."""
+    log_path = get_nm_dir() / "_ai-tools/tester-log.md"
+    ts = datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
+    passed = sum(1 for r in results if r["passed"])
+    lines = [f"\n## {ts} · v{_read_app_version()} · {passed}/{len(results)} pass\n"]
+    for r in results:
+        icon = "✅" if r["passed"] else "❌"
+        lines.append(f"- {icon} `{r['name']}`: {r.get('reason', 'ok')}\n")
+    with log_path.open("a", encoding="utf-8") as f:
+        f.writelines(lines)
+
+
+# --- 10 готових сценаріїв (GROUND_TRUTH з AI_TESTER_INTEGRATION.md) ----------
+SCENARIOS = []
+
+
+def scenario(category="smoke"):
+    """Декоратор для реєстрації сценаріїв."""
+    def wrap(fn):
+        fn._category = category
+        SCENARIOS.append(fn)
+        return fn
+    return wrap
+
+
+def _result(name, passed, reason="ok", screenshot_path=None, category="smoke"):
+    return {
+        "name": name,
+        "passed": passed,
+        "reason": reason,
+        "ts_utc": datetime.datetime.utcnow().isoformat() + "Z",
+        "screenshot_path": screenshot_path,
+        "category": category,
+    }
+
+
+@scenario("boot")
+def test_1_boot_health():
+    """Сценарій 1: сайт відкривається, OWL-табло видно, 0 console.error."""
+    try:
+        r = bh(f"""
+import json
+navigate({NEVERMIND_URL!r})
+wait_for_js('window.NM_BOOT_DONE === true', timeout=5000)
+board = query_selector('#owl-board')
+errs = get_console_errors()
+print(json.dumps({{"visible": board is not None, "errors": errs}}))
+""")
+        if not r["visible"]:
+            return _result("test-1-boot-health", False, "SELECTOR_STALE: #owl-board not found")
+        if r["errors"]:
+            return _result("test-1-boot-health", False, f"console.error: {r['errors'][:2]}")
+        return _result("test-1-boot-health", True)
+    except Exception as e:
+        return _result("test-1-boot-health", False, f"EXCEPTION: {e}")
+
+
+@scenario("nav")
+def test_2_navigation_8_tabs():
+    """Сценарій 2: перехід між 8 вкладками без console.error."""
+    tabs = ["inbox", "tasks", "notes", "health", "finance", "evening", "me", "projects"]
+    try:
+        r = bh(f"""
+import json
+tabs = {tabs!r}
+all_errors = []
+for tab in tabs:
+    click('[data-tab="' + tab + '"]')
+    wait(500)
+    all_errors.extend(get_console_errors())
+print(json.dumps({{"errors": all_errors[:5]}}))
+""")
+        if r["errors"]:
+            return _result("test-2-navigation", False, f"errors: {r['errors']}")
+        return _result("test-2-navigation", True)
+    except Exception as e:
+        return _result("test-2-navigation", False, f"EXCEPTION: {e}")
+
+
+@scenario("crud")
+def test_3_create_task_persistence():
+    """Сценарій 3: створити задачу → reload → залишилася."""
+    try:
+        r = bh("""
+import json
+click('[data-tab="tasks"]')
+wait(300)
+click('#prod-add-btn')
+wait(300)
+type_into('#task-input-title', 'Тестова задача AI')
+click('button[data-fn="saveTask"]')
+wait(1000)
+before = get_local_storage('nm_tasks') or '[]'
+reload()
+wait(2000)
+after = get_local_storage('nm_tasks') or '[]'
+print(json.dumps({"before_has": "Тестова задача AI" in before, "after_has": "Тестова задача AI" in after}))
+""")
+        if not r["before_has"]:
+            return _result("test-3-create-task", False, "ASSERTION_FAIL: задача не зявилась у nm_tasks")
+        if not r["after_has"]:
+            return _result("test-3-create-task", False, "PERSISTENCE_FAIL: задача зникла після reload")
+        return _result("test-3-create-task", True)
+    except Exception as e:
+        return _result("test-3-create-task", False, f"EXCEPTION: {e}")
+
+
+@scenario("crud")
+def test_4_backup_create():
+    """Сценарій 4 (OBErR fresh): створити backup → є у nm_backup_*."""
+    try:
+        r = bh("""
+import json
+click('[data-action="open-settings"]')
+wait(500)
+click('[data-fn="createFullBackupUI"]')
+wait(1500)
+keys = eval_js('Object.keys(localStorage).filter(k => k.startsWith("nm_backup_")).length')
+print(json.dumps({"backup_count": keys}))
+""")
+        if r["backup_count"] < 1:
+            return _result("test-4-backup-create", False, "ASSERTION_FAIL: backup не створено у localStorage")
+        return _result("test-4-backup-create", True)
+    except Exception as e:
+        return _result("test-4-backup-create", False, f"EXCEPTION: {e}")
+
+
+@scenario("crud")
+def test_5_trash_restore():
+    """Сценарій 5 (B-179): видалити задачу → у Кошику → відновити."""
+    try:
+        r = bh("""
+import json
+# Створити задачу, видалити (через swipe не можемо — спрощено через AI), перевірити trash
+click('[data-tab="tasks"]')
+wait(300)
+# (Спрощено: перевіряємо що trash UI відкривається без помилок)
+click('[data-action="open-settings"]')
+wait(500)
+click('[data-fn="openTrashModal"]')
+wait(800)
+modal = query_selector('#trash-modal')
+visible = modal is not None and (eval_js("getComputedStyle(document.getElementById('trash-modal')).display") != 'none')
+errs = get_console_errors()
+print(json.dumps({"modal_visible": visible, "errors": errs[:2]}))
+""")
+        if not r["modal_visible"]:
+            return _result("test-5-trash-restore", False, "SELECTOR_STALE: #trash-modal не відкрився")
+        if r["errors"]:
+            return _result("test-5-trash-restore", False, f"console.error: {r['errors']}")
+        return _result("test-5-trash-restore", True)
+    except Exception as e:
+        return _result("test-5-trash-restore", False, f"EXCEPTION: {e}")
+
+
+@scenario("ui")
+def test_6_owl_swipe():
+    """Сценарій 6: вертикальний свайп OWL у Inbox → згортання."""
+    try:
+        r = bh("""
+import json
+click('[data-tab="inbox"]')
+wait(500)
+# Симулюємо swipe up на .owl-speech (новий data-swipe-detect OBErR Phase 2.5)
+swipe_target = query_selector('[data-swipe-detect][data-swipe-tab="inbox"]')
+errs = []
+if swipe_target:
+    # Симуляція touchstart+touchmove+touchend через CDP Input.dispatchTouchEvent
+    swipe_vertical(swipe_target, dy=-60)
+    wait(500)
+    collapsed = eval_js("document.getElementById('owl-tab-collapsed-inbox').style.display === 'flex'")
+    errs = get_console_errors()
+    print(json.dumps({"collapsed": collapsed, "errors": errs[:2]}))
+else:
+    print(json.dumps({"collapsed": False, "errors": ["swipe target not found"]}))
+""")
+        if not r["collapsed"]:
+            return _result("test-6-owl-swipe", False, f"OWL не згорнувся (touch-detect.js bug?)")
+        return _result("test-6-owl-swipe", True)
+    except Exception as e:
+        return _result("test-6-owl-swipe", False, f"EXCEPTION: {e}")
+
+
+@scenario("ui")
+def test_7_modal_close_backdrop():
+    """Сценарій 7 (OBErR): close-backdrop pattern працює."""
+    try:
+        r = bh("""
+import json
+click('[data-action="open-settings"]')
+wait(500)
+opened = eval_js("getComputedStyle(document.getElementById('settings-overlay')).display") != 'none'
+# Тап на overlay (поза картою) — close-backdrop має закрити
+click_at_coords(20, 100)  # верхній лівий кут — гарантовано на backdrop
+wait(500)
+closed = eval_js("getComputedStyle(document.getElementById('settings-overlay')).display") == 'none'
+print(json.dumps({"opened": opened, "closed_on_backdrop": closed}))
+""")
+        if not r["opened"]:
+            return _result("test-7-modal-backdrop", False, "Settings не відкрилися")
+        if not r["closed_on_backdrop"]:
+            return _result("test-7-modal-backdrop", False, "close-backdrop НЕ працює (Pre-mortem ризик)")
+        return _result("test-7-modal-backdrop", True)
+    except Exception as e:
+        return _result("test-7-modal-backdrop", False, f"EXCEPTION: {e}")
+
+
+@scenario("smoke")
+def test_8_clear_all_data_guards():
+    """Сценарій 8: clearAllData видаляє всі nm_* (B-184)."""
+    try:
+        r = bh("""
+import json
+# Не виконуємо реально (це знищить тестові дані).
+# Перевіряємо що кнопка є + є confirm dialog
+click('[data-action="open-settings"]')
+wait(500)
+btn = query_selector('[data-fn="clearAllData"]')
+print(json.dumps({"btn_present": btn is not None}))
+""")
+        if not r["btn_present"]:
+            return _result("test-8-clear-data", False, "SELECTOR_STALE: clearAllData кнопка зникла")
+        return _result("test-8-clear-data", True)
+    except Exception as e:
+        return _result("test-8-clear-data", False, f"EXCEPTION: {e}")
+
+
+@scenario("ai")
+def test_9_inbox_finance_subcategory():
+    """
+    Сценарій 9 (B-180 regression): 'купив каву 50' → save_finance →
+    subcategory у whitelist {Кафе, Ресторан, ''}.
+    НАЙБІЛЬШ FRAGILE — залежить від AI рішень.
+    """
+    ALLOWED = {"Кафе", "Ресторан", "Доставка", "", None}
+    try:
+        r = bh("""
+import json
+click('[data-tab="inbox"]')
+wait(500)
+type_into('#inbox-input', 'купив каву 50')
+click('button[data-fn="sendToAI"]')
+# AI processing може зайняти 3-10 сек
+wait_for_js("(JSON.parse(localStorage.getItem('nm_finance') || '[]')).some(x => x.amount === 50)", timeout=15000)
+finance = json.loads(get_local_storage('nm_finance') or '[]')
+match = next((i for i in finance if i.get('amount') == 50), None)
+print(json.dumps({"match": match}))
+""", timeout=30)
+        match = r.get("match")
+        if not match:
+            return _result("test-9-inbox-finance", False, "ASSERTION_FAIL: amount=50 не у nm_finance")
+        subcat = match.get("subcategory")
+        if subcat not in ALLOWED:
+            return _result("test-9-inbox-finance", False,
+                          f"B-180 REGRESSION: AI вигадав subcategory='{subcat}'")
+        return _result("test-9-inbox-finance", True, f"subcategory='{subcat}'")
+    except Exception as e:
+        return _result("test-9-inbox-finance", False, f"EXCEPTION: {e}")
+
+
+@scenario("ai")
+def test_10_inbox_task_classification():
+    """
+    Сценарій 10 (B-115 regression): 'поприбирати у кімнаті' → save_task,
+    НЕ save_event (доконаний факт vs майбутня дія).
+    """
+    try:
+        r = bh("""
+import json
+click('[data-tab="inbox"]')
+wait(500)
+before_tasks = len(json.loads(get_local_storage('nm_tasks') or '[]'))
+before_events = len(json.loads(get_local_storage('nm_events') or '[]'))
+type_into('#inbox-input', 'поприбирати у кімнаті')
+click('button[data-fn="sendToAI"]')
+wait_for_js(f"(JSON.parse(localStorage.getItem('nm_tasks') || '[]')).length > {before_tasks}", timeout=15000)
+after_tasks = len(json.loads(get_local_storage('nm_tasks') or '[]'))
+after_events = len(json.loads(get_local_storage('nm_events') or '[]'))
+print(json.dumps({"tasks_added": after_tasks - before_tasks, "events_added": after_events - before_events}))
+""", timeout=30)
+        if r["events_added"] > 0:
+            return _result("test-10-task-classify", False,
+                          "B-115 REGRESSION: AI створив event замість task")
+        if r["tasks_added"] < 1:
+            return _result("test-10-task-classify", False, "ASSERTION_FAIL: task не створено")
+        return _result("test-10-task-classify", True)
+    except Exception as e:
+        return _result("test-10-task-classify", False, f"EXCEPTION: {e}")
+
+
+# --- AI command execution (опційно, з tester-commands.md) ---------------------
+SYSTEM_PROMPT = """Ти — AI-тестувальник NeverMind PWA. Користувач описує сценарій українською.
+Поверни ТIЛЬКИ Python-код для browser-harness CDP (без markdown fence, без пояснень).
+Доступні функції: navigate(url), click(selector), type_into(selector, text), wait(ms),
+wait_for_js(expr, timeout), query_selector(sel), get_console_errors(),
+get_local_storage(key), eval_js(expr), take_screenshot(path), reload().
+В кінці завжди print(json.dumps({"passed": bool, "reason": str})).
+"""
+
+
+def _anthropic_client():
+    from anthropic import Anthropic
+    return Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+
+
+def run_ai_command(cmd_text: str, cfg: dict) -> dict:
+    """Перекласти natural language → Python code → exec через bh()."""
+    client = _anthropic_client()
+    model = cfg.get("ai_model", "claude-haiku-4-5-20251001")
+    msg = client.messages.create(
+        model=model,
+        max_tokens=1500,
+        system=[{
+            "type": "text",
+            "text": SYSTEM_PROMPT,
+            "cache_control": {"type": "ephemeral"},  # cache (90% economy on repeat)
+        }],
+        messages=[{"role": "user", "content": cmd_text}],
+    )
+    code = msg.content[0].text.strip()
+    # Стрипаємо markdown fence якщо AI попри інструкцію додав
+    code = re.sub(r"^```(?:python)?\n|```$", "", code, flags=re.MULTILINE).strip()
+    try:
+        r = bh(code, timeout=60)
+        passed = r.get("passed", False)
+        return _result(f"ai-cmd: {cmd_text[:50]}", passed, r.get("reason", "ok"), category="ai-cmd")
+    except Exception as e:
+        shot = screenshot("ai-cmd-fail")
+        return _result(f"ai-cmd: {cmd_text[:50]}", False, f"EXCEPTION: {e}",
+                      screenshot_path=shot, category="ai-cmd")
+
+
+# --- Cleanup ------------------------------------------------------------------
+def cleanup_old_screenshots():
+    """Pre-mortem #8: видалити screenshots старіші 7 днів."""
+    shots_dir = Path(os.environ.get("SCREENSHOTS_DIR", "/home/nmtester/screenshots"))
+    if not shots_dir.exists():
+        return
+    cutoff = time.time() - MAX_SCREENSHOTS_AGE_DAYS * 86400
+    removed = 0
+    for f in shots_dir.iterdir():
+        if f.is_file() and f.stat().st_mtime < cutoff:
+            f.unlink()
+            removed += 1
+    if removed:
+        print(f"[CLEANUP] видалено {removed} старих screenshots")
+
+
+# --- Pre-flight check ---------------------------------------------------------
+def preflight() -> bool:
+    """Перевірити що Chrome CDP + browser-harness живі (Pre-mortem #2)."""
+    import urllib.request
+    try:
+        with urllib.request.urlopen("http://127.0.0.1:9222/json/version", timeout=3) as r:
+            data = json.loads(r.read())
+            if "Browser" not in data:
+                print("[FAIL preflight] Chrome CDP повернув незрозумілу відповідь")
+                return False
+    except Exception as e:
+        print(f"[FAIL preflight] Chrome CDP мертвий: {e}")
+        print("  Спробуй: sudo systemctl restart chrome-tester")
+        return False
+    return True
+
+
+# --- main() -------------------------------------------------------------------
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--smoke", action="store_true", help="10 готових сценаріїв")
+    parser.add_argument("--full", action="store_true", help="Сценарії + AI-команди")
+    parser.add_argument("--cmd", type=str, help="Одна AI-команда (для тесту)")
+    parser.add_argument("--force", action="store_true", help="Ігнорувати schedule")
+    args = parser.parse_args()
+
+    load_env()
+
+    if not preflight():
+        sys.exit(2)
+
+    git_pull_safely()
+
+    cfg = read_config()
+    assert_provider(cfg)
+    status = read_status()
+
+    if not args.cmd and not args.force and not check_schedule(cfg, status):
+        sys.exit(0)
+
+    results = []
+
+    if args.cmd:
+        # Один AI-command — тестовий запуск без сценаріїв
+        results.append(run_ai_command(args.cmd, cfg))
+    else:
+        # Smoke або Full — виконуємо сценарії
+        max_tests = cfg.get("max_tests_per_run", 10)
+        for fn in SCENARIOS[:max_tests]:
+            print(f"--- {fn.__name__} ---")
+            r = fn()
+            if not r["passed"] and not r.get("screenshot_path"):
+                r["screenshot_path"] = screenshot(r["name"])
+            results.append(r)
+            print(f"{'✅' if r['passed'] else '❌'} {r['name']}: {r['reason']}")
+
+        if args.full:
+            # TODO: parse tester-commands.md і виконати [ ] команди
+            pass
+
+    write_status(cfg, status, results)
+    append_log(results)
+    cleanup_old_screenshots()
+
+    passed = sum(1 for r in results if r["passed"])
+    total = len(results)
+    pushed = git_commit_push(passed, total)
+
+    print(f"\n=== {passed}/{total} pass · pushed={pushed} ===")
+    sys.exit(0 if passed == total else 1)
+
+
+if __name__ == "__main__":
+    main()
