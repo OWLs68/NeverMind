@@ -271,7 +271,7 @@
             <div class="owl-collapsed-text" id="owl-tab-ctext-inbox"></div>
           </div>
           <div id="owl-tab-speech-inbox" class="owl-speech"
-               ontouchstart="owlTabSwipeStart(event,'inbox')" ontouchmove="owlTabSwipeMove(event,'inbox')" ontouchend="owlTabSwipeEnd(event,'inbox')">
+               data-swipe-detect data-swipe-action="owl-tab-swipe" data-swipe-tab="inbox" data-swipe-axis="y" data-swipe-threshold="40">
             <div class="owl-speech-avatar">🦉
               <div id="owl-api-dot" class="owl-api-error-dot" style="display:none"></div>
             </div>

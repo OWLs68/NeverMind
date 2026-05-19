@@ -2,6 +2,7 @@ import { applyTheme, autoRefreshMemory, closeSettings, currentTab, setupDrumTabb
 import { generateUUID } from './uuid.js';
 import { createSelectiveBackup } from './backup.js';
 import { initDelegation } from './delegation.js';
+import { initTouchDetect } from '../ui/touch-detect.js';
 import { cleanupTrash } from './trash.js';
 import { restoreChatUI } from '../ai/core.js';
 import { renderTabBoard } from '../owl/board.js';
@@ -1388,6 +1389,10 @@ function bootApp() {
   // header buttons (data-action="open-settings"/"open-help") працювали з
   // першого ж рендеру. ПIСЛЯ init() бо delegation imports nav (через app.js).
   try { initDelegation(); } catch(e) { console.error('delegation init error:', e); }
+  // OBErR CSP Phase 2.5 (19.05.2026): touch-detect helper для swipe/tap
+  // координатної логіки (owl-tab swipe + task step-check). Окремий init
+  // бо різна signature handler'ів (dataset + delta vs dataset).
+  try { initTouchDetect(); } catch(e) { console.error('touch-detect init error:', e); }
   // Показуємо одразу — без delay
   showApp();
   // Фаза 6 OWL V3 (xHQfi 30.04): фоновий збір довгострокових патернів через
