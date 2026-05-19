@@ -461,27 +461,31 @@ print(_json.dumps({"modal_visible": bool(visible), "errors": errs[:2]}))
 
 @scenario("ui")
 def test_6_owl_swipe():
-    """Сценарій 6: вертикальний свайп OWL у Inbox → згортання."""
+    """Сценарій 6: вертикальний свайп OWL у Inbox → згортання. CDP Input.dispatchTouchEvent."""
     try:
         r = bh("""
-import json
-click('[data-tab="inbox"]')
-wait(500)
-# Симулюємо swipe up на .owl-speech (новий data-swipe-detect OBErR Phase 2.5)
-swipe_target = query_selector('[data-swipe-detect][data-swipe-tab="inbox"]')
-errs = []
-if swipe_target:
-    # Симуляція touchstart+touchmove+touchend через CDP Input.dispatchTouchEvent
-    swipe_vertical(swipe_target, dy=-60)
-    wait(500)
-    collapsed = eval_js("document.getElementById('owl-tab-collapsed-inbox').style.display === 'flex'")
-    errs = get_console_errors()
-    print(json.dumps({"collapsed": collapsed, "errors": errs[:2]}))
+inject_error_capture()
+click_sel('[data-tab="inbox"]')
+wait(0.5)
+# Знайти центр swipe-target через DOM
+rect = js('(function(){var e=document.querySelector(\\'[data-swipe-detect][data-swipe-tab="inbox"]\\');if(!e)return null;var r=e.getBoundingClientRect();return [r.left+r.width/2, r.top+r.height/2];})()')
+if not rect:
+    print(_json.dumps({"collapsed": False, "errors": ["swipe target not found"]}))
 else:
-    print(json.dumps({"collapsed": False, "errors": ["swipe target not found"]}))
+    x, y = int(rect[0]), int(rect[1])
+    # Touch sequence: start → move up 60px → end
+    cdp("Input.dispatchTouchEvent", type="touchStart", touchPoints=[{"x":x,"y":y,"id":1,"radiusX":1,"radiusY":1}])
+    wait(0.05)
+    cdp("Input.dispatchTouchEvent", type="touchMove", touchPoints=[{"x":x,"y":y-60,"id":1,"radiusX":1,"radiusY":1}])
+    wait(0.05)
+    cdp("Input.dispatchTouchEvent", type="touchEnd", touchPoints=[])
+    wait(0.5)
+    collapsed = js('(function(){var e=document.getElementById("owl-tab-collapsed-inbox");return !!e && getComputedStyle(e).display==="flex";})()')
+    errs = get_console_errs()
+    print(_json.dumps({"collapsed": bool(collapsed), "errors": errs[:2]}))
 """)
         if not r["collapsed"]:
-            return _result("test-6-owl-swipe", False, f"OWL не згорнувся (touch-detect.js bug?)")
+            return _result("test-6-owl-swipe", False, "OWL не згорнувся (touch-detect.js bug?)")
         return _result("test-6-owl-swipe", True)
     except Exception as e:
         return _result("test-6-owl-swipe", False, f"EXCEPTION: {e}")
@@ -492,15 +496,15 @@ def test_7_modal_close_backdrop():
     """Сценарій 7 (OBErR): close-backdrop pattern працює."""
     try:
         r = bh("""
-import json
-click('[data-action="open-settings"]')
-wait(500)
-opened = eval_js("getComputedStyle(document.getElementById('settings-overlay')).display") != 'none'
-# Тап на overlay (поза картою) — close-backdrop має закрити
-click_at_coords(20, 100)  # верхній лівий кут — гарантовано на backdrop
-wait(500)
-closed = eval_js("getComputedStyle(document.getElementById('settings-overlay')).display") == 'none'
-print(json.dumps({"opened": opened, "closed_on_backdrop": closed}))
+inject_error_capture()
+click_sel('[data-action="open-settings"]')
+wait(0.5)
+opened = js('(function(){var e=document.getElementById("settings-overlay");return !!e && getComputedStyle(e).display!=="none";})()')
+# Тап на backdrop (верхній лівий кут — гарантовано на overlay, не на content card)
+click_at_xy(20, 100)
+wait(0.5)
+closed = js('(function(){var e=document.getElementById("settings-overlay");return !e || getComputedStyle(e).display==="none";})()')
+print(_json.dumps({"opened": bool(opened), "closed_on_backdrop": bool(closed)}))
 """)
         if not r["opened"]:
             return _result("test-7-modal-backdrop", False, "Settings не відкрилися")
@@ -513,16 +517,14 @@ print(json.dumps({"opened": opened, "closed_on_backdrop": closed}))
 
 @scenario("smoke")
 def test_8_clear_all_data_guards():
-    """Сценарій 8: clearAllData видаляє всі nm_* (B-184)."""
+    """Сценарій 8: clearAllData кнопка наявна (B-184). НЕ виконуємо — це знищить тестові дані."""
     try:
         r = bh("""
-import json
-# Не виконуємо реально (це знищить тестові дані).
-# Перевіряємо що кнопка є + є confirm dialog
-click('[data-action="open-settings"]')
-wait(500)
-btn = query_selector('[data-fn="clearAllData"]')
-print(json.dumps({"btn_present": btn is not None}))
+inject_error_capture()
+click_sel('[data-action="open-settings"]')
+wait(0.5)
+btn_present = js('!!document.querySelector(\\'[data-fn="clearAllData"]\\')')
+print(_json.dumps({"btn_present": bool(btn_present)}))
 """)
         if not r["btn_present"]:
             return _result("test-8-clear-data", False, "SELECTOR_STALE: clearAllData кнопка зникла")
@@ -535,23 +537,24 @@ print(json.dumps({"btn_present": btn is not None}))
 def test_9_inbox_finance_subcategory():
     """
     Сценарій 9 (B-180 regression): 'купив каву 50' → save_finance →
-    subcategory у whitelist {Кафе, Ресторан, ''}.
+    subcategory у whitelist {Кафе, Ресторан, '', None}.
     НАЙБІЛЬШ FRAGILE — залежить від AI рішень.
     """
     ALLOWED = {"Кафе", "Ресторан", "Доставка", "", None}
     try:
         r = bh("""
-import json
-click('[data-tab="inbox"]')
-wait(500)
-type_into('#inbox-input', 'купив каву 50')
-click('button[data-fn="sendToAI"]')
-# AI processing може зайняти 3-10 сек
-wait_for_js("(JSON.parse(localStorage.getItem('nm_finance') || '[]')).some(x => x.amount === 50)", timeout=15000)
-finance = json.loads(get_local_storage('nm_finance') or '[]')
+inject_error_capture()
+click_sel('[data-tab="inbox"]')
+wait(0.5)
+fill_input('#inbox-input', 'купив каву 50')
+click_sel('button[data-fn="sendToAI"]')
+# AI processing може зайняти 3-15 сек
+wait_for_js_expr("(JSON.parse(localStorage.getItem('nm_finance') || '[]')).some(function(x){return x.amount===50;})", timeout_s=20)
+raw = get_ls('nm_finance') or '[]'
+finance = _json.loads(raw)
 match = next((i for i in finance if i.get('amount') == 50), None)
-print(json.dumps({"match": match}))
-""", timeout=30)
+print(_json.dumps({"match": match}))
+""", timeout=40)
         match = r.get("match")
         if not match:
             return _result("test-9-inbox-finance", False, "ASSERTION_FAIL: amount=50 не у nm_finance")
@@ -572,18 +575,18 @@ def test_10_inbox_task_classification():
     """
     try:
         r = bh("""
-import json
-click('[data-tab="inbox"]')
-wait(500)
-before_tasks = len(json.loads(get_local_storage('nm_tasks') or '[]'))
-before_events = len(json.loads(get_local_storage('nm_events') or '[]'))
-type_into('#inbox-input', 'поприбирати у кімнаті')
-click('button[data-fn="sendToAI"]')
-wait_for_js(f"(JSON.parse(localStorage.getItem('nm_tasks') || '[]')).length > {before_tasks}", timeout=15000)
-after_tasks = len(json.loads(get_local_storage('nm_tasks') or '[]'))
-after_events = len(json.loads(get_local_storage('nm_events') or '[]'))
-print(json.dumps({"tasks_added": after_tasks - before_tasks, "events_added": after_events - before_events}))
-""", timeout=30)
+inject_error_capture()
+click_sel('[data-tab="inbox"]')
+wait(0.5)
+before_tasks = len(_json.loads(get_ls('nm_tasks') or '[]'))
+before_events = len(_json.loads(get_ls('nm_events') or '[]'))
+fill_input('#inbox-input', 'поприбирати у кімнаті')
+click_sel('button[data-fn="sendToAI"]')
+wait_for_js_expr("(JSON.parse(localStorage.getItem('nm_tasks') || '[]')).length > " + str(before_tasks), timeout_s=20)
+after_tasks = len(_json.loads(get_ls('nm_tasks') or '[]'))
+after_events = len(_json.loads(get_ls('nm_events') or '[]'))
+print(_json.dumps({"tasks_added": after_tasks - before_tasks, "events_added": after_events - before_events}))
+""", timeout=40)
         if r["events_added"] > 0:
             return _result("test-10-task-classify", False,
                           "B-115 REGRESSION: AI створив event замість task")
@@ -597,10 +600,26 @@ print(json.dumps({"tasks_added": after_tasks - before_tasks, "events_added": aft
 # --- AI command execution (опційно, з tester-commands.md) ---------------------
 SYSTEM_PROMPT = """Ти — AI-тестувальник NeverMind PWA. Користувач описує сценарій українською.
 Поверни ТIЛЬКИ Python-код для browser-harness CDP (без markdown fence, без пояснень).
-Доступні функції: navigate(url), click(selector), type_into(selector, text), wait(ms),
-wait_for_js(expr, timeout), query_selector(sel), get_console_errors(),
-get_local_storage(key), eval_js(expr), take_screenshot(path), reload().
-В кінці завжди print(json.dumps({"passed": bool, "reason": str})).
+
+Доступні функції (browser-harness 0.1.0 API + custom helpers):
+- goto_url(url) — перейти на URL
+- click_sel(selector) — клік по CSS-селектору (через DOM .click())
+- fill_input(selector, text) — заповнити input/textarea (clear_first=True за замовч)
+- click_at_xy(x, y) — клік за координатами (для tests backdrop)
+- js(expression) — виконати JS, повертає результат
+- wait(seconds) — пауза у СЕКУНДАХ (не ms!): wait(0.5) = 500мс
+- wait_for_js_expr(expr, timeout_s=5) — polling поки JS expr → truthy
+- get_ls(key) — localStorage.getItem (string або None)
+- inject_error_capture() — встановити listener на window.error/unhandledrejection (одноразово на старті)
+- get_console_errs() — list[str] помилок з window._jsErrors
+- capture_screenshot(path, full=False) — зберегти PNG
+- cdp(method, **params) — низькорівневий CDP виклик (Input.dispatchTouchEvent etc)
+- _json — модуль json (рrefix щоб не конфліктувати з імпортами користувача)
+
+ВАЖЛИВО:
+- wait() приймає секунди (float), НЕ мілісекунди
+- Викликай inject_error_capture() ОДРАЗУ після goto_url або на старті сценарію
+- В кінці завжди print(_json.dumps({"passed": bool, "reason": str}))
 """
 
 

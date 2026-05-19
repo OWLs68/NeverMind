@@ -71,10 +71,41 @@ source $HOME/.local/bin/env
 # Reinstall browser-harness від nmtester (paths поміняли при mv)
 cd $HOME/browser-harness && uv tool install -e . --force
 # Venv для anthropic SDK (uv venv без --seed не ставить pip — ставимо через uv pip)
-uv venv $HOME/.venv
+uv venv $HOME/.venv --clear
 uv pip install --python $HOME/.venv/bin/python anthropic
 INNER
 echo "    uv + venv + anthropic встановлено"
+
+echo "=== [3b/8] Патч browser-harness ensure_daemon race (HKnlM 19.05.2026) ==="
+# Корінь: у browser-harness 0.1.0 ensure_daemon() polling-race fail хоча
+# daemon реально listening on socket. Виявлено HKnlM. Apстейм fix очікується
+# у новій версії — поки що локальний patch idempotent.
+# Логіка: якщо у daemon log є "listening on" → daemon healthy → return success.
+sudo -u nmtester python3 <<'PYPATCH'
+import os
+path = "/home/nmtester/browser-harness/src/browser_harness/admin.py"
+if not os.path.exists(path):
+    print("    SKIP: admin.py не знайдено")
+else:
+    src = open(path).read()
+    needle = '        raise RuntimeError(msg or f"daemon {name or NAME}'
+    inject = '        if "listening on" in (msg or ""): return\n        raise RuntimeError(msg or f"daemon {name or NAME}'
+    if 'if "listening on" in (msg or "")' in src:
+        print("    OK: patch ВЖЕ застосовано")
+    elif needle not in src:
+        print("    WARN: needle не знайдено — нова версія browser-harness?")
+    else:
+        open(path, "w").write(src.replace(needle, inject, 1))
+        print("    OK: patch застосовано")
+PYPATCH
+
+echo "=== [3c/8] Cleanup stale /tmp/bu-* socket/pid від попередніх запусків ==="
+# Якщо setup запускався раніше — socket може бути root-owned (старі експерименти),
+# що блокує nmtester (Permission denied на unlink/connect).
+pkill -u nmtester -f "browser_harness.daemon" 2>/dev/null || true
+sleep 1
+rm -f /tmp/bu-default.sock /tmp/bu-default.pid /tmp/bu-default.log
+echo "    OK: /tmp/bu-* очищено"
 
 echo "=== [4/8] Clone NM repo через credential store ==="
 # Pre-mortem #3: PAT у ~/.git-credentials (chmod 600), не в URL.
