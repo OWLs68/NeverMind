@@ -20044,6 +20044,7 @@ ${logLines}
     if (typeof document === "undefined") return;
     document.body.addEventListener("click", _handleClick);
     document.body.addEventListener("keydown", _handleKeyDown);
+    document.body.addEventListener("input", _handleInput);
     _initialized = true;
   }
   function _handleClick(e) {
@@ -20057,6 +20058,22 @@ ${logLines}
       fn(el.dataset, el, e);
     } catch (err) {
       console.error("[delegation] action \xAB" + action + "\xBB handler failed:", err);
+    }
+  }
+  function _handleInput(e) {
+    const el = e.target && e.target.closest ? e.target.closest("[data-on-input]") : null;
+    if (!el) return;
+    const fn = el.dataset.onInput;
+    if (!_isCallAllowed(fn)) {
+      if (fn) console.warn("[delegation] `on-input` rejected \u2014 fn not in whitelist:", fn);
+      return;
+    }
+    if (typeof window !== "undefined" && typeof window[fn] === "function") {
+      try {
+        window[fn](el);
+      } catch (err) {
+        console.error("[delegation] on-input \xAB" + fn + "\xBB failed:", err);
+      }
     }
   }
   function _handleKeyDown(e) {
@@ -20730,7 +20747,9 @@ ${logLines}
         "addHealth",
         "addMemory",
         "shift",
-        "navigate"
+        // OBErR CSP Phase 2.2 (19.05.2026): auto* для autoResizeTextarea +
+        // autoSaveNoteView (data-on-input handlers).
+        "auto"
       ];
       CALL_BLACKLIST = /* @__PURE__ */ new Set([
         "eval",

@@ -56,6 +56,11 @@ export function initDelegation() {
   //                                              (для NoteChat де Enter = новий
   //                                              рядок, Cmd+Enter = send)
   document.body.addEventListener('keydown', _handleKeyDown);
+  // Global input listener для data-on-input="fn" (11 точок: 10×
+  // autoResizeTextarea + 1× autoSaveNoteView). Handler передає element як
+  // arg — функції що не очікують просто ігнорують. Whitelist через
+  // _isCallAllowed (auto/refresh префікси).
+  document.body.addEventListener('input', _handleInput);
   _initialized = true;
 }
 
@@ -70,6 +75,24 @@ function _handleClick(e) {
     fn(el.dataset, el, e);
   } catch (err) {
     console.error('[delegation] action «' + action + '» handler failed:', err);
+  }
+}
+
+// OBErR CSP Phase 2 (19.05.2026): global input listener для input/textarea
+// з data-on-input="fn". Передає element як arg (функції що не очікують —
+// ігнорують). Whitelist gate.
+function _handleInput(e) {
+  const el = e.target && e.target.closest ? e.target.closest('[data-on-input]') : null;
+  if (!el) return;
+  const fn = el.dataset.onInput;
+  if (!_isCallAllowed(fn)) {
+    if (fn) console.warn('[delegation] `on-input` rejected — fn not in whitelist:', fn);
+    return;
+  }
+  if (typeof window !== 'undefined' && typeof window[fn] === 'function') {
+    try { window[fn](el); } catch (err) {
+      console.error('[delegation] on-input «' + fn + '» failed:', err);
+    }
   }
 }
 
@@ -913,7 +936,10 @@ const CALL_PREFIX_WHITELIST = [
   'adjust', 'skip', 'log', 'sync', 'route', 'note', 'copy', 'export',
   'import', 'refresh', 'slides', 'undo', 'calendar', 'routine', 'create',
   'ob', 'reset', 'restore', 'cancel', 'confirm', 'edit', 'tap', 'hold',
-  'navigate', 'finCalc', 'addHealth', 'addMemory', 'shift', 'navigate',
+  'navigate', 'finCalc', 'addHealth', 'addMemory', 'shift',
+  // OBErR CSP Phase 2.2 (19.05.2026): auto* для autoResizeTextarea +
+  // autoSaveNoteView (data-on-input handlers).
+  'auto',
 ];
 // Жорсткий чорний список (наказово блокується незалежно від whitelist).
 // Це функції які небезпечні незалежно від наміру виклику.
