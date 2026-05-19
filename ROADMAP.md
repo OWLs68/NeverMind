@@ -98,11 +98,21 @@ EAA (мікро-виняток), NIS2 (мікро-виняток), DSA (особ
 - Explicit consent flow при першому логіні (health/finance окремо)
 - Right to erasure (видалити акаунт) + Right to portability (експорт JSON)
 
-**Hetzner AI-тестер security** (Brain-Claude робить — поза NM-репо):
+**Hetzner AI-тестер — ФIКС РIШЕННЯ Романа 19.05.2026 OBErR:**
+Обрано Hetzner (НЕ Managed Agents, НЕ Playwright Skill локально). Причини: якість тесту 24/7 без залежності від Mac (мобільність — Роман на телефоні), AI-planning через `tester-commands.md` (юзер пише «перевір X» природною мовою → тестер сам розуміє), persistent Chrome profile як справжній юзер. Альтернативи відхилено: Playwright Skill потребує Mac постійно включений; Managed Agents можливо не вміє headless Chrome.
+
+**Архітектурне виправлення (Brain-Claude 19.05):** Brain не має SSH доступу до 94.130.25.22 — це фундаментальна помилка handoff'у 14.05. Setup робить **Роман через свою Claude Code Web сесію по SSH** (як 14.05 коли ставив Chrome+browser-harness). NM-Claude (тут) готує конкретні step-by-step + перевіряє результати у `_ai-tools/tester-status.json` після кожного кроку.
+
+**Залишок setup'у** (Роман через SSH, ~1-2 год):
 - non-root user `nmtester` — BLOCKER перед першим запуском
 - fail2ban, key-only SSH, root login disabled
+- Python 3 + Playwright headless Chromium
+- Скрипт `ai-tester.py` (за GROUND_TRUTH у `_ai-tools/AI_TESTER_INTEGRATION.md`)
+- Cron 03:00 UTC щодня
 - Fine-grained PAT scope `claude/ai-tester-*` only
 - Окремий OpenAI ключ з $5/міс cap
+
+**Чек-ліст setup'у:** `docs/HETZNER_TESTER_SETUP.md` (буде створено NM-Claude після SSH inventory Романа).
 
 **📚 Системні принципи безпеки** — у [`docs/SECURITY.md`](docs/SECURITY.md) § «Системні принципи». Кожна нова фіча проходить Security Checklist.
 
