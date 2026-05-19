@@ -20047,7 +20047,21 @@ ${logLines}
     document.body.addEventListener("input", _handleInput);
     document.body.addEventListener("focus", _handleFocusOrBlur, true);
     document.body.addEventListener("blur", _handleFocusOrBlur, true);
+    document.body.addEventListener("change", _handleChange);
     _initialized = true;
+  }
+  function _handleChange(e) {
+    const el = e.target && e.target.closest ? e.target.closest("[data-on-change]") : null;
+    if (!el) return;
+    const action = el.dataset.onChange;
+    if (!action) return;
+    const fn = ACTIONS[action];
+    if (!fn) return;
+    try {
+      fn(el.dataset, el, e);
+    } catch (err) {
+      console.error("[delegation] change action \xAB" + action + "\xBB failed:", err);
+    }
   }
   function _handleFocusOrBlur(e) {
     const attr = e.type === "focus" ? "data-on-focus" : "data-on-blur";
@@ -20814,6 +20828,19 @@ ${logLines}
         if (typeof window !== "undefined" && typeof window.saveMemoryFactEdit === "function") {
           window.saveMemoryFactEdit(factId, el.textContent);
         }
+      });
+      reg("set-fin-tx-date-from-input", (data, el) => {
+        if (!el) return;
+        if (typeof window !== "undefined" && typeof window.setFinTxDateFromInput === "function") {
+          window.setFinTxDateFromInput(el.value);
+        }
+      });
+      reg("update-cat-modal-subcat", (data, el) => {
+        if (typeof window === "undefined" || !el) return;
+        if (typeof window.updateCatModalSubcat !== "function") return;
+        const idx = parseInt(data.subcatIdx, 10);
+        if (Number.isNaN(idx)) return;
+        window.updateCatModalSubcat(idx, el.value);
       });
       reg("set-evening-mood", (data) => {
         if (!data.mood) return;
@@ -25900,7 +25927,7 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
       </div>
       <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">${t("finance.date.choose_day", "\u0412\u0438\u0431\u0435\u0440\u0456\u0442\u044C \u0434\u0435\u043D\u044C")}</div>
       <input id="fin-date-input" type="date" value="${currentYmd}" max="${(/* @__PURE__ */ new Date()).toISOString().slice(0, 10)}"
-        onchange="setFinTxDateFromInput(this.value)"
+        data-on-change="set-fin-tx-date-from-input"
         style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:11px 40px 11px 14px;font-size:15px;font-weight:600;font-family:inherit;color:#1e1040;outline:none;margin-bottom:14px;box-sizing:border-box;background:rgba(255,255,255,0.7);text-align:left;-webkit-appearance:none;appearance:none;min-height:44px">
       <button data-action="close-fin-date-modal" class="btn-cancel" style="width:100%">${t("common.close", "\u0417\u0430\u043A\u0440\u0438\u0442\u0438")}</button>
       </div>
@@ -26053,7 +26080,7 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
     </div>` : "";
     const subcatsHtml = d.subcategories.map(
       (s, i) => `<div style="display:flex;align-items:center;gap:6px">
-      <input type="text" value="${escapeHtml(s)}" onchange="updateCatModalSubcat(${i}, this.value)" style="flex:1;border:1.5px solid rgba(30,16,64,0.1);border-radius:8px;padding:6px 10px;font-size:13px;font-family:inherit;color:#1e1040;outline:none;background:rgba(255,255,255,0.7)">
+      <input type="text" value="${escapeHtml(s)}" data-on-change="update-cat-modal-subcat" data-subcat-idx="${i}" style="flex:1;border:1.5px solid rgba(30,16,64,0.1);border-radius:8px;padding:6px 10px;font-size:13px;font-family:inherit;color:#1e1040;outline:none;background:rgba(255,255,255,0.7)">
       <button data-action="remove-cat-modal-subcat" data-idx="${i}" style="width:28px;height:28px;border-radius:8px;border:none;background:rgba(239,68,68,0.08);color:#dc2626;font-size:14px;cursor:pointer;font-family:inherit">\xD7</button>
     </div>`
     ).join("");

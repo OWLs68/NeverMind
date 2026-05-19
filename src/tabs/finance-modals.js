@@ -369,7 +369,7 @@ export function openFinDateModal() {
       </div>
       <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">${t('finance.date.choose_day', 'Виберіть день')}</div>
       <input id="fin-date-input" type="date" value="${currentYmd}" max="${new Date().toISOString().slice(0,10)}"
-        onchange="setFinTxDateFromInput(this.value)"
+        data-on-change="set-fin-tx-date-from-input"
         style="width:100%;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:11px 40px 11px 14px;font-size:15px;font-weight:600;font-family:inherit;color:#1e1040;outline:none;margin-bottom:14px;box-sizing:border-box;background:rgba(255,255,255,0.7);text-align:left;-webkit-appearance:none;appearance:none;min-height:44px">
       <button data-action="close-fin-date-modal" class="btn-cancel" style="width:100%">${t('common.close', 'Закрити')}</button>
       </div>
@@ -526,7 +526,7 @@ function _renderCatEditModalBody() {
     </div>` : '';
   const subcatsHtml = d.subcategories.map((s, i) =>
     `<div style="display:flex;align-items:center;gap:6px">
-      <input type="text" value="${escapeHtml(s)}" onchange="updateCatModalSubcat(${i}, this.value)" style="flex:1;border:1.5px solid rgba(30,16,64,0.1);border-radius:8px;padding:6px 10px;font-size:13px;font-family:inherit;color:#1e1040;outline:none;background:rgba(255,255,255,0.7)">
+      <input type="text" value="${escapeHtml(s)}" data-on-change="update-cat-modal-subcat" data-subcat-idx="${i}" style="flex:1;border:1.5px solid rgba(30,16,64,0.1);border-radius:8px;padding:6px 10px;font-size:13px;font-family:inherit;color:#1e1040;outline:none;background:rgba(255,255,255,0.7)">
       <button data-action="remove-cat-modal-subcat" data-idx="${i}" style="width:28px;height:28px;border-radius:8px;border:none;background:rgba(239,68,68,0.08);color:#dc2626;font-size:14px;cursor:pointer;font-family:inherit">×</button>
     </div>`
   ).join('');
