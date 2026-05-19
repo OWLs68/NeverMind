@@ -70,9 +70,9 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 source $HOME/.local/bin/env
 # Reinstall browser-harness від nmtester (paths поміняли при mv)
 cd $HOME/browser-harness && uv tool install -e . --force
-# Venv для anthropic SDK
+# Venv для anthropic SDK (uv venv без --seed не ставить pip — ставимо через uv pip)
 uv venv $HOME/.venv
-$HOME/.venv/bin/pip install anthropic
+uv pip install --python $HOME/.venv/bin/python anthropic
 INNER
 echo "    uv + venv + anthropic встановлено"
 
