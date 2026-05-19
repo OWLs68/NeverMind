@@ -61,7 +61,33 @@ export function initDelegation() {
   // arg — функції що не очікують просто ігнорують. Whitelist через
   // _isCallAllowed (auto/refresh префікси).
   document.body.addEventListener('input', _handleInput);
+  // Global focus + blur listeners для data-on-focus / data-on-blur — reuse
+  // named actions з registry (`data-on-focus="open-chat-bar" data-tab="X"`
+  // викликає ACTIONS['open-chat-bar'] з тим самим API що click). 7 onfocus
+  // (chat-bars) + 1 onblur (saveSettings) → 0. focus подія не bubbles за
+  // дефолтом — використовуємо capture phase + closest().
+  document.body.addEventListener('focus', _handleFocusOrBlur, true);
+  document.body.addEventListener('blur', _handleFocusOrBlur, true);
   _initialized = true;
+}
+
+// OBErR CSP Phase 2.3 (19.05.2026): unified focus/blur handler через
+// data-on-focus / data-on-blur. Делегує до named action у ACTIONS registry
+// (той самий API що click) — щоб не дублювати logic. focus bubbles=false →
+// use capture phase щоб піймати focus на input/textarea descendants.
+function _handleFocusOrBlur(e) {
+  const attr = e.type === 'focus' ? 'data-on-focus' : 'data-on-blur';
+  const el = e.target && e.target.closest ? e.target.closest('[' + attr + ']') : null;
+  if (!el) return;
+  const action = e.type === 'focus' ? el.dataset.onFocus : el.dataset.onBlur;
+  if (!action) return;
+  const fn = ACTIONS[action];
+  if (!fn) return;
+  try {
+    fn(el.dataset, el, e);
+  } catch (err) {
+    console.error('[delegation] ' + e.type + ' action «' + action + '» failed:', err);
+  }
 }
 
 function _handleClick(e) {
@@ -968,6 +994,29 @@ reg('close-chat-bar', (data) => {
   if (!data.tab) return;
   if (typeof window !== 'undefined' && typeof window.closeChatBar === 'function') {
     window.closeChatBar(data.tab);
+  }
+});
+// OBErR CSP Phase 2.3 (19.05.2026) — open-chat-bar (data-tab) ×7 — onfocus
+// handler. Симетрично до close-chat-bar.
+reg('open-chat-bar', (data) => {
+  if (!data.tab) return;
+  if (typeof window !== 'undefined' && typeof window.openChatBar === 'function') {
+    window.openChatBar(data.tab);
+  }
+});
+// save-settings — onblur handler для input API key.
+reg('save-settings', () => {
+  if (typeof window !== 'undefined' && typeof window.saveSettings === 'function') {
+    window.saveSettings();
+  }
+});
+// save-memory-fact-edit — onblur handler для contenteditable у memory cards.
+// data-fact-edit = factId (вже є у HTML). Читає el.textContent безпосередньо.
+reg('save-memory-fact-edit', (data, el) => {
+  const factId = data.factEdit;
+  if (!factId || !el) return;
+  if (typeof window !== 'undefined' && typeof window.saveMemoryFactEdit === 'function') {
+    window.saveMemoryFactEdit(factId, el.textContent);
   }
 });
 // set-evening-mood — кнопки 5 настроїв (😄😊😐😟😢).

@@ -705,7 +705,7 @@
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.55)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
     </button>
     <textarea id="inbox-input" rows="1" placeholder="Напиши що завгодно — Агент розбереться…"
-      onfocus="openChatBar('inbox')"
+      data-on-focus="open-chat-bar" data-tab="inbox"
       maxlength="500" data-on-input="autoResizeTextarea"
       data-on-enter="sendToAI"></textarea>
     <!-- Мікрофон (неактивний) -->
@@ -726,7 +726,7 @@
   <div class="ai-bar-input-box">
     <textarea id="finance-bar-input" rows="1" placeholder="Витратив, отримав, запитай агента…"
       maxlength="500" data-on-input="autoResizeTextarea"
-      onfocus="openChatBar('finance')"
+      data-on-focus="open-chat-bar" data-tab="finance"
       data-on-enter="sendFinanceBarMessage"></textarea>
     <button class="ai-bar-send-btn" id="finance-send-btn" data-action="call" data-fn="sendFinanceBarMessage">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1e1040" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
@@ -741,7 +741,7 @@
   <div class="ai-bar-input-box">
     <textarea id="notes-bar-input" rows="1" placeholder="Створи нотатку, запитай агента…"
       maxlength="500" data-on-input="autoResizeTextarea"
-      onfocus="openChatBar('notes')"
+      data-on-focus="open-chat-bar" data-tab="notes"
       data-on-enter="sendNotesBarMessage"></textarea>
     <button class="ai-bar-send-btn" id="notes-send-btn" data-action="call" data-fn="sendNotesBarMessage">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1e1040" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
@@ -758,7 +758,7 @@
   <div class="ai-bar-input-box">
     <textarea id="tasks-chat-input" rows="1" placeholder="Запитай або скажи Агенту про задачі…"
       maxlength="500" data-on-input="autoResizeTextarea"
-      onfocus="openChatBar('tasks')"
+      data-on-focus="open-chat-bar" data-tab="tasks"
       data-on-enter="sendTasksBarMessage"></textarea>
     <button class="ai-bar-send-btn" id="tasks-send-btn" data-action="call" data-fn="sendTasksBarMessage">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1e1040" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
@@ -773,7 +773,7 @@
       <div class="ai-bar-input-box">
         <textarea id="me-chat-input" rows="1" placeholder="Запитай агента про себе…"
           maxlength="500" data-on-input="autoResizeTextarea"
-          onfocus="openChatBar('me')"
+          data-on-focus="open-chat-bar" data-tab="me"
           data-on-enter="sendMeChatMessage"></textarea>
         <button class="ai-bar-send-btn" id="me-send-btn" data-action="call" data-fn="sendMeChatMessage">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1e1040" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
@@ -788,7 +788,7 @@
       <div class="ai-bar-input-box">
         <textarea id="evening-bar-input" rows="1" placeholder="Поговори з агентом про день…"
           maxlength="500" data-on-input="autoResizeTextarea"
-          onfocus="openChatBar('evening')"
+          data-on-focus="open-chat-bar" data-tab="evening"
           data-on-enter="sendEveningBarMessage"></textarea>
         <button class="ai-bar-send-btn" id="evening-send-btn" data-action="call" data-fn="sendEveningBarMessage">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1e1040" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
@@ -881,7 +881,7 @@
   <div class="ai-bar-input-box">
     <textarea id="projects-bar-input" rows="1" placeholder="Виконав крок, питання, редагувати план…"
       maxlength="500" data-on-input="autoResizeTextarea"
-      onfocus="openChatBar('projects')"
+      data-on-focus="open-chat-bar" data-tab="projects"
       data-on-enter="sendProjectsBarMessage"></textarea>
     <button class="ai-bar-send-btn" id="projects-send-btn" data-action="call" data-fn="sendProjectsBarMessage">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1e1040" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
@@ -1522,7 +1522,7 @@
     <div class="s-group-label" style="padding:4px 14px;font-size:11px;font-weight:700;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.09em">Розробник</div>
     <div class="s-group">
       <div class="s-row" style="cursor:default;flex-direction:column;align-items:stretch;gap:8px;padding:14px">
-        <input class="settings-input" type="password" id="input-api-key" placeholder="sk-proj-..." autocomplete="off" autocorrect="off" spellcheck="false" onblur="saveSettings()" style="padding:10px 14px;font-size:15px;border-radius:12px;background:rgba(255,255,255,0.7);border:1px solid rgba(30,16,64,0.1)">
+        <input class="settings-input" type="password" id="input-api-key" placeholder="sk-proj-..." autocomplete="off" autocorrect="off" spellcheck="false" data-on-blur="save-settings" style="padding:10px 14px;font-size:15px;border-radius:12px;background:rgba(255,255,255,0.7);border:1px solid rgba(30,16,64,0.1)">
         <button data-action="call" data-fn="saveSettings" style="padding:10px 14px;font-size:14px;font-weight:700;border-radius:10px;background:rgba(194,121,10,0.12);border:1.5px solid rgba(194,121,10,0.35);color:#c2790a;cursor:pointer;font-family:inherit">Зберегти ключ</button>
         <div id="key-status" class="key-status no-key">⚠️ Ключ не встановлено</div>
       </div>

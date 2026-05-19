@@ -20045,7 +20045,23 @@ ${logLines}
     document.body.addEventListener("click", _handleClick);
     document.body.addEventListener("keydown", _handleKeyDown);
     document.body.addEventListener("input", _handleInput);
+    document.body.addEventListener("focus", _handleFocusOrBlur, true);
+    document.body.addEventListener("blur", _handleFocusOrBlur, true);
     _initialized = true;
+  }
+  function _handleFocusOrBlur(e) {
+    const attr = e.type === "focus" ? "data-on-focus" : "data-on-blur";
+    const el = e.target && e.target.closest ? e.target.closest("[" + attr + "]") : null;
+    if (!el) return;
+    const action = e.type === "focus" ? el.dataset.onFocus : el.dataset.onBlur;
+    if (!action) return;
+    const fn = ACTIONS[action];
+    if (!fn) return;
+    try {
+      fn(el.dataset, el, e);
+    } catch (err) {
+      console.error("[delegation] " + e.type + " action \xAB" + action + "\xBB failed:", err);
+    }
   }
   function _handleClick(e) {
     const el = e.target && e.target.closest ? e.target.closest("[data-action]") : null;
@@ -20779,6 +20795,24 @@ ${logLines}
         if (!data.tab) return;
         if (typeof window !== "undefined" && typeof window.closeChatBar === "function") {
           window.closeChatBar(data.tab);
+        }
+      });
+      reg("open-chat-bar", (data) => {
+        if (!data.tab) return;
+        if (typeof window !== "undefined" && typeof window.openChatBar === "function") {
+          window.openChatBar(data.tab);
+        }
+      });
+      reg("save-settings", () => {
+        if (typeof window !== "undefined" && typeof window.saveSettings === "function") {
+          window.saveSettings();
+        }
+      });
+      reg("save-memory-fact-edit", (data, el) => {
+        const factId = data.factEdit;
+        if (!factId || !el) return;
+        if (typeof window !== "undefined" && typeof window.saveMemoryFactEdit === "function") {
+          window.saveMemoryFactEdit(factId, el.textContent);
         }
       });
       reg("set-evening-mood", (data) => {
@@ -23733,7 +23767,7 @@ ${logLines}
         parts.push(`
         <div data-fact-id="${escId}" style="background:rgba(255,255,255,0.75);border:1.5px solid rgba(255,255,255,0.7);border-radius:14px;padding:12px 14px;display:flex;align-items:flex-start;gap:10px">
           <div style="flex:1;min-width:0">
-            <div contenteditable="true" data-fact-edit="${escId}" onblur="saveMemoryFactEdit('${escId}', this.textContent)" style="font-size:15px;color:#1e1040;line-height:1.4;outline:none;word-break:break-word">${escapeHtml(f.text)}</div>
+            <div contenteditable="true" data-fact-edit="${escId}" data-on-blur="save-memory-fact-edit" style="font-size:15px;color:#1e1040;line-height:1.4;outline:none;word-break:break-word">${escapeHtml(f.text)}</div>
             <div style="font-size:11px;color:rgba(30,16,64,0.4);margin-top:4px">${ago}${sourceLabel ? " \xB7 " + sourceLabel : ""}${ttlNote}</div>
           </div>
           <button data-action="delete-memory-card" data-id="${escId}" style="background:none;border:none;cursor:pointer;color:rgba(30,16,64,0.25);font-size:18px;line-height:1;padding:2px;flex-shrink:0;margin-top:1px">\xD7</button>

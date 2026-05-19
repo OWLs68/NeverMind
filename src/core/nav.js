@@ -912,7 +912,7 @@ function renderMemoryCards() {
       parts.push(`
         <div data-fact-id="${escId}" style="background:rgba(255,255,255,0.75);border:1.5px solid rgba(255,255,255,0.7);border-radius:14px;padding:12px 14px;display:flex;align-items:flex-start;gap:10px">
           <div style="flex:1;min-width:0">
-            <div contenteditable="true" data-fact-edit="${escId}" onblur="saveMemoryFactEdit('${escId}', this.textContent)" style="font-size:15px;color:#1e1040;line-height:1.4;outline:none;word-break:break-word">${escapeHtml(f.text)}</div>
+            <div contenteditable="true" data-fact-edit="${escId}" data-on-blur="save-memory-fact-edit" style="font-size:15px;color:#1e1040;line-height:1.4;outline:none;word-break:break-word">${escapeHtml(f.text)}</div>
             <div style="font-size:11px;color:rgba(30,16,64,0.4);margin-top:4px">${ago}${sourceLabel ? ' · ' + sourceLabel : ''}${ttlNote}</div>
           </div>
           <button data-action="delete-memory-card" data-id="${escId}" style="background:none;border:none;cursor:pointer;color:rgba(30,16,64,0.25);font-size:18px;line-height:1;padding:2px;flex-shrink:0;margin-top:1px">×</button>
