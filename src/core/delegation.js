@@ -68,7 +68,26 @@ export function initDelegation() {
   // дефолтом — використовуємо capture phase + closest().
   document.body.addEventListener('focus', _handleFocusOrBlur, true);
   document.body.addEventListener('blur', _handleFocusOrBlur, true);
+  // Global change listener для data-on-change="action" (2 точки у
+  // finance-modals: date picker + cat subcat edit). Reuse named actions.
+  document.body.addEventListener('change', _handleChange);
   _initialized = true;
+}
+
+// OBErR CSP Phase 2.4 (19.05.2026): change handler через data-on-change.
+// 2 точки у finance-modals (date picker + cat subcat). Reuse named actions.
+function _handleChange(e) {
+  const el = e.target && e.target.closest ? e.target.closest('[data-on-change]') : null;
+  if (!el) return;
+  const action = el.dataset.onChange;
+  if (!action) return;
+  const fn = ACTIONS[action];
+  if (!fn) return;
+  try {
+    fn(el.dataset, el, e);
+  } catch (err) {
+    console.error('[delegation] change action «' + action + '» failed:', err);
+  }
 }
 
 // OBErR CSP Phase 2.3 (19.05.2026): unified focus/blur handler через
@@ -1018,6 +1037,24 @@ reg('save-memory-fact-edit', (data, el) => {
   if (typeof window !== 'undefined' && typeof window.saveMemoryFactEdit === 'function') {
     window.saveMemoryFactEdit(factId, el.textContent);
   }
+});
+// OBErR CSP Phase 2.4 (19.05.2026): onchange handlers.
+// set-fin-tx-date-from-input — date picker (HTML <input type="date">).
+// Читає el.value (ISO string YYYY-MM-DD).
+reg('set-fin-tx-date-from-input', (data, el) => {
+  if (!el) return;
+  if (typeof window !== 'undefined' && typeof window.setFinTxDateFromInput === 'function') {
+    window.setFinTxDateFromInput(el.value);
+  }
+});
+// update-cat-modal-subcat — edit subcategory text у Category Edit Modal.
+// data-subcat-idx = індекс у списку (parseInt). Читає el.value.
+reg('update-cat-modal-subcat', (data, el) => {
+  if (typeof window === 'undefined' || !el) return;
+  if (typeof window.updateCatModalSubcat !== 'function') return;
+  const idx = parseInt(data.subcatIdx, 10);
+  if (Number.isNaN(idx)) return;
+  window.updateCatModalSubcat(idx, el.value);
 });
 // set-evening-mood — кнопки 5 настроїв (😄😊😐😟😢).
 reg('set-evening-mood', (data) => {
