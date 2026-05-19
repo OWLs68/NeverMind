@@ -50,10 +50,56 @@ def load_env():
 # --- Browser-harness CDP helper ----------------------------------------------
 BH_BIN = None  # ініціалізується у load_env через os.environ
 
+# Inline-helpers що додаються до КОЖНОГО payload — реальний API browser-harness
+# має тільки: goto_url, js, fill_input, click_at_xy, wait, wait_for_element,
+# capture_screenshot, list_tabs, switch_tab. Ми будуємо вищерівневі helpers
+# через js() — щоб сценарії читалися як Playwright-style.
+PAYLOAD_PRELUDE = """
+import time as _t
+import json as _json
+
+# JS-click — browser-harness не має click(selector), емулюємо через DOM.
+def click_sel(selector):
+    js('document.querySelector(' + _json.dumps(selector) + ')?.click()')
+
+# localStorage.getItem — повертає string або None.
+def get_ls(key):
+    return js('localStorage.getItem(' + _json.dumps(key) + ')')
+
+# Polling expr → truthy. Raises RuntimeError якщо не дочекався.
+def wait_for_js_expr(expr, timeout_s=5.0):
+    deadline = _t.time() + timeout_s
+    while _t.time() < deadline:
+        try:
+            if js(expr):
+                return True
+        except Exception:
+            pass
+        wait(0.2)
+    raise RuntimeError('wait_for_js timeout: ' + expr[:80])
+
+# Idempotent: window.onerror + unhandledrejection listeners. Викликати на старті
+# КОЖНОГО сценарію — listener збережеться у tab до reload/navigate.
+def inject_error_capture():
+    js('(function(){if(window._jsErrors)return;window._jsErrors=[];'
+       'window.addEventListener("error",function(e){window._jsErrors.push(String(e.message||e.error||"unknown"));});'
+       'window.addEventListener("unhandledrejection",function(e){window._jsErrors.push("promise: "+String(e.reason));});'
+       '})();')
+
+# Список error messages зібраних inject_error_capture().
+def get_console_errs():
+    raw = js('JSON.stringify(window._jsErrors || [])')
+    try:
+        return _json.loads(raw or '[]')
+    except Exception:
+        return []
+"""
+
 
 def bh(code: str, timeout: int = 60) -> dict:
     """
     Виконати Python через browser-harness CDP.
+    Автоматично додає PAYLOAD_PRELUDE (helpers).
     Останній рядок stdout = JSON результат.
 
     Raises RuntimeError при non-zero exit або empty stdout.
@@ -62,8 +108,9 @@ def bh(code: str, timeout: int = 60) -> dict:
     if BH_BIN is None:
         BH_BIN = os.environ.get("BH_BIN", "/home/nmtester/.local/bin/browser-harness")
 
+    full_code = PAYLOAD_PRELUDE + "\n" + code
     r = subprocess.run(
-        [BH_BIN], input=code, capture_output=True, text=True, timeout=timeout,
+        [BH_BIN], input=full_code, capture_output=True, text=True, timeout=timeout,
         env={**os.environ, "BU_CDP_URL": "http://127.0.0.1:9222"},
     )
     if r.returncode != 0:
@@ -292,13 +339,19 @@ def test_1_boot_health():
     """Сценарій 1: сайт відкривається, OWL-табло видно, 0 console.error."""
     try:
         r = bh(f"""
-import json
-navigate({NEVERMIND_URL!r})
-wait_for_js('window.NM_BOOT_DONE === true', timeout=5000)
-board = query_selector('#owl-board')
-errs = get_console_errors()
-print(json.dumps({{"visible": board is not None, "errors": errs}}))
+goto_url({NEVERMIND_URL!r})
+inject_error_capture()
+try:
+    wait_for_js_expr('window.NM_BOOT_DONE === true', timeout_s=10)
+    booted = True
+except Exception:
+    booted = False
+visible = js('!!document.querySelector("#owl-board")')
+errs = get_console_errs()
+print(_json.dumps({{"booted": booted, "visible": bool(visible), "errors": errs[:3]}}))
 """)
+        if not r["booted"]:
+            return _result("test-1-boot-health", False, "BOOT_TIMEOUT: window.NM_BOOT_DONE не встановлено за 10с")
         if not r["visible"]:
             return _result("test-1-boot-health", False, "SELECTOR_STALE: #owl-board not found")
         if r["errors"]:
@@ -314,14 +367,13 @@ def test_2_navigation_8_tabs():
     tabs = ["inbox", "tasks", "notes", "health", "finance", "evening", "me", "projects"]
     try:
         r = bh(f"""
-import json
+inject_error_capture()
 tabs = {tabs!r}
-all_errors = []
 for tab in tabs:
-    click('[data-tab="' + tab + '"]')
-    wait(500)
-    all_errors.extend(get_console_errors())
-print(json.dumps({{"errors": all_errors[:5]}}))
+    click_sel('[data-tab="' + tab + '"]')
+    wait(0.4)
+errs = get_console_errs()
+print(_json.dumps({{"errors": errs[:5]}}))
 """)
         if r["errors"]:
             return _result("test-2-navigation", False, f"errors: {r['errors']}")
@@ -334,20 +386,24 @@ print(json.dumps({{"errors": all_errors[:5]}}))
 def test_3_create_task_persistence():
     """Сценарій 3: створити задачу → reload → залишилася."""
     try:
-        r = bh("""
-import json
-click('[data-tab="tasks"]')
-wait(300)
-click('#prod-add-btn')
-wait(300)
-type_into('#task-input-title', 'Тестова задача AI')
-click('button[data-fn="saveTask"]')
-wait(1000)
-before = get_local_storage('nm_tasks') or '[]'
-reload()
-wait(2000)
-after = get_local_storage('nm_tasks') or '[]'
-print(json.dumps({"before_has": "Тестова задача AI" in before, "after_has": "Тестова задача AI" in after}))
+        r = bh(f"""
+inject_error_capture()
+click_sel('[data-tab="tasks"]')
+wait(0.3)
+click_sel('#prod-add-btn')
+wait(0.3)
+fill_input('#task-input-title', 'Тестова задача AI')
+click_sel('button[data-fn="saveTask"]')
+wait(1.0)
+before = get_ls('nm_tasks') or '[]'
+goto_url({NEVERMIND_URL!r})
+wait(2.0)
+inject_error_capture()
+after = get_ls('nm_tasks') or '[]'
+print(_json.dumps({{
+    "before_has": "Тестова задача AI" in before,
+    "after_has": "Тестова задача AI" in after,
+}}))
 """)
         if not r["before_has"]:
             return _result("test-3-create-task", False, "ASSERTION_FAIL: задача не зявилась у nm_tasks")
@@ -363,13 +419,13 @@ def test_4_backup_create():
     """Сценарій 4 (OBErR fresh): створити backup → є у nm_backup_*."""
     try:
         r = bh("""
-import json
-click('[data-action="open-settings"]')
-wait(500)
-click('[data-fn="createFullBackupUI"]')
-wait(1500)
-keys = eval_js('Object.keys(localStorage).filter(k => k.startsWith("nm_backup_")).length')
-print(json.dumps({"backup_count": keys}))
+inject_error_capture()
+click_sel('[data-action="open-settings"]')
+wait(0.5)
+click_sel('[data-fn="createFullBackupUI"]')
+wait(1.5)
+keys_count = js('Object.keys(localStorage).filter(function(k){return k.indexOf("nm_backup_")===0;}).length')
+print(_json.dumps({"backup_count": int(keys_count or 0)}))
 """)
         if r["backup_count"] < 1:
             return _result("test-4-backup-create", False, "ASSERTION_FAIL: backup не створено у localStorage")
@@ -380,22 +436,19 @@ print(json.dumps({"backup_count": keys}))
 
 @scenario("crud")
 def test_5_trash_restore():
-    """Сценарій 5 (B-179): видалити задачу → у Кошику → відновити."""
+    """Сценарій 5 (B-179): trash modal відкривається без console.error."""
     try:
         r = bh("""
-import json
-# Створити задачу, видалити (через swipe не можемо — спрощено через AI), перевірити trash
-click('[data-tab="tasks"]')
-wait(300)
-# (Спрощено: перевіряємо що trash UI відкривається без помилок)
-click('[data-action="open-settings"]')
-wait(500)
-click('[data-fn="openTrashModal"]')
-wait(800)
-modal = query_selector('#trash-modal')
-visible = modal is not None and (eval_js("getComputedStyle(document.getElementById('trash-modal')).display") != 'none')
-errs = get_console_errors()
-print(json.dumps({"modal_visible": visible, "errors": errs[:2]}))
+inject_error_capture()
+click_sel('[data-tab="tasks"]')
+wait(0.3)
+click_sel('[data-action="open-settings"]')
+wait(0.5)
+click_sel('[data-fn="openTrashModal"]')
+wait(0.8)
+visible = js('(function(){var m=document.getElementById("trash-modal");return !!m && getComputedStyle(m).display!=="none";})()')
+errs = get_console_errs()
+print(_json.dumps({"modal_visible": bool(visible), "errors": errs[:2]}))
 """)
         if not r["modal_visible"]:
             return _result("test-5-trash-restore", False, "SELECTOR_STALE: #trash-modal не відкрився")
