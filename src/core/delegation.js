@@ -45,6 +45,17 @@ export function initDelegation() {
   if (_initialized) return;
   if (typeof document === 'undefined') return;
   document.body.addEventListener('click', _handleClick);
+  // OBErR CSP Phase 2 quick win (19.05.2026): global keydown listener для
+  // input/textarea з `data-on-enter="windowFnName"`. Замінює 11 inline
+  // `onkeydown="if(event.key==='Enter'&&!event.shiftKey){...sendX()}"`.
+  // CSP-friendly + DRY. Whitelist gate (_isCallAllowed) той самий що `call`.
+  //
+  // Patterns supported:
+  //   data-on-enter="sendFooMessage"           — Enter (без модифікаторів)
+  //   data-on-enter-mod="cmd"                  — додаткова вимога Cmd/Ctrl+Enter
+  //                                              (для NoteChat де Enter = новий
+  //                                              рядок, Cmd+Enter = send)
+  document.body.addEventListener('keydown', _handleKeyDown);
   _initialized = true;
 }
 
@@ -59,6 +70,30 @@ function _handleClick(e) {
     fn(el.dataset, el, e);
   } catch (err) {
     console.error('[delegation] action «' + action + '» handler failed:', err);
+  }
+}
+
+// OBErR CSP Phase 2 (19.05.2026): global keydown listener для input/textarea
+// з data-on-enter. Замінює inline onkeydown patterns.
+function _handleKeyDown(e) {
+  if (e.key !== 'Enter') return;
+  const el = e.target && e.target.closest ? e.target.closest('[data-on-enter]') : null;
+  if (!el) return;
+  // Shift+Enter — НЕ trigger (стандарт для multiline textarea = новий рядок)
+  if (e.shiftKey) return;
+  // Якщо data-on-enter-mod="cmd" — потрібен meta або ctrl (Mac/Win/Linux)
+  const requireMod = el.dataset.onEnterMod === 'cmd';
+  if (requireMod && !(e.metaKey || e.ctrlKey)) return;
+  const fn = el.dataset.onEnter;
+  if (!_isCallAllowed(fn)) {
+    if (fn) console.warn('[delegation] `on-enter` rejected — fn not in whitelist:', fn);
+    return;
+  }
+  e.preventDefault();
+  if (typeof window !== 'undefined' && typeof window[fn] === 'function') {
+    try { window[fn](); } catch (err) {
+      console.error('[delegation] on-enter «' + fn + '» failed:', err);
+    }
   }
 }
 

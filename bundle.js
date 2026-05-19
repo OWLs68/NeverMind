@@ -20043,6 +20043,7 @@ ${logLines}
     if (_initialized) return;
     if (typeof document === "undefined") return;
     document.body.addEventListener("click", _handleClick);
+    document.body.addEventListener("keydown", _handleKeyDown);
     _initialized = true;
   }
   function _handleClick(e) {
@@ -20056,6 +20057,27 @@ ${logLines}
       fn(el.dataset, el, e);
     } catch (err) {
       console.error("[delegation] action \xAB" + action + "\xBB handler failed:", err);
+    }
+  }
+  function _handleKeyDown(e) {
+    if (e.key !== "Enter") return;
+    const el = e.target && e.target.closest ? e.target.closest("[data-on-enter]") : null;
+    if (!el) return;
+    if (e.shiftKey) return;
+    const requireMod = el.dataset.onEnterMod === "cmd";
+    if (requireMod && !(e.metaKey || e.ctrlKey)) return;
+    const fn = el.dataset.onEnter;
+    if (!_isCallAllowed(fn)) {
+      if (fn) console.warn("[delegation] `on-enter` rejected \u2014 fn not in whitelist:", fn);
+      return;
+    }
+    e.preventDefault();
+    if (typeof window !== "undefined" && typeof window[fn] === "function") {
+      try {
+        window[fn]();
+      } catch (err) {
+        console.error("[delegation] on-enter \xAB" + fn + "\xBB failed:", err);
+      }
     }
   }
   function _isCallAllowed(fn) {
