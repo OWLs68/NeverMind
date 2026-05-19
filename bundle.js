@@ -9718,6 +9718,92 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
     }
   });
 
+  // src/ui/touch-detect.js
+  function regTouch(name, fn) {
+    if (typeof name !== "string" || !name) return;
+    if (typeof fn !== "function") return;
+    TOUCH_ACTIONS[name] = fn;
+  }
+  function initTouchDetect() {
+    if (_touchInitialized) return;
+    if (typeof document === "undefined") return;
+    document.body.addEventListener("touchstart", _onStart, { passive: true });
+    document.body.addEventListener("touchmove", _onMove, { passive: true });
+    document.body.addEventListener("touchend", _onEnd, { passive: false });
+    _touchInitialized = true;
+  }
+  function _findTarget(eventTarget) {
+    if (!eventTarget || typeof eventTarget.closest !== "function") return null;
+    return eventTarget.closest("[data-swipe-detect], [data-tap-detect]");
+  }
+  function _onStart(e) {
+    const el = _findTarget(e.target);
+    if (!el) return;
+    const t2 = e.touches && e.touches[0];
+    if (!t2) return;
+    _state.set(el, { sx: t2.clientX, sy: t2.clientY, dx: 0, dy: 0 });
+  }
+  function _onMove(e) {
+    const el = _findTarget(e.target);
+    if (!el) return;
+    const s = _state.get(el);
+    if (!s) return;
+    const t2 = e.touches && e.touches[0];
+    if (!t2) return;
+    s.dx = t2.clientX - s.sx;
+    s.dy = t2.clientY - s.sy;
+  }
+  function _onEnd(e) {
+    const el = _findTarget(e.target);
+    if (!el) return;
+    const s = _state.get(el);
+    if (!s) return;
+    _state.delete(el);
+    const ct = e.changedTouches && e.changedTouches[0];
+    const dx = ct ? ct.clientX - s.sx : s.dx;
+    const dy = ct ? ct.clientY - s.sy : s.dy;
+    if (el.hasAttribute("data-swipe-detect")) {
+      const action = el.dataset.swipeAction;
+      if (!action) return;
+      const axis = el.dataset.swipeAxis || "y";
+      const threshold = parseInt(el.dataset.swipeThreshold, 10) || 40;
+      const delta = axis === "x" ? dx : dy;
+      if (Math.abs(delta) < threshold) return;
+      const fn = TOUCH_ACTIONS[action];
+      if (typeof fn === "function") {
+        try {
+          fn(el.dataset, delta, el);
+        } catch (err) {
+          console.error("[touch-detect] swipe \xAB" + action + "\xBB failed:", err);
+        }
+      }
+      return;
+    }
+    if (el.hasAttribute("data-tap-detect")) {
+      const action = el.dataset.tapAction;
+      if (!action) return;
+      const threshold = parseInt(el.dataset.tapThreshold, 10) || 10;
+      if (Math.abs(dx) >= threshold || Math.abs(dy) >= threshold) return;
+      e.preventDefault();
+      const fn = TOUCH_ACTIONS[action];
+      if (typeof fn === "function") {
+        try {
+          fn(el.dataset, 0, el);
+        } catch (err) {
+          console.error("[touch-detect] tap \xAB" + action + "\xBB failed:", err);
+        }
+      }
+    }
+  }
+  var _state, TOUCH_ACTIONS, _touchInitialized;
+  var init_touch_detect = __esm({
+    "src/ui/touch-detect.js"() {
+      _state = /* @__PURE__ */ new WeakMap();
+      TOUCH_ACTIONS = /* @__PURE__ */ Object.create(null);
+      _touchInitialized = false;
+    }
+  });
+
   // src/owl/board.js
   function getOwlTabTsKey(tab) {
     return "nm_owl_tab_ts_" + tab;
@@ -9736,7 +9822,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
       <div class="owl-collapsed-text" id="owl-tab-ctext-${t2}"></div>
     </div>
     <div id="owl-tab-speech-${t2}" class="owl-speech"
-         ontouchstart="owlTabSwipeStart(event,'${t2}')" ontouchmove="owlTabSwipeMove(event,'${t2}')" ontouchend="owlTabSwipeEnd(event,'${t2}')">
+         data-swipe-detect data-swipe-action="owl-tab-swipe" data-swipe-tab="${t2}" data-swipe-axis="y" data-swipe-threshold="40">
       <div class="owl-speech-avatar">\u{1F989}</div>
       <div class="owl-tab-card">
         <div class="owl-tab-bubble" id="owl-tab-bubble-${t2}">
@@ -9765,18 +9851,8 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
     _owlTabStates[tab] = "speech";
     _owlTabApplyState(tab);
   }
-  function owlTabSwipeStart(e, tab) {
-    _owlTabSwipes[tab] = { y: e.touches[0].clientY, dy: 0 };
-  }
-  function owlTabSwipeMove(e, tab) {
-    if (!_owlTabSwipes[tab]) return;
-    _owlTabSwipes[tab].dy = e.touches[0].clientY - _owlTabSwipes[tab].y;
-  }
-  function owlTabSwipeEnd(e, tab) {
-    const sw = _owlTabSwipes[tab];
-    if (!sw) return;
-    _owlTabSwipes[tab] = null;
-    const dy = sw.dy, st = _owlTabStates[tab] || "speech";
+  function owlTabSwipeEnd(dy, tab) {
+    const st = _owlTabStates[tab] || "speech";
     if (dy < -40) {
       if (st === "speech") {
         _owlTabStates[tab] = "collapsed";
@@ -9906,20 +9982,25 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
     } catch {
     }
   }
-  var OWL_TAB_BOARD_MIN_INTERVAL, _owlTabStates, _owlTabSwipes;
+  var OWL_TAB_BOARD_MIN_INTERVAL, _owlTabStates;
   var init_board = __esm({
     "src/owl/board.js"() {
       init_core();
       init_chips();
       init_unified_storage();
       init_board_utils();
+      init_touch_detect();
       OWL_TAB_BOARD_MIN_INTERVAL = 30 * 60 * 1e3;
       _owlTabStates = {};
-      _owlTabSwipes = {};
+      regTouch("owl-tab-swipe", (data, delta) => {
+        if (!data.swipeTab) return;
+        owlTabSwipeEnd(delta, data.swipeTab);
+      });
       Object.assign(window, {
+        // OBErR Phase 2.5: owlTabSwipeStart/Move видалено — туди-detect.js робить
+        // координати. owlTabSwipeEnd теж не потрібен у window (touch-detect виклик
+        // через TOUCH_ACTIONS registry), але лишаю для backward compat диагностики.
         toggleOwlTabChat,
-        owlTabSwipeStart,
-        owlTabSwipeMove,
         owlTabSwipeEnd,
         scrollOwlTabChips,
         openChatBar,
@@ -16107,7 +16188,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
         </div>
         <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:10px">
           ${steps.map((s) => `
-            <div data-step-check="1" ontouchstart="this._sx=event.touches[0].clientX;this._sy=event.touches[0].clientY" ontouchend="if(Math.abs(event.changedTouches[0].clientX-(this._sx||0))<10&&Math.abs(event.changedTouches[0].clientY-(this._sy||0))<10){event.preventDefault();toggleTaskStep('${task.id}',${s.id})}" style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:4px 0">
+            <div data-step-check="1" data-tap-detect data-tap-action="toggle-task-step" data-task-id="${task.id}" data-step-id="${s.id}" style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:4px 0">
               <div style="width:24px;height:24px;border-radius:7px;border:1.5px solid ${s.done ? "#ea580c" : "rgba(30,16,64,0.18)"};background:rgba(255,255,255,0.6);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px;color:#ea580c">${s.done ? "\u2713" : ""}</div>
               <div style="flex:1;font-size:14px;color:rgba(30,16,64,0.65);${s.done ? "text-decoration:line-through;opacity:0.4" : ""}">${escapeHtml(s.text)}</div>
             </div>
@@ -16390,6 +16471,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
       init_swipe_delete();
       init_habits();
       init_notes();
+      init_touch_detect();
       editingTaskId = null;
       tempSteps = [];
       taskChatId = null;
@@ -16429,6 +16511,10 @@ ${JSON.stringify(contextData, null, 2)}` : "";
         toggleTaskStatus,
         toggleTaskStep,
         taskCardClick
+      });
+      regTouch("toggle-task-step", (data) => {
+        if (!data.taskId || !data.stepId) return;
+        toggleTaskStep(data.taskId, data.stepId);
       });
     }
   });
@@ -22837,6 +22923,11 @@ ${logLines}
     } catch (e) {
       console.error("delegation init error:", e);
     }
+    try {
+      initTouchDetect();
+    } catch (e) {
+      console.error("touch-detect init error:", e);
+    }
     showApp();
     try {
       if (typeof window.buildProfileIfStale === "function") {
@@ -22860,6 +22951,7 @@ ${logLines}
       init_uuid();
       init_backup();
       init_delegation();
+      init_touch_detect();
       init_trash();
       init_core();
       init_board();

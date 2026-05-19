@@ -28,7 +28,9 @@ export function saveTabBoardMsg(tab, newMsg) {
 // === OWL TAB BOARD — новий стиль (як Інбокс) ===
 
 export const _owlTabStates = {}; // 'speech' | 'collapsed'
-const _owlTabSwipes = {};
+// OBErR Phase 2.5: _owlTabSwipes closure-state видалено — туди-detect.js
+// зберігає координати у WeakMap per-element (per-tab у нашому випадку,
+// бо el = .owl-speech з унікальним data-swipe-tab).
 
 function _owlTabHTML(tab) {
   const t = tab;
@@ -38,7 +40,7 @@ function _owlTabHTML(tab) {
       <div class="owl-collapsed-text" id="owl-tab-ctext-${t}"></div>
     </div>
     <div id="owl-tab-speech-${t}" class="owl-speech"
-         ontouchstart="owlTabSwipeStart(event,'${t}')" ontouchmove="owlTabSwipeMove(event,'${t}')" ontouchend="owlTabSwipeEnd(event,'${t}')">
+         data-swipe-detect data-swipe-action="owl-tab-swipe" data-swipe-tab="${t}" data-swipe-axis="y" data-swipe-threshold="40">
       <div class="owl-speech-avatar">🦉</div>
       <div class="owl-tab-card">
         <div class="owl-tab-bubble" id="owl-tab-bubble-${t}">
@@ -67,18 +69,13 @@ export function _owlTabApplyState(tab) {
 
 export function toggleOwlTabChat(tab) { _owlTabStates[tab] = 'speech'; _owlTabApplyState(tab); }
 
-export function owlTabSwipeStart(e, tab) {
-  _owlTabSwipes[tab] = { y: e.touches[0].clientY, dy: 0 };
-}
-export function owlTabSwipeMove(e, tab) {
-  if (!_owlTabSwipes[tab]) return;
-  _owlTabSwipes[tab].dy = e.touches[0].clientY - _owlTabSwipes[tab].y;
-}
-
-export function owlTabSwipeEnd(e, tab) {
-  const sw = _owlTabSwipes[tab]; if (!sw) return;
-  _owlTabSwipes[tab] = null;
-  const dy = sw.dy, st = _owlTabStates[tab] || 'speech';
+// OBErR CSP Phase 2.5 (19.05.2026): owlTabSwipeStart/Move перенесено у
+// touch-detect.js (per-element WeakMap state). owlTabSwipeEnd замінено на
+// reg-callback що отримує тільки dy (без 3 окремих координатних викликів).
+// Старі функції видалено разом з window-exports — inline ontouchstart/move/end
+// у board.js:41 + index.html:274 замінено на data-swipe-detect.
+export function owlTabSwipeEnd(dy, tab) {
+  const st = _owlTabStates[tab] || 'speech';
 
   if (dy < -40) {
     // Свайп вгору — згорнути табло
@@ -89,6 +86,14 @@ export function owlTabSwipeEnd(e, tab) {
     else if (st === 'speech') openChatBar(tab === 'inbox' ? 'inbox' : tab);
   }
 }
+
+// Реєстрація touch-detect action — викликається з touch-detect.js при swipe.
+// delta — це dy (вертикальний компонент свайпу). data.swipeTab — назва tab.
+import { regTouch } from '../ui/touch-detect.js';
+regTouch('owl-tab-swipe', (data, delta) => {
+  if (!data.swipeTab) return;
+  owlTabSwipeEnd(delta, data.swipeTab);
+});
 
 export function _updateOwlTabChipsArrows(tab) {
   const el    = document.getElementById('owl-tab-chips-' + tab);
@@ -217,7 +222,10 @@ function _applyTabText(el, text) {
 
 // === WINDOW GLOBALS (HTML handlers only) ===
 Object.assign(window, {
-  toggleOwlTabChat, owlTabSwipeStart, owlTabSwipeMove, owlTabSwipeEnd,
+  // OBErR Phase 2.5: owlTabSwipeStart/Move видалено — туди-detect.js робить
+  // координати. owlTabSwipeEnd теж не потрібен у window (touch-detect виклик
+  // через TOUCH_ACTIONS registry), але лишаю для backward compat диагностики.
+  toggleOwlTabChat, owlTabSwipeEnd,
   scrollOwlTabChips, openChatBar, cancelOwlSilenceFromBadge,
 });
 

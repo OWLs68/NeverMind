@@ -287,7 +287,7 @@ export function renderTasks() {
         </div>
         <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:10px">
           ${steps.map(s => `
-            <div data-step-check="1" ontouchstart="this._sx=event.touches[0].clientX;this._sy=event.touches[0].clientY" ontouchend="if(Math.abs(event.changedTouches[0].clientX-(this._sx||0))<10&&Math.abs(event.changedTouches[0].clientY-(this._sy||0))<10){event.preventDefault();toggleTaskStep('${task.id}',${s.id})}" style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:4px 0">
+            <div data-step-check="1" data-tap-detect data-tap-action="toggle-task-step" data-task-id="${task.id}" data-step-id="${s.id}" style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:4px 0">
               <div style="width:24px;height:24px;border-radius:7px;border:1.5px solid ${s.done ? '#ea580c' : 'rgba(30,16,64,0.18)'};background:rgba(255,255,255,0.6);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px;color:#ea580c">${s.done ? '✓' : ''}</div>
               <div style="flex:1;font-size:14px;color:rgba(30,16,64,0.65);${s.done ? 'text-decoration:line-through;opacity:0.4' : ''}">${escapeHtml(s.text)}</div>
             </div>
@@ -656,4 +656,15 @@ Object.assign(window, {
   addTaskStep, toggleTempStep, removeTempStep, closeTaskChat,
   sendTaskChatMessage, toggleTaskStatus, toggleTaskStep,
   taskCardClick,
+});
+
+// OBErR CSP Phase 2.5 (19.05.2026): touch-detect tap action для step-check
+// (раніше inline ontouchstart/end з координатними порогами у render).
+// Реєстрація на module-level — викликається 1 раз при import tasks.js
+// (через app.js → бутстрап) ДО першого render. Якщо реєстрація після
+// render — handler не спрацює.
+import { regTouch } from '../ui/touch-detect.js';
+regTouch('toggle-task-step', (data) => {
+  if (!data.taskId || !data.stepId) return;
+  toggleTaskStep(data.taskId, data.stepId);
 });
