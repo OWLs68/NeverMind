@@ -110,11 +110,12 @@ def bh(code: str, timeout: int = 60) -> dict:
 
     full_code = PAYLOAD_PRELUDE + "\n" + code
     r = subprocess.run(
-        [BH_BIN], input=full_code, capture_output=True, text=True, timeout=timeout,
+        [BH_BIN], input=full_code, capture_output=True,
+        encoding="utf-8", timeout=timeout,  # explicit UTF-8 — locale у cron може бути ASCII
         env={**os.environ, "BU_CDP_URL": "http://127.0.0.1:9222"},
     )
     if r.returncode != 0:
-        raise RuntimeError(f"bh exit {r.returncode}: {r.stderr.strip()[:300]}")
+        raise RuntimeError(f"bh exit {r.returncode}: {r.stderr.strip()[:2000]}")
     lines = [l.strip() for l in r.stdout.strip().splitlines() if l.strip()]
     if not lines:
         raise RuntimeError("bh returned empty output")
