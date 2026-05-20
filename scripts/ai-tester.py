@@ -22,6 +22,7 @@ Council Pre-mortem fixes у коді:
 """
 import argparse
 import datetime
+import fcntl
 import json
 import os
 import re
@@ -32,9 +33,38 @@ from pathlib import Path
 
 # --- Config / shared state ----------------------------------------------------
 ENV_FILE = Path("/home/nmtester/.config/ai-tester/.env")
-TESTER_VERSION = "0.1.0-OBErR-19.05.2026"
+TESTER_VERSION = "0.2.0-HKnlM-20.05.2026"
 NEVERMIND_URL = "https://owls68.github.io/NeverMind/"
 MAX_SCREENSHOTS_AGE_DAYS = 7
+LOCK_PATH = "/tmp/nm-tester.lock"
+PAT_EXPIRATION_WARN_DAYS = 15  # попередження якщо PAT створено >75 днів тому (90-day TTL)
+
+
+def _now_utc() -> "datetime.datetime":
+    """tz-aware UTC datetime — заміна deprecated datetime.utcnow() (Python 3.12+)."""
+    import datetime as _dt
+    return _dt.datetime.now(_dt.timezone.utc)
+
+
+def _now_iso_z() -> str:
+    """ISO-8601 з Z-суфіксом (NM-Claude чекає формат '...Z')."""
+    return _now_utc().isoformat().replace("+00:00", "Z")
+
+
+def acquire_lock_or_exit():
+    """flock щоб cron-запуск + manual --force одночасно не ламали Chrome state.
+    Pre-mortem silent-bug-scout #2: два tester instance =
+    CDP session conflict + status counter loss + git checkout race.
+    """
+    fd = open(LOCK_PATH, "w")
+    try:
+        fcntl.flock(fd.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        fd.write(str(os.getpid()))
+        fd.flush()
+        return fd  # тримати відкритим до завершення процесу
+    except BlockingIOError:
+        print("[SKIP] інший AI-tester instance вже працює (flock)")
+        sys.exit(0)
 
 
 def load_env():
@@ -136,7 +166,7 @@ def screenshot(name: str) -> str:
     """
     shots_dir = Path(os.environ.get("SCREENSHOTS_DIR", "/home/nmtester/screenshots"))
     shots_dir.mkdir(parents=True, exist_ok=True)
-    ts = datetime.datetime.utcnow().strftime("%Y%m%d-%H%M%S")
+    ts = _now_utc().strftime("%Y%m%d-%H%M%S")
     path = shots_dir / f"{name}-{ts}.png"
     try:
         bh(f"take_screenshot({path!r})")
@@ -218,7 +248,7 @@ def git_commit_push(passed: int, total: int) -> bool:
     Перевіряємо returncode явно — без silent fail.
     Returns True if push succeeded.
     """
-    ts = datetime.datetime.utcnow().strftime("%Y%m%d-%H%M%S")
+    ts = _now_utc().strftime("%Y%m%d-%H%M%S")
     branch = f"claude/ai-tester-{ts}"
     try:
         # Стартуємо з origin/main щоб уникнути конфліктів
@@ -286,7 +316,7 @@ def write_status(cfg: dict, prev_status: dict, results: list):
 
     status = {
         "_comment": "Stamped by ai-tester.py. NM-Claude reads at /start.",
-        "last_run_utc": datetime.datetime.utcnow().isoformat() + "Z",
+        "last_run_utc": _now_iso_z(),
         "tester_version": TESTER_VERSION,
         "ai_tester_app_version": _read_app_version(),
         "summary": {
@@ -298,9 +328,31 @@ def write_status(cfg: dict, prev_status: dict, results: list):
             "openai_budget_remaining_usd": cfg.get("daily_budget_usd", 2.0),
         },
         "last_failures": failures,
+        "warnings": _collect_warnings(),
     }
     path = get_nm_dir() / "_ai-tools/tester-status.json"
     path.write_text(json.dumps(status, ensure_ascii=False, indent=2))
+
+
+def _collect_warnings() -> list:
+    """Попередження для NM-Claude /start (PAT expiration, низький Anthropic budget тощо)."""
+    warnings = []
+    # Pre-mortem #4: PAT expiration alert
+    pat_created = os.environ.get("PAT_CREATED_UTC")
+    if pat_created:
+        try:
+            import datetime as _dt
+            created = _dt.datetime.fromisoformat(pat_created).replace(tzinfo=_dt.timezone.utc)
+            age_days = (_now_utc() - created).days
+            remaining = 90 - age_days  # GitHub fine-grained PAT default = 90 днів
+            if remaining <= PAT_EXPIRATION_WARN_DAYS:
+                warnings.append(
+                    f"PAT_EXPIRES_SOON: GitHub PAT створено {age_days}д тому, "
+                    f"залишилось ~{remaining}д. Перегенеруй у github.com/settings/personal-access-tokens"
+                )
+        except Exception:
+            warnings.append(f"PAT_CREATED_UTC malformed: {pat_created}")
+    return warnings
 
 
 def _read_app_version() -> str:
@@ -316,7 +368,7 @@ def _read_app_version() -> str:
 def append_log(results: list):
     """Дописати у tester-log.md (append-only, ротація — cron weekly)."""
     log_path = get_nm_dir() / "_ai-tools/tester-log.md"
-    ts = datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
+    ts = _now_utc().strftime("%Y-%m-%d %H:%M UTC")
     passed = sum(1 for r in results if r["passed"])
     lines = [f"\n## {ts} · v{_read_app_version()} · {passed}/{len(results)} pass\n"]
     for r in results:
@@ -344,7 +396,7 @@ def _result(name, passed, reason="ok", screenshot_path=None, category="smoke"):
         "name": name,
         "passed": passed,
         "reason": reason,
-        "ts_utc": datetime.datetime.utcnow().isoformat() + "Z",
+        "ts_utc": _now_iso_z(),
         "screenshot_path": screenshot_path,
         "category": category,
     }
@@ -789,6 +841,9 @@ def main():
     parser.add_argument("--cmd", type=str, help="Одна AI-команда (для тесту)")
     parser.add_argument("--force", action="store_true", help="Ігнорувати schedule")
     args = parser.parse_args()
+
+    # Pre-mortem: lock щоб cron+manual не зіткнулись (Chrome CDP race + git race + status counter)
+    _lock_fd = acquire_lock_or_exit()  # noqa: F841 — тримати fd живим до process end
 
     load_env()
 
