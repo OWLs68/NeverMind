@@ -10,6 +10,18 @@
 
 ## 🔄 Робочі патерни (коли X — роблю Y)
 
+### Pre-mortem ПЕРЕД першим Edit на видимий баг — ловить латентні дірки в тій же функції (Ug2Jw 20.05.2026)
+
+- **Контекст:** При /start побачив у `tester-status.json` traceback: `NameError: name 'take_screenshot' is not defined. Did you mean: 'capture_screenshot'?`. Видимий корінь — 1 typo. Спокуса: Edit рядка 172, commit, готово.
+- **Замість цього — Pre-mortem (CLAUDE.md mental model #1):** «Якщо typo фікс не запрацює, ЧОМУ?». Питання задане ДО першого Edit.
+- **Знайшов 2 додаткові латентні дірки у тій же 14-рядковій функції `screenshot()`:**
+  1. **Path repr** — `path!r` = `PosixPath('...')` Python літерал, вимагає `pathlib` у `globals()` browser-harness (там нема). Після typo-фіксу впав би на наступному cron-run з `NameError: PosixPath`. Замінено на `str(path)!r`.
+  2. **Missing stdout** — `capture_screenshot()` нічого не друкує, а `bh()` raise'ить `RuntimeError("bh returned empty output")` коли stdout порожній (рядок 150). Підтверджено патерн: ВСI 10 тестових сценаріїв закінчуються `print(_json.dumps(...))`. Додано `print(_json.dumps({}))` після виклику.
+- **Симптом який маскував:** PythonClient повідомив тільки про typo (бо `NameError` падає на lookup до evaluation arguments). Path repr і empty stdout були **повністю невидимі** у traceback — стали б видимими ТIЛЬКИ після typo-фіксу.
+- **Без Pre-mortem розклад би був:** Edit #1 typo → push → cron 8 год чекати → fail Path → Edit #2 → push → cron → fail empty output → Edit #3 → 24+ год debug на те що зайняло 10 хв самотестування Pre-mortem'ом.
+- **Підтверджений кейс Ug2Jw (`e993aa7`):** один commit, 3 латентні дірки закриті разом, syntax-check pass. Debug test_3/test_4 (HKnlM хвости) розблоковано.
+- **Сигнал застосовувати:** видимий typo / NameError / single-line bug у файлі який має >1 виклик схожого API → Pre-mortem питання «якщо #1 фікс не запрацює, ЧОМУ?» ДО першого Edit. Особливо в обгортках над зовнішнім API (browser-harness, OpenAI SDK, fetch wrappers) — там 1 typo часто = system mismatch з API.
+
 ### subprocess.run з input/text=True — ОБОВ'ЯЗКОВО `encoding='utf-8'` (HKnlM 20.05.2026)
 
 - **Контекст:** AI-Tester на Hetzner викликає browser-harness через `subprocess.run([BH_BIN], input=code, text=True)`. На Mac/desktop locale = UTF-8 → працює. На сервері у cron env locale може бути POSIX/C/ASCII → cyrillic символи у payload → `?` substitution → SyntaxError на стороні daemon.
