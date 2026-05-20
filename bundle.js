@@ -13387,22 +13387,6 @@ ${CHIP_PROMPT_RULES}`;
     document.getElementById("habit-delete-btn").style.display = "inline-block";
     setupModalSwipeClose(document.querySelector("#habit-modal > div:last-child"), closeHabitModal);
   }
-  function openAddHabit() {
-    editingHabitId = null;
-    document.getElementById("habit-modal-title").textContent = t("habits.modal.title_new", "\u041D\u043E\u0432\u0430 \u0437\u0432\u0438\u0447\u043A\u0430");
-    document.getElementById("habit-input-name").value = "";
-    document.getElementById("habit-input-details").value = "";
-    document.getElementById("habit-input-emoji").value = "";
-    document.getElementById("habit-input-count").value = "1";
-    document.getElementById("habit-count-display").textContent = "1";
-    document.getElementById("habit-delete-btn").style.display = "none";
-    setHabitModalType("build");
-    document.querySelectorAll(".habit-day-btn").forEach((b) => {
-      b.classList.toggle("active", [0, 1, 2, 3, 4].includes(parseInt(b.dataset.day)));
-    });
-    document.getElementById("habit-modal").style.display = "flex";
-    setupModalSwipeClose(document.querySelector("#habit-modal > div:last-child"), closeHabitModal);
-  }
   function closeHabitModal() {
     document.getElementById("habit-modal").style.display = "none";
   }
@@ -13659,7 +13643,7 @@ ${CHIP_PROMPT_RULES}`;
     document.getElementById("prod-page-tasks").style.display = isHabits ? "none" : "block";
     document.getElementById("prod-page-habits").style.display = isHabits ? "block" : "none";
     const addBtn = document.getElementById("prod-add-btn");
-    if (addBtn) addBtn.onclick = isHabits ? openAddHabit : openAddTask;
+    if (addBtn) addBtn.dataset.fn = isHabits ? "openAddHabit" : "openAddTask";
     updateProdTabCounters();
     if (isHabits) renderProdHabits();
     _attachProdTabSwipe();
