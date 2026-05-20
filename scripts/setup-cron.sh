@@ -41,11 +41,19 @@ SHELL=/bin/bash
 */15 * * * * $PYTHON $HEALTH >> $LOG 2>&1
 
 # === Лог ротація ===
-# Раз на тиждень обрізаємо cron.log до 1000 останніх рядків.
-0 4 * * 0 tail -1000 $LOG > ${LOG}.tmp && mv ${LOG}.tmp $LOG
+# Раз на тиждень обрізаємо cron.log до 1000 останніх рядків + chmod 600 (security).
+0 4 * * 0 tail -1000 $LOG > ${LOG}.tmp && mv ${LOG}.tmp $LOG && chmod 600 $LOG
 CRONTAB
 
-echo "✅ Cron встановлено для nmtester:"
+# Security HKnlM: chmod 600 на cron.log щоб PAT/секрети у git stderr (якщо просочаться)
+# не були видимі іншим юзерам системи (silent-bug-scout #3).
+sudo -u nmtester touch "$LOG"
+chmod 600 "$LOG"
+chown nmtester:nmtester "$LOG"
+echo "    OK: $LOG chmod 600 (security)"
+echo ""
+
+echo "Cron встановлено для nmtester:"
 echo ""
 crontab -u nmtester -l
 echo ""
