@@ -220,3 +220,11 @@ RuntimeError: wait_for_js timeout: (JSON.parse(localStorage.getItem('nm_tasks') 
 - ❌ `test-4-backup-create`: ASSERTION_FAIL: backup count 0->0 (delta 0)
 - ✅ `test-5-trash-restore`: ok
 - ✅ `test-8-clear-data`: ok
+
+## 2026-05-20 20:53 UTC · vnm-20260520-2100 · 4/6 pass
+- ✅ `test-1-boot-health`: ok
+- ✅ `test-2-navigation`: ok
+- ❌ `test-3-create-task`: ASSERTION_FAIL: задача не зявилась у nm_tasks
+- ❌ `test-4-backup-create`: ASSERTION_FAIL: backup count 0->0 (delta 0)
+- ✅ `test-5-trash-restore`: ok
+- ✅ `test-8-clear-data`: ok
