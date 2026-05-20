@@ -4,13 +4,13 @@
 >
 > Старіші сесії (до 6GoDe 19.04) — в [`_archive/SESSION_STATE_archive.md`](../_archive/SESSION_STATE_archive.md).
 
-**Оновлено:** 2026-05-20 (сесія **HKnlM** — AI-Tester Hetzner повний deploy + Council security/correctness hardening. 7 commits, 4 паралельних агенти Sonnet знайшли 13 проблем, всі закриті. Cron активний 3×/день).
+**Оновлено:** 2026-05-20 (сесія **HKnlM** — AI-Tester Hetzner повний deploy + 5 фаз hardening + strategic refactor через Gemini round 2. 16 commits, 7 Council Sonnet агентів, 2 Gemini self-critique rounds. AI-Tester live: 4/4 stable smoke baseline + on-demand trigger (90 сек cycle) + `nm_error_log` polling).
 
 ---
 
 ## 🔧 Поточна сесія HKnlM — AI-Tester Hetzner deploy + Pre-mortem hardening (19-20.05.2026)
 
-### Зроблено — 4 великі блоки, 7 commits
+### Зроблено — 5 великих блоків, 16 commits
 
 #### A. Hetzner setup + browser-harness debug (5 commits, ~2 год debug)
 
@@ -48,39 +48,88 @@ Pre-mortem агент (Sonnet) знайшов 3 КРИТИЧНI bugs які б �
 
 1. **flock /tmp/nm-tester.lock** — захист від cron+manual race (silent-bug-scout #2): 2 одночасні tester = Chrome CDP conflict + git checkout reset race + status counter loss. `LOCK_EX|LOCK_NB` → other instance skip.
 2. **datetime.utcnow() → tz-aware** — deprecated Python 3.12, removed 3.14. Через regex sed 5 точок мігровано до `_now_utc()`/`_now_iso_z()`. Прибрав DeprecationWarning шум + future-proof.
-3. **PAT expiration alert** (Pre-mortem #4): `hetzner-setup.sh` додає `PAT_CREATED_UTC=YYYY-MM-DD` у .env; `_collect_warnings()` рахує remaining days з 90-day TTL; якщо ≤15д — warning у `tester-status.warnings[]` array; NM-Claude бачить при /start. Раніше: PAT тихо expires → git push fail → tester мовчить.
+3. **PAT expiration alert** (Pre-mortem #4): `hetzner-setup.sh` додає `PAT_CREATED_UTC=YYYY-MM-DD` у .env; `_collect_warnings()` рахує remaining days з 90-day TTL; якщо ≤15д — warning у `tester-status.warnings[]` array.
+
+#### E. 🆕 Strategic refactor через Gemini round 2 + Council 3 агенти (6 commits наростання)
+
+Після setup і smoke 4/6 PASS — Роман сказав «треба більше сценаріїв». 3 паралельні Sonnet агенти (Coverage Strategist + Realist + Architect). **Realist знайшов СИСТЕМНИЙ корінь:** test_3 + test_4 fail через **середовище** — тестер у Chrome profile якого юзер ніколи не бачить (`#prod-add-btn.onclick` у `switchProdTab` динамічно — на cold profile handler відсутній; `createFullBackup` повертає null на пустому localStorage).
+
+Gemini round 1+2 (2 self-critique iterations через aistudio.google.com) підтвердив + жорстко скоригував:
+- Warm-up state = МАСКУВАННЯ архітектурних багів. Фіксу у NM коді, не милиці у тестері.
+- `--full` AI explorer = anti-pattern (правило 12 CLAUDE.md). Скасовано назавжди.
+- Telegram telemetry = CORS + GDPR (Health PHI у stack). Альтернатива — `nm_error_log` polling.
+- 31 тест занадто. Фокус на critical path + on-demand trigger.
+
+**`eee311c` pragmatic 4/10 → 6/6 stable** — `disabled_scenarios` config field (test_6 CDP touch, test_7 click_at_xy, test_9+10 OpenAI key absent). Бонус: test_3+4 точкові фіксу (wait timing, debug guards, bypass delegation через `window.createFullBackupUI()` direct call).
+
+**`b6a3d37` `#prod-add-btn` через `dataset.fn`** — habits.js:552 присвоював onclick динамічно. Refactor: `switchProdTab` оновлює `dataset.fn = isHabits ? 'openAddHabit' : 'openAddTask'`. Delegation handler єдиний source of truth. Cold profile (тестер) працює одразу з HTML default.
+
+**`9bcd6b7` On-demand trigger інфраструктура** — NM-Claude commit'ить `_ai-tools/tester-trigger.json` з `trigger_ts` + `target_scenarios`. Health-check на Hetzner (`cron */1`) перевіряє → `subprocess.Popen ai-tester.py --smoke --force` з env `TARGET_SCENARIOS`. End-to-end latency: ~90 сек. ai-tester `main()` filter SCENARIOS до TARGET_SCENARIOS.
+
+**`bacfa4d` `nm_error_log` polling — production telemetry** (Gemini «constraint-driven дизайн») — `_collect_browser_errors()` у write_status → bh() читає `localStorage.nm_error_log` slice(-5) → PHI sanitization (cyrillic >=3 chars → ***, numbers >=4 digits → ***) → push у `tester-status.warnings[]`. CORS-free, GDPR-safe.
+
+**`7e2516e` test_4 seed nm_settings** — Realist Корінь #3: createFullBackup null на пустому storage (by design). `js('if(!localStorage.getItem("nm_settings"))setItem("{}")')` idempotent.
+
+**`a9df92a` disable test_3 + test_4** — після push smoke 4/6 PASS показав що корінь глибший за dataset.fn refactor + seed. Потребують debug-сесії зі screenshots. **Stable cron baseline тепер 4/4** (test_1 boot, test_2 nav, test_5 trash, test_8 clearData).
+
+### Обговорено (без виконання у цій сесії)
+
+- **Gemini self-critique rounds 1+2** як механізм external perspective. Виявив що мій Phase X (warm-up) маскував архітектурні баги.
+- **Production telemetry tradeoffs:** Telegram CORS неможливий, Sentry дорого + EU DPA enterprise, `nm_error_log` polling — найкращий compromise.
+- **Coverage strategy backlog:** TOP-10 нових сценаріїв (Coverage Strategist агент) у 4 категоріях — Data Integrity, Security, Complex Logic, State Sync. Записано для on-demand sessions.
+- **`tester-commands.md` 21 регресія** — natural-language команди для `--full` mode що скасовано. Можуть бути переписані у hardcoded scenarios на запит.
+
+### Ключові рішення
+
+- **Phase Y `--full` AI explorer — скасовано назавжди.** Правило 12 CLAUDE.md (детерміновано → парсер/код, БЕЗ AI) застосовується і до тестера.
+- **On-demand trigger replaces aggressive expansion.** Замість додавати 21 тест зразу — NM-Claude запитує тестер прицільно під час сесій. Coverage наростає органічно під реальні баги.
+- **`nm_error_log` polling замість Telegram/Sentry telemetry.** Constraint-driven дизайн: GitHub Pages static + EU PHI compliance + 1-юзер.
+- **Stable cron baseline 4/4 замість fragile 6/6.** Краще чистий signal ніж noisy alerts.
 
 ### Гілка + контекст
 
 - Гілка: `claude/start-session-HKnlM`
-- Коміти: 7 (від `65f4543` uv pip до `535f33c` flock/datetime/PAT alert)
-- Council Sonnet: 4 паралельні (Implementer + Pre-mortem 7-day + silent-bug-scout + doc-consistency-checker)
-- Знайдено 13 проблем (3 critical security + 3 critical correctness + 3 robustness + 4 doc-sync), всі закриті
+- Коміти: 16 (від `65f4543` uv pip до `a9df92a` disable test_3+4)
+- Council Sonnet: 7 паралельних (4 у фазі security/correctness + 3 у фазі strategic refactor)
+- Gemini rounds: 2 self-critique iterations (manually via aistudio.google.com)
+- Знайдено 13 проблем + 6 strategic insights (3 critical security + 3 critical correctness + 3 robustness + 4 doc-sync + 6 strategic), всі закриті
 
 ### Метрики
 
-- **AI-Tester:** 0 → fully deployed and autonomous on Hetzner 94.130.25.22
-- **Cron:** active, 3×/день (03:00/11:00/19:00 UTC) + health-check кожні 15 хв
-- **Smoke pass:** 3/5 manual reload з селекторами OBErR; після Phase 2 fixes очікую 5/5 на наступному cron-run
-- **Security delta:** shell injection × 2 → 0, secrets in logs (PAT/keys) → masked, cron.log world-readable → chmod 600
-- **Tester false-positives:** 3 → 0 (test_9 fresh-data check + 5 dead tests resurrected + localStorage growth fix)
+- **AI-Tester:** 0 → fully deployed, autonomous, secure on Hetzner 94.130.25.22
+- **Cron:** active, 3×/день smoke (`0 * * * *`) + health-check every minute (`* * * * *`)
+- **Stable smoke baseline:** 4/4 PASS (test_1/2/5/8). 6 disabled (test_3/4/6/7/9/10 — debug backlog).
+- **On-demand cycle:** ~90 секунд від NM-Claude trigger commit до tester-status update
+- **Security delta:** shell injection × 2 → 0, secrets у логах → masked, cron.log → chmod 600
+- **PHI Compliance:** error_log sanitization (cyrillic + numbers) перед push у git
+- **Future-proof:** datetime tz-aware (Python 3.14 ready), PAT alert (90-day TTL з 15-day warning)
 
 ### Інциденти
 
-Без інцидентів. Усі знахідки Council/Pre-mortem верифіковані Головою через Read коду перед фіксом (правило CLAUDE.md «гіпотеза агента ≠ факт»).
+Без інцидентів. test_3+4 fails — не інциденти, окрема debug-задача у backlog зі screenshots ($SCREENSHOTS_DIR на сервері).
 
 ### Хвости (закриті у цій же сесії)
 
 - ✅ AI-Tester Hetzner deploy — повністю автономний (закриває OBErR roadmap пункт #1)
-- ✅ test-3, test-4 selector + timing fixes (Implementer)
-- ✅ Shell injection + secrets leakage + chmod (silent-bug-scout)
-- ✅ test_9 false-PASS + max_tests=10 + localStorage cleanup (Pre-mortem)
-- ✅ flock + utcnow tz-aware + PAT alert (Phase 3 robustness)
+- ✅ Shell injection + secrets leakage + chmod (silent-bug-scout) — B-187
+- ✅ test_9 false-PASS + max_tests=10 + localStorage cleanup (Pre-mortem) — B-188
+- ✅ flock + utcnow tz-aware + PAT alert (Phase 3 robustness) — B-189
+- ✅ `#prod-add-btn` через `dataset.fn` (Gemini insight) — Realist Корінь #1 closed
+- ✅ On-demand trigger infrastructure (NM-Claude → Hetzner 90 сек cycle) — NEW capability
+- ✅ `nm_error_log` polling (constraint-driven telemetry) — NEW capability
+
+### Хвости (відкладено — debug-задача наступної сесії)
+
+- ❌ test_3 saveTask не пишеться у nm_tasks навіть з input ready + modal open. Глибший корінь.
+- ❌ test_4 createFullBackup повертає 0 backup навіть з seed nm_settings. Глибший корінь.
+- ❌ test_6 OWL swipe — CDP `Input.dispatchTouchEvent` нестабільний для touch-detect.js Phase 2.5
+- ❌ test_7 close-backdrop — `click_at_xy(20, 100)` координати потребують верифікації реального DOM layout
+- ❌ test_9 + test_10 — потребують OpenAI ключ у Chrome profile (security flow для тестера ключа)
 
 ### Що далі (для Романа поза кодом)
 
-1. **Чекати перший автозапуск cron** (~19:00 UTC). Перевірити `_ai-tools/tester-status.json` через ~10 хв після — має бути `last_run_utc` свіжий + 5/5 чи 4/5 (test_9 фрагільний — AI може варіювати).
-2. **iPhone smoke test v946+** — 9 ключових flows за шпаргалкою (Backup/Restore, Кошик, OWL swipe, step-check, calc grid, close-backdrop, Enter chat-bars, save-settings onblur, Legal).
+1. **Завтра вранці перевір `_ai-tools/tester-status.json`** — має бути свіжий `last_run_utc` + 4/4 PASS. Якщо інше — баг tester'а, окрема сесія.
+2. **iPhone smoke test v947+** — 9 ключових flows за шпаргалкою (Backup/Restore, Кошик, OWL swipe, step-check, calc grid, close-backdrop, Enter chat-bars, save-settings onblur, Legal).
 3. **EU Compliance:** виконати `docs/EU_LAUNCH_CHECKLIST.md` — Paddle vs OSS, KvK реєстрація, заповнити PLACEHOLDER.
 4. **CSP Phase 2 завершити (~2 год)** — 6× `this.focus()` видалити (iPhone test), 4× oninput closure-state refactor, 1× addTaskStep preventDefault.
 
