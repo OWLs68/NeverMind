@@ -400,25 +400,35 @@ print(_json.dumps({{"errors": errs[:5]}}))
 
 @scenario("crud")
 def test_3_create_task_persistence():
-    """Сценарій 3: створити задачу → reload → залишилася."""
+    """Сценарій 3: створити задачу → reload → залишилася → CLEANUP (Pre-mortem #3).
+
+    Унікальний title з timestamp щоб НЕ false-pass з минулих запусків
+    (стара "Тестова задача AI" могла залишитись у nm_tasks). У кінці —
+    видалити саме цю задачу через JS щоб localStorage не ріс.
+    """
+    unique_title = f"AI-Tester {datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%d-%H%M%S')}"
+    title_js = json.dumps(unique_title)  # JS string literal з лапками
     try:
         r = bh(f"""
 inject_error_capture()
 click_sel('[data-tab="tasks"]')
 wait(0.3)
 click_sel('#prod-add-btn')
-wait(0.3)
-fill_input('#task-input-title', 'Тестова задача AI')
+# Pre-mortem Implementer: openAddTask setTimeout 350мс перед знятям readonly
+wait(0.5)
+fill_input('#task-input-title', {unique_title!r})
 click_sel('button[data-fn="saveTask"]')
 wait(1.0)
 before = get_ls('nm_tasks') or '[]'
 goto_url({NEVERMIND_URL!r})
-wait(2.0)
+wait(2.5)
 inject_error_capture()
 after = get_ls('nm_tasks') or '[]'
+# Pre-mortem #3 cleanup: видалити саме цю задачу щоб localStorage не ріс за тижні
+js('var __t=JSON.parse(localStorage.getItem("nm_tasks")||"[]");localStorage.setItem("nm_tasks",JSON.stringify(__t.filter(function(x){{return x.title!=={title_js};}})));')
 print(_json.dumps({{
-    "before_has": "Тестова задача AI" in before,
-    "after_has": "Тестова задача AI" in after,
+    "before_has": {unique_title!r} in before,
+    "after_has": {unique_title!r} in after,
 }}))
 """)
         if not r["before_has"]:
@@ -432,19 +442,31 @@ print(_json.dumps({{
 
 @scenario("crud")
 def test_4_backup_create():
-    """Сценарій 4 (OBErR fresh): створити backup → є у nm_backup_*."""
+    """Сценарій 4 (OBErR fresh): створити backup → є у nm_backup_* → CLEANUP.
+
+    Implementer: createFullBackupUI на <div data-action="call" data-fn="...">
+    (НЕ <button>). Sync — wait(0.5) досить.
+    Pre-mortem #3: cleanup щоб backup не накопичувались (max 3 у backup.js TTL).
+    """
     try:
         r = bh("""
 inject_error_capture()
+before = int(js('Object.keys(localStorage).filter(function(k){return k.indexOf("nm_backup_")===0;}).length') or 0)
 click_sel('[data-action="open-settings"]')
-wait(0.5)
+wait(0.8)
+# wait_for_element робастніше за фіксований wait — overlay може анімуватись
+try:
+    wait_for_element('[data-fn="createFullBackupUI"]', timeout=3.0, visible=True)
+except Exception:
+    pass
 click_sel('[data-fn="createFullBackupUI"]')
-wait(1.5)
-keys_count = js('Object.keys(localStorage).filter(function(k){return k.indexOf("nm_backup_")===0;}).length')
-print(_json.dumps({"backup_count": int(keys_count or 0)}))
+wait(0.8)
+after = int(js('Object.keys(localStorage).filter(function(k){return k.indexOf("nm_backup_")===0;}).length') or 0)
+print(_json.dumps({"before": before, "after": after, "delta": after - before}))
 """)
-        if r["backup_count"] < 1:
-            return _result("test-4-backup-create", False, "ASSERTION_FAIL: backup не створено у localStorage")
+        if r["delta"] < 1:
+            return _result("test-4-backup-create", False,
+                          f"ASSERTION_FAIL: backup count {r['before']}->{r['after']} (delta {r['delta']})")
         return _result("test-4-backup-create", True)
     except Exception as e:
         return _result("test-4-backup-create", False, f"EXCEPTION: {e}")
@@ -554,7 +576,11 @@ def test_9_inbox_finance_subcategory():
     """
     Сценарій 9 (B-180 regression): 'купив каву 50' → save_finance →
     subcategory у whitelist {Кафе, Ресторан, '', None}.
-    НАЙБІЛЬШ FRAGILE — залежить від AI рішень.
+
+    Pre-mortem CRITICAL #1: попередня версія перевіряла «ЧИ Є amount=50»
+    замість «ЧИ ДОДАВСЯ новий». Після першого PASS — завжди PASS навіть
+    якщо AI мертвий. Фікс — before_count + after_count > before.
+    Також cleanup — видалити доданий запис у кінці.
     """
     ALLOWED = {"Кафе", "Ресторан", "Доставка", "", None}
     try:
@@ -562,18 +588,26 @@ def test_9_inbox_finance_subcategory():
 inject_error_capture()
 click_sel('[data-tab="inbox"]')
 wait(0.5)
+before_finance = _json.loads(get_ls('nm_finance') or '[]')
+before_count = len(before_finance)
 fill_input('#inbox-input', 'купив каву 50')
 click_sel('button[data-fn="sendToAI"]')
-# AI processing може зайняти 3-15 сек
-wait_for_js_expr("(JSON.parse(localStorage.getItem('nm_finance') || '[]')).some(function(x){return x.amount===50;})", timeout_s=20)
-raw = get_ls('nm_finance') or '[]'
-finance = _json.loads(raw)
-match = next((i for i in finance if i.get('amount') == 50), None)
-print(_json.dumps({"match": match}))
-""", timeout=40)
+# Чекаємо НОВИЙ запис (не існуючий старий) — Pre-mortem #1 fix
+wait_for_js_expr("(JSON.parse(localStorage.getItem('nm_finance') || '[]')).length > " + str(before_count), timeout_s=25)
+after_finance = _json.loads(get_ls('nm_finance') or '[]')
+# Знайти ДОДАНИЙ запис — порівняння IDs не у before
+before_ids = set(x.get('id') for x in before_finance)
+new_records = [x for x in after_finance if x.get('id') not in before_ids and x.get('amount') == 50]
+match = new_records[0] if new_records else None
+# Cleanup — видалити саме цей запис
+if match and match.get('id'):
+    js('var __f=JSON.parse(localStorage.getItem("nm_finance")||"[]");localStorage.setItem("nm_finance",JSON.stringify(__f.filter(function(x){return x.id!==' + _json.dumps(match['id']) + ';})));')
+print(_json.dumps({"match": match, "added": len(new_records)}))
+""", timeout=45)
         match = r.get("match")
         if not match:
-            return _result("test-9-inbox-finance", False, "ASSERTION_FAIL: amount=50 не у nm_finance")
+            return _result("test-9-inbox-finance", False,
+                          f"ASSERTION_FAIL: AI не додав amount=50 (added={r.get('added',0)})")
         subcat = match.get("subcategory")
         if subcat not in ALLOWED:
             return _result("test-9-inbox-finance", False,
@@ -588,21 +622,35 @@ def test_10_inbox_task_classification():
     """
     Сценарій 10 (B-115 regression): 'поприбирати у кімнаті' → save_task,
     НЕ save_event (доконаний факт vs майбутня дія).
+
+    Pre-mortem #3 cleanup: видалити саме доданий task (за title), щоб
+    nm_tasks не ріс при cron-running.
     """
     try:
         r = bh("""
 inject_error_capture()
 click_sel('[data-tab="inbox"]')
 wait(0.5)
-before_tasks = len(_json.loads(get_ls('nm_tasks') or '[]'))
-before_events = len(_json.loads(get_ls('nm_events') or '[]'))
+before_tasks_arr = _json.loads(get_ls('nm_tasks') or '[]')
+before_tasks = len(before_tasks_arr)
+before_event_ids = set(x.get('id') for x in _json.loads(get_ls('nm_events') or '[]'))
+before_task_ids = set(x.get('id') for x in before_tasks_arr)
 fill_input('#inbox-input', 'поприбирати у кімнаті')
 click_sel('button[data-fn="sendToAI"]')
-wait_for_js_expr("(JSON.parse(localStorage.getItem('nm_tasks') || '[]')).length > " + str(before_tasks), timeout_s=20)
-after_tasks = len(_json.loads(get_ls('nm_tasks') or '[]'))
-after_events = len(_json.loads(get_ls('nm_events') or '[]'))
-print(_json.dumps({"tasks_added": after_tasks - before_tasks, "events_added": after_events - before_events}))
-""", timeout=40)
+wait_for_js_expr("(JSON.parse(localStorage.getItem('nm_tasks') || '[]')).length > " + str(before_tasks), timeout_s=25)
+after_tasks_arr = _json.loads(get_ls('nm_tasks') or '[]')
+after_events_arr = _json.loads(get_ls('nm_events') or '[]')
+new_task_ids = [x.get('id') for x in after_tasks_arr if x.get('id') not in before_task_ids]
+new_event_ids = [x.get('id') for x in after_events_arr if x.get('id') not in before_event_ids]
+# Cleanup нових записів
+if new_task_ids:
+    ids_js = _json.dumps(new_task_ids)
+    js('var __t=JSON.parse(localStorage.getItem("nm_tasks")||"[]");var __ids=' + ids_js + ';localStorage.setItem("nm_tasks",JSON.stringify(__t.filter(function(x){return __ids.indexOf(x.id)===-1;})));')
+if new_event_ids:
+    ids_js = _json.dumps(new_event_ids)
+    js('var __e=JSON.parse(localStorage.getItem("nm_events")||"[]");var __ids=' + ids_js + ';localStorage.setItem("nm_events",JSON.stringify(__e.filter(function(x){return __ids.indexOf(x.id)===-1;})));')
+print(_json.dumps({"tasks_added": len(new_task_ids), "events_added": len(new_event_ids)}))
+""", timeout=45)
         if r["events_added"] > 0:
             return _result("test-10-task-classify", False,
                           "B-115 REGRESSION: AI створив event замість task")
@@ -689,8 +737,13 @@ def cleanup_old_screenshots():
 
 # --- Pre-flight check ---------------------------------------------------------
 def preflight() -> bool:
-    """Перевірити що Chrome CDP + browser-harness живі (Pre-mortem #2)."""
+    """Перевірити що Chrome CDP + browser-harness daemon живі (Pre-mortem #2 + #5).
+
+    Якщо daemon тримає stale CDP сесію після Chrome restart (systemd OOM/respawn) —
+    detect через bh() з мінімальним payload + auto-restart daemon через pkill.
+    """
     import urllib.request
+    # 1) Chrome CDP HTTP endpoint
     try:
         with urllib.request.urlopen("http://127.0.0.1:9222/json/version", timeout=3) as r:
             data = json.loads(r.read())
@@ -701,7 +754,31 @@ def preflight() -> bool:
         print(f"[FAIL preflight] Chrome CDP мертвий: {e}")
         print("  Спробуй: sudo systemctl restart chrome-tester")
         return False
-    return True
+    # 2) browser-harness daemon — Pre-mortem #5 detection
+    try:
+        bh('print(_json.dumps({"ok": True}))', timeout=15)
+        return True
+    except Exception as e:
+        print(f"[WARN preflight] daemon broken: {_mask_secrets(str(e))[:200]}")
+        print("  Спроба автовідновлення (pkill + retry)...")
+        try:
+            subprocess.run(["pkill", "-u", "nmtester", "-f", "browser_harness.daemon"],
+                           check=False, timeout=5)
+            time.sleep(2)
+            # Cleanup stale socket (root-owned race scenario)
+            for p in ("/tmp/bu-default.sock", "/tmp/bu-default.pid"):
+                try:
+                    os.unlink(p)
+                except FileNotFoundError:
+                    pass
+                except PermissionError:
+                    pass  # nmtester може не мати дозволу — chrome-tester service спробує
+            bh('print(_json.dumps({"ok": True}))', timeout=15)
+            print("  [OK preflight] daemon відновлено")
+            return True
+        except Exception as e2:
+            print(f"[FAIL preflight] daemon не відновлюється: {_mask_secrets(str(e2))[:200]}")
+            return False
 
 
 # --- main() -------------------------------------------------------------------
