@@ -3458,3 +3458,82 @@ Council 5 паралельних агентів Sonnet (Secret/Key + XSS + CSP +
 - Гілка: `claude/start-session-e9t3N`. Коміти: 15. Версії: v878.
 - CACHE_NAME: `nm-20260515-2230`. Council Sonnet: 9. WebSearch: 4.
 - Files created: 8. Files edited: ~12.
+
+---
+
+## 🔧 Сесія JMQuT — Health AI Isolation + Event Delegation +4 + EU Compliance (17.05.2026)
+
+
+### Зроблено — 3 великі блоки
+
+#### A. Health AI Isolation — EU AI Act compliance (8 фаз, 8 комітів)
+
+Стратегічне рішення Романа: Health-вкладка → AI-isolated. UI CRUD працює як раніше; AI більше НЕ читає/пише у `nm_health_cards`/`nm_allergies`. Council 6 паралельних агентів Sonnet (Critic + Pre-mortem + Strategist + UI-Map + OWL-Map + Inbox-classifier) + 4 WebSearch перевірив законодавчий контекст (EU AI Act Annex III — NM = Limited Risk productivity app; стає High-risk при profiling або clinical decisions; GDPR Art.9 special category data).
+
+**Видалено:**
+- 11 AI-tools (`create_health_card`/`edit_health_card`/`delete_health_card`/`update_health_card_status`/`add_medication`/`edit_medication`/`delete_medication`/`log_medication_dose`/`add_allergy`/`delete_allergy`/`add_health_history_entry`) + 1 UI-tool `export_health_card`
+- `getHealthContext()` з `getAIContext()` — PHI більше НЕ йде у промпт жодного з 8 чатів (це був головний канал profiling)
+- Brain-signals `_collectAppointmentSoon` (передавало лікаря + дату у промпт)
+- Clarify-guard doctor profiling chips (`DOCTOR_MENTION_RE` + `_buildDoctorChips`)
+- OWL proactive health згадки (`getTabBoardContext('health')`, `_isTabActive('health')`, OWL_QUESTIONS health, board fallback, TAB_HINTS оновлено)
+- `save_memory_fact category='health'` enum
+- Health chat-bar HTML (`#health-ai-bar`) + JS (addHealthChatMsg, sendHealthBarMessage, 3-крокове AI-інтерв'ю — 185 рядків) + askOwlAboutHealthCard блок
+- `syncHealthFinanceToHistory` (фінанси більше не пишуть автоматично у health-картки)
+- Migration v18 у `boot.js`: cleanup `nm_chat_health` + `nm_health_interview_pending` + facts з category='health' + старі health tool_calls у nm_chat_* історіях
+- Cross-tab refs: health з CHAT_STORE_KEYS, _ALL_CHAT_TABS, SEND_BTN_MAP, addMsgForTab+restoreChatUI maps, NM_KEYS.chat, inbox-board forEach
+
+**Залишено (Limited risk):** UI CRUD Health-вкладки повністю функціональний, кошик restore, Health-папка у Notes (AI зберігає текст без judgment), `switch_tab('health')` навігація, експорт через UI кнопку.
+
+Bundle: 25742 → 24948 рядків (-794, -3.1%).
+
+Деталі: `docs/AI_ACT_COMPLIANCE.md` + ширший контекст `docs/EU_COMPLIANCE.md`.
+
+#### B. Event Delegation Phase 1+ (4 файли, 5 комітів)
+
+Продовження Strangler refactor з DGH6F. Council 3 паралельні агенти Sonnet перед першим Edit для `notes.js`. **Pre-mortem знайшов критичний баг:** `escapeJsArg` у `data-folder` додавав JS-escape (`\\'`) що у data-* attr читалось як literal backslash → нотатки з апострофом «Roman's notes» не відкривались. Виправлено: `escapeHtml` замість `escapeJsArg` для data-* атрибутів (data attrs не JS-evaluated).
+
+Мігровано:
+- **notes.js** (10 → 0): closeNotesFolder, 2× openNotesFolder (intra-tab без switchTab+150ms), openFolderEditModal, openNoteView, openNoteMenu, selectFolderIcon/Color, open-note-from-search.
+- **nav.js** (9 → 0): toggleTabSelection, applyTabSelection, 2× moveTabOrder, 2× selectTabOrder, deleteMemoryCard, closeDeployInfo. 2× inline `event.stopPropagation()` видалено.
+- **habits.js** (12 → 0): 3 reuse universal (`toggle-entity-done` × habit/habit-prod), 3 nеw (tap-habit-square, open-edit-habit, prod-habit-card-click), 2 reuse з DGH6F (hold-quit-habit, confirm-quit-relapse). 7× inline stopPropagation видалено. 2× ontouchend → CSS `touch-action:manipulation`.
+- **health.js** (13 → 0, UI CRUD only): open-add-health-card, open-health-card, close-health-card, open-edit-health-card, set-health-card-status, log-health-med-dose (2), skip-health-med-dose, open-health-card-note, open-add-allergy (2), delete-allergy-by-id + reuse close-parent для med-row.
+
+Council post-аудит 2 агенти Sonnet (PHI Leak Auditor + Regression Hunter): 0 критичних поломок, 0 невідповідностей `data-action` ↔ `reg()`. Знайдено iOS 300мс delay на `[data-habit-check]` → закрито додаванням селектора до правила `touch-action: manipulation` (style.css:1696).
+
+Сумарно JMQuT: **44 onclick → 0**. delegation registry: 23 → 49 actions (+26). 0 регресій.
+
+#### C. EU Compliance — brain-Claude research (4 файли)
+
+Brain-Claude (вересень-листопад 2026) дослідив повний EU compliance landscape для AI-powered SaaS — речі поза AI Act що Роман пропустив. Передано через Романа у NM-сесію.
+
+Створено `docs/EU_COMPLIANCE.md` (зонтичний документ):
+- 🚨 VAT OSS (критично перед першим EU юзером) — Paddle/Lemonsqueezy as merchant of record
+- 🟡 Impressum (DE Abmahnung €500-2000), 14-day withdrawal checkbox, Privacy Policy DPF/Schrems II
+- ⚪ CRA (11.09.2026), Data Act (Export my data), PLD (09.12.2026), ePrivacy
+- 🟢 НЕ стосується: EAA/NIS2/DSA/AI Code of Practice (соло-розробник <€2M)
+
+ROADMAP додано блок «🚨 Pre-EU-MVP Compliance» з 6 пунктами за пріоритетом. CLAUDE.md мапа + `_ai-tools/INDEX.md` семантичний індекс оновлено. `docs/AI_ACT_COMPLIANCE.md` шапка з посиланням на ширший EU_COMPLIANCE.
+
+### Гілка + контекст
+
+- Гілка: `claude/start-session-JMQuT`
+- Коміти: 14 (від `4769b18` Phase 2 Health AI до `3ac2132` EU compliance docs)
+- Council Sonnet: 8 (6 Health pre-Edit + 2 Health post-аудит + 1 notes Pre-mortem + 1 final Regression Hunter)
+- WebSearch: 4 (EU AI Act + GDPR Art.9 + Annex III + productivity apps classification)
+
+### Хвости (закриті у цій же сесії)
+
+- ✅ Документація (SESSION_STATE / CHANGES / ROADMAP_DONE / lessons) — обробляється у /finish-блоку
+- 🟢 health.js:73 legacy numeric med.id — pre-existing, не регресія, окремий ticket
+- 🟢 habits.js:951 prodHabitCardClick guard dead code — delegation closest перехоплює раніше
+- 🟢 notes.js:1054 застарілий коментар — допустимо
+- ⏳ iPhone smoke TESTING_LOG v926-v936 — чекає юзера
+
+### Що далі (узгоджено з Романом)
+
+1. **Event Delegation залишок** — calendar (15), finance-analytics (9), finance (16), finance-modals (34), index.html (167) = 241 onclick. ~4 год.
+2. **Backup Phase 2** — `createFullBackup()` + JSON export + Restore UI. ~3 год. Готує до Supabase + закриває Data Act compliance.
+3. **B-179 UI Кошика** — кнопка «Кошик» у Налаштуваннях. ~1.5 год.
+4. **EU Compliance pre-MVP** — VAT OSS вибір (Paddle/Lemonsqueezy), Impressum, 14-day withdrawal, Privacy Policy DPF. ~1 день разом.
+
+---

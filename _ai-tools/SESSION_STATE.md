@@ -4,11 +4,89 @@
 >
 > Старіші сесії (до 6GoDe 19.04) — в [`_archive/SESSION_STATE_archive.md`](../_archive/SESSION_STATE_archive.md).
 
-**Оновлено:** 2026-05-19 (сесія **OBErR** — 26 commits, 7 великих блоків: Event Delegation 241→0 + Backup Phase 2 + B-179 Кошик + EU Compliance pre-MVP + Audit fixes 9 bugs + Security CALL_WHITELIST + CSP Phase 2 (43/55 inline non-onclick) + AI-Tester Hetzner повний комплект. ~20 Council Sonnet, 14 CACHE bumps.
+**Оновлено:** 2026-05-20 (сесія **HKnlM** — AI-Tester Hetzner повний deploy + Council security/correctness hardening. 7 commits, 4 паралельних агенти Sonnet знайшли 13 проблем, всі закриті. Cron активний 3×/день).
 
 ---
 
-## 🔧 Поточна сесія OBErR — Event Delegation 241→0 + Backup+Кошик + CSP P2 + AI-Tester (18-19.05.2026)
+## 🔧 Поточна сесія HKnlM — AI-Tester Hetzner deploy + Pre-mortem hardening (19-20.05.2026)
+
+### Зроблено — 4 великі блоки, 7 commits
+
+#### A. Hetzner setup + browser-harness debug (5 commits, ~2 год debug)
+
+Setup Романа на сервері 94.130.25.22 виявив 5 кореневих проблем у скриптах OBErR (мій недогляд):
+
+**`65f4543` uv pip baseline** — `uv venv` без `--seed` не ставить bare `pip`. Скрипт викликав `$HOME/.venv/bin/pip install anthropic` → `No such file or directory`. Фікс: `uv pip install --python <venv>/python anthropic` (штатний uv-стиль без витрат на setuptools/wheel).
+
+**`e905959` + `725ec10` API rewrite** — ai-tester.py я писав під неіснуючий Playwright-like API (`navigate()`, `query_selector()`, `get_console_errors()`). Реальний browser-harness 0.1.0 має тільки `goto_url/js/fill_input/click_at_xy/wait/wait_for_element/cdp`. Перепис всіх 10 сценаріїв + PAYLOAD_PRELUDE з helpers (`click_sel/get_ls/wait_for_js_expr/inject_error_capture/get_console_errs`) + SYSTEM_PROMPT для AI-планувальника + auto-патч `hetzner-setup.sh` (browser-harness ensure_daemon race idempotent fix + cleanup /tmp/bu-* root-owned race).
+
+**`6bd1f06` UTF-8 encoding** — `subprocess.run(text=True)` використовує locale encoding. На cron-env locale може бути ASCII → українські коментарі у PRELUDE → SyntaxError на стороні daemon. Фікс: explicit `encoding="utf-8"`. Manual heredoc працював бо bash передає raw UTF-8 bytes без conversion.
+
+**Smoke pass 3/5** (test-1 boot-health, test-2 nav 8tabs, test-5 trash) — інфраструктура жива. test-3 + test-4 — селектори потребували wait-timing fix.
+
+#### B. Security hardening — Council silent-bug-scout (3 critical fixes, commit `c3cbdfa`)
+
+Council 4 паралельні агенти Sonnet (Implementer + Pre-mortem + silent-bug-scout + doc-consistency) знайшли 13 проблем. Security найкритичніша:
+
+1. **Shell injection** у hetzner-setup.sh heredoc'и БЕЗ лапок (`<<INNER`, `<<ENV`) — `${PAT}`/`${ANTHROPIC_KEY}` через bash substitution. Якщо ключ містив `` ` ``/`$()`/`\` → injection або поломка. Фікс: single-quoted heredoc + `sudo -u nmtester env PAT="$PAT" bash <<'INNER'` для git credentials; Python heredoc з f-string literal для .env (з newline check).
+2. **Secrets leakage** у tester-log.md / cron.log — git stderr може містити `x-access-token:TOKEN@github.com`. Фікс: новий `_mask_secrets()` regex для `github_pat_***/ghp_***/sk-ant-api03-***` перед write. Застосовано у `git_commit_push` exception + `bh()` RuntimeError.
+3. **cron.log без chmod 600** — будь-хто з read доступом бачить PAT. Фікс: `chmod 600 + chown nmtester:nmtester` у `setup-cron.sh` + повторно після rotation cron job.
+
+#### C. Tester correctness — Council Pre-mortem (3 critical fixes, commit `250d84f`)
+
+Pre-mortem агент (Sonnet) знайшов 3 КРИТИЧНI bugs які б скривали проблеми тижнями:
+
+1. **test_9 false-PASS (#1)** — `wait_for_js_expr('finance.some(x=>x.amount===50)')` після першого PASS finance вже має amount=50 → True миттєво на старих даних → AI взагалі не викликається, тест завжди зеленіє навіть якщо Anthropic ключ протух. Фікс: `before_finance` + порівняння IDs → match = ДОДАНИЙ запис.
+2. **test_6-10 dead (#2)** — `tester-config.max_tests_per_run: 5` → `SCENARIOS[:5]` → test_6-10 ніколи не виконувались → B-180 (finance subcategory) + B-115 (task vs event) AI регресії поза контролем. Фікс: 5 → 10.
+3. **localStorage growth (#3)** — test_3 додає задачу без cleanup → 3 запуски/день × 30 = 90+ за місяць → Chrome profile localStorage 5MB cap → test_3 PERSISTENCE_FAIL false positive. Фікс: cleanup через JS у кінці test_3 (за unique title з timestamp), test_9 (за id), test_10 (за нові task/event ids).
+
+Бонус Implementer: test_3 wait(0.3)→(0.5) (openAddTask має setTimeout 350мс перед знятям readonly), test_4 wait_for_element для overlay робастності.
+
+Бонус Pre-mortem #5: `preflight()` тепер не тільки curl 9222 (Chrome alive) а й `bh()` з minimal payload → якщо daemon broken → `pkill` + cleanup /tmp/bu-* + retry. CDP drift після Chrome systemd respawn = recoverable.
+
+#### D. Robustness — flock + utcnow + PAT expiration (commit `535f33c`)
+
+1. **flock /tmp/nm-tester.lock** — захист від cron+manual race (silent-bug-scout #2): 2 одночасні tester = Chrome CDP conflict + git checkout reset race + status counter loss. `LOCK_EX|LOCK_NB` → other instance skip.
+2. **datetime.utcnow() → tz-aware** — deprecated Python 3.12, removed 3.14. Через regex sed 5 точок мігровано до `_now_utc()`/`_now_iso_z()`. Прибрав DeprecationWarning шум + future-proof.
+3. **PAT expiration alert** (Pre-mortem #4): `hetzner-setup.sh` додає `PAT_CREATED_UTC=YYYY-MM-DD` у .env; `_collect_warnings()` рахує remaining days з 90-day TTL; якщо ≤15д — warning у `tester-status.warnings[]` array; NM-Claude бачить при /start. Раніше: PAT тихо expires → git push fail → tester мовчить.
+
+### Гілка + контекст
+
+- Гілка: `claude/start-session-HKnlM`
+- Коміти: 7 (від `65f4543` uv pip до `535f33c` flock/datetime/PAT alert)
+- Council Sonnet: 4 паралельні (Implementer + Pre-mortem 7-day + silent-bug-scout + doc-consistency-checker)
+- Знайдено 13 проблем (3 critical security + 3 critical correctness + 3 robustness + 4 doc-sync), всі закриті
+
+### Метрики
+
+- **AI-Tester:** 0 → fully deployed and autonomous on Hetzner 94.130.25.22
+- **Cron:** active, 3×/день (03:00/11:00/19:00 UTC) + health-check кожні 15 хв
+- **Smoke pass:** 3/5 manual reload з селекторами OBErR; після Phase 2 fixes очікую 5/5 на наступному cron-run
+- **Security delta:** shell injection × 2 → 0, secrets in logs (PAT/keys) → masked, cron.log world-readable → chmod 600
+- **Tester false-positives:** 3 → 0 (test_9 fresh-data check + 5 dead tests resurrected + localStorage growth fix)
+
+### Інциденти
+
+Без інцидентів. Усі знахідки Council/Pre-mortem верифіковані Головою через Read коду перед фіксом (правило CLAUDE.md «гіпотеза агента ≠ факт»).
+
+### Хвости (закриті у цій же сесії)
+
+- ✅ AI-Tester Hetzner deploy — повністю автономний (закриває OBErR roadmap пункт #1)
+- ✅ test-3, test-4 selector + timing fixes (Implementer)
+- ✅ Shell injection + secrets leakage + chmod (silent-bug-scout)
+- ✅ test_9 false-PASS + max_tests=10 + localStorage cleanup (Pre-mortem)
+- ✅ flock + utcnow tz-aware + PAT alert (Phase 3 robustness)
+
+### Що далі (для Романа поза кодом)
+
+1. **Чекати перший автозапуск cron** (~19:00 UTC). Перевірити `_ai-tools/tester-status.json` через ~10 хв після — має бути `last_run_utc` свіжий + 5/5 чи 4/5 (test_9 фрагільний — AI може варіювати).
+2. **iPhone smoke test v946+** — 9 ключових flows за шпаргалкою (Backup/Restore, Кошик, OWL swipe, step-check, calc grid, close-backdrop, Enter chat-bars, save-settings onblur, Legal).
+3. **EU Compliance:** виконати `docs/EU_LAUNCH_CHECKLIST.md` — Paddle vs OSS, KvK реєстрація, заповнити PLACEHOLDER.
+4. **CSP Phase 2 завершити (~2 год)** — 6× `this.focus()` видалити (iPhone test), 4× oninput closure-state refactor, 1× addTaskStep preventDefault.
+
+---
+
+## 🔧 Сесія OBErR — Event Delegation 241→0 + Backup+Кошик + CSP P2 + AI-Tester (18-19.05.2026) — попередня
 
 ### Зроблено — 7 великих блоків, 26 commits
 
@@ -179,79 +257,9 @@ Council 2 паралельні агенти Sonnet (Implementer + Pre-mortem) з
 
 ---
 
-## 🔧 Сесія JMQuT — Health AI Isolation + Event Delegation +4 + EU Compliance (17.05.2026) — попередня
+## 🔧 Сесія JMQuT (17.05.2026) — архівовано HKnlM 20.05 → [archive](../_archive/SESSION_STATE_archive.md#-сесія-jmqut--health-ai-isolation--event-delegation-4--eu-compliance-17052026)
 
-### Зроблено — 3 великі блоки
-
-#### A. Health AI Isolation — EU AI Act compliance (8 фаз, 8 комітів)
-
-Стратегічне рішення Романа: Health-вкладка → AI-isolated. UI CRUD працює як раніше; AI більше НЕ читає/пише у `nm_health_cards`/`nm_allergies`. Council 6 паралельних агентів Sonnet (Critic + Pre-mortem + Strategist + UI-Map + OWL-Map + Inbox-classifier) + 4 WebSearch перевірив законодавчий контекст (EU AI Act Annex III — NM = Limited Risk productivity app; стає High-risk при profiling або clinical decisions; GDPR Art.9 special category data).
-
-**Видалено:**
-- 11 AI-tools (`create_health_card`/`edit_health_card`/`delete_health_card`/`update_health_card_status`/`add_medication`/`edit_medication`/`delete_medication`/`log_medication_dose`/`add_allergy`/`delete_allergy`/`add_health_history_entry`) + 1 UI-tool `export_health_card`
-- `getHealthContext()` з `getAIContext()` — PHI більше НЕ йде у промпт жодного з 8 чатів (це був головний канал profiling)
-- Brain-signals `_collectAppointmentSoon` (передавало лікаря + дату у промпт)
-- Clarify-guard doctor profiling chips (`DOCTOR_MENTION_RE` + `_buildDoctorChips`)
-- OWL proactive health згадки (`getTabBoardContext('health')`, `_isTabActive('health')`, OWL_QUESTIONS health, board fallback, TAB_HINTS оновлено)
-- `save_memory_fact category='health'` enum
-- Health chat-bar HTML (`#health-ai-bar`) + JS (addHealthChatMsg, sendHealthBarMessage, 3-крокове AI-інтерв'ю — 185 рядків) + askOwlAboutHealthCard блок
-- `syncHealthFinanceToHistory` (фінанси більше не пишуть автоматично у health-картки)
-- Migration v18 у `boot.js`: cleanup `nm_chat_health` + `nm_health_interview_pending` + facts з category='health' + старі health tool_calls у nm_chat_* історіях
-- Cross-tab refs: health з CHAT_STORE_KEYS, _ALL_CHAT_TABS, SEND_BTN_MAP, addMsgForTab+restoreChatUI maps, NM_KEYS.chat, inbox-board forEach
-
-**Залишено (Limited risk):** UI CRUD Health-вкладки повністю функціональний, кошик restore, Health-папка у Notes (AI зберігає текст без judgment), `switch_tab('health')` навігація, експорт через UI кнопку.
-
-Bundle: 25742 → 24948 рядків (-794, -3.1%).
-
-Деталі: `docs/AI_ACT_COMPLIANCE.md` + ширший контекст `docs/EU_COMPLIANCE.md`.
-
-#### B. Event Delegation Phase 1+ (4 файли, 5 комітів)
-
-Продовження Strangler refactor з DGH6F. Council 3 паралельні агенти Sonnet перед першим Edit для `notes.js`. **Pre-mortem знайшов критичний баг:** `escapeJsArg` у `data-folder` додавав JS-escape (`\\'`) що у data-* attr читалось як literal backslash → нотатки з апострофом «Roman's notes» не відкривались. Виправлено: `escapeHtml` замість `escapeJsArg` для data-* атрибутів (data attrs не JS-evaluated).
-
-Мігровано:
-- **notes.js** (10 → 0): closeNotesFolder, 2× openNotesFolder (intra-tab без switchTab+150ms), openFolderEditModal, openNoteView, openNoteMenu, selectFolderIcon/Color, open-note-from-search.
-- **nav.js** (9 → 0): toggleTabSelection, applyTabSelection, 2× moveTabOrder, 2× selectTabOrder, deleteMemoryCard, closeDeployInfo. 2× inline `event.stopPropagation()` видалено.
-- **habits.js** (12 → 0): 3 reuse universal (`toggle-entity-done` × habit/habit-prod), 3 nеw (tap-habit-square, open-edit-habit, prod-habit-card-click), 2 reuse з DGH6F (hold-quit-habit, confirm-quit-relapse). 7× inline stopPropagation видалено. 2× ontouchend → CSS `touch-action:manipulation`.
-- **health.js** (13 → 0, UI CRUD only): open-add-health-card, open-health-card, close-health-card, open-edit-health-card, set-health-card-status, log-health-med-dose (2), skip-health-med-dose, open-health-card-note, open-add-allergy (2), delete-allergy-by-id + reuse close-parent для med-row.
-
-Council post-аудит 2 агенти Sonnet (PHI Leak Auditor + Regression Hunter): 0 критичних поломок, 0 невідповідностей `data-action` ↔ `reg()`. Знайдено iOS 300мс delay на `[data-habit-check]` → закрито додаванням селектора до правила `touch-action: manipulation` (style.css:1696).
-
-Сумарно JMQuT: **44 onclick → 0**. delegation registry: 23 → 49 actions (+26). 0 регресій.
-
-#### C. EU Compliance — brain-Claude research (4 файли)
-
-Brain-Claude (вересень-листопад 2026) дослідив повний EU compliance landscape для AI-powered SaaS — речі поза AI Act що Роман пропустив. Передано через Романа у NM-сесію.
-
-Створено `docs/EU_COMPLIANCE.md` (зонтичний документ):
-- 🚨 VAT OSS (критично перед першим EU юзером) — Paddle/Lemonsqueezy as merchant of record
-- 🟡 Impressum (DE Abmahnung €500-2000), 14-day withdrawal checkbox, Privacy Policy DPF/Schrems II
-- ⚪ CRA (11.09.2026), Data Act (Export my data), PLD (09.12.2026), ePrivacy
-- 🟢 НЕ стосується: EAA/NIS2/DSA/AI Code of Practice (соло-розробник <€2M)
-
-ROADMAP додано блок «🚨 Pre-EU-MVP Compliance» з 6 пунктами за пріоритетом. CLAUDE.md мапа + `_ai-tools/INDEX.md` семантичний індекс оновлено. `docs/AI_ACT_COMPLIANCE.md` шапка з посиланням на ширший EU_COMPLIANCE.
-
-### Гілка + контекст
-
-- Гілка: `claude/start-session-JMQuT`
-- Коміти: 14 (від `4769b18` Phase 2 Health AI до `3ac2132` EU compliance docs)
-- Council Sonnet: 8 (6 Health pre-Edit + 2 Health post-аудит + 1 notes Pre-mortem + 1 final Regression Hunter)
-- WebSearch: 4 (EU AI Act + GDPR Art.9 + Annex III + productivity apps classification)
-
-### Хвости (закриті у цій же сесії)
-
-- ✅ Документація (SESSION_STATE / CHANGES / ROADMAP_DONE / lessons) — обробляється у /finish-блоку
-- 🟢 health.js:73 legacy numeric med.id — pre-existing, не регресія, окремий ticket
-- 🟢 habits.js:951 prodHabitCardClick guard dead code — delegation closest перехоплює раніше
-- 🟢 notes.js:1054 застарілий коментар — допустимо
-- ⏳ iPhone smoke TESTING_LOG v926-v936 — чекає юзера
-
-### Що далі (узгоджено з Романом)
-
-1. **Event Delegation залишок** — calendar (15), finance-analytics (9), finance (16), finance-modals (34), index.html (167) = 241 onclick. ~4 год.
-2. **Backup Phase 2** — `createFullBackup()` + JSON export + Restore UI. ~3 год. Готує до Supabase + закриває Data Act compliance.
-3. **B-179 UI Кошика** — кнопка «Кошик» у Налаштуваннях. ~1.5 год.
-4. **EU Compliance pre-MVP** — VAT OSS вибір (Paddle/Lemonsqueezy), Impressum, 14-day withdrawal, Privacy Policy DPF. ~1 день разом.
+**Стислі метрики:** 14 commits, 8 Council Sonnet + 4 WebSearch. Health AI Isolation (EU AI Act compliance, 11 AI-tools видалено, 1 UI-tool, getHealthContext, brain-signals, OWL proactive, chat-bar HTML+JS 185 рядків, syncHealthFinanceToHistory, migration v18, cross-tab refs). Event Delegation Phase 1+ (notes 10, nav 9, habits 12, health 13 = 44 onclick → 0; delegation registry 23 → 49; 0 регресій). EU Compliance umbrella doc + ROADMAP block. Pre-mortem знайшов escapeJsArg → escapeHtml для data-* atts (Roman's notes apostrophe bug).
 
 ---
 

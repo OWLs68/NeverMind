@@ -65,11 +65,13 @@ EAA (мікро-виняток), NIS2 (мікро-виняток), DSA (особ
      - 1× ontouchend + 1× onmousedown `event.preventDefault();addTaskStep()` — preventDefault sync. Через addEventListener у JS.
    - **Після цього:** strict CSP `script-src 'self'` без `unsafe-inline` — блокує 95% XSS.
 
-5. **🚀 AI-Tester Hetzner deploy** (нова OBErR 19.05.2026 — скрипти готові, чекає Романа)
-   - **Готово (NM-Claude):** `scripts/hetzner-setup.sh` + `ai-tester.py` + `setup-cron.sh` + `health-check.py` + `docs/HETZNER_TESTER_SETUP.md` + tester-config.json (Claude Haiku 4.5).
-   - **Готово (Roman):** Anthropic API key створено, сервер 94.130.25.22 з Chrome + browser-harness стоїть з 14.05.
-   - **Залишок (Roman, ~10 хв):** SSH на сервер → git clone NM → `sudo bash hetzner-setup.sh "PAT" "key"` → ручний `--smoke --force` → `setup-cron.sh`. Покроково у HETZNER_TESTER_SETUP.md.
-   - **Після deploy:** 3 запуски/день о 03/11/19 UTC з push звітів у claude/ai-tester-{ts} гілки. 12 регресійних команд OBErR у tester-commands.md чекають.
+5. **✅ AI-Tester Hetzner deploy — ЗАВЕРШЕНО HKnlM 20.05.2026**
+   - Cron активний на 94.130.25.22 — 3×/день (03:00/11:00/19:00 UTC) + health-check кожні 15 хв.
+   - Council 4 паралельних агентів Sonnet (Implementer/Pre-mortem/silent-bug-scout/doc-checker) знайшли 13 проблем у моїх же скриптах — закрито 7 commits на гілці `claude/start-session-HKnlM`.
+   - Security: shell injection × 2 → 0, PAT у логах → `_mask_secrets()`, cron.log `chmod 600`.
+   - Correctness: test_9 false-PASS → before/after IDs comparison, `max_tests` 5→10, localStorage cleanup у test_3/9/10.
+   - Robustness: `flock /tmp/nm-tester.lock`, datetime tz-aware, PAT expiration alert (90-day TTL з warning ≤15д).
+   - Smoke baseline 3/5 manual; після Phase 2 fixes очікую 5/5 на наступному cron-run (~19:00 UTC).
 
 2. **🔴 OpenAI ключ → Supabase Edge Function** (під час Supabase міграції)
    - Зараз `nm_gemini_key` у localStorage видно через DevTools
