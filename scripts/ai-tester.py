@@ -168,10 +168,14 @@ def screenshot(name: str) -> str:
     shots_dir.mkdir(parents=True, exist_ok=True)
     ts = _now_utc().strftime("%Y%m%d-%H%M%S")
     path = shots_dir / f"{name}-{ts}.png"
+    # bh() exec'ується у browser-harness globals — capture_screenshot(path: str, full: bool=False).
+    # str(path)!r дає чистий рядковий літерал замість PosixPath('...') (Path не у harness globals).
     try:
-        bh(f"take_screenshot({path!r})")
+        bh(f"capture_screenshot({str(path)!r})\nprint(_json.dumps({{}}))")
     except Exception as e:
-        return f"[screenshot failed: {e}]"
+        # Коротке повідомлення — JSON у tester-status.json не повинен містити 500-char traceback.
+        msg = str(e).splitlines()[0][:120]
+        return f"[screenshot failed: {msg}]"
     return str(path)
 
 
