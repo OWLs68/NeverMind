@@ -109,41 +109,53 @@ echo "    OK: /tmp/bu-* очищено"
 
 echo "=== [4/8] Clone NM repo через credential store ==="
 # Pre-mortem #3: PAT у ~/.git-credentials (chmod 600), не в URL.
-# git config credential.helper store — стандарт для headless CI.
-sudo -u nmtester bash <<INNER
+# Security HKnlM: single-quoted heredoc + env передача — захист від shell
+# injection якщо PAT містить $/`/() (silent-bug-scout #1).
+sudo -u nmtester env PAT="$PAT" NM_REPO="$NM_REPO" bash <<'INNER'
 git config --global credential.helper store
 git config --global user.email "ai-tester@nevermind.app"
 git config --global user.name "NeverMind AI Tester"
-echo "https://x-access-token:${PAT}@github.com" > \$HOME/.git-credentials
-chmod 600 \$HOME/.git-credentials
-if [ ! -d \$HOME/nevermind ]; then
-  git clone ${NM_REPO} \$HOME/nevermind
+echo "https://x-access-token:${PAT}@github.com" > "$HOME/.git-credentials"
+chmod 600 "$HOME/.git-credentials"
+if [ ! -d "$HOME/nevermind" ]; then
+  git clone "${NM_REPO}" "$HOME/nevermind"
 fi
 # Перевірка push доступу (--dry-run не пушить)
-cd \$HOME/nevermind
+cd "$HOME/nevermind"
 if git push --dry-run origin HEAD 2>&1 | grep -q "Everything up-to-date\|new branch"; then
-  echo "    ✅ git push працює"
+  echo "    OK: git push працює"
 else
-  echo "    ⚠️  git push НЕ працює — перевір PAT scope (Contents: Read and write)"
+  echo "    WARN: git push НЕ працює — перевір PAT scope (Contents: Read and write)"
 fi
 INNER
 
 echo "=== [5/8] .env з ключами ==="
-mkdir -p $NMTESTER_HOME/.config/ai-tester
-mkdir -p $NMTESTER_HOME/screenshots
-cat > $NMTESTER_HOME/.config/ai-tester/.env <<ENV
-# AI Tester credentials (chmod 600, owner = nmtester)
-ANTHROPIC_API_KEY=${ANTHROPIC_KEY}
-GITHUB_PAT=${PAT}
-# Шляхи (cron має повні шляхи бо PATH у crontab мінімальний — Pre-mortem #1)
-BH_BIN=$NMTESTER_HOME/.local/bin/browser-harness
-PYTHON_VENV=$NMTESTER_HOME/.venv/bin/python3
-NM_DIR=$NMTESTER_HOME/nevermind
-SCREENSHOTS_DIR=$NMTESTER_HOME/screenshots
-ENV
-chmod 600 $NMTESTER_HOME/.config/ai-tester/.env
-chown -R nmtester:nmtester $NMTESTER_HOME/.config $NMTESTER_HOME/screenshots
-echo "    .env створено (chmod 600)"
+# Security HKnlM: запис через Python (f-string literal) замість bash heredoc
+# expansion — захист від injection якщо ANTHROPIC_KEY містить $/`/() etc.
+mkdir -p "$NMTESTER_HOME/screenshots"
+PAT="$PAT" ANTHROPIC_KEY="$ANTHROPIC_KEY" NMTESTER_HOME="$NMTESTER_HOME" python3 <<'PYENV'
+import os, pathlib
+home = os.environ["NMTESTER_HOME"]
+env_path = pathlib.Path(home) / ".config/ai-tester/.env"
+env_path.parent.mkdir(parents=True, exist_ok=True)
+# Перевірка на newline — захист від multi-line injection
+for name, val in [("PAT", os.environ["PAT"]), ("ANTHROPIC_KEY", os.environ["ANTHROPIC_KEY"])]:
+    if "\n" in val or "\r" in val:
+        raise SystemExit(f"FATAL: {name} містить newline — abort (можлива injection)")
+lines = [
+    "# AI Tester credentials (chmod 600, owner = nmtester)",
+    f"ANTHROPIC_API_KEY={os.environ['ANTHROPIC_KEY']}",
+    f"GITHUB_PAT={os.environ['PAT']}",
+    f"BH_BIN={home}/.local/bin/browser-harness",
+    f"PYTHON_VENV={home}/.venv/bin/python3",
+    f"NM_DIR={home}/nevermind",
+    f"SCREENSHOTS_DIR={home}/screenshots",
+]
+env_path.write_text("\n".join(lines) + "\n")
+env_path.chmod(0o600)
+print(f"    OK: .env створено (chmod 600)")
+PYENV
+chown -R nmtester:nmtester "$NMTESTER_HOME/.config" "$NMTESTER_HOME/screenshots"
 
 echo "=== [6/8] systemd service для Chrome headless ==="
 # Pre-mortem #2: Chrome як systemd → auto-restart after reboot / OOM kill.

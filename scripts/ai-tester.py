@@ -115,7 +115,7 @@ def bh(code: str, timeout: int = 60) -> dict:
         env={**os.environ, "BU_CDP_URL": "http://127.0.0.1:9222"},
     )
     if r.returncode != 0:
-        raise RuntimeError(f"bh exit {r.returncode}: {r.stderr.strip()[:2000]}")
+        raise RuntimeError(f"bh exit {r.returncode}: {_mask_secrets(r.stderr.strip())[:2000]}")
     lines = [l.strip() for l in r.stdout.strip().splitlines() if l.strip()]
     if not lines:
         raise RuntimeError("bh returned empty output")
@@ -236,11 +236,26 @@ def git_commit_push(passed: int, total: int) -> bool:
         return True
     except subprocess.CalledProcessError as e:
         # Pre-mortem #3: explicit fail logging
+        # Security HKnlM: маскуємо PAT з git URL (x-access-token:TOKEN@github)
+        # перед записом у tester-log.md та cron.log (silent-bug-scout #3).
+        safe_stderr = _mask_secrets(e.stderr or "")
         log_path = get_nm_dir() / "_ai-tools/tester-log.md"
         with log_path.open("a", encoding="utf-8") as f:
-            f.write(f"\n## ❌ GIT PUSH FAILED {ts}\n```\n{e.stderr[:500]}\n```\n")
-        print(f"[FAIL] git push: {e.stderr[:300]}")
+            f.write(f"\n## GIT PUSH FAILED {ts}\n```\n{safe_stderr[:500]}\n```\n")
+        print(f"[FAIL] git push: {safe_stderr[:300]}")
         return False
+
+
+def _mask_secrets(text: str) -> str:
+    """Маскує credentials у логах перед записом на диск.
+    - x-access-token:TOKEN@github.com → x-access-token:***@github.com
+    - github_pat_XXX / ghp_XXX literal → github_pat_***
+    - sk-ant-api03-XXX → sk-ant-api03-***
+    """
+    text = re.sub(r"x-access-token:[^@\s]+@", "x-access-token:***@", text)
+    text = re.sub(r"\b(github_pat_|ghp_|ghs_|gho_|ghu_)[A-Za-z0-9_]{20,}", r"\1***", text)
+    text = re.sub(r"\b(sk-ant-[a-z0-9-]+-)[A-Za-z0-9_-]{20,}", r"\1***", text)
+    return text
 
 
 # --- Status + log writers -----------------------------------------------------
