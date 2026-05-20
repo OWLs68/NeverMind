@@ -548,6 +548,10 @@ def test_4_backup_create():
     try:
         r = bh("""
 inject_error_capture()
+# Seed (Gemini self-critique OK для backup test): createFullBackup повертає null
+# коли localStorage пустий — це КОРЕКТНО (нічого бекапити). Юзер завжди має
+# хоч nm_settings/nm_tasks — симулюємо мінімальний state для тесту.
+js('if(!localStorage.getItem("nm_settings"))localStorage.setItem("nm_settings","{}");if(!localStorage.getItem("nm_tasks"))localStorage.setItem("nm_tasks","[]");')
 before = int(js('Object.keys(localStorage).filter(function(k){return k.indexOf("nm_backup_")===0;}).length') or 0)
 # Bypass delegation: викликаємо exported function напряму. Tester заповіт
 # не повинен залежати від UI відкриття Settings + reveal-animation.
