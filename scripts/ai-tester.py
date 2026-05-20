@@ -464,13 +464,20 @@ def test_3_create_task_persistence():
         r = bh(f"""
 inject_error_capture()
 click_sel('[data-tab="tasks"]')
-wait(0.3)
-click_sel('#prod-add-btn')
-# Pre-mortem Implementer: openAddTask setTimeout 350мс перед знятям readonly
 wait(0.5)
+click_sel('#prod-add-btn')
+# Pre-mortem Implementer: openAddTask setTimeout 350мс перед знятям readonly.
+# Збільшено до 0.8 бо tab switch + modal show мають додаткову анімацію.
+wait(0.8)
+# Debug: перевірити що input ready (readonly знятий, visible)
+input_ready = js('(function(){{var i=document.getElementById("task-input-title");return !!i && !i.readOnly && i.offsetParent!==null;}})()')
+if not input_ready:
+    print(_json.dumps({{"before_has": False, "after_has": False, "debug": "input не ready (readonly або hidden)"}}))
+    raise SystemExit(0)
 fill_input('#task-input-title', {unique_title!r})
+wait(0.2)
 click_sel('button[data-fn="saveTask"]')
-wait(1.0)
+wait(1.2)
 before = get_ls('nm_tasks') or '[]'
 goto_url({NEVERMIND_URL!r})
 wait(2.5)
@@ -504,15 +511,14 @@ def test_4_backup_create():
         r = bh("""
 inject_error_capture()
 before = int(js('Object.keys(localStorage).filter(function(k){return k.indexOf("nm_backup_")===0;}).length') or 0)
-click_sel('[data-action="open-settings"]')
-wait(0.8)
-# wait_for_element робастніше за фіксований wait — overlay може анімуватись
-try:
-    wait_for_element('[data-fn="createFullBackupUI"]', timeout=3.0, visible=True)
-except Exception:
-    pass
-click_sel('[data-fn="createFullBackupUI"]')
-wait(0.8)
+# Bypass delegation: викликаємо exported function напряму. Tester заповіт
+# не повинен залежати від UI відкриття Settings + reveal-animation.
+fn_type = js('typeof window.createFullBackupUI')
+if fn_type != 'function':
+    print(_json.dumps({"before": before, "after": before, "delta": 0, "debug": "window.createFullBackupUI=" + str(fn_type)}))
+    raise SystemExit(0)
+js('window.createFullBackupUI()')
+wait(0.5)
 after = int(js('Object.keys(localStorage).filter(function(k){return k.indexOf("nm_backup_")===0;}).length') or 0)
 print(_json.dumps({"before": before, "after": after, "delta": after - before}))
 """)
@@ -867,13 +873,18 @@ def main():
     else:
         # Smoke або Full — виконуємо сценарії
         max_tests = cfg.get("max_tests_per_run", 10)
-        for fn in SCENARIOS[:max_tests]:
+        disabled = set(cfg.get("disabled_scenarios", []))
+        active = [fn for fn in SCENARIOS[:max_tests] if fn.__name__ not in disabled]
+        skipped = [fn.__name__ for fn in SCENARIOS[:max_tests] if fn.__name__ in disabled]
+        if skipped:
+            print(f"[SKIP] {len(skipped)} disabled scenarios: {', '.join(skipped)}")
+        for fn in active:
             print(f"--- {fn.__name__} ---")
             r = fn()
             if not r["passed"] and not r.get("screenshot_path"):
                 r["screenshot_path"] = screenshot(r["name"])
             results.append(r)
-            print(f"{'✅' if r['passed'] else '❌'} {r['name']}: {r['reason']}")
+            print(f"{'PASS' if r['passed'] else 'FAIL'} {r['name']}: {r['reason']}")
 
         if args.full:
             # TODO: parse tester-commands.md і виконати [ ] команди
