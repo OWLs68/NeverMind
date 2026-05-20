@@ -35,10 +35,13 @@ SHELL=/bin/bash
 # Logs у cron.log, ротація раз на тиждень.
 0 * * * * $PYTHON $TESTER --smoke >> $LOG 2>&1
 
-# === Health check ===
-# Кожні 15 хв перевіряє Chrome CDP + диск + cleanup screenshots.
-# Якщо Chrome мертвий — systemd ChromeService Restart=on-failure підхопить.
-*/15 * * * * $PYTHON $HEALTH >> $LOG 2>&1
+# === Health check + On-demand trigger watcher ===
+# Кожну хвилину:
+# - Chrome CDP + browser-harness daemon + disk + cleanup screenshots
+# - Перевірити tester-trigger.json — якщо NM-Claude запитав on-demand → запустити ai-tester
+# Latency on-demand: ~90 сек (cron 60s + git pull + ai-tester run).
+# Якщо Chrome мертвий — systemd chrome-tester.service Restart=on-failure підхопить.
+* * * * * $PYTHON $HEALTH >> $LOG 2>&1
 
 # === Лог ротація ===
 # Раз на тиждень обрізаємо cron.log до 1000 останніх рядків + chmod 600 (security).

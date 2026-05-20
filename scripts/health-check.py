@@ -28,6 +28,11 @@ from pathlib import Path
 
 SCREENSHOTS_DIR = Path(os.environ.get("SCREENSHOTS_DIR", "/home/nmtester/screenshots"))
 BH_BIN = os.environ.get("BH_BIN", "/home/nmtester/.local/bin/browser-harness")
+NM_DIR = Path(os.environ.get("NM_DIR", "/home/nmtester/nevermind"))
+PYTHON_VENV = os.environ.get("PYTHON_VENV", "/home/nmtester/.venv/bin/python3")
+TESTER_SCRIPT = NM_DIR / "scripts/ai-tester.py"
+TRIGGER_FILE = NM_DIR / "_ai-tools/tester-trigger.json"
+STATUS_FILE = NM_DIR / "_ai-tools/tester-status.json"
 MAX_AGE_DAYS = 7
 DISK_THRESHOLD_PCT = 80
 
@@ -71,6 +76,76 @@ def check_disk() -> tuple[bool, str]:
     return True, f"Disk {pct:.0f}% used"
 
 
+def check_on_demand_trigger() -> str:
+    """On-demand trigger від NM-Claude (HKnlM 20.05.2026).
+
+    NM-Claude під час сесії може робити commit + push у `tester-trigger.json`
+    з новим `trigger_ts`. Health-check бачить його (на наступному cron-cycle),
+    git pull → запускає ai-tester.py позачергово.
+
+    Latency: ~60-90 секунд (cron interval + git pull + run).
+
+    Returns:
+        '' = no trigger (silent)
+        'started' = trigger новий, ai-tester.py запущено асинхронно
+        'skipped: <reason>' = trigger є але не новий або інше
+    """
+    # 1) Спочатку pull щоб бачити свіжий trigger.json (NM-Claude commit'нув)
+    try:
+        subprocess.run(
+            ["git", "-C", str(NM_DIR), "fetch", "origin", "main"],
+            check=False, capture_output=True, timeout=15,
+        )
+        subprocess.run(
+            ["git", "-C", str(NM_DIR), "reset", "--hard", "origin/main"],
+            check=False, capture_output=True, timeout=10,
+        )
+    except Exception:
+        return "skipped: git fetch failed"
+
+    if not TRIGGER_FILE.exists():
+        return ""
+
+    try:
+        trigger = json.loads(TRIGGER_FILE.read_text())
+    except Exception as e:
+        return f"skipped: trigger malformed ({e})"
+
+    trigger_ts = trigger.get("trigger_ts")
+    if not trigger_ts:
+        return "skipped: trigger без trigger_ts"
+
+    # Порівняти з last_run_utc у status — якщо вже виконували → skip
+    last_run = ""
+    if STATUS_FILE.exists():
+        try:
+            status = json.loads(STATUS_FILE.read_text())
+            last_run = status.get("last_run_utc", "")
+        except Exception:
+            pass
+
+    # trigger новий якщо trigger_ts > last_run_utc (лексикографічне порівняння
+    # ISO-8601 з Z-суфіксом коректне).
+    if trigger_ts <= last_run:
+        return ""  # silent — вже виконали
+
+    # Trigger новий → запустити ai-tester (асинхронно, ми не чекаємо результат)
+    target = trigger.get("target_scenarios", [])
+    env = os.environ.copy()
+    if target:
+        env["TARGET_SCENARIOS"] = ",".join(target)
+
+    try:
+        subprocess.Popen(
+            [PYTHON_VENV, str(TESTER_SCRIPT), "--smoke", "--force"],
+            env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            start_new_session=True,
+        )
+        return f"started (ts={trigger_ts}, target={target or 'all-active'})"
+    except Exception as e:
+        return f"skipped: subprocess fail ({e})"
+
+
 def cleanup_screenshots() -> int:
     """Видалити screenshots старіші MAX_AGE_DAYS. Returns count видалених."""
     if not SCREENSHOTS_DIR.exists():
@@ -104,10 +179,15 @@ def main():
 
     removed = cleanup_screenshots()
     if removed:
-        lines.append(f"  🗑 Cleanup: видалено {removed} screenshots старіших {MAX_AGE_DAYS}д")
+        lines.append(f"  Cleanup: видалено {removed} screenshots старіших {MAX_AGE_DAYS}д")
 
-    # Логуємо тільки якщо щось не OK або був cleanup — інакше spam у cron.log
-    if not all_ok or removed:
+    # On-demand trigger check (HKnlM)
+    trigger_result = check_on_demand_trigger()
+    if trigger_result and trigger_result.startswith("started"):
+        lines.append(f"  TRIGGER: {trigger_result}")
+
+    # Логуємо тільки якщо щось не OK / cleanup / trigger fired — інакше spam у cron.log
+    if not all_ok or removed or trigger_result.startswith("started"):
         print("\n".join(lines))
 
     sys.exit(0 if all_ok else 1)

@@ -874,10 +874,17 @@ def main():
         # Smoke або Full — виконуємо сценарії
         max_tests = cfg.get("max_tests_per_run", 10)
         disabled = set(cfg.get("disabled_scenarios", []))
-        active = [fn for fn in SCENARIOS[:max_tests] if fn.__name__ not in disabled]
-        skipped = [fn.__name__ for fn in SCENARIOS[:max_tests] if fn.__name__ in disabled]
-        if skipped:
-            print(f"[SKIP] {len(skipped)} disabled scenarios: {', '.join(skipped)}")
+        # On-demand: TARGET_SCENARIOS env var звужує до specific тестів (HKnlM trigger)
+        target_env = os.environ.get("TARGET_SCENARIOS", "").strip()
+        if target_env:
+            targets = set(s.strip() for s in target_env.split(",") if s.strip())
+            active = [fn for fn in SCENARIOS if fn.__name__ in targets and fn.__name__ not in disabled]
+            print(f"[TARGET] on-demand: {sorted(fn.__name__ for fn in active)}")
+        else:
+            active = [fn for fn in SCENARIOS[:max_tests] if fn.__name__ not in disabled]
+            skipped = [fn.__name__ for fn in SCENARIOS[:max_tests] if fn.__name__ in disabled]
+            if skipped:
+                print(f"[SKIP] {len(skipped)} disabled scenarios: {', '.join(skipped)}")
         for fn in active:
             print(f"--- {fn.__name__} ---")
             r = fn()
