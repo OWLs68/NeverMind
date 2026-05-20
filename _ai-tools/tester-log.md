@@ -184,3 +184,31 @@ RuntimeError: wait_for_js timeout: (JSON.parse(localStorage.getItem('nm_finance'
   File "<string>", line 49, in <module>
   File "<string>", line 23, in wait_for_js_expr
 RuntimeError: wait_for_js timeout: (JSON.parse(localStorage.getItem('nm_tasks') || '[]')).length > 2
+
+## 2026-05-20 19:57 UTC · vnm-20260519-0300 · 4/10 pass
+- ✅ `test-1-boot-health`: ok
+- ✅ `test-2-navigation`: ok
+- ❌ `test-3-create-task`: ASSERTION_FAIL: задача не зявилась у nm_tasks
+- ❌ `test-4-backup-create`: ASSERTION_FAIL: backup count 0->0 (delta 0)
+- ✅ `test-5-trash-restore`: ok
+- ❌ `test-6-owl-swipe`: OWL не згорнувся (touch-detect.js bug?)
+- ❌ `test-7-modal-backdrop`: close-backdrop НЕ працює (Pre-mortem ризик)
+- ✅ `test-8-clear-data`: ok
+- ❌ `test-9-inbox-finance`: EXCEPTION: bh exit 1: Traceback (most recent call last):
+  File "/home/nmtester/.local/bin/browser-harness", line 10, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/home/nmtester/browser-harness/src/browser_harness/run.py", line 125, in main
+    exec(code, globals())
+  File "<string>", line 50, in <module>
+  File "<string>", line 23, in wait_for_js_expr
+RuntimeError: wait_for_js timeout: (JSON.parse(localStorage.getItem('nm_finance') || '[]')).length > 0
+- ❌ `test-10-task-classify`: EXCEPTION: bh exit 1: Traceback (most recent call last):
+  File "/home/nmtester/.local/bin/browser-harness", line 10, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/home/nmtester/browser-harness/src/browser_harness/run.py", line 125, in main
+    exec(code, globals())
+  File "<string>", line 51, in <module>
+  File "<string>", line 23, in wait_for_js_expr
+RuntimeError: wait_for_js timeout: (JSON.parse(localStorage.getItem('nm_tasks') || '[]')).length > 3
