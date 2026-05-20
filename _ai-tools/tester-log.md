@@ -149,3 +149,10 @@
     exec(code, globals())
   File "<string>", line 4, in <module>
 
+
+## 2026-05-20 19:24 UTC · vnm-20260519-0300 · 3/5 pass
+- ✅ `test-1-boot-health`: ok
+- ✅ `test-2-navigation`: ok
+- ❌ `test-3-create-task`: ASSERTION_FAIL: задача не зявилась у nm_tasks
+- ❌ `test-4-backup-create`: ASSERTION_FAIL: backup не створено у localStorage
+- ✅ `test-5-trash-restore`: ok

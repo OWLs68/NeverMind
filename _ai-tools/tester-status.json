@@ -1,51 +1,30 @@
 {
   "_comment": "Stamped by ai-tester.py. NM-Claude reads at /start.",
-  "last_run_utc": "2026-05-20T19:17:02.703390Z",
+  "last_run_utc": "2026-05-20T19:24:17.856383Z",
   "tester_version": "0.1.0-OBErR-19.05.2026",
   "ai_tester_app_version": "nm-20260519-0300",
   "summary": {
     "date_utc": "2026-05-20",
-    "total_runs_today": 1,
-    "passed_today": 0,
-    "failed_today": 5,
+    "total_runs_today": 2,
+    "passed_today": 3,
+    "failed_today": 7,
     "openai_spent_today_usd": 0.0,
     "openai_budget_remaining_usd": 2.0
   },
   "last_failures": [
     {
-      "test_name": "test-1-boot-health",
-      "fail_reason": "EXCEPTION: bh exit 1: Traceback (most recent call last):\n  File \"/home/nmtester/.local/bin/browser-harness\", line 10, in <module>\n    sys.exit(main())\n             ^^^^^^\n  File \"/home/nmtester/browser-harness/src/browser_harness/run.py\", line 125, in main\n    exec(code, globals())\n  File \"<string>\"",
-      "category": "smoke",
-      "ts_utc": "2026-05-20T19:17:01.577628Z",
-      "screenshot_path": "[screenshot failed: bh exit 1: Traceback (most recent call last):\n  File \"/home/nmtester/.local/bin/browser-harness\", line 10, in <module>\n    sys.exit(main())\n             ^^^^^^\n  File \"/home/nmtester/browser-harness/src/browser_harness/run.py\", line 125, in main\n    exec(code, globals())\n  File \"<string>\", line 1, in <module>\n]"
-    },
-    {
-      "test_name": "test-2-navigation",
-      "fail_reason": "EXCEPTION: bh exit 1: Traceback (most recent call last):\n  File \"/home/nmtester/.local/bin/browser-harness\", line 10, in <module>\n    sys.exit(main())\n             ^^^^^^\n  File \"/home/nmtester/browser-harness/src/browser_harness/run.py\", line 125, in main\n    exec(code, globals())\n  File \"<string>\"",
-      "category": "smoke",
-      "ts_utc": "2026-05-20T19:17:01.853669Z",
-      "screenshot_path": "[screenshot failed: bh exit 1: Traceback (most recent call last):\n  File \"/home/nmtester/.local/bin/browser-harness\", line 10, in <module>\n    sys.exit(main())\n             ^^^^^^\n  File \"/home/nmtester/browser-harness/src/browser_harness/run.py\", line 125, in main\n    exec(code, globals())\n  File \"<string>\", line 1, in <module>\n]"
-    },
-    {
       "test_name": "test-3-create-task",
-      "fail_reason": "EXCEPTION: bh exit 1: Traceback (most recent call last):\n  File \"/home/nmtester/.local/bin/browser-harness\", line 10, in <module>\n    sys.exit(main())\n             ^^^^^^\n  File \"/home/nmtester/browser-harness/src/browser_harness/run.py\", line 125, in main\n    exec(code, globals())\n  File \"<string>\"",
+      "fail_reason": "ASSERTION_FAIL: задача не зявилась у nm_tasks",
       "category": "smoke",
-      "ts_utc": "2026-05-20T19:17:02.093753Z",
-      "screenshot_path": "[screenshot failed: bh exit 1: Traceback (most recent call last):\n  File \"/home/nmtester/.local/bin/browser-harness\", line 10, in <module>\n    sys.exit(main())\n             ^^^^^^\n  File \"/home/nmtester/browser-harness/src/browser_harness/run.py\", line 125, in main\n    exec(code, globals())\n  File \"<string>\", line 1, in <module>\n]"
+      "ts_utc": "2026-05-20T19:24:13.685946Z",
+      "screenshot_path": "[screenshot failed: bh exit 1: Traceback (most recent call last):\n  File \"/home/nmtester/.local/bin/browser-harness\", line 10, in <module>\n    sys.exit(main())\n             ^^^^^^\n  File \"/home/nmtester/browser-harness/src/browser_harness/run.py\", line 125, in main\n    exec(code, globals())\n  File \"<string>\", line 41, in <module>]"
     },
     {
       "test_name": "test-4-backup-create",
-      "fail_reason": "EXCEPTION: bh exit 1: Traceback (most recent call last):\n  File \"/home/nmtester/.local/bin/browser-harness\", line 10, in <module>\n    sys.exit(main())\n             ^^^^^^\n  File \"/home/nmtester/browser-harness/src/browser_harness/run.py\", line 125, in main\n    exec(code, globals())\n  File \"<string>\"",
+      "fail_reason": "ASSERTION_FAIL: backup не створено у localStorage",
       "category": "smoke",
-      "ts_utc": "2026-05-20T19:17:02.334461Z",
-      "screenshot_path": "[screenshot failed: bh exit 1: Traceback (most recent call last):\n  File \"/home/nmtester/.local/bin/browser-harness\", line 10, in <module>\n    sys.exit(main())\n             ^^^^^^\n  File \"/home/nmtester/browser-harness/src/browser_harness/run.py\", line 125, in main\n    exec(code, globals())\n  File \"<string>\", line 1, in <module>\n]"
-    },
-    {
-      "test_name": "test-5-trash-restore",
-      "fail_reason": "EXCEPTION: bh exit 1: Traceback (most recent call last):\n  File \"/home/nmtester/.local/bin/browser-harness\", line 10, in <module>\n    sys.exit(main())\n             ^^^^^^\n  File \"/home/nmtester/browser-harness/src/browser_harness/run.py\", line 125, in main\n    exec(code, globals())\n  File \"<string>\"",
-      "category": "smoke",
-      "ts_utc": "2026-05-20T19:17:02.578307Z",
-      "screenshot_path": "[screenshot failed: bh exit 1: Traceback (most recent call last):\n  File \"/home/nmtester/.local/bin/browser-harness\", line 10, in <module>\n    sys.exit(main())\n             ^^^^^^\n  File \"/home/nmtester/browser-harness/src/browser_harness/run.py\", line 125, in main\n    exec(code, globals())\n  File \"<string>\", line 1, in <module>\n]"
+      "ts_utc": "2026-05-20T19:24:15.967268Z",
+      "screenshot_path": "[screenshot failed: bh exit 1: Traceback (most recent call last):\n  File \"/home/nmtester/.local/bin/browser-harness\", line 10, in <module>\n    sys.exit(main())\n             ^^^^^^\n  File \"/home/nmtester/browser-harness/src/browser_harness/run.py\", line 125, in main\n    exec(code, globals())\n  File \"<string>\", line 41, in <module>]"
     }
   ]
 }
