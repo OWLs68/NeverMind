@@ -10,6 +10,46 @@
 
 ## 🔄 Робочі патерни (коли X — роблю Y)
 
+### subprocess.run з input/text=True — ОБОВ'ЯЗКОВО `encoding='utf-8'` (HKnlM 20.05.2026)
+
+- **Контекст:** AI-Tester на Hetzner викликає browser-harness через `subprocess.run([BH_BIN], input=code, text=True)`. На Mac/desktop locale = UTF-8 → працює. На сервері у cron env locale може бути POSIX/C/ASCII → cyrillic символи у payload → `?` substitution → SyntaxError на стороні daemon.
+- **Симптом:** manual heredoc через `sudo -u nmtester /path/to/cli <<'PY' ... PY` працює (bash передає raw UTF-8 bytes), але точно той самий payload через subprocess з `text=True` падає з обрізаним trace.
+- **Правило:** при будь-якому `subprocess.run/Popen` з `input=str` АБО `text=True` — додавати explicit `encoding="utf-8"`. Не покладатись на locale.
+- **Підтверджений кейс HKnlM (`6bd1f06`):** ai-tester.py 5 тестів fail з `File "<string>", line 3, in <module>` (обрізана помилка). Manual heredoc — works. Виправлено: `text=True` → `encoding="utf-8"`. Одразу 3/5 pass.
+- **Сигнал:** будь-який subprocess з cyrillic/emoji у payload → перевір encoding ПЕРЕД деплоєм.
+
+### uv venv без `--seed` = bare `pip` не існує — використовуй `uv pip install` (HKnlM 20.05.2026)
+
+- **Контекст:** `uv venv $HOME/.venv` створює мінімальний venv БЕЗ pip/setuptools/wheel за замовч (з 2024). Це раніше було `--seed` поведінкою, тепер opt-in.
+- **БАГ:** `$HOME/.venv/bin/pip install anthropic` → `No such file or directory`.
+- **Правило:** після `uv venv` ставити пакети через `uv pip install --python $VENV/bin/python pkg`. Не використовувати bare pip. Якщо потрібен pip — додавати `--seed` до `uv venv`.
+- **Підтверджений кейс HKnlM (`65f4543`):** hetzner-setup.sh `[3/8]` крок впав → mid-setup. Виправлено за 5 хв, але втрачено час на діагностику. Тепер `hetzner-setup.sh` ідемпотентний (`uv venv --clear` + `uv pip`).
+
+### Verify реальний API перед написанням скриптів — НЕ покладатись на «має бути» (HKnlM 20.05.2026)
+
+- **Контекст:** Я писав ai-tester.py під Playwright-like API (`navigate()`, `query_selector()`, `get_console_errors()`, `eval_js()`, `type_into()`, `wait(ms)`) — але browser-harness 0.1.0 має зовсім інший набір: `goto_url()`, `js()`, `fill_input()`, `click_at_xy()`, `wait(seconds)`, `cdp()`. Жодна з моїх функцій не існувала.
+- **БАГ:** 10 з 10 сценаріїв fail з `NameError: navigate is not defined` (обрізано до line 3).
+- **Правило:** при інтеграції з third-party CLI/library ОБОВ'ЯЗКОВО `grep "^def " <library>/helpers.py` або `<cli> --help` ПЕРЕД написанням клієнтського коду. Не довіряти пам'яті/інтуїції про "схожі API".
+- **Підтверджений кейс HKnlM (`e905959`+`725ec10`):** перепис 10 сценаріїв + PAYLOAD_PRELUDE з helpers (`click_sel`/`get_ls`/`wait_for_js_expr`) + SYSTEM_PROMPT. Це той самий клас бага що 64CXo промпт-лоскути без перевірки реальних даних. **Правильний flow:** Read API → Council Implementer-агент верифікує селектори → потім write код.
+
+### Pre-mortem перед production-deploy критичної інфраструктури (HKnlM 20.05.2026)
+
+- **Контекст:** AI-Tester мав бігати автономно 24/7. Без Pre-mortem я б закрив сесію на 3/5 pass з ілюзією успіху. Pre-mortem агент Sonnet знайшов 3 КРИТИЧНI bugs які б ховались тижнями:
+  1. test_9 false-PASS — після першого пасу старі дані тривіально match → AI ніколи не викликається. B-180 регресія була б «зеленою» 89 днів.
+  2. max_tests_per_run=5 → test_6-10 (саме AI регресії B-180/B-115) ніколи не виконуються. Тестер на половину сліпий.
+  3. localStorage growth — test_3 додає задачу без cleanup → 3×30 = 90 за місяць → 5MB cap → false PERSISTENCE_FAIL на 3-4 тиждень.
+- **Правило:** перед deploy будь-якої autonomous системи (тестер, cron, watchdog, daemon) — запустити Pre-mortem-агента Sonnet з промптом «уяви через 7 днів автономної роботи мертва — чому?». Це не theoretical exercise — це rotina checkpoint.
+- **Підтверджений кейс HKnlM:** Council 4 паралельні агенти знайшли 13 проблем (3 critical security + 3 critical correctness + 3 robustness + 4 doc-sync). Без Council — я б deployed з 5 серйозними дірками.
+
+### Council read-only audit ПIСЛЯ свого setup-скрипта — обов'язковий крок (HKnlM 20.05.2026)
+
+- **Контекст:** Я писав `hetzner-setup.sh` + `ai-tester.py` без security review. Council `silent-bug-scout` Sonnet знайшов 3 security діри:
+  1. Heredoc'и БЕЗ лапок (`<<INNER`) — shell injection якщо ключ містить `` ` ``/`$()`.
+  2. `git stderr` з PAT у `tester-log.md` БЕЗ маскування.
+  3. `cron.log` без `chmod 600`.
+- **Правило:** при роботі з secrets/credentials/PATs — після написання скрипту запустити `silent-bug-scout` агента ОБОВ'ЯЗКОВО з security focus. Перевірити: shell heredoc'и (лапки!), log writes (mask!), file perms (chmod 600!).
+- **Підтверджений кейс HKnlM (`c3cbdfa`):** виправлено 3 діри одним commit ПЕРЕД production traffic. Якби deploy відбувся — security incident міг статись на першому ключі з spec char.
+
 ### escapeJsArg ≠ escapeHtml для `data-*` атрибутів (JMQuT 17.05.2026)
 
 - **Контекст:** `escapeJsArg(s)` додає JS-escape (`\\`, `\'`, `\"`) для безпечного вкладення у `onclick="fn('${...}')"`. Браузер парсить HTML attr → JS string → обидва рівні відновлюються.
