@@ -1,50 +1,29 @@
 {
   "_comment": "Stamped by ai-tester.py. NM-Claude reads at /start.",
-  "last_run_utc": "2026-05-20T19:57:23.456190Z",
+  "last_run_utc": "2026-05-20T20:02:07.941418Z",
   "tester_version": "0.2.0-HKnlM-20.05.2026",
   "ai_tester_app_version": "nm-20260519-0300",
   "summary": {
     "date_utc": "2026-05-20",
-    "total_runs_today": 4,
-    "passed_today": 11,
-    "failed_today": 19,
+    "total_runs_today": 5,
+    "passed_today": 15,
+    "failed_today": 21,
     "openai_spent_today_usd": 0.0,
     "openai_budget_remaining_usd": 2.0
   },
   "last_failures": [
     {
+      "test_name": "test-3-create-task",
+      "fail_reason": "ASSERTION_FAIL: задача не зявилась у nm_tasks",
+      "category": "smoke",
+      "ts_utc": "2026-05-20T20:02:04.648274Z",
+      "screenshot_path": "[screenshot failed: bh exit 1: Traceback (most recent call last):\n  File \"/home/nmtester/.local/bin/browser-harness\", line 10, in <module>\n    sys.exit(main())\n             ^^^^^^\n  File \"/home/nmtester/browser-harness/src/browser_harness/run.py\", line 125, in main\n    exec(code, globals())\n  File \"<string>\", line 41, in <module>\nNameError: name 'take_screenshot' is not defined. Did you mean: 'capture_screenshot'?]"
+    },
+    {
       "test_name": "test-4-backup-create",
       "fail_reason": "ASSERTION_FAIL: backup count 0->0 (delta 0)",
       "category": "smoke",
-      "ts_utc": "2026-05-20T19:56:26.245877Z",
-      "screenshot_path": "[screenshot failed: bh exit 1: Traceback (most recent call last):\n  File \"/home/nmtester/.local/bin/browser-harness\", line 10, in <module>\n    sys.exit(main())\n             ^^^^^^\n  File \"/home/nmtester/browser-harness/src/browser_harness/run.py\", line 125, in main\n    exec(code, globals())\n  File \"<string>\", line 41, in <module>\nNameError: name 'take_screenshot' is not defined. Did you mean: 'capture_screenshot'?]"
-    },
-    {
-      "test_name": "test-6-owl-swipe",
-      "fail_reason": "OWL не згорнувся (touch-detect.js bug?)",
-      "category": "smoke",
-      "ts_utc": "2026-05-20T19:56:29.446028Z",
-      "screenshot_path": "[screenshot failed: bh exit 1: Traceback (most recent call last):\n  File \"/home/nmtester/.local/bin/browser-harness\", line 10, in <module>\n    sys.exit(main())\n             ^^^^^^\n  File \"/home/nmtester/browser-harness/src/browser_harness/run.py\", line 125, in main\n    exec(code, globals())\n  File \"<string>\", line 41, in <module>\nNameError: name 'take_screenshot' is not defined. Did you mean: 'capture_screenshot'?]"
-    },
-    {
-      "test_name": "test-7-modal-backdrop",
-      "fail_reason": "close-backdrop НЕ працює (Pre-mortem ризик)",
-      "category": "smoke",
-      "ts_utc": "2026-05-20T19:56:30.738138Z",
-      "screenshot_path": "[screenshot failed: bh exit 1: Traceback (most recent call last):\n  File \"/home/nmtester/.local/bin/browser-harness\", line 10, in <module>\n    sys.exit(main())\n             ^^^^^^\n  File \"/home/nmtester/browser-harness/src/browser_harness/run.py\", line 125, in main\n    exec(code, globals())\n  File \"<string>\", line 41, in <module>\nNameError: name 'take_screenshot' is not defined. Did you mean: 'capture_screenshot'?]"
-    },
-    {
-      "test_name": "test-9-inbox-finance",
-      "fail_reason": "EXCEPTION: bh exit 1: Traceback (most recent call last):\n  File \"/home/nmtester/.local/bin/browser-harness\", line 10, in <module>\n    sys.exit(main())\n             ^^^^^^\n  File \"/home/nmtester/browser-harness/src/browser_harness/run.py\", line 125, in main\n    exec(code, globals())\n  File \"<string>\"",
-      "category": "smoke",
-      "ts_utc": "2026-05-20T19:56:57.361015Z",
-      "screenshot_path": "[screenshot failed: bh exit 1: Traceback (most recent call last):\n  File \"/home/nmtester/.local/bin/browser-harness\", line 10, in <module>\n    sys.exit(main())\n             ^^^^^^\n  File \"/home/nmtester/browser-harness/src/browser_harness/run.py\", line 125, in main\n    exec(code, globals())\n  File \"<string>\", line 41, in <module>\nNameError: name 'take_screenshot' is not defined. Did you mean: 'capture_screenshot'?]"
-    },
-    {
-      "test_name": "test-10-task-classify",
-      "fail_reason": "EXCEPTION: bh exit 1: Traceback (most recent call last):\n  File \"/home/nmtester/.local/bin/browser-harness\", line 10, in <module>\n    sys.exit(main())\n             ^^^^^^\n  File \"/home/nmtester/browser-harness/src/browser_harness/run.py\", line 125, in main\n    exec(code, globals())\n  File \"<string>\"",
-      "category": "smoke",
-      "ts_utc": "2026-05-20T19:57:23.334668Z",
+      "ts_utc": "2026-05-20T20:02:05.426203Z",
       "screenshot_path": "[screenshot failed: bh exit 1: Traceback (most recent call last):\n  File \"/home/nmtester/.local/bin/browser-harness\", line 10, in <module>\n    sys.exit(main())\n             ^^^^^^\n  File \"/home/nmtester/browser-harness/src/browser_harness/run.py\", line 125, in main\n    exec(code, globals())\n  File \"<string>\", line 41, in <module>\nNameError: name 'take_screenshot' is not defined. Did you mean: 'capture_screenshot'?]"
     }
   ],
