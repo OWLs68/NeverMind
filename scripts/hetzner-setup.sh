@@ -142,10 +142,13 @@ env_path.parent.mkdir(parents=True, exist_ok=True)
 for name, val in [("PAT", os.environ["PAT"]), ("ANTHROPIC_KEY", os.environ["ANTHROPIC_KEY"])]:
     if "\n" in val or "\r" in val:
         raise SystemExit(f"FATAL: {name} містить newline — abort (можлива injection)")
+import datetime
+today = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d")
 lines = [
     "# AI Tester credentials (chmod 600, owner = nmtester)",
     f"ANTHROPIC_API_KEY={os.environ['ANTHROPIC_KEY']}",
     f"GITHUB_PAT={os.environ['PAT']}",
+    f"PAT_CREATED_UTC={today}",  # Pre-mortem: warning у tester-status коли PAT >75 днів
     f"BH_BIN={home}/.local/bin/browser-harness",
     f"PYTHON_VENV={home}/.venv/bin/python3",
     f"NM_DIR={home}/nevermind",
