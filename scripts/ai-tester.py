@@ -335,7 +335,7 @@ def write_status(cfg: dict, prev_status: dict, results: list):
 
 
 def _collect_warnings() -> list:
-    """Попередження для NM-Claude /start (PAT expiration, низький Anthropic budget тощо)."""
+    """Попередження для NM-Claude /start (PAT expiration, browser errors)."""
     warnings = []
     # Pre-mortem #4: PAT expiration alert
     pat_created = os.environ.get("PAT_CREATED_UTC")
@@ -352,7 +352,45 @@ def _collect_warnings() -> list:
                 )
         except Exception:
             warnings.append(f"PAT_CREATED_UTC malformed: {pat_created}")
+    # Production telemetry (Gemini рекомендація HKnlM): nm_error_log polling.
+    # Замість Telegram (CORS+GDPR) — читаємо локальний логер NM з Chrome profile.
+    warnings.extend(_collect_browser_errors())
     return warnings
+
+
+def _collect_browser_errors() -> list:
+    """Прочитати nm_error_log з Chrome profile localStorage → PHI-sanitized list[str].
+
+    NM логер (B-185 fix у boot.js:1195) пише errors у nm_error_log. Тестер на cron-run
+    зчитує останні 5 → sanitize (cyrillic >=3 chars, numbers >=4 digits) → push у
+    tester-status.warnings[]. NM-Claude бачить на /start.
+
+    Sanitization rationale: stack/context можуть містити PHI (health words, finance
+    amounts). Беремо ТIЛЬКИ message + ts + type. Заміна cyrillic >=3 chars + numbers
+    >=4 digits на ***. EU Compliance — error не залишає GitHub репо у plain text.
+    """
+    try:
+        raw = bh(
+            'errs = JSON.parse(localStorage.getItem("nm_error_log") || "[]");\n'
+            'print(_json.dumps(errs[-5:] if len(errs) >= 5 else errs))',
+            timeout=10,
+        )
+    except Exception:
+        return []  # silent — не блокуємо tester. browser-harness daemon може бути closed.
+    if not isinstance(raw, list):
+        return []
+    out = []
+    for e in raw:
+        if not isinstance(e, dict):
+            continue
+        ts = str(e.get("ts", "?"))[:19]
+        etype = str(e.get("type", "error"))[:20]
+        msg = str(e.get("message", ""))[:150]
+        # PHI mask
+        msg = re.sub(r"[Ѐ-ӿ]{3,}", "***", msg)  # cyrillic substring 3+ chars
+        msg = re.sub(r"\d{4,}", "***", msg)  # numbers 4+ digits (phone/amounts)
+        out.append(f"BROWSER_ERR[{ts}][{etype}]: {msg}")
+    return out
 
 
 def _read_app_version() -> str:
