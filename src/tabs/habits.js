@@ -547,9 +547,13 @@ function switchProdTab(tab) {
   document.getElementById('prod-page-tasks').style.display = isHabits ? 'none' : 'block';
   document.getElementById('prod-page-habits').style.display = isHabits ? 'block' : 'none';
 
-  // Update + button action
+  // HKnlM: оновлюємо data-fn (НЕ onclick) — delegation handler єдиний source of truth.
+  // Раніше onclick перезаписувався динамічно → на cold profile (де switchProdTab ще не
+  // викликався) handler був відсутній → AI-тестер не міг клікнути. data-fn з HTML default
+  // 'openAddTask' тепер працює одразу для Tasks-drum, switchProdTab лише змінює коли
+  // юзер перемикає на Habits-drum. (Gemini self-critique + Realist Корінь #1.)
   const addBtn = document.getElementById('prod-add-btn');
-  if (addBtn) addBtn.onclick = isHabits ? openAddHabit : openAddTask;
+  if (addBtn) addBtn.dataset.fn = isHabits ? 'openAddHabit' : 'openAddTask';
 
   updateProdTabCounters();
   if (isHabits) renderProdHabits();
