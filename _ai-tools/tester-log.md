@@ -107,3 +107,45 @@
     exec(code, globals())
   File "<string>", line 4, in <module>
 
+
+## 2026-05-20 19:17 UTC · vnm-20260519-0300 · 0/5 pass
+- ❌ `test-1-boot-health`: EXCEPTION: bh exit 1: Traceback (most recent call last):
+  File "/home/nmtester/.local/bin/browser-harness", line 10, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/home/nmtester/browser-harness/src/browser_harness/run.py", line 125, in main
+    exec(code, globals())
+  File "<string>", line 3, in <module>
+
+- ❌ `test-2-navigation`: EXCEPTION: bh exit 1: Traceback (most recent call last):
+  File "/home/nmtester/.local/bin/browser-harness", line 10, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/home/nmtester/browser-harness/src/browser_harness/run.py", line 125, in main
+    exec(code, globals())
+  File "<string>", line 6, in <module>
+
+- ❌ `test-3-create-task`: EXCEPTION: bh exit 1: Traceback (most recent call last):
+  File "/home/nmtester/.local/bin/browser-harness", line 10, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/home/nmtester/browser-harness/src/browser_harness/run.py", line 125, in main
+    exec(code, globals())
+  File "<string>", line 3, in <module>
+
+- ❌ `test-4-backup-create`: EXCEPTION: bh exit 1: Traceback (most recent call last):
+  File "/home/nmtester/.local/bin/browser-harness", line 10, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/home/nmtester/browser-harness/src/browser_harness/run.py", line 125, in main
+    exec(code, globals())
+  File "<string>", line 3, in <module>
+
+- ❌ `test-5-trash-restore`: EXCEPTION: bh exit 1: Traceback (most recent call last):
+  File "/home/nmtester/.local/bin/browser-harness", line 10, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/home/nmtester/browser-harness/src/browser_harness/run.py", line 125, in main
+    exec(code, globals())
+  File "<string>", line 4, in <module>
+
