@@ -1647,6 +1647,43 @@ print(_json.dumps({
 # === Inbox systematic coverage (Ug2Jw post-audit, Roman 21.05) ================
 
 @scenario("ui")
+def test_32_inbox_scroll_chips():
+    """Inbox → tap chips left arrow + right arrow → handler не throw console.error.
+
+    Покриває data-action="scroll-owl-chips" → scrollOwlTabChips delegation chain.
+    Smoke: chips can be empty (no AI seed), handler має gracefully no-op.
+    """
+    payload = '''
+inject_error_capture()
+goto_url(__URL__)
+wait(2.0)
+inject_error_capture()
+click_sel('[data-tab=inbox]')
+wait(0.4)
+left_btn_exists = js("(function(){return !!document.getElementById('owl-tab-chips-left-inbox');})()")
+right_btn_exists = js("(function(){return !!document.getElementById('owl-tab-chips-right-inbox');})()")
+scroll_fn_type = js("typeof window.scrollOwlTabChips")
+click_sel('#owl-tab-chips-left-inbox')
+wait(0.3)
+click_sel('#owl-tab-chips-right-inbox')
+wait(0.3)
+errs = get_console_errs()
+print(_json.dumps({"left_btn_exists":bool(left_btn_exists),"right_btn_exists":bool(right_btn_exists),"scroll_fn_type":scroll_fn_type,"errors":errs[:3]}))
+'''.replace("__URL__", repr(NEVERMIND_URL))
+    try:
+        r = bh(payload, timeout=60)
+        if not r["left_btn_exists"] or not r["right_btn_exists"]:
+            return _result("test-32-inbox-chips-scroll", False, f"ARROW_BTNS_MISSING: left={r['left_btn_exists']} right={r['right_btn_exists']}")
+        if r.get("scroll_fn_type") != "function":
+            return _result("test-32-inbox-chips-scroll", False, f"scrollOwlTabChips_NOT_FN: type={r.get('scroll_fn_type')}")
+        if r["errors"]:
+            return _result("test-32-inbox-chips-scroll", False, f"HANDLER_THREW: console.error={r['errors']}")
+        return _result("test-32-inbox-chips-scroll", True)
+    except Exception as e:
+        return _result("test-32-inbox-chips-scroll", False, f"EXCEPTION: {e}")
+
+
+@scenario("ui")
 def test_31_inbox_owl_toggle():
     """Inbox → tap [data-action=toggle-owl-collapsed][data-tab=inbox] → handler
     спрацьовує без console.error → state stays/becomes speech (нема падіння).
