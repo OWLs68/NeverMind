@@ -4,54 +4,93 @@
 >
 > Старіші сесії (до 6GoDe 19.04) — в [`_archive/SESSION_STATE_archive.md`](../_archive/SESSION_STATE_archive.md).
 
-**Оновлено:** 2026-05-20 (сесія **Ug2Jw** — AI-Tester `screenshot()` unblock + Pre-mortem розкрив 3 латентні дірки в одній 14-рядковій функції перед першим Edit. 1 commit, debug test_3/test_4 розблоковано).
+**Оновлено:** 2026-05-21 (сесія **Ug2Jw** day 2 — повний debug AI-Tester хвостів HKnlM через 7 раундів on-demand trigger з Roman на роботі. B-190 закрито + B-191 + B-192 відкрито. test_3 PASS після workaround. Stable baseline 4/4 → 5/5).
 
 ---
 
-## 🔧 Поточна сесія Ug2Jw — AI-Tester screenshot() unblock (20.05.2026)
+## 🔧 Поточна сесія Ug2Jw — AI-Tester повний debug HKnlM хвостів (20-21.05.2026)
 
-### Зроблено — 1 commit
+### Зроблено — 6 commits, 7 ітерацій on-demand trigger, 2 Council Sonnet агенти
 
-**`e993aa7` fix(tester): screenshot() — typo + Path repr + missing JSON ламали скрін кожного фейлу**
+#### Day 1 (вечір 20.05) — screenshot unblock
 
-При /start побачив у `tester-status.json` `last_failures[].screenshot_path = "[screenshot failed: bh exit 1: NameError: name 'take_screenshot' is not defined. Did you mean: 'capture_screenshot'?]"`. Це КОРНЕВО блокувало debug test_3/test_4 (HKnlM хвости) — без скрінів неможливо побачити чому saveTask мовчить.
+**`e993aa7` fix(tester): screenshot() — typo + Path repr + missing JSON**
 
-**Pre-mortem ПЕРЕД першим Edit (CLAUDE.md mental model #1):** «Якщо typo фікс не запрацює — ЧОМУ?». Розкрив 2 ДОДАТКОВI латентні дірки які впали б на наступному cron-run:
+При /start побачив `tester-status.json screenshot_path = "[screenshot failed: NameError: take_screenshot is not defined. Did you mean: capture_screenshot?]"`. Корнево блокувало debug всіх fail'ів.
 
-1. **typo** — `take_screenshot()` → `capture_screenshot()`. Підтверджено сам файл рядок 85 коментар + рядок 779 docstring.
-2. **Path repr** — `path!r` = `PosixPath('...')` — Python літерал вимагає `pathlib` у `globals()` browser-harness (там нема). Замінено на `str(path)!r` → чистий рядковий літерал.
-3. **Empty stdout** — `capture_screenshot()` нічого не друкує, а `bh()` raise'є `RuntimeError` коли stdout порожній (рядок 150). Підтверджено патерн: ВСI 10 тестових сценаріїв закінчуються `print(_json.dumps(...))`. Додано `print(_json.dumps({}))` після виклику.
+Pre-mortem ПЕРЕД першим Edit розкрив 2 додаткові латентні дірки в одній 14-рядковій функції:
+1. **typo** `take_screenshot` → `capture_screenshot`
+2. **Path repr** `path!r` = `PosixPath('...')` → `str(path)!r`
+3. **Empty stdout** `bh()` raise при empty → додано `print(_json.dumps({}))`
 
-**Bonus:** failed screenshot exception обрізаний до 120 chars першого рядка — JSON `tester-status.json` більше не засмічується 500+ char Python traceback'ами у `screenshot_path` полі.
+Bonus: failed-screenshot exception truncate 120 chars (раніше 500+ char traceback у JSON).
 
-### Не зроблено (свідомо — Роман сказав «поки почекай»)
+#### Day 2 (ранок 21.05) — повний debug debug-сесія коли Roman на роботі
 
-- Тимчасово enable test_3+test_4 у `tester-config.json` + on-demand trigger щоб переконатись що screenshot'и записуються (5 хв перевірки). Залишено на окремий раунд.
-- Чекаємо deploy через auto-merge → cron 03:00 UTC або on-demand trigger.
+**`daed822` feat(tester): test_3/test_4 debug payload + enable** — розширений діагностичний payload з 15+ полів (diag_pre, console_errors, nm_error_log_tail, call_result, call_ok, etc). Enable test_3+test_4 у config щоб тестер їх запустив. + paralleled Council Sonnet 2 агенти (saveTask flow + createFullBackupUI flow) для гіпотез на коди реальний NM.
+
+**`7284c74` trigger #1 (04:17 UTC)** — on-demand trigger, ai-tester виконав через ~90 сек. Screenshot fix підтверджено працює (`screenshot_path = "/home/nmtester/screenshots/test-3-...png"` без `[failed:...]`). АЛЕ debug payload upadв з SyntaxError на CDP — `\"` escape у JS string через Python triple-quote ламається при JSON serialize.
+
+**`4743cff` fix(tester): JS escape — single-quote + CSS attr без лапок** — системний фікс: усі JS string literals single-quote, CSS attribute селектори без лапок навколо value (`button[data-fn=saveTask]`), Python wrap triple-single-quote (`'''...'''`).
+
+**`7a22347` trigger #2 (04:25)** — re-run показав test_4 повний debug, але test_3 ще fail з `SyntaxError: leading zeros` бо мій `__TITLE_JS__` (JSON.dumps з лапками) встромлювався у Python `"..."` → розрив рядка. Виправлено через JS backtick template literal + raw value replace. + truncate `fail_reason` 300 → 1500 chars (debug повний). + test_4 seed verify (підтверджено seed реально записує `nm_settings='{}'`).
+
+**`28ceb0a` fix: test_3 JS-direct fill + test_4 backup cleanup** — діагностика 04:35 показала 2 нові корені:
+- **test_3:** `fill_input('#task-input-title', 'AI-Tester X')` → input.value = `'AAII--TTeesstteerr  XX'` (КОЖЕН CHAR ПОДВОЄНО). Workaround: JS-direct `el.value = X; dispatchEvent('input')` без keyboard simulation. **PASS після цього.**
+- **test_4:** explicit cleanup nm_backup_* перед seed (припустив quota path 3 backup × 1.5 MB).
+
+**`13591a2` debug: test_4 inline-копія createSelectiveBackup** — після test_3 PASS, test_4 ще fail на ЧИСТОМУ LS (keys_b=0, keys_a=0). Inline-копія `createSelectiveBackup` logіки у тестері показала: **`b4_call=0 → af_call=1` — backup СТВОРЕНО синхронно у JS! Але через wait(0.8s) → 0**. Тобто async видалення.
+
+**`28ceb0a` revert + docs** (фінал) — повернув test_4 у disabled_scenarios (поки не розслідуємо async deletion). Stable baseline тепер: test_1/2/3/5/8 = 5/5 PASS.
+
+### Результати — 7 trigger ітерацій
+
+| # | Час | test_3 | test_4 | Що знайшов |
+|---|-----|--------|--------|-----------|
+| 1 | 04:17 | EXC | EXC | screenshot fix працює (шляхи валідні), debug payload SyntaxError |
+| 2 | 04:25 | EXC | NO_BACKUP | UI_fn=function, BE_fn=undefined, ret=undefined, keys_b=3→0 (mysterious) |
+| 3 | 04:33 | EXC | NO_BACKUP | seed_ok=True, settings_val='{}', ls_keys=49, NM_KEYS_data=20 |
+| 4 | 04:35 | NO_WRITE | NO_BACKUP | **fill_input ПОДВОЄННЯ chars!** (B-191) |
+| 5 | 04:40 | ✅ PASS | NO_BACKUP | JS-direct fill працює; backup ще mystery з keys_b=0→0 |
+| 6 | 04:46 | (skip) | NO_BACKUP | **b4_call=0, af_call=1 — backup synchronously, потім зникає за 0.8s** (B-192) |
+
+### Відкриті баги після Ug2Jw
+
+- **B-192 ВIДКРИТО** — createFullBackupUI створює backup, але async видалення через ~0.8s. Не з backup.js (grep verified). Потребує iPhone screenshot з PWA app або інструментоване logging у backup.js.
+- **B-191 ВIДКРИТО** — `browser-harness fill_input` ПОДВОЮЄ chars у NM textarea. Workaround у тестера (JS-direct). Не блокер для звичайного юзера. Потребує grep `oninput` delegation handlers щоб зрозуміти джерело.
+
+### Закриті
+
+- **B-190 закрито** (`e993aa7`) — screenshot() typo + Path repr + missing JSON
+- **test_3 РОЗБЛОКОВАНО** через JS-direct fill (workaround у `28ceb0a`)
+- **screenshot pipeline ПРАЦЮЄ** — реальні шляхи у tester-status.json, Roman може SSH `scp` з `/home/nmtester/screenshots/`
 
 ### Гілка + контекст
 
 - Гілка: `claude/start-session-Ug2Jw`
-- Коміти: 1 (`e993aa7` screenshot fix)
-- Інструменти: Read/Grep/Bash для верифікації browser-harness API (документація у самому ai-tester.py + lessons.md HKnlM запис «browser-harness 0.1.0 API»). Council НЕ використовував — задача малого scope (14 рядків функції), Pre-mortem самостійний.
+- Коміти: 7 (`e993aa7` screenshot fix → `28ceb0a` revert + docs final)
+- Council Sonnet: 2 паралельні (saveTask audit + createFullBackupUI audit) — обидва дали гіпотези, частково підтверджені reality
+- Інструменти: 7 on-demand trigger циклів через `tester-trigger.json` + git poll origin/main
+- Час: ~50 хв debug-сесії (Roman на роботі)
 
 ### Метрики
 
-- Виявлено латентних багів: 3 (typo + Path repr + missing JSON) у одній 14-рядковій функції
-- Self-debug розблоковано для: test_3, test_4, test_6, test_7, test_9, test_10 (всі disabled зараз — потрібен enable + on-demand trigger щоб отримати скріни)
-- Впевненість що працює з першого пушу: ~80% (typo 100%, missing JSON 95%, Path repr 85%)
+- **Stable baseline:** 4/4 → 5/5 PASS (test_3 додано після workaround)
+- **Mystery:** test_4 backup async deletion (відкритий B-192)
+- **Council hypothesis verification:** saveTask hypothesis (cold profile bundle) — спростовано через diag (saveTask_fn=function існує). showToast crash — спростовано (errs=[], call_ok=True). Реальний корінь test_3 — fill_input bug. Урок: **гіпотези агентів треба ВЕРИФIКУВАТИ через real run** перед фіксом.
 
-### Урок (записано у lessons.md)
+### Що далі (для Романа)
 
-«1 видимий typo приховує 2 латентні дірки — Pre-mortem ловить перед deploy. Якби фіксив тільки typo: наступний cron-run упав би на Path repr → ще доба debug → ще раунд → empty stdout. Pre-mortem #2 і #3 знайдено зворотним питанням `«якщо #1 фікс не спрацює, ЧОМУ?»` ДО першого Edit».
+1. **`scp` test_4 screenshot з сервера** — `/home/nmtester/screenshots/test-4-backup-create-20260521-044613.png` — побачимо який toast (`💾 Знімок створено` чи `⚠️ Не вдалось`)
+2. **iPhone PWA smoke** — створити backup → перевірити що залишається у Settings → Список знімків. Якщо реальний юзер бачить такий же async delete — B-192 critical
+3. **B-191 audit** — grep `[data-on-input]` / `oninput` listeners у delegation.js + tasks.js. Можливо подвійна реєстрація handler'а
+4. **CSP Phase 2 завершити** (~2 год, з HKnlM хвостів)
 
-### Хвости (відкладено — окрема debug-сесія коли Роман готовий)
+### Хвости (відкладено)
 
-- ❌ test_3 saveTask мовчить (HKnlM хвіст, тепер з screenshots можливий)
-- ❌ test_4 createFullBackup повертає 0 (HKnlM хвіст, тепер з screenshots можливий)
-- ❌ test_6 OWL swipe (CDP Input.dispatchTouchEvent нестабільний)
-- ❌ test_7 close-backdrop click_at_xy координати
-- ❌ test_9 + test_10 потребують OpenAI ключ у Chrome profile
+- ❌ test_6 OWL swipe (CDP Input.dispatchTouchEvent)
+- ❌ test_7 close-backdrop click_at_xy
+- ❌ test_9 + test_10 OpenAI ключ у Chrome profile
 
 ---
 
