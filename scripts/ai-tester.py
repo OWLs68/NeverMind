@@ -1402,6 +1402,181 @@ print(_json.dumps({"modal_exists":bool(modal_exists),"errors":errs[:3]}))
         return _result("test-23-finance-modal", False, f"EXCEPTION: {e}")
 
 
+# === Batch 5 (Ug2Jw 21.05.2026) — habits edit + prod-tab + evening note + health med ===
+
+@scenario("ui")
+def test_24_habits_edit():
+    """Створити habit → tap [data-action=open-edit-habit] → edit modal prefilled → змінити name → Save → новий name у DOM."""
+    orig = "AI-T HabitEd Orig " + datetime.datetime.now(datetime.timezone.utc).strftime('%H%M%S')
+    new = orig + " UPD"
+    payload = '''
+inject_error_capture()
+goto_url(__URL__)
+wait(2.0)
+inject_error_capture()
+click_sel('[data-tab=tasks]')
+wait(0.4)
+click_sel('[data-action=switch-prod-tab][data-tab=habits]')
+wait(0.4)
+click_sel('#prod-add-btn')
+wait(0.7)
+js("(function(){var el=document.getElementById('habit-input-name');el.value=`__ORIG__`;el.dispatchEvent(new Event('input',{bubbles:true}));})()")
+wait(0.2)
+click_sel('[data-fn=saveHabit]')
+wait(0.8)
+habit_id = js("(function(){var h=JSON.parse(localStorage.getItem('nm_habits2')||'[]');var f=h.find(function(x){return x.name===`__ORIG__`;});return f?f.id:null;})()")
+if not habit_id:
+    print(_json.dumps({"step":"create_failed"}))
+    raise SystemExit(0)
+click_sel('[data-action=open-edit-habit][data-id="' + str(habit_id) + '"]')
+wait(0.6)
+modal_visible = js("(function(){var o=document.getElementById('habit-modal');return !!o && getComputedStyle(o).display!=='none';})()")
+prefilled = js("document.getElementById('habit-input-name').value")
+js("(function(){var el=document.getElementById('habit-input-name');el.value=`__NEW__`;el.dispatchEvent(new Event('input',{bubbles:true}));})()")
+wait(0.2)
+click_sel('[data-fn=saveHabit]')
+wait(0.8)
+dom_has_new = js("(function(){return (document.body.textContent||'').indexOf(`__NEW__`)>=0;})()")
+js("(function(){var h=JSON.parse(localStorage.getItem('nm_habits2')||'[]');localStorage.setItem('nm_habits2',JSON.stringify(h.filter(function(x){return x.name!==`__ORIG__` && x.name!==`__NEW__`;})));})()")
+errs = get_console_errs()
+print(_json.dumps({"step":"complete","habit_id":str(habit_id),"modal_visible":bool(modal_visible),"prefilled_matches_orig":bool(prefilled and `__ORIG__` in prefilled),"dom_has_new":bool(dom_has_new),"errors":errs[:3]}))
+'''.replace("`__ORIG__`", repr(orig)).replace("`__NEW__`", repr(new))
+    payload = payload.replace("__URL__", repr(NEVERMIND_URL))
+    payload = payload.replace("__ORIG__", orig)
+    payload = payload.replace("__NEW__", new)
+    try:
+        r = bh(payload, timeout=90)
+        if r.get("step") == "create_failed":
+            return _result("test-24-habits-edit", False, "CREATE_FAILED")
+        if not r.get("modal_visible"):
+            return _result("test-24-habits-edit", False, "EDIT_MODAL_NOT_OPEN")
+        if not r.get("prefilled_matches_orig"):
+            return _result("test-24-habits-edit", False, "INPUT_NOT_PREFILLED")
+        if not r.get("dom_has_new"):
+            return _result("test-24-habits-edit", False, "DOM_NOT_UPDATED")
+        if r.get("errors"):
+            return _result("test-24-habits-edit", False, f"console.error: {r['errors']}")
+        return _result("test-24-habits-edit", True)
+    except Exception as e:
+        return _result("test-24-habits-edit", False, f"EXCEPTION: {e}")
+
+
+@scenario("ui")
+def test_25_prod_tab_switch():
+    """Tasks → switch-prod-tab=habits → prod-tab-indicator transform translateX != 0 + #prod-add-btn data-fn=openAddHabit."""
+    try:
+        r = bh("""
+inject_error_capture()
+goto_url('https://owls68.github.io/NeverMind/')
+wait(2.0)
+inject_error_capture()
+click_sel('[data-tab=tasks]')
+wait(0.4)
+initial_fn = js("(function(){var b=document.getElementById('prod-add-btn');return b?b.getAttribute('data-fn'):null;})()")
+click_sel('[data-action=switch-prod-tab][data-tab=habits]')
+wait(0.5)
+after_switch_fn = js("(function(){var b=document.getElementById('prod-add-btn');return b?b.getAttribute('data-fn'):null;})()")
+indicator_transform = js("(function(){var i=document.getElementById('prod-tab-indicator');return i?getComputedStyle(i).transform:null;})()")
+click_sel('[data-action=switch-prod-tab][data-tab=tasks]')
+wait(0.4)
+back_to_tasks_fn = js("(function(){var b=document.getElementById('prod-add-btn');return b?b.getAttribute('data-fn'):null;})()")
+errs = get_console_errs()
+print(_json.dumps({"initial_fn":initial_fn,"after_switch_fn":after_switch_fn,"indicator_transform":indicator_transform,"back_to_tasks_fn":back_to_tasks_fn,"errors":errs[:3]}))
+""")
+        if r.get("initial_fn") != "openAddTask":
+            return _result("test-25-prod-tab-switch", False, f"INITIAL_NOT_TASKS: data-fn={r.get('initial_fn')!r}")
+        if r.get("after_switch_fn") != "openAddHabit":
+            return _result("test-25-prod-tab-switch", False, f"SWITCH_FAILED: data-fn={r.get('after_switch_fn')!r} (expected openAddHabit)")
+        if r.get("back_to_tasks_fn") != "openAddTask":
+            return _result("test-25-prod-tab-switch", False, f"SWITCH_BACK_FAILED: data-fn={r.get('back_to_tasks_fn')!r}")
+        if r.get("indicator_transform") in (None, "none", "matrix(1, 0, 0, 1, 0, 0)"):
+            return _result("test-25-prod-tab-switch", False, f"INDICATOR_NOT_MOVED: transform={r.get('indicator_transform')!r}")
+        if r.get("errors"):
+            return _result("test-25-prod-tab-switch", False, f"console.error: {r['errors']}")
+        return _result("test-25-prod-tab-switch", True)
+    except Exception as e:
+        return _result("test-25-prod-tab-switch", False, f"EXCEPTION: {e}")
+
+
+@scenario("ui")
+def test_26_evening_chat_input():
+    """Evening tab → fill chat-bar input → перевір value у DOM (без send — потребує AI ключ)."""
+    text = "AI-T Evening " + datetime.datetime.now(datetime.timezone.utc).strftime('%H%M%S')
+    payload = '''
+inject_error_capture()
+goto_url(__URL__)
+wait(2.0)
+inject_error_capture()
+click_sel('[data-tab=evening]')
+wait(0.5)
+input_id_check = js("(function(){var ids=['evening-input','me-input'];for(var i=0;i<ids.length;i++){if(document.getElementById(ids[i]))return ids[i];}return null;})()")
+js("(function(){var el=document.querySelector('textarea[data-tab=evening]')||document.getElementById('evening-input');if(el){el.focus();el.value=`__TEXT__`;el.dispatchEvent(new Event('input',{bubbles:true}));return el.id;}return null;})()")
+wait(0.3)
+value_after = js("(function(){var el=document.querySelector('textarea[data-tab=evening]')||document.getElementById('evening-input');return el?el.value:null;})()")
+js("(function(){var el=document.querySelector('textarea[data-tab=evening]')||document.getElementById('evening-input');if(el){el.value='';el.dispatchEvent(new Event('input',{bubbles:true}));}})()")
+errs = get_console_errs()
+print(_json.dumps({"input_id":input_id_check,"value_after":value_after,"errors":errs[:3]}))
+'''
+    payload = payload.replace("__URL__", repr(NEVERMIND_URL))
+    payload = payload.replace("__TEXT__", text)
+    try:
+        r = bh(payload, timeout=60)
+        if r.get("value_after") != text:
+            return _result("test-26-evening-input", False, f"INPUT_VALUE_MISMATCH: id={r.get('input_id')!r} value={r.get('value_after')!r}")
+        if r["errors"]:
+            return _result("test-26-evening-input", False, f"console.error: {r['errors']}")
+        return _result("test-26-evening-input", True)
+    except Exception as e:
+        return _result("test-26-evening-input", False, f"EXCEPTION: {e}")
+
+
+@scenario("ui")
+def test_27_health_medication_add():
+    """Health → ➕ Картка → fill name → tap addHealthMedicationRow → перевір медикамент row у DOM → save → у card.medications."""
+    card_name = "AI-T Med Card " + datetime.datetime.now(datetime.timezone.utc).strftime('%H%M%S')
+    med_name = "AI-T Med " + datetime.datetime.now(datetime.timezone.utc).strftime('%H%M%S')
+    payload = '''
+inject_error_capture()
+goto_url(__URL__)
+wait(2.0)
+inject_error_capture()
+click_sel('[data-tab=health]')
+wait(0.4)
+click_sel('[data-fn=openAddHealthCard]')
+wait(0.6)
+js("(function(){var el=document.getElementById('health-card-name');el.value=`__CARD__`;el.dispatchEvent(new Event('input',{bubbles:true}));})()")
+wait(0.2)
+med_rows_before = js("(function(){var rows=document.querySelectorAll('.health-med-row, [data-med-row]');return rows.length;})()")
+click_sel('[data-fn=addHealthMedicationRow]')
+wait(0.4)
+med_rows_after = js("(function(){var rows=document.querySelectorAll('.health-med-row, [data-med-row]');return rows.length;})()")
+med_input_found = js("(function(){var inps=document.querySelectorAll('input[id*=med-name],input[placeholder*=Препарат],input[placeholder*=едикам]');for(var i=0;i<inps.length;i++){if(!inps[i].value){inps[i].value=`__MED__`;inps[i].dispatchEvent(new Event('input',{bubbles:true}));return inps[i].id||true;}}return null;})()")
+wait(0.2)
+click_sel('[data-fn=saveHealthCardFromModal]')
+wait(0.8)
+card_with_med = js("(function(){var c=JSON.parse(localStorage.getItem('nm_health_cards')||'[]');var f=c.find(function(x){return x.name===`__CARD__`;});return f?(f.medications||[]).length:0;})()")
+js("(function(){var c=JSON.parse(localStorage.getItem('nm_health_cards')||'[]');localStorage.setItem('nm_health_cards',JSON.stringify(c.filter(function(x){return x.name!==`__CARD__`;})));})()")
+errs = get_console_errs()
+print(_json.dumps({"med_rows_before":med_rows_before,"med_rows_after":med_rows_after,"med_input_found":med_input_found,"card_with_med":card_with_med,"errors":errs[:3]}))
+'''
+    payload = payload.replace("__URL__", repr(NEVERMIND_URL))
+    payload = payload.replace("__CARD__", card_name)
+    payload = payload.replace("__MED__", med_name)
+    try:
+        r = bh(payload, timeout=60)
+        if r.get("med_rows_after", 0) <= r.get("med_rows_before", 0):
+            return _result("test-27-health-medication", False, f"MED_ROW_NOT_ADDED: before={r.get('med_rows_before')} after={r.get('med_rows_after')}")
+        if not r.get("med_input_found"):
+            return _result("test-27-health-medication", False, "MED_INPUT_NOT_FOUND: жодне input медикаменту не відповідає очікуваним selector'ам")
+        if r.get("card_with_med", 0) < 1:
+            return _result("test-27-health-medication", False, f"MED_NOT_SAVED: card.medications.length={r.get('card_with_med')}")
+        if r["errors"]:
+            return _result("test-27-health-medication", False, f"console.error: {r['errors']}")
+        return _result("test-27-health-medication", True)
+    except Exception as e:
+        return _result("test-27-health-medication", False, f"EXCEPTION: {e}")
+
+
 # --- AI command execution (опційно, з tester-commands.md) ---------------------
 SYSTEM_PROMPT = """Ти — AI-тестувальник NeverMind PWA. Користувач описує сценарій українською.
 Поверни ТIЛЬКИ Python-код для browser-harness CDP (без markdown fence, без пояснень).
