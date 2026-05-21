@@ -1123,6 +1123,196 @@ print(_json.dumps({"addStepFn_type":addStepFn_type,"steps_in_modal":steps_in_lis
         return _result("test-16-tasks-steps", False, f"EXCEPTION: {e}")
 
 
+# === Batch 3 (Ug2Jw 21.05.2026) — Notes + Habits UI scenarios =================
+
+@scenario("ui")
+def test_17_notes_add():
+    """Notes → ➕ → fill textarea → Save → нотатка у списку (DOM assertion)."""
+    text = "AI-T Note " + datetime.datetime.now(datetime.timezone.utc).strftime('%H%M%S')
+    payload = '''
+inject_error_capture()
+goto_url(__URL__)
+wait(2.0)
+inject_error_capture()
+click_sel('[data-tab=notes]')
+wait(0.5)
+click_sel('[data-fn=openAddNote]')
+wait(0.6)
+modal_visible = js("(function(){var o=document.getElementById('note-modal');return !!o && getComputedStyle(o).display!=='none';})()")
+js("(function(){var el=document.getElementById('note-input-text');el.value=`__TEXT__`;el.dispatchEvent(new Event('input',{bubbles:true}));})()")
+wait(0.2)
+click_sel('[data-fn=saveNote]')
+wait(0.8)
+modal_closed = js("(function(){var o=document.getElementById('note-modal');return !o || getComputedStyle(o).display==='none';})()")
+note_in_list = js("(function(){return (document.body.textContent||'').indexOf(`__TEXT__`)>=0;})()")
+js("(function(){var n=JSON.parse(localStorage.getItem('nm_notes')||'[]');localStorage.setItem('nm_notes',JSON.stringify(n.filter(function(x){return (x.text||x.body||'').indexOf(`__TEXT__`)===-1;})));})()")
+errs = get_console_errs()
+print(_json.dumps({"modal_visible":bool(modal_visible),"modal_closed":bool(modal_closed),"note_in_list":bool(note_in_list),"errors":errs[:3]}))
+'''
+    payload = payload.replace("__URL__", repr(NEVERMIND_URL))
+    payload = payload.replace("__TEXT__", text)
+    try:
+        r = bh(payload, timeout=60)
+        if not r["modal_visible"]:
+            return _result("test-17-notes-add", False, "MODAL_NOT_OPEN: #note-modal не відкрилась")
+        if not r["modal_closed"]:
+            return _result("test-17-notes-add", False, "MODAL_NOT_CLOSED: після saveNote модалка залишилась")
+        if not r["note_in_list"]:
+            return _result("test-17-notes-add", False, f"NOTE_NOT_VISIBLE: текст {text!r} не з'явився у DOM")
+        if r["errors"]:
+            return _result("test-17-notes-add", False, f"console.error: {r['errors']}")
+        return _result("test-17-notes-add", True)
+    except Exception as e:
+        return _result("test-17-notes-add", False, f"EXCEPTION: {e}")
+
+
+@scenario("ui")
+def test_18_notes_edit():
+    """Створити нотатку → tap [data-action=open-note] → edit → save → новий текст у списку."""
+    orig = "AI-T Edit Note " + datetime.datetime.now(datetime.timezone.utc).strftime('%H%M%S')
+    new = orig + " UPDATED"
+    payload = '''
+inject_error_capture()
+goto_url(__URL__)
+wait(2.0)
+inject_error_capture()
+click_sel('[data-tab=notes]')
+wait(0.5)
+click_sel('[data-fn=openAddNote]')
+wait(0.6)
+js("(function(){var el=document.getElementById('note-input-text');el.value=`__ORIG__`;el.dispatchEvent(new Event('input',{bubbles:true}));})()")
+wait(0.2)
+click_sel('[data-fn=saveNote]')
+wait(0.8)
+note_id = js("(function(){var n=JSON.parse(localStorage.getItem('nm_notes')||'[]');var f=n.find(function(x){return (x.text||x.body||'').indexOf(`__ORIG__`)>=0;});return f?f.id:null;})()")
+if not note_id:
+    print(_json.dumps({"step":"create_failed","note_id":note_id}))
+    raise SystemExit(0)
+click_sel('[data-action=open-note][data-id="' + str(note_id) + '"]')
+wait(0.6)
+edit_modal_visible = js("(function(){var o=document.getElementById('note-modal');return !!o && getComputedStyle(o).display!=='none';})()")
+input_prefilled = js("(function(){var el=document.getElementById('note-input-text');return el?el.value:null;})()")
+js("(function(){var el=document.getElementById('note-input-text');el.value=`__NEW__`;el.dispatchEvent(new Event('input',{bubbles:true}));})()")
+wait(0.2)
+click_sel('[data-fn=saveNote]')
+wait(0.8)
+list_has_new = js("(function(){return (document.body.textContent||'').indexOf(`__NEW__`)>=0;})()")
+js("(function(){var n=JSON.parse(localStorage.getItem('nm_notes')||'[]');localStorage.setItem('nm_notes',JSON.stringify(n.filter(function(x){var t=x.text||x.body||'';return t.indexOf(`__NEW__`)===-1 && t.indexOf(`__ORIG__`)===-1;})));})()")
+errs = get_console_errs()
+print(_json.dumps({"step":"complete","note_id":str(note_id),"edit_modal_visible":bool(edit_modal_visible),"input_prefilled_has_orig":bool(input_prefilled and `__ORIG__` in input_prefilled),"list_has_new":bool(list_has_new),"errors":errs[:3]}))
+'''.replace("`__ORIG__`", repr(orig)).replace("`__NEW__`", repr(new))
+    payload = payload.replace("__URL__", repr(NEVERMIND_URL))
+    payload = payload.replace("__ORIG__", orig)
+    payload = payload.replace("__NEW__", new)
+    try:
+        r = bh(payload, timeout=90)
+        if r.get("step") == "create_failed":
+            return _result("test-18-notes-edit", False, "CREATE_FAILED: нотатка не створилась перед edit")
+        if not r.get("edit_modal_visible"):
+            return _result("test-18-notes-edit", False, "EDIT_MODAL_NOT_OPEN: open-note не відкрив edit-модалку")
+        if not r.get("input_prefilled_has_orig"):
+            return _result("test-18-notes-edit", False, "EDIT_INPUT_NOT_PREFILLED: textarea не містить оригінальний текст")
+        if not r.get("list_has_new"):
+            return _result("test-18-notes-edit", False, "LIST_NOT_UPDATED: новий текст не зявився у DOM")
+        if r.get("errors"):
+            return _result("test-18-notes-edit", False, f"console.error: {r['errors']}")
+        return _result("test-18-notes-edit", True)
+    except Exception as e:
+        return _result("test-18-notes-edit", False, f"EXCEPTION: {e}")
+
+
+@scenario("ui")
+def test_19_habits_add():
+    """Tasks tab → switch-prod-tab=habits → ➕ → fill habit name → Save → habit у списку."""
+    name = "AI-T Habit " + datetime.datetime.now(datetime.timezone.utc).strftime('%H%M%S')
+    payload = '''
+inject_error_capture()
+goto_url(__URL__)
+wait(2.0)
+inject_error_capture()
+click_sel('[data-tab=tasks]')
+wait(0.5)
+click_sel('[data-action=switch-prod-tab][data-tab=habits]')
+wait(0.5)
+prod_btn_fn = js("(function(){var b=document.getElementById('prod-add-btn');return b?b.getAttribute('data-fn'):null;})()")
+click_sel('#prod-add-btn')
+wait(0.7)
+modal_visible = js("(function(){var o=document.getElementById('habit-modal');return !!o && getComputedStyle(o).display!=='none';})()")
+js("(function(){var el=document.getElementById('habit-input-name');el.value=`__NAME__`;el.dispatchEvent(new Event('input',{bubbles:true}));})()")
+wait(0.2)
+click_sel('[data-fn=saveHabit]')
+wait(0.8)
+habit_in_storage = js("(function(){var h=JSON.parse(localStorage.getItem('nm_habits2')||'[]');return h.some(function(x){return x.name===`__NAME__`;});})()")
+habit_in_dom = js("(function(){return (document.body.textContent||'').indexOf(`__NAME__`)>=0;})()")
+js("(function(){var h=JSON.parse(localStorage.getItem('nm_habits2')||'[]');localStorage.setItem('nm_habits2',JSON.stringify(h.filter(function(x){return x.name!==`__NAME__`;})));})()")
+errs = get_console_errs()
+print(_json.dumps({"prod_btn_fn":prod_btn_fn,"modal_visible":bool(modal_visible),"habit_in_storage":bool(habit_in_storage),"habit_in_dom":bool(habit_in_dom),"errors":errs[:3]}))
+'''
+    payload = payload.replace("__URL__", repr(NEVERMIND_URL))
+    payload = payload.replace("__NAME__", name)
+    try:
+        r = bh(payload, timeout=60)
+        if r.get("prod_btn_fn") != "openAddHabit":
+            return _result("test-19-habits-add", False, f"PROD_TAB_NOT_SWITCHED: prod-add-btn data-fn={r.get('prod_btn_fn')!r} (expected openAddHabit)")
+        if not r["modal_visible"]:
+            return _result("test-19-habits-add", False, "HABIT_MODAL_NOT_OPEN")
+        if not r["habit_in_storage"]:
+            return _result("test-19-habits-add", False, "HABIT_NOT_SAVED: nm_habits2 не містить нову звичку")
+        if not r["habit_in_dom"]:
+            return _result("test-19-habits-add", False, "HABIT_NOT_IN_DOM: звичка не відображається у списку Me/Habits")
+        if r["errors"]:
+            return _result("test-19-habits-add", False, f"console.error: {r['errors']}")
+        return _result("test-19-habits-add", True)
+    except Exception as e:
+        return _result("test-19-habits-add", False, f"EXCEPTION: {e}")
+
+
+@scenario("ui")
+def test_20_habits_toggle_done():
+    """Створити звичку → tap [toggle-entity-done] → counter збільшується (через delegation, не touch-detect)."""
+    name = "AI-T Toggle " + datetime.datetime.now(datetime.timezone.utc).strftime('%H%M%S')
+    payload = '''
+inject_error_capture()
+goto_url(__URL__)
+wait(2.0)
+inject_error_capture()
+click_sel('[data-tab=tasks]')
+wait(0.4)
+click_sel('[data-action=switch-prod-tab][data-tab=habits]')
+wait(0.4)
+click_sel('#prod-add-btn')
+wait(0.7)
+js("(function(){var el=document.getElementById('habit-input-name');el.value=`__NAME__`;el.dispatchEvent(new Event('input',{bubbles:true}));})()")
+wait(0.2)
+click_sel('[data-fn=saveHabit]')
+wait(0.8)
+habit_id = js("(function(){var h=JSON.parse(localStorage.getItem('nm_habits2')||'[]');var f=h.find(function(x){return x.name===`__NAME__`;});return f?f.id:null;})()")
+if not habit_id:
+    print(_json.dumps({"step":"create_failed"}))
+    raise SystemExit(0)
+log_before = js("(function(){try{var l=JSON.parse(localStorage.getItem('nm_habit_log2')||'{}');return l['" + str(habit_id) + "']?Object.keys(l['" + str(habit_id) + "']).length:0;}catch(e){return -1;}})()")
+click_sel('[data-action=toggle-entity-done][data-entity=habit-prod][data-id="' + str(habit_id) + '"]')
+wait(0.6)
+log_after = js("(function(){try{var l=JSON.parse(localStorage.getItem('nm_habit_log2')||'{}');return l['" + str(habit_id) + "']?Object.keys(l['" + str(habit_id) + "']).length:0;}catch(e){return -1;}})()")
+js("(function(){var h=JSON.parse(localStorage.getItem('nm_habits2')||'[]');localStorage.setItem('nm_habits2',JSON.stringify(h.filter(function(x){return x.name!==`__NAME__`;})));try{var l=JSON.parse(localStorage.getItem('nm_habit_log2')||'{}');delete l['" + str(habit_id) + "'];localStorage.setItem('nm_habit_log2',JSON.stringify(l));}catch(e){}})()")
+errs = get_console_errs()
+print(_json.dumps({"step":"complete","habit_id":str(habit_id),"log_before":log_before,"log_after":log_after,"errors":errs[:3]}))
+'''
+    payload = payload.replace("__URL__", repr(NEVERMIND_URL))
+    payload = payload.replace("__NAME__", name)
+    try:
+        r = bh(payload, timeout=60)
+        if r.get("step") == "create_failed":
+            return _result("test-20-habits-toggle", False, "CREATE_FAILED: звичка не створилась")
+        if r.get("log_after", -1) <= r.get("log_before", 0):
+            return _result("test-20-habits-toggle", False, f"TOGGLE_NO_EFFECT: log_before={r.get('log_before')} log_after={r.get('log_after')}")
+        if r.get("errors"):
+            return _result("test-20-habits-toggle", False, f"console.error: {r['errors']}")
+        return _result("test-20-habits-toggle", True)
+    except Exception as e:
+        return _result("test-20-habits-toggle", False, f"EXCEPTION: {e}")
+
+
 # --- AI command execution (опційно, з tester-commands.md) ---------------------
 SYSTEM_PROMPT = """Ти — AI-тестувальник NeverMind PWA. Користувач описує сценарій українською.
 Поверни ТIЛЬКИ Python-код для browser-harness CDP (без markdown fence, без пояснень).
