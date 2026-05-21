@@ -287,3 +287,10 @@ SyntaxError: leading zeros in decimal integer literals are not permitted; use an
 ## 2026-05-21 04:46 UTC · vnm-20260520-2100 · 1/2 pass
 - ✅ `test-3-create-task`: ok
 - ❌ `test-4-backup-create`: NO_BACKUP: seed_ok=True seed_backups_removed=1 call_ok=True ret=undefined keys_arg=54 snap_count=8 snap_sample=['nm_inbox', 'nm_tasks', 'nm_settings', 'nm_onboarding_done', 'nm_last_active', 'nm_last_active_day', 'nm_seen_update', 'nm_chat_inbox'] hasData=True b4_call=0 af_call=1 err=None NM_KEYS_data_len=20 settings_val='{}' tasks_val='[]' ls_keys=49 ls_sample=['setItem', 'nm_seen_update', 'nm_last_active_day', 'nm_visited_inbox', 'nm_last_active', 'nm_chips_v10_done_ts', 'nm_steps_uuid_migrated_v17', 'nm_owl_board_unified', 'nm_inbox', 'nm_owl_tab_ts_notes', 'nm_board_clean_pji7l_done', 'nm_settings', 'nm_owl_tab_ts_tasks', 'nm_owl_silence_reset_v5', 'nm_notes_uuid_migrated_v11'] ls_size_kb=36 keys_b=0 keys_a=0 errs=[] log=[{'ts': 1779338763472, 'type': 'warn', 'msg': '[NM_KEYS] Знайдено 1 nm_* ключ(ів) поза реєстром.\nДодай у NM_KEYS у boot.js (data/settings/chat/cache/patterns):\n  - nm_chat\nІнакше clearAllData() їх не видалить + Supabase backup пропустить.', 'src': '', 'tab': 'inbox', 'stack': None, 'actions': []}, {'ts': 1779338768045, 'type': 'warn', 'msg': '[NM_KEYS] Знайдено 1 nm_* ключ(ів) поза реєстром.\nДодай у NM_KEYS у boot.js (data/settings/chat/cache/patterns):\n  - nm_chat\nІнакше clearAllData() їх не видалить + Supabase backup пропустить.', 'src': '', 'tab': 'inbox', 'stack': None, 'actions': []}, {'ts': 1779338770697, 'type': 'warn', 'msg': '[NM_KEYS] Знайдено 1 nm_* ключ(ів) поза реєстром.\nДодай у NM_KEYS у boot.js (data/settings/chat/cache/patterns):\n  - nm_chat\nІнакше clearAllData() їх не видалить + Supabase backup пропустить.', 'src': '', 'tab': 'inbox', 'stack': None, 'actions': []}]
+
+## 2026-05-21 04:55 UTC · vnm-20260520-2100 · 5/5 pass
+- ✅ `test-1-boot-health`: ok
+- ✅ `test-2-navigation`: ok
+- ✅ `test-3-create-task`: ok
+- ✅ `test-5-trash-restore`: ok
+- ✅ `test-8-clear-data`: ok
