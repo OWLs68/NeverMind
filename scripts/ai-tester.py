@@ -1647,6 +1647,44 @@ print(_json.dumps({
 # === Inbox systematic coverage (Ug2Jw post-audit, Roman 21.05) ================
 
 @scenario("ui")
+def test_31_inbox_owl_toggle():
+    """Inbox → tap [data-action=toggle-owl-collapsed][data-tab=inbox] → handler
+    спрацьовує без console.error → state stays/becomes speech (нема падіння).
+
+    Покриває data-action="toggle-owl-collapsed" delegation chain → toggleOwlTabChat.
+    Note: toggleOwlTabChat завжди ставить 'speech' (не справжній toggle), тож тест
+    smoke на handler chain integrity, не branch logic.
+    """
+    payload = '''
+inject_error_capture()
+goto_url(__URL__)
+wait(2.0)
+inject_error_capture()
+click_sel('[data-tab=inbox]')
+wait(0.4)
+collapsed_el_exists = js("(function(){return !!document.getElementById('owl-tab-collapsed-inbox');})()")
+speech_el_exists = js("(function(){return !!document.getElementById('owl-tab-speech-inbox');})()")
+toggle_fn_type = js("typeof window.toggleOwlTabChat")
+click_sel('[data-action=toggle-owl-collapsed][data-tab=inbox]')
+wait(0.4)
+speech_display = js("(function(){var s=document.getElementById('owl-tab-speech-inbox');return s?getComputedStyle(s).display:null;})()")
+errs = get_console_errs()
+print(_json.dumps({"collapsed_el_exists":bool(collapsed_el_exists),"speech_el_exists":bool(speech_el_exists),"toggle_fn_type":toggle_fn_type,"speech_display":speech_display,"errors":errs[:3]}))
+'''.replace("__URL__", repr(NEVERMIND_URL))
+    try:
+        r = bh(payload, timeout=60)
+        if r.get("toggle_fn_type") != "function":
+            return _result("test-31-inbox-owl-toggle", False, f"WINDOW_EXPORT_MISSING: toggleOwlTabChat type={r.get('toggle_fn_type')}")
+        if not r.get("collapsed_el_exists") or not r.get("speech_el_exists"):
+            return _result("test-31-inbox-owl-toggle", False, f"OWL_BOARD_ELEMENTS_MISSING: collapsed={r.get('collapsed_el_exists')} speech={r.get('speech_el_exists')}")
+        if r["errors"]:
+            return _result("test-31-inbox-owl-toggle", False, f"HANDLER_THREW: console.error={r['errors']}")
+        return _result("test-31-inbox-owl-toggle", True)
+    except Exception as e:
+        return _result("test-31-inbox-owl-toggle", False, f"EXCEPTION: {e}")
+
+
+@scenario("ui")
 def test_30_inbox_chat_bar_close():
     """Inbox → window.openChatBar('inbox') → #inbox-chat-window.open class is added →
     tap [data-action=close-chat-bar][data-tab=inbox] → .open class видалено.
