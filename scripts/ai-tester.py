@@ -1167,10 +1167,13 @@ print(_json.dumps({"modal_visible":bool(modal_visible),"modal_closed":bool(modal
 
 
 @scenario("ui")
-def test_18_notes_edit():
-    """Створити нотатку → tap [data-action=open-note] → edit → save → новий текст у списку."""
-    orig = "AI-T Edit Note " + datetime.datetime.now(datetime.timezone.utc).strftime('%H%M%S')
-    new = orig + " UPDATED"
+def test_18_notes_view():
+    """Створити нотатку → tap [data-action=open-note] → відкриває #note-view-modal (read-only).
+
+    Виправлено Ug2Jw: open-note → openNoteView, не openEditNote. Edit flow окремий
+    (через menu з view-modal) — covered separately якщо потрібно.
+    """
+    text = "AI-T View Note " + datetime.datetime.now(datetime.timezone.utc).strftime('%H%M%S')
     payload = '''
 inject_error_capture()
 goto_url(__URL__)
@@ -1180,45 +1183,37 @@ click_sel('[data-tab=notes]')
 wait(0.5)
 click_sel('[data-fn=openAddNote]')
 wait(0.6)
-js("(function(){var el=document.getElementById('note-input-text');el.value=`__ORIG__`;el.dispatchEvent(new Event('input',{bubbles:true}));})()")
+js("(function(){var el=document.getElementById('note-input-text');el.value=`__TEXT__`;el.dispatchEvent(new Event('input',{bubbles:true}));})()")
 wait(0.2)
 click_sel('[data-fn=saveNote]')
 wait(0.8)
-note_id = js("(function(){var n=JSON.parse(localStorage.getItem('nm_notes')||'[]');var f=n.find(function(x){return (x.text||x.body||'').indexOf(`__ORIG__`)>=0;});return f?f.id:null;})()")
+note_id = js("(function(){var n=JSON.parse(localStorage.getItem('nm_notes')||'[]');var f=n.find(function(x){return (x.text||x.body||'').indexOf(`__TEXT__`)>=0;});return f?f.id:null;})()")
 if not note_id:
-    print(_json.dumps({"step":"create_failed","note_id":note_id}))
+    print(_json.dumps({"step":"create_failed"}))
     raise SystemExit(0)
 click_sel('[data-action=open-note][data-id="' + str(note_id) + '"]')
 wait(0.6)
-edit_modal_visible = js("(function(){var o=document.getElementById('note-modal');return !!o && getComputedStyle(o).display!=='none';})()")
-input_prefilled = js("(function(){var el=document.getElementById('note-input-text');return el?el.value:null;})()")
-js("(function(){var el=document.getElementById('note-input-text');el.value=`__NEW__`;el.dispatchEvent(new Event('input',{bubbles:true}));})()")
-wait(0.2)
-click_sel('[data-fn=saveNote]')
-wait(0.8)
-list_has_new = js("(function(){return (document.body.textContent||'').indexOf(`__NEW__`)>=0;})()")
-js("(function(){var n=JSON.parse(localStorage.getItem('nm_notes')||'[]');localStorage.setItem('nm_notes',JSON.stringify(n.filter(function(x){var t=x.text||x.body||'';return t.indexOf(`__NEW__`)===-1 && t.indexOf(`__ORIG__`)===-1;})));})()")
+view_modal_visible = js("(function(){var o=document.getElementById('note-view-modal');return !!o && getComputedStyle(o).display!=='none';})()")
+view_text = js("(function(){var el=document.getElementById('note-view-text');return el?(el.textContent||el.value||''):null;})()")
+js("(function(){var n=JSON.parse(localStorage.getItem('nm_notes')||'[]');localStorage.setItem('nm_notes',JSON.stringify(n.filter(function(x){return (x.text||x.body||'').indexOf(`__TEXT__`)===-1;})));})()")
 errs = get_console_errs()
-print(_json.dumps({"step":"complete","note_id":str(note_id),"edit_modal_visible":bool(edit_modal_visible),"input_prefilled_has_orig":bool(input_prefilled and `__ORIG__` in input_prefilled),"list_has_new":bool(list_has_new),"errors":errs[:3]}))
-'''.replace("`__ORIG__`", repr(orig)).replace("`__NEW__`", repr(new))
+print(_json.dumps({"step":"complete","note_id":str(note_id),"view_modal_visible":bool(view_modal_visible),"view_text_contains_orig":bool(view_text and `__TEXT__` in view_text),"errors":errs[:3]}))
+'''.replace("`__TEXT__`", repr(text))
     payload = payload.replace("__URL__", repr(NEVERMIND_URL))
-    payload = payload.replace("__ORIG__", orig)
-    payload = payload.replace("__NEW__", new)
+    payload = payload.replace("__TEXT__", text)
     try:
-        r = bh(payload, timeout=90)
+        r = bh(payload, timeout=60)
         if r.get("step") == "create_failed":
-            return _result("test-18-notes-edit", False, "CREATE_FAILED: нотатка не створилась перед edit")
-        if not r.get("edit_modal_visible"):
-            return _result("test-18-notes-edit", False, "EDIT_MODAL_NOT_OPEN: open-note не відкрив edit-модалку")
-        if not r.get("input_prefilled_has_orig"):
-            return _result("test-18-notes-edit", False, "EDIT_INPUT_NOT_PREFILLED: textarea не містить оригінальний текст")
-        if not r.get("list_has_new"):
-            return _result("test-18-notes-edit", False, "LIST_NOT_UPDATED: новий текст не зявився у DOM")
+            return _result("test-18-notes-view", False, "CREATE_FAILED")
+        if not r.get("view_modal_visible"):
+            return _result("test-18-notes-view", False, "VIEW_MODAL_NOT_OPEN: open-note не відкрив #note-view-modal")
+        if not r.get("view_text_contains_orig"):
+            return _result("test-18-notes-view", False, "VIEW_TEXT_MISSING: оригінальний текст не у note-view-text")
         if r.get("errors"):
-            return _result("test-18-notes-edit", False, f"console.error: {r['errors']}")
-        return _result("test-18-notes-edit", True)
+            return _result("test-18-notes-view", False, f"console.error: {r['errors']}")
+        return _result("test-18-notes-view", True)
     except Exception as e:
-        return _result("test-18-notes-edit", False, f"EXCEPTION: {e}")
+        return _result("test-18-notes-view", False, f"EXCEPTION: {e}")
 
 
 @scenario("ui")
