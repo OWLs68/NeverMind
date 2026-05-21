@@ -262,3 +262,16 @@ RuntimeError: JavaScript evaluation failed at line 0, column 93: SyntaxError: mi
   File "/home/nmtester/browser-harness/src/browser_harness/helpers.py", line 104, in _runtime_value
     raise RuntimeError(f"JavaScript evaluation failed{loc}: {desc}; expression: {_js_snippet(expression)}")
 RuntimeError: JavaScript evaluation failed at line 0, column 244: SyntaxError: Invalid or unexpected token; expression: (function(){try{var r=window.createFullBackupUI?window.createFullBackupUI():"NO_FN";return {ok:true,return_val:typeof r==="object"?JSON.stringify(r):String(r...
+
+## 2026-05-21 04:26 UTC · vnm-20260520-2100 · 0/2 pass
+- ❌ `test-3-create-task`: EXCEPTION: bh exit 1: Traceback (most recent call last):
+  File "/home/nmtester/.local/bin/browser-harness", line 10, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/home/nmtester/browser-harness/src/browser_harness/run.py", line 125, in main
+    exec(code, globals())
+  File "<string>", line 99
+    js("var __t=JSON.parse(localStorage.getItem('nm_tasks')||'[]');localStorage.setItem('nm_tasks',JSON.stringify(__t.filter(function(x){return x.title!=="AI-Tester 20260521-042603";})));")
+                                                                                                                                                                              ^
+SyntaxError: leading zeros in decimal integer literals are not permitted; use an 0o prefix for octal integers
+- ❌ `test-4-backup-create`: NO_BACKUP: UI_fn=function BE_fn=undefined call_ok=True ret=undefined err=None settings_len=0 keys_b=3 keys_a=0 errs=[] log=[{'ts': 1779336180046, 'type': 'log', 'msg': '[brain-pulse] skip: no-api-key', 'src': '', 'tab': 'inbox', 'stack': None, 'actions': []}, {'ts': 1779336780046, 'type': 'log', 'msg': '[brain-pulse] skip: no-api-key', 'src': '', 'tab': 'inbox', 'stack': None, 'actions': []}, {'ts': 1779337136346, 'type': 'log', 'msg': '[brain-pulse] skip: no-api-key', 'src': '', 'tab': 'inbox', 'stack': None, 'actions': []}]

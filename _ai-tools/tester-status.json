@@ -1,13 +1,13 @@
 {
   "_comment": "Stamped by ai-tester.py. NM-Claude reads at /start.",
-  "last_run_utc": "2026-05-21T04:18:09.898002Z",
+  "last_run_utc": "2026-05-21T04:26:07.171173Z",
   "tester_version": "0.2.0-HKnlM-20.05.2026",
   "ai_tester_app_version": "nm-20260520-2100",
   "summary": {
     "date_utc": "2026-05-21",
-    "total_runs_today": 1,
+    "total_runs_today": 2,
     "passed_today": 0,
-    "failed_today": 2,
+    "failed_today": 4,
     "openai_spent_today_usd": 0.0,
     "openai_budget_remaining_usd": 2.0
   },
@@ -16,15 +16,15 @@
       "test_name": "test-3-create-task",
       "fail_reason": "EXCEPTION: bh exit 1: Traceback (most recent call last):\n  File \"/home/nmtester/.local/bin/browser-harness\", line 10, in <module>\n    sys.exit(main())\n             ^^^^^^\n  File \"/home/nmtester/browser-harness/src/browser_harness/run.py\", line 125, in main\n    exec(code, globals())\n  File \"<string>\"",
       "category": "smoke",
-      "ts_utc": "2026-05-21T04:18:06.816089Z",
-      "screenshot_path": "/home/nmtester/screenshots/test-3-create-task-20260521-041806.png"
+      "ts_utc": "2026-05-21T04:26:03.405176Z",
+      "screenshot_path": "/home/nmtester/screenshots/test-3-create-task-20260521-042603.png"
     },
     {
       "test_name": "test-4-backup-create",
-      "fail_reason": "EXCEPTION: bh exit 1: Traceback (most recent call last):\n  File \"/home/nmtester/.local/bin/browser-harness\", line 10, in <module>\n    sys.exit(main())\n             ^^^^^^\n  File \"/home/nmtester/browser-harness/src/browser_harness/run.py\", line 125, in main\n    exec(code, globals())\n  File \"<string>\"",
+      "fail_reason": "NO_BACKUP: UI_fn=function BE_fn=undefined call_ok=True ret=undefined err=None settings_len=0 keys_b=3 keys_a=0 errs=[] log=[{'ts': 1779336180046, 'type': 'log', 'msg': '[brain-pulse] skip: no-api-key', 'src': '', 'tab': 'inbox', 'stack': None, 'actions': []}, {'ts': 1779336780046, 'type': 'log', 'ms",
       "category": "smoke",
-      "ts_utc": "2026-05-21T04:18:09.636736Z",
-      "screenshot_path": "/home/nmtester/screenshots/test-4-backup-create-20260521-041809.png"
+      "ts_utc": "2026-05-21T04:26:06.944119Z",
+      "screenshot_path": "/home/nmtester/screenshots/test-4-backup-create-20260521-042606.png"
     }
   ],
   "warnings": []
