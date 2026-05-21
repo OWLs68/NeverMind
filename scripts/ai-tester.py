@@ -1553,7 +1553,7 @@ med_rows_before = js("(function(){var rows=document.querySelectorAll('.health-me
 click_sel('[data-fn=addHealthMedicationRow]')
 wait(0.4)
 med_rows_after = js("(function(){var rows=document.querySelectorAll('.health-med-row, [data-med-row]');return rows.length;})()")
-med_input_found = js("(function(){var inps=document.querySelectorAll('input[id*=med-name],input[placeholder*=Препарат],input[placeholder*=едикам]');for(var i=0;i<inps.length;i++){if(!inps[i].value){inps[i].value=`__MED__`;inps[i].dispatchEvent(new Event('input',{bubbles:true}));return inps[i].id||true;}}return null;})()")
+med_input_found = js("(function(){var inps=document.querySelectorAll('input.med-name');for(var i=0;i<inps.length;i++){if(!inps[i].value){inps[i].value=`__MED__`;inps[i].dispatchEvent(new Event('input',{bubbles:true}));return inps[i].className||true;}}return null;})()")
 wait(0.2)
 click_sel('[data-fn=saveHealthCardFromModal]')
 wait(0.8)
