@@ -499,43 +499,86 @@ def test_3_create_task_persistence():
     Унікальний title з timestamp щоб НЕ false-pass з минулих запусків
     (стара "Тестова задача AI" могла залишитись у nm_tasks). У кінці —
     видалити саме цю задачу через JS щоб localStorage не ріс.
+
+    Ug2Jw debug: рясні diagnostics поля у JSON output щоб без SSH-скрінів
+    бачити чому saveTask мовчить (HKnlM хвіст).
     """
     unique_title = f"AI-Tester {datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%d-%H%M%S')}"
-    title_js = json.dumps(unique_title)  # JS string literal з лапками
-    try:
-        r = bh(f"""
+    title_js = json.dumps(unique_title)
+    payload = """
+inject_error_capture()
+goto_url(__URL__)
+wait(2.0)
 inject_error_capture()
 click_sel('[data-tab="tasks"]')
 wait(0.5)
 click_sel('#prod-add-btn')
-# Pre-mortem Implementer: openAddTask setTimeout 350мс перед знятям readonly.
-# Збільшено до 0.8 бо tab switch + modal show мають додаткову анімацію.
 wait(0.8)
-# Debug: перевірити що input ready (readonly знятий, visible)
-input_ready = js('(function(){{var i=document.getElementById("task-input-title");return !!i && !i.readOnly && i.offsetParent!==null;}})()')
+# Ug2Jw debug: масовий dump стану перед fill_input
+diag_pre = js('(function(){var i=document.getElementById("task-input-title");var btn=document.querySelector("button[data-fn=\\"saveTask\\"]");var ov=document.getElementById("task-overlay");return {input_exists:!!i,input_readonly:i?i.readOnly:null,input_visible:i?i.offsetParent!==null:null,save_btn_exists:!!btn,save_btn_count:document.querySelectorAll("button[data-fn=\\"saveTask\\"]").length,overlay_exists:!!ov,overlay_visible:ov?getComputedStyle(ov).display!=="none":null,saveTask_fn_type:typeof window.saveTask,addTask_fn_type:typeof window.addTask};})()')
+input_ready = diag_pre and diag_pre.get('input_exists') and not diag_pre.get('input_readonly') and diag_pre.get('input_visible')
+before_count = _json.loads(get_ls('nm_tasks') or '[]')
+before_count = len(before_count) if isinstance(before_count, list) else -1
 if not input_ready:
-    print(_json.dumps({{"before_has": False, "after_has": False, "debug": "input не ready (readonly або hidden)"}}))
+    errs_pre = get_console_errs()[:3]
+    print(_json.dumps({"step":"input_not_ready","diag_pre":diag_pre,"before_count":before_count,"console_errors":errs_pre}))
     raise SystemExit(0)
-fill_input('#task-input-title', {unique_title!r})
+fill_input('#task-input-title', __TITLE_REPR__)
 wait(0.2)
+input_value = js('document.getElementById("task-input-title").value')
 click_sel('button[data-fn="saveTask"]')
 wait(1.2)
-before = get_ls('nm_tasks') or '[]'
-goto_url({NEVERMIND_URL!r})
+before_raw = get_ls('nm_tasks') or '[]'
+before_arr = _json.loads(before_raw)
+before_titles = [x.get('title','') for x in before_arr] if isinstance(before_arr,list) else []
+title_in_before = __TITLE_PY__ in before_titles
+errs_after_save = get_console_errs()[:5]
+err_log_raw = get_ls('nm_error_log') or '[]'
+try:
+    err_log = _json.loads(err_log_raw)
+    err_log_tail = err_log[-3:] if isinstance(err_log,list) else []
+except Exception:
+    err_log_tail = []
+# Reload
+goto_url(__URL__)
 wait(2.5)
 inject_error_capture()
-after = get_ls('nm_tasks') or '[]'
-# Pre-mortem #3 cleanup: видалити саме цю задачу щоб localStorage не ріс за тижні
-js('var __t=JSON.parse(localStorage.getItem("nm_tasks")||"[]");localStorage.setItem("nm_tasks",JSON.stringify(__t.filter(function(x){{return x.title!=={title_js};}})));')
-print(_json.dumps({{
-    "before_has": {unique_title!r} in before,
-    "after_has": {unique_title!r} in after,
-}}))
-""")
-        if not r["before_has"]:
-            return _result("test-3-create-task", False, "ASSERTION_FAIL: задача не зявилась у nm_tasks")
-        if not r["after_has"]:
-            return _result("test-3-create-task", False, "PERSISTENCE_FAIL: задача зникла після reload")
+after_raw = get_ls('nm_tasks') or '[]'
+after_arr = _json.loads(after_raw)
+after_titles = [x.get('title','') for x in after_arr] if isinstance(after_arr,list) else []
+title_in_after = __TITLE_PY__ in after_titles
+# Cleanup
+js('var __t=JSON.parse(localStorage.getItem("nm_tasks")||"[]");localStorage.setItem("nm_tasks",JSON.stringify(__t.filter(function(x){return x.title!==__TITLE_JS__;})));')
+print(_json.dumps({
+    "step":"complete",
+    "diag_pre":diag_pre,
+    "input_value_after_fill":input_value,
+    "before_count":len(before_arr) if isinstance(before_arr,list) else -1,
+    "after_count":len(after_arr) if isinstance(after_arr,list) else -1,
+    "title_in_before":title_in_before,
+    "title_in_after":title_in_after,
+    "console_errors":errs_after_save,
+    "nm_error_log_tail":err_log_tail,
+}))
+"""
+    payload = payload.replace("__URL__", repr(NEVERMIND_URL))
+    payload = payload.replace("__TITLE_REPR__", repr(unique_title))
+    payload = payload.replace("__TITLE_PY__", repr(unique_title))
+    payload = payload.replace("__TITLE_JS__", title_js)
+    try:
+        r = bh(payload, timeout=90)
+        # Скорочений summary у reason — повний debug у JSON output (видно у cron.log)
+        if r.get("step") == "input_not_ready":
+            diag = r.get("diag_pre", {}) or {}
+            return _result("test-3-create-task", False,
+                f"INPUT_NOT_READY: input_exists={diag.get('input_exists')} readonly={diag.get('input_readonly')} visible={diag.get('input_visible')} saveTask_fn={diag.get('saveTask_fn_type')} errs={r.get('console_errors')}")
+        if not r.get("title_in_before"):
+            diag = r.get("diag_pre", {}) or {}
+            return _result("test-3-create-task", False,
+                f"NO_WRITE: input_val={r.get('input_value_after_fill')!r} save_btn={diag.get('save_btn_count')} saveTask_fn={diag.get('saveTask_fn_type')} before={r.get('before_count')} errs={r.get('console_errors')} log={r.get('nm_error_log_tail')}")
+        if not r.get("title_in_after"):
+            return _result("test-3-create-task", False,
+                f"PERSISTENCE_FAIL: before_count={r.get('before_count')} after_count={r.get('after_count')} errs={r.get('console_errors')}")
         return _result("test-3-create-task", True)
     except Exception as e:
         return _result("test-3-create-task", False, f"EXCEPTION: {e}")
@@ -548,29 +591,46 @@ def test_4_backup_create():
     Implementer: createFullBackupUI на <div data-action="call" data-fn="...">
     (НЕ <button>). Sync — wait(0.5) досить.
     Pre-mortem #3: cleanup щоб backup не накопичувались (max 3 у backup.js TTL).
+
+    Ug2Jw debug: dump fn_types, return value, error_log, console errors.
     """
-    try:
-        r = bh("""
+    payload = """
 inject_error_capture()
-# Seed (Gemini self-critique OK для backup test): createFullBackup повертає null
-# коли localStorage пустий — це КОРЕКТНО (нічого бекапити). Юзер завжди має
-# хоч nm_settings/nm_tasks — симулюємо мінімальний state для тесту.
+goto_url(__URL__)
+wait(2.0)
+inject_error_capture()
+# Seed: createFullBackup повертає null коли localStorage пустий — потрібен мінімальний state.
 js('if(!localStorage.getItem("nm_settings"))localStorage.setItem("nm_settings","{}");if(!localStorage.getItem("nm_tasks"))localStorage.setItem("nm_tasks","[]");')
-before = int(js('Object.keys(localStorage).filter(function(k){return k.indexOf("nm_backup_")===0;}).length') or 0)
-# Bypass delegation: викликаємо exported function напряму. Tester заповіт
-# не повинен залежати від UI відкриття Settings + reveal-animation.
-fn_type = js('typeof window.createFullBackupUI')
-if fn_type != 'function':
-    print(_json.dumps({"before": before, "after": before, "delta": 0, "debug": "window.createFullBackupUI=" + str(fn_type)}))
-    raise SystemExit(0)
-js('window.createFullBackupUI()')
-wait(0.5)
-after = int(js('Object.keys(localStorage).filter(function(k){return k.indexOf("nm_backup_")===0;}).length') or 0)
-print(_json.dumps({"before": before, "after": after, "delta": after - before}))
-""")
-        if r["delta"] < 1:
+wait(0.3)
+diag = js('(function(){var keys=Object.keys(localStorage);var bk=keys.filter(function(k){return k.indexOf("nm_backup_")===0;});return {createFullBackup_fn:typeof window.createFullBackup,createFullBackupUI_fn:typeof window.createFullBackupUI,nm_settings:localStorage.getItem("nm_settings"),nm_tasks_len:(JSON.parse(localStorage.getItem("nm_tasks")||"[]")).length,backup_keys_before:bk,ls_size_kb:Math.round(JSON.stringify(localStorage).length/1024)};})()')
+# Виклик з try/catch — щоб exception НЕ скривав корінь
+call_result = js('(function(){try{var r=window.createFullBackupUI?window.createFullBackupUI():"NO_FN";return {ok:true,return_val:typeof r==="object"?JSON.stringify(r):String(r)};}catch(e){return {ok:false,err:String(e.message||e),stack:String(e.stack||"").split("\\n").slice(0,3).join(" | ")};}})()')
+wait(0.8)
+after_keys = js('Object.keys(localStorage).filter(function(k){return k.indexOf("nm_backup_")===0;})')
+errs = get_console_errs()[:5]
+err_log_raw = get_ls('nm_error_log') or '[]'
+try:
+    err_log = _json.loads(err_log_raw)
+    err_log_tail = err_log[-3:] if isinstance(err_log,list) else []
+except Exception:
+    err_log_tail = []
+print(_json.dumps({
+    "diag":diag,
+    "call_result":call_result,
+    "backup_keys_after":after_keys,
+    "delta":(len(after_keys) if isinstance(after_keys,list) else 0) - (len(diag.get("backup_keys_before",[])) if isinstance(diag.get("backup_keys_before"),list) else 0),
+    "console_errors":errs,
+    "nm_error_log_tail":err_log_tail,
+}))
+"""
+    payload = payload.replace("__URL__", repr(NEVERMIND_URL))
+    try:
+        r = bh(payload, timeout=60)
+        if r.get("delta", 0) < 1:
+            diag = r.get("diag", {}) or {}
+            call = r.get("call_result", {}) or {}
             return _result("test-4-backup-create", False,
-                          f"ASSERTION_FAIL: backup count {r['before']}->{r['after']} (delta {r['delta']})")
+                f"NO_BACKUP: UI_fn={diag.get('createFullBackupUI_fn')} BE_fn={diag.get('createFullBackup_fn')} call_ok={call.get('ok')} ret={call.get('return_val')} err={call.get('err')} settings_len={len(str(diag.get('nm_settings') or ''))} keys_b={len(diag.get('backup_keys_before',[]))} keys_a={len(r.get('backup_keys_after',[]))} errs={r.get('console_errors')} log={r.get('nm_error_log_tail')}")
         return _result("test-4-backup-create", True)
     except Exception as e:
         return _result("test-4-backup-create", False, f"EXCEPTION: {e}")

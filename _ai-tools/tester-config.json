@@ -13,14 +13,12 @@
   "_max_tests_help": "Скільки готових сценаріїв виконати за один запуск. 5 = ~5 хв, 10 = ~10 хв. HKnlM Pre-mortem CRITICAL #2: 5 → test_6-10 ніколи не виконувались (AI регресії B-180/B-115 поза контролем). 10 = повний smoke ~10 хв.",
 
   "disabled_scenarios": [
-    "test_3_create_task_persistence",
-    "test_4_backup_create",
     "test_6_owl_swipe",
     "test_7_modal_close_backdrop",
     "test_9_inbox_finance_subcategory",
     "test_10_inbox_task_classification"
   ],
-  "_disabled_help": "Тимчасово вимкнені (HKnlM 20.05.2026). test_3+test_4 — корінь глибший за onclick refactor (Gemini раунд 2 не покрив повністю), потребує debug-сесії зі screenshots на сервері. test_6 (CDP touch фрагільний). test_7 (click_at_xy координати backdrop потребують верифікації). test_9+10 (потребують OpenAI ключ у Chrome profile). Stable cron baseline: test_1/2/5/8 = 4 сценарії 100% PASS.",
+  "_disabled_help": "Ug2Jw 21.05.2026: test_3+test_4 ТИМЧАСОВО enable для debug-сесії — debug payload з diagnostics fields знайде корінь HKnlM хвостів без SSH-скрінів. Після debug — назад у disabled. test_6 (CDP touch фрагільний), test_7 (click_at_xy координати backdrop), test_9+10 (потребують OpenAI ключ у Chrome profile).",
 
   "max_openai_requests_per_run": 20,
   "_openai_help": "Захист від retry-loop. AI-планування використовується тільки для команд природною мовою (НЕ для 10 готових сценаріїв).",
