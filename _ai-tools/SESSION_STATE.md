@@ -99,10 +99,46 @@ Bonus: failed-screenshot exception truncate 120 chars (раніше 500+ char tr
 
 Roman сказав «робимо» — імплементація в наступних сесіях, поточна сесія завершується з планом + документацією.
 
+### Day 2 (продовження) — 4 Batch нових сценаріїв + B-193 found by tester
+
+Після обговорення «300 кнопок ≠ 10 тестів» Roman повернувся з обідньої перерви — продовжили автономну роботу.
+
+**Batch 1** (`ded99ba` + fix `843bffb`) — 3/3 PASS:
+- test_11_header_buttons — ⚙️ Settings + ? Help модалки
+- test_12_language_switch — set-language UK↔EN з nm_settings.language assertion
+- test_13_legal_pages — Impressum/Privacy/Terms 3 модалки open/close
+
+**Batch 2** (`f43dc64`) — 3/3 PASS:
+- test_14_inbox_chat_input — JS-direct fill (B-191 workaround)
+- test_15_tasks_edit — створити → edit → перевір новий title у DOM
+- test_16_tasks_steps_add — addTaskStep ×3 → save → task.steps.length=3
+
+**Batch 3** (`fb813cc` + B-193 fix `54c2e46`) — 2/4 PASS + 🎯 REAL BUG FOUND:
+- test_17_notes_add PASS
+- test_18_notes_view — disabled (open-note flow складніший, окремий debug)
+- **test_19_habits_add ПIД ЧАС РАН ЗНАЙШОВ B-193:** `openAddHabit` не у window export — HKnlM `b6a3d37` фіксу замикав це через dataset.fn але забув window.openAddHabit. Тестер сам зловив production bug! Фікс: +1 рядок у habits.js:1945. PASS після фіксу.
+- test_20_habits_toggle_done — disabled (toggle-entity-done flow на habit-prod entity потребує окремий debug)
+
+**Batch 4** (`a192c97`) — 3/3 PASS:
+- test_21_evening_tab_open — #page-evening display!=none
+- test_22_health_add_card — fill #health-card-name → saveHealthCardFromModal → DOM+storage
+- test_23_finance_modal_open — #fin-tx-modal (dynamic) visible
+
+**Final stable baseline (16 PASS):**
+test_1/2/3/5/8 (HKnlM) + test_11/12/13/14/15/16/17/19/21/22/23 (Ug2Jw Batch 1-4) = **16**
+
+**Disabled (потребують окремий debug-цикл):**
+test_4 (B-192 backup async deletion), test_6/7 (CDP touch), test_9/10 (OpenAI key), test_18/20 (Ug2Jw нові, складніші flows)
+
+### Цінність тестера підтверджена
+
+- **B-193 знайдено САМ ТЕСТЕРОМ** — це перший випадок коли AI-Tester виявив real production bug без Council/Pre-mortem допомоги. Доказ що інфраструктура працює.
+- Усі 35 запланованих сценаріїв з TESTER_SCENARIOS_PLAN.md реалізуються за ~3 ще такі сесії.
+
 ### Гілка + контекст
 
 - Гілка: `claude/start-session-Ug2Jw`
-- Коміти: 7 (`e993aa7` screenshot fix → `28ceb0a` revert + docs final)
+- Коміти: 14 (від `e993aa7` screenshot fix → `54c2e46` B-193 fix → `a192c97` Batch 4)
 - Council Sonnet: 2 паралельні (saveTask audit + createFullBackupUI audit) — обидва дали гіпотези, частково підтверджені reality
 - Інструменти: 7 on-demand trigger циклів через `tester-trigger.json` + git poll origin/main
 - Час: ~50 хв debug-сесії (Roman на роботі)
