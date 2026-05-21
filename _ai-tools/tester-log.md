@@ -379,3 +379,6 @@ SyntaxError: leading zeros in decimal integer literals are not permitted; use an
 - ❌ `test-20-habits-toggle`: TOGGLE_NO_EFFECT: log_before=0 log_after=0
 - ❌ `test-24-habits-edit`: EDIT_MODAL_NOT_OPEN
 - ❌ `test-27-health-medication`: MED_INPUT_NOT_FOUND: жодне input медикаменту не відповідає очікуваним selector'ам
+
+## 2026-05-21 12:05 UTC · vnm-20260521-0925 · 1/1 pass
+- ✅ `test-27-health-medication`: ok

@@ -1,45 +1,16 @@
 {
   "_comment": "Stamped by ai-tester.py. NM-Claude reads at /start.",
-  "last_run_utc": "2026-05-21T12:00:25.847904Z",
+  "last_run_utc": "2026-05-21T12:05:08.251906Z",
   "tester_version": "0.2.0-HKnlM-20.05.2026",
   "ai_tester_app_version": "nm-20260521-0925",
   "summary": {
     "date_utc": "2026-05-21",
-    "total_runs_today": 17,
-    "passed_today": 58,
+    "total_runs_today": 18,
+    "passed_today": 59,
     "failed_today": 20,
     "openai_spent_today_usd": 0.0,
     "openai_budget_remaining_usd": 2.0
   },
-  "last_failures": [
-    {
-      "test_name": "test-18-notes-view",
-      "fail_reason": "VIEW_MODAL_NOT_OPEN: open-note не відкрив #note-view-modal",
-      "category": "smoke",
-      "ts_utc": "2026-05-21T12:00:08.460301Z",
-      "screenshot_path": "/home/nmtester/screenshots/test-18-notes-view-20260521-120008.png"
-    },
-    {
-      "test_name": "test-20-habits-toggle",
-      "fail_reason": "TOGGLE_NO_EFFECT: log_before=0 log_after=0",
-      "category": "smoke",
-      "ts_utc": "2026-05-21T12:00:13.994896Z",
-      "screenshot_path": "/home/nmtester/screenshots/test-20-habits-toggle-20260521-120013.png"
-    },
-    {
-      "test_name": "test-24-habits-edit",
-      "fail_reason": "EDIT_MODAL_NOT_OPEN",
-      "category": "smoke",
-      "ts_utc": "2026-05-21T12:00:20.524078Z",
-      "screenshot_path": "/home/nmtester/screenshots/test-24-habits-edit-20260521-120020.png"
-    },
-    {
-      "test_name": "test-27-health-medication",
-      "fail_reason": "MED_INPUT_NOT_FOUND: жодне input медикаменту не відповідає очікуваним selector'ам",
-      "category": "smoke",
-      "ts_utc": "2026-05-21T12:00:25.579405Z",
-      "screenshot_path": "/home/nmtester/screenshots/test-27-health-medication-20260521-120025.png"
-    }
-  ],
+  "last_failures": [],
   "warnings": []
 }
