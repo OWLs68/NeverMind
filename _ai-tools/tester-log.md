@@ -302,3 +302,8 @@ SyntaxError: leading zeros in decimal integer literals are not permitted; use an
 
 ## 2026-05-21 09:09 UTC · vnm-20260520-2100 · 1/1 pass
 - ✅ `test-12-language-switch`: ok
+
+## 2026-05-21 09:14 UTC · vnm-20260520-2100 · 3/3 pass
+- ✅ `test-14-inbox-chat-input`: ok
+- ✅ `test-15-tasks-edit`: ok
+- ✅ `test-16-tasks-steps`: ok
