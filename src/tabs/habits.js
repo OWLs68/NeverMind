@@ -1942,7 +1942,7 @@ export async function sendTasksBarMessage() {
 Object.assign(window, {
   switchProdTab, saveHabit, closeHabitModal, setHabitModalType,
   deleteHabitFromModal, adjustHabitCount, sendTasksBarMessage,
-  openEditHabit, toggleHabitToday, toggleProdHabitToday,
+  openAddHabit, openEditHabit, toggleHabitToday, toggleProdHabitToday,
   tapHabitSquare, tapHabitSquareMe,
   prodHabitCardClick,
   holdQuitHabit, confirmQuitRelapse,
