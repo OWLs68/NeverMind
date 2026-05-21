@@ -17,6 +17,10 @@
 
 ## Активна черга
 
+- [ ] Регресія Ug2Jw (B-193 openAddHabit window export): Tasks tab → switch-prod-tab=habits → tap #prod-add-btn → перевір що #habit-modal відкривається (display!=none). Якщо silent skip → window export знов зник.
+- [ ] Smoke Ug2Jw (тестер 24 PASS baseline): запусти target=[] → ВСІ 19 активних тестів мають PASS. Якщо хоч один fail — регресія від останнього deploy.
+- [ ] Smoke Ug2Jw (Inbox handlers): target=[test_29,test_30,test_31,test_32] → 4/4 PASS. Покривають deploy-info modal, chat-bar close, OWL toggle, chips scroll arrows.
+
 - [ ] Регресія HKnlM (B-187 shell injection): перевір що hetzner-setup.sh з PAT що містить `$()` НЕ виконує injection (наприклад PAT=`gh_$(touch /tmp/pwned)test` → перевір що `/tmp/pwned` НЕ створено). Це сухий тест архітектури — НЕ запускати на production сервері.
 - [ ] Регресія HKnlM (B-188 false-PASS): test_9 при пустому Anthropic ключі → має fail з `ASSERTION_FAIL: AI не додав amount=50`, НЕ silent PASS на старих даних. Перевір через TARGET_SCENARIOS=test_9_inbox_finance_subcategory + видалення ANTHROPIC_API_KEY з env (на сервері).
 - [ ] Регресія HKnlM (B-189 PAT expiration alert): встав PAT_CREATED_UTC=2026-02-20 (90 днів тому) → запусти tester → перевір що `tester-status.warnings[]` містить «PAT_EXPIRES_SOON».
