@@ -505,32 +505,48 @@ def test_3_create_task_persistence():
     """
     unique_title = f"AI-Tester {datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%d-%H%M%S')}"
     title_js = json.dumps(unique_title)
-    payload = """
+    # КРИТИЧНО: усі JS string literals single-quote, CSS attr value без лапок
+    # (button[data-fn=saveTask], не data-fn="saveTask") — інакше CDP JSON
+    # serialization ламає escape (підтверджено Ug2Jw 04:18 SyntaxError).
+    payload = '''
 inject_error_capture()
 goto_url(__URL__)
 wait(2.0)
 inject_error_capture()
-click_sel('[data-tab="tasks"]')
+click_sel('[data-tab=tasks]')
 wait(0.5)
 click_sel('#prod-add-btn')
 wait(0.8)
-# Ug2Jw debug: масовий dump стану перед fill_input
-diag_pre = js('(function(){var i=document.getElementById("task-input-title");var btn=document.querySelector("button[data-fn=\\"saveTask\\"]");var ov=document.getElementById("task-overlay");return {input_exists:!!i,input_readonly:i?i.readOnly:null,input_visible:i?i.offsetParent!==null:null,save_btn_exists:!!btn,save_btn_count:document.querySelectorAll("button[data-fn=\\"saveTask\\"]").length,overlay_exists:!!ov,overlay_visible:ov?getComputedStyle(ov).display!=="none":null,saveTask_fn_type:typeof window.saveTask,addTask_fn_type:typeof window.addTask};})()')
+diag_pre = js("(function(){var i=document.getElementById('task-input-title');var btn=document.querySelector('button[data-fn=saveTask]');var ov=document.getElementById('task-overlay');return {input_exists:!!i,input_readonly:i?i.readOnly:null,input_visible:i?i.offsetParent!==null:null,save_btn_count:document.querySelectorAll('button[data-fn=saveTask]').length,overlay_visible:ov?getComputedStyle(ov).display!=='none':null,saveTask_fn_type:typeof window.saveTask,addTask_fn_type:typeof window.addTask,switchTab_fn_type:typeof window.switchTab,active_tab:document.querySelector('.tab-btn.active')?document.querySelector('.tab-btn.active').getAttribute('data-tab'):null};})()")
 input_ready = diag_pre and diag_pre.get('input_exists') and not diag_pre.get('input_readonly') and diag_pre.get('input_visible')
-before_count = _json.loads(get_ls('nm_tasks') or '[]')
-before_count = len(before_count) if isinstance(before_count, list) else -1
+before_raw = get_ls('nm_tasks') or '[]'
+try:
+    before_arr_pre = _json.loads(before_raw)
+    before_count_pre = len(before_arr_pre) if isinstance(before_arr_pre,list) else -1
+except Exception:
+    before_count_pre = -1
 if not input_ready:
     errs_pre = get_console_errs()[:3]
-    print(_json.dumps({"step":"input_not_ready","diag_pre":diag_pre,"before_count":before_count,"console_errors":errs_pre}))
+    err_log_raw = get_ls('nm_error_log') or '[]'
+    try:
+        err_log_pre = _json.loads(err_log_raw)
+        err_log_tail_pre = err_log_pre[-3:] if isinstance(err_log_pre,list) else []
+    except Exception:
+        err_log_tail_pre = []
+    print(_json.dumps({"step":"input_not_ready","diag_pre":diag_pre,"before_count":before_count_pre,"console_errors":errs_pre,"nm_error_log_tail":err_log_tail_pre}))
     raise SystemExit(0)
 fill_input('#task-input-title', __TITLE_REPR__)
 wait(0.2)
-input_value = js('document.getElementById("task-input-title").value')
-click_sel('button[data-fn="saveTask"]')
+input_value = js("document.getElementById('task-input-title').value")
+click_sel('button[data-fn=saveTask]')
 wait(1.2)
 before_raw = get_ls('nm_tasks') or '[]'
-before_arr = _json.loads(before_raw)
-before_titles = [x.get('title','') for x in before_arr] if isinstance(before_arr,list) else []
+try:
+    before_arr = _json.loads(before_raw)
+    before_titles = [x.get('title','') for x in before_arr] if isinstance(before_arr,list) else []
+except Exception:
+    before_arr = []
+    before_titles = []
 title_in_before = __TITLE_PY__ in before_titles
 errs_after_save = get_console_errs()[:5]
 err_log_raw = get_ls('nm_error_log') or '[]'
@@ -539,16 +555,18 @@ try:
     err_log_tail = err_log[-3:] if isinstance(err_log,list) else []
 except Exception:
     err_log_tail = []
-# Reload
 goto_url(__URL__)
 wait(2.5)
 inject_error_capture()
 after_raw = get_ls('nm_tasks') or '[]'
-after_arr = _json.loads(after_raw)
-after_titles = [x.get('title','') for x in after_arr] if isinstance(after_arr,list) else []
+try:
+    after_arr = _json.loads(after_raw)
+    after_titles = [x.get('title','') for x in after_arr] if isinstance(after_arr,list) else []
+except Exception:
+    after_arr = []
+    after_titles = []
 title_in_after = __TITLE_PY__ in after_titles
-# Cleanup
-js('var __t=JSON.parse(localStorage.getItem("nm_tasks")||"[]");localStorage.setItem("nm_tasks",JSON.stringify(__t.filter(function(x){return x.title!==__TITLE_JS__;})));')
+js("var __t=JSON.parse(localStorage.getItem('nm_tasks')||'[]');localStorage.setItem('nm_tasks',JSON.stringify(__t.filter(function(x){return x.title!==__TITLE_JS__;})));")
 print(_json.dumps({
     "step":"complete",
     "diag_pre":diag_pre,
@@ -560,7 +578,7 @@ print(_json.dumps({
     "console_errors":errs_after_save,
     "nm_error_log_tail":err_log_tail,
 }))
-"""
+'''
     payload = payload.replace("__URL__", repr(NEVERMIND_URL))
     payload = payload.replace("__TITLE_REPR__", repr(unique_title))
     payload = payload.replace("__TITLE_PY__", repr(unique_title))
@@ -594,19 +612,23 @@ def test_4_backup_create():
 
     Ug2Jw debug: dump fn_types, return value, error_log, console errors.
     """
-    payload = """
+    # КРИТИЧНО: усі JS strings single-quote, NM_KEYS.data ключі через
+    # JS variable assignment щоб уникнути escape проблем (Ug2Jw 04:18 урок).
+    payload = '''
 inject_error_capture()
 goto_url(__URL__)
 wait(2.0)
 inject_error_capture()
-# Seed: createFullBackup повертає null коли localStorage пустий — потрібен мінімальний state.
-js('if(!localStorage.getItem("nm_settings"))localStorage.setItem("nm_settings","{}");if(!localStorage.getItem("nm_tasks"))localStorage.setItem("nm_tasks","[]");')
+js("if(!localStorage.getItem('nm_settings'))localStorage.setItem('nm_settings','{}');if(!localStorage.getItem('nm_tasks'))localStorage.setItem('nm_tasks','[]');if(!localStorage.getItem('nm_chat'))localStorage.setItem('nm_chat','{}');")
 wait(0.3)
-diag = js('(function(){var keys=Object.keys(localStorage);var bk=keys.filter(function(k){return k.indexOf("nm_backup_")===0;});return {createFullBackup_fn:typeof window.createFullBackup,createFullBackupUI_fn:typeof window.createFullBackupUI,nm_settings:localStorage.getItem("nm_settings"),nm_tasks_len:(JSON.parse(localStorage.getItem("nm_tasks")||"[]")).length,backup_keys_before:bk,ls_size_kb:Math.round(JSON.stringify(localStorage).length/1024)};})()')
-# Виклик з try/catch — щоб exception НЕ скривав корінь
-call_result = js('(function(){try{var r=window.createFullBackupUI?window.createFullBackupUI():"NO_FN";return {ok:true,return_val:typeof r==="object"?JSON.stringify(r):String(r)};}catch(e){return {ok:false,err:String(e.message||e),stack:String(e.stack||"").split("\\n").slice(0,3).join(" | ")};}})()')
+diag = js("(function(){var keys=Object.keys(localStorage);var bk=keys.filter(function(k){return k.indexOf('nm_backup_')===0;});var nmK=window.NM_KEYS;return {createFullBackup_fn:typeof window.createFullBackup,createFullBackupUI_fn:typeof window.createFullBackupUI,NM_KEYS_present:!!nmK,NM_KEYS_data_len:nmK&&nmK.data?nmK.data.length:0,nm_settings_len:(localStorage.getItem('nm_settings')||'').length,nm_tasks_len:(JSON.parse(localStorage.getItem('nm_tasks')||'[]')).length,backup_keys_before:bk,ls_total_keys:keys.length,ls_size_kb:Math.round(JSON.stringify(localStorage).length/1024),boot_done:typeof window.bootApp,delegation_ready:typeof window.initDelegation};})()")
+call_result = js("(function(){try{if(typeof window.createFullBackupUI!=='function')return {ok:false,err:'NO_FN',fn_type:typeof window.createFullBackupUI};var r=window.createFullBackupUI();return {ok:true,return_val:r===undefined?'undefined':(typeof r==='object'?JSON.stringify(r):String(r))};}catch(e){return {ok:false,err:String(e.message||e),stack:String(e.stack||'').substring(0,300)};}})()")
 wait(0.8)
-after_keys = js('Object.keys(localStorage).filter(function(k){return k.indexOf("nm_backup_")===0;})')
+after_keys_raw = js("JSON.stringify(Object.keys(localStorage).filter(function(k){return k.indexOf('nm_backup_')===0;}))")
+try:
+    after_keys = _json.loads(after_keys_raw) if after_keys_raw else []
+except Exception:
+    after_keys = []
 errs = get_console_errs()[:5]
 err_log_raw = get_ls('nm_error_log') or '[]'
 try:
@@ -614,15 +636,16 @@ try:
     err_log_tail = err_log[-3:] if isinstance(err_log,list) else []
 except Exception:
     err_log_tail = []
+before_keys = diag.get('backup_keys_before',[]) if isinstance(diag,dict) else []
 print(_json.dumps({
     "diag":diag,
     "call_result":call_result,
     "backup_keys_after":after_keys,
-    "delta":(len(after_keys) if isinstance(after_keys,list) else 0) - (len(diag.get("backup_keys_before",[])) if isinstance(diag.get("backup_keys_before"),list) else 0),
+    "delta":len(after_keys) - (len(before_keys) if isinstance(before_keys,list) else 0),
     "console_errors":errs,
     "nm_error_log_tail":err_log_tail,
 }))
-"""
+'''
     payload = payload.replace("__URL__", repr(NEVERMIND_URL))
     try:
         r = bh(payload, timeout=60)
