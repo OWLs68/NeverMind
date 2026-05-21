@@ -228,3 +228,37 @@ RuntimeError: wait_for_js timeout: (JSON.parse(localStorage.getItem('nm_tasks') 
 - ❌ `test-4-backup-create`: ASSERTION_FAIL: backup count 0->0 (delta 0)
 - ✅ `test-5-trash-restore`: ok
 - ✅ `test-8-clear-data`: ok
+
+## 2026-05-21 04:18 UTC · vnm-20260520-2100 · 0/2 pass
+- ❌ `test-3-create-task`: EXCEPTION: bh exit 1: Traceback (most recent call last):
+  File "/home/nmtester/.local/bin/browser-harness", line 10, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/home/nmtester/browser-harness/src/browser_harness/run.py", line 125, in main
+    exec(code, globals())
+  File "<string>", line 51, in <module>
+  File "/home/nmtester/browser-harness/src/browser_harness/helpers.py", line 435, in js
+    return _runtime_evaluate(expression, session_id=sid, await_promise=True)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nmtester/browser-harness/src/browser_harness/helpers.py", line 117, in _runtime_evaluate
+    return _runtime_value(r, expression)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nmtester/browser-harness/src/browser_harness/helpers.py", line 104, in _runtime_value
+    raise RuntimeError(f"JavaScript evaluation failed{loc}: {desc}; expression: {_js_snippet(expression)}")
+RuntimeError: JavaScript evaluation failed at line 0, column 93: SyntaxError: missing ) after argument list; expression: (function(){var i=document.getElementById("task-input-title");var btn=document.querySelector("button[data-fn="saveTask"]");var ov=document.getElementById("ta...
+- ❌ `test-4-backup-create`: EXCEPTION: bh exit 1: Traceback (most recent call last):
+  File "/home/nmtester/.local/bin/browser-harness", line 10, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/home/nmtester/browser-harness/src/browser_harness/run.py", line 125, in main
+    exec(code, globals())
+  File "<string>", line 51, in <module>
+  File "/home/nmtester/browser-harness/src/browser_harness/helpers.py", line 435, in js
+    return _runtime_evaluate(expression, session_id=sid, await_promise=True)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nmtester/browser-harness/src/browser_harness/helpers.py", line 117, in _runtime_evaluate
+    return _runtime_value(r, expression)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nmtester/browser-harness/src/browser_harness/helpers.py", line 104, in _runtime_value
+    raise RuntimeError(f"JavaScript evaluation failed{loc}: {desc}; expression: {_js_snippet(expression)}")
+RuntimeError: JavaScript evaluation failed at line 0, column 244: SyntaxError: Invalid or unexpected token; expression: (function(){try{var r=window.createFullBackupUI?window.createFullBackupUI():"NO_FN";return {ok:true,return_val:typeof r==="object"?JSON.stringify(r):String(r...
