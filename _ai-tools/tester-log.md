@@ -294,3 +294,8 @@ SyntaxError: leading zeros in decimal integer literals are not permitted; use an
 - ✅ `test-3-create-task`: ok
 - ✅ `test-5-trash-restore`: ok
 - ✅ `test-8-clear-data`: ok
+
+## 2026-05-21 09:05 UTC · vnm-20260520-2100 · 2/3 pass
+- ✅ `test-11-header-buttons`: ok
+- ❌ `test-12-language-switch`: EN_NOT_SET: nm_settings.lang=None
+- ✅ `test-13-legal-pages`: ok
