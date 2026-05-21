@@ -124,36 +124,74 @@ Roman сказав «робимо» — імплементація в насту
 - test_22_health_add_card — fill #health-card-name → saveHealthCardFromModal → DOM+storage
 - test_23_finance_modal_open — #fin-tx-modal (dynamic) visible
 
-**Final stable baseline (16 PASS):**
-test_1/2/3/5/8 (HKnlM) + test_11/12/13/14/15/16/17/19/21/22/23 (Ug2Jw Batch 1-4) = **16**
+**Final stable baseline (24 PASS):**
+test_1/2/3/5/8 (HKnlM) + test_11/12/13/14/15/16/17/19/21/22/23/25/26/27/28/29/30/31/32 (Ug2Jw Batch 1-6) = **24**
 
 **Disabled (потребують окремий debug-цикл):**
-test_4 (B-192 backup async deletion), test_6/7 (CDP touch), test_9/10 (OpenAI key), test_18/20 (Ug2Jw нові, складніші flows)
+test_4 (B-192 backup async deletion), test_6/7 (CDP touch), test_9/10 (OpenAI key), test_18/20/24 (Ug2Jw нові, складніші flows)
 
 ### Цінність тестера підтверджена
 
-- **B-193 знайдено САМ ТЕСТЕРОМ** — це перший випадок коли AI-Tester виявив real production bug без Council/Pre-mortem допомоги. Доказ що інфраструктура працює.
-- Усі 35 запланованих сценаріїв з TESTER_SCENARIOS_PLAN.md реалізуються за ~3 ще такі сесії.
+- **B-193 знайдено САМ ТЕСТЕРОМ** — перший випадок коли AI-Tester виявив real production bug без Council/Pre-mortem допомоги. Habits subtab ➕ → нічого (silent skip через missing `window.openAddHabit`). Виправлено +1 рядок у habits.js:1945.
+- Усі 35 запланованих сценаріїв з TESTER_SCENARIOS_PLAN.md реалізуються за ~2 ще такі сесії.
+
+### Council аудит (5 паралельних агентів Sonnet, post-Batch 4)
+
+Roman попросив "глибокий аудит зробленого". 4 проблеми знайдено + виправлено:
+
+1. **🚨 max_tests_per_run=10 → 30** (silent-bug-scout). 13 нових тестів написано АЛЕ blocked у cron-mode — SCENARIOS[:10] не доходив до test_11-27. "18 stable PASS" була недосяжна автоматично, тільки on-demand. Тепер усі активні бігають 3×/день.
+2. **Hardcoded URLs у test_21/23/25** (architecture review). 3 тести використовували literal 'https://owls68.github.io/NeverMind/' замість NEVERMIND_URL константи. При custom domain — silent fail. Конвертовано на payload pattern.
+3. **B-191 + B-192 у НЕПРАВИЛЬНIЙ секції BUGS** (doc-consistency). "ВIДКРИТО" баги фізично під ## ✅ Закриті заголовком. Перенесено у 🟡 Середні.
+4. **lessons.md урок «AI-Tester сам знайшов real bug»** (doc-consistency). Відсутній — критичний пропуск після B-193. Додано урок з рекомендацією «додавати тести АГРЕСИВНО».
+
+System-wide missing exports audit: жодних інших B-193-like. Всі 99 data-fn handlers покриті через Object.assign(window) або window.X=fn. Системна якість делегації після OBErR Phase 0-6 — висока.
+
+### Verification — двосторонній (anti-flaky + chaos)
+
+Roman: "Перевіряй все два рази. Перший anti-flaky, другий — несподівано".
+
+1. **#1 anti-flaky:** target=[] → 18/18 PASS повтор. Стабільність підтверджена.
+2. **#2 chaos test_5+test_8 ізольовано:** 2/2 PASS. Architecture agent попередження було false alarm — test_5/test_8 самодостатні (обидва клікають `[data-action="open-settings"]` на старті). Isolation реально працює.
+
+### Bug-hunt run (Roman: "запускай хай шукає баги")
+
+Enable 4 disabled (test_18/20/24/27) → 0/4 PASS. Аналіз fail_reasons:
+- **test_27:** `MED_INPUT_NOT_FOUND` — мій selector помилковий (`input[id*=med-name]` замість `input.med-name` class). Виправлено → PASS. ENABLED у baseline.
+- **test_18/20/24:** стабільно fail без iPhone screenshot. Залишені disabled. **Жодного нового real bug не знайдено** — це або timing/state issues у тесті, або реальні bugs які потребують real device debug.
+
+### Inbox systematic coverage (Roman: "методично, по одній вкладці")
+
+Inventory Inbox section — 4 нових тестів для непокритих handlers (всі PASS):
+- test_29_inbox_deploy_info — tap версії → #deploy-info-modal
+- test_30_inbox_chat_bar_close — openChatBar → close handle → .open class видалено
+- test_31_inbox_owl_toggle — toggle-owl-collapsed smoke (handler не throw)
+- test_32_inbox_scroll_chips — left/right arrows handlers чисті
+
+Не покрито (AI-залежне або CDP touch): chips клики, inbox-item card tap, OWL vertical swipe, send Enter.
+
+**Inbox ЗАВЕРШЕНО.** Наступна вкладка: Tasks (наступна сесія).
 
 ### Гілка + контекст
 
 - Гілка: `claude/start-session-Ug2Jw`
-- Коміти: 14 (від `e993aa7` screenshot fix → `54c2e46` B-193 fix → `a192c97` Batch 4)
-- Council Sonnet: 2 паралельні (saveTask audit + createFullBackupUI audit) — обидва дали гіпотези, частково підтверджені reality
-- Інструменти: 7 on-demand trigger циклів через `tester-trigger.json` + git poll origin/main
-- Час: ~50 хв debug-сесії (Roman на роботі)
+- Коміти: **31** (від `e993aa7` screenshot fix → `782b5d4` test_32 chips)
+- Версії: **v960 → v991** (31 deploys)
+- CACHE_NAME: `nm-20260521-0925`
+- Council Sonnet: 7 паралельних агентів (2 saveTask/backup + 5 системний аудит)
+- Інструменти: 14 on-demand trigger циклів через `tester-trigger.json` + git poll origin/main
 
 ### Метрики
 
-- **Stable baseline:** 4/4 → 5/5 PASS (test_3 додано після workaround)
-- **Mystery:** test_4 backup async deletion (відкритий B-192)
-- **Council hypothesis verification:** saveTask hypothesis (cold profile bundle) — спростовано через diag (saveTask_fn=function існує). showToast crash — спростовано (errs=[], call_ok=True). Реальний корінь test_3 — fill_input bug. Урок: **гіпотези агентів треба ВЕРИФIКУВАТИ через real run** перед фіксом.
+- **Stable baseline:** 5 → 24 PASS (+19 нових)
+- **Тести написано:** 22 (test_11 → test_32). З них 19 active PASS, 3 disabled (test_18/20/24)
+- **Real bugs знайдено + закрито:** 1 (B-193 — openAddHabit window export)
+- **Council hypothesis verification:** saveTask + showToast гіпотези спростовано. Реальний корінь test_3 — fill_input doubling (B-191). Урок: гіпотези агентів треба ВЕРИФIКУВАТИ через real run.
 
 ### Що далі (для Романа)
 
-1. **`scp` test_4 screenshot з сервера** — `/home/nmtester/screenshots/test-4-backup-create-20260521-044613.png` — побачимо який toast (`💾 Знімок створено` чи `⚠️ Не вдалось`)
-2. **iPhone PWA smoke** — створити backup → перевірити що залишається у Settings → Список знімків. Якщо реальний юзер бачить такий же async delete — B-192 critical
-3. **B-191 audit** — grep `[data-on-input]` / `oninput` listeners у delegation.js + tasks.js. Можливо подвійна реєстрація handler'а
+1. **`scp` 3 disabled screenshots з сервера** — `/home/nmtester/screenshots/test-{18,20,24}*` (одна команда). Скріни покажуть чи це real bugs у NM чи моя помилка тесту.
+2. **iPhone PWA smoke** — B-192 backup async deletion + B-191 fill_input doubling
+3. **Tasks systematic** наступна сесія — методично по інших вкладках (Notes/Me/Evening/Health/Finance)
 4. **CSP Phase 2 завершити** (~2 год, з HKnlM хвостів)
 
 ### Хвости (відкладено)
@@ -161,6 +199,7 @@ test_4 (B-192 backup async deletion), test_6/7 (CDP touch), test_9/10 (OpenAI ke
 - ❌ test_6 OWL swipe (CDP Input.dispatchTouchEvent)
 - ❌ test_7 close-backdrop click_at_xy
 - ❌ test_9 + test_10 OpenAI ключ у Chrome profile
+- ❌ test_18/20/24 (Ug2Jw нові — потребують iPhone screenshot)
 
 ---
 
