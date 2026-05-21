@@ -412,3 +412,6 @@ SyntaxError: leading zeros in decimal integer literals are not permitted; use an
 
 ## 2026-05-21 12:31 UTC · vnm-20260521-0925 · 1/1 pass
 - ✅ `test-30-inbox-chat-close`: ok
+
+## 2026-05-21 12:35 UTC · vnm-20260521-0925 · 1/1 pass
+- ✅ `test-31-inbox-owl-toggle`: ok
