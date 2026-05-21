@@ -19,7 +19,9 @@
     "test_9_inbox_finance_subcategory",
     "test_10_inbox_task_classification",
     "test_18_notes_view",
-    "test_20_habits_toggle_done"
+    "test_20_habits_toggle_done",
+    "test_24_habits_edit",
+    "test_27_health_medication_add"
   ],
   "_disabled_help": "Ug2Jw 21.05.2026 (фінальний стан): test_3 ENABLE — fixed через JS-direct fill (fill_input bh API подвоює chars). test_4 DISABLE — async delete mystery: createFullBackupUI створює synchronously (af_call=1) АЛЕ через ~0.8s зникає. Не з backup.js (всі removeItem callsites verified). Потребує iPhone screenshot або глибший debug. test_6 (CDP touch фрагільний), test_7 (click_at_xy координати backdrop), test_9+10 (потребують OpenAI ключ у Chrome profile). Stable baseline: test_1/2/3/5/8 = 5/5.",
 
