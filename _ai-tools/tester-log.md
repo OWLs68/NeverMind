@@ -329,3 +329,23 @@ SyntaxError: leading zeros in decimal integer literals are not permitted; use an
 - ✅ `test-25-prod-tab-switch`: ok
 - ✅ `test-26-evening-input`: ok
 - ❌ `test-27-health-medication`: MED_INPUT_NOT_FOUND: жодне input медикаменту не відповідає очікуваним selector'ам
+
+## 2026-05-21 10:50 UTC · vnm-20260521-0925 · 18/18 pass
+- ✅ `test-1-boot-health`: ok
+- ✅ `test-2-navigation`: ok
+- ✅ `test-3-create-task`: ok
+- ✅ `test-5-trash-restore`: ok
+- ✅ `test-8-clear-data`: ok
+- ✅ `test-11-header-buttons`: ok
+- ✅ `test-12-language-switch`: ok
+- ✅ `test-13-legal-pages`: ok
+- ✅ `test-14-inbox-chat-input`: ok
+- ✅ `test-15-tasks-edit`: ok
+- ✅ `test-16-tasks-steps`: ok
+- ✅ `test-17-notes-add`: ok
+- ✅ `test-19-habits-add`: ok
+- ✅ `test-21-evening-open`: ok
+- ✅ `test-22-health-card`: ok
+- ✅ `test-23-finance-modal`: ok
+- ✅ `test-25-prod-tab-switch`: ok
+- ✅ `test-26-evening-input`: ok
