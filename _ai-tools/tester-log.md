@@ -307,3 +307,9 @@ SyntaxError: leading zeros in decimal integer literals are not permitted; use an
 - ✅ `test-14-inbox-chat-input`: ok
 - ✅ `test-15-tasks-edit`: ok
 - ✅ `test-16-tasks-steps`: ok
+
+## 2026-05-21 09:20 UTC · vnm-20260520-2100 · 1/4 pass
+- ✅ `test-17-notes-add`: ok
+- ❌ `test-18-notes-edit`: EDIT_MODAL_NOT_OPEN: open-note не відкрив edit-модалку
+- ❌ `test-19-habits-add`: HABIT_MODAL_NOT_OPEN
+- ❌ `test-20-habits-toggle`: TOGGLE_NO_EFFECT: log_before=0 log_after=0
