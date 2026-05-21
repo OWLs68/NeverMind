@@ -535,7 +535,9 @@ if not input_ready:
         err_log_tail_pre = []
     print(_json.dumps({"step":"input_not_ready","diag_pre":diag_pre,"before_count":before_count_pre,"console_errors":errs_pre,"nm_error_log_tail":err_log_tail_pre}))
     raise SystemExit(0)
-fill_input('#task-input-title', __TITLE_REPR__)
+# Ug2Jw v3: fill_input browser-harness ПОДВОЮЄ chars (підтверджено run 04:35:
+# input_val='AAII--TTeesstteerr...'). JS-direct value + dispatchEvent bypass.
+js("(function(){var el=document.getElementById('task-input-title');el.value=`__TITLE_RAW__`;el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));return el.value;})()")
 wait(0.2)
 input_value = js("document.getElementById('task-input-title').value")
 click_sel('button[data-fn=saveTask]')
@@ -620,7 +622,9 @@ inject_error_capture()
 goto_url(__URL__)
 wait(2.0)
 inject_error_capture()
-seed_result = js("(function(){try{localStorage.setItem('nm_settings','{}');localStorage.setItem('nm_tasks','[]');localStorage.setItem('nm_chat','{}');return {ok:true,after_settings:localStorage.getItem('nm_settings'),after_tasks:localStorage.getItem('nm_tasks'),after_chat:localStorage.getItem('nm_chat')};}catch(e){return {ok:false,err:String(e.message||e)};}})()")
+# Ug2Jw v3: explicit cleanup nm_backup_* ДО seed — гіпотеза квоти
+# (run 04:35: keys_b=3 → keys_a=0 — quota path видаляє і retry setItem fail).
+seed_result = js("(function(){try{var removed=0;Object.keys(localStorage).filter(function(k){return k.indexOf('nm_backup_')===0;}).forEach(function(k){localStorage.removeItem(k);removed++;});localStorage.setItem('nm_settings','{}');localStorage.setItem('nm_tasks','[]');localStorage.setItem('nm_chat','{}');return {ok:true,backups_removed:removed,after_settings:localStorage.getItem('nm_settings'),after_tasks:localStorage.getItem('nm_tasks')};}catch(e){return {ok:false,err:String(e.message||e)};}})()")
 wait(0.3)
 diag = js("(function(){var keys=Object.keys(localStorage);var bk=keys.filter(function(k){return k.indexOf('nm_backup_')===0;});var nmK=window.NM_KEYS;var nmSet=localStorage.getItem('nm_settings');var nmTasks=localStorage.getItem('nm_tasks');return {createFullBackup_fn:typeof window.createFullBackup,createFullBackupUI_fn:typeof window.createFullBackupUI,createSelectiveBackup_fn:typeof window.createSelectiveBackup,NM_KEYS_present:!!nmK,NM_KEYS_data_len:nmK&&nmK.data?nmK.data.length:0,NM_KEYS_data_sample:nmK&&nmK.data?nmK.data.slice(0,3):null,nm_settings_value:nmSet,nm_settings_len:nmSet?nmSet.length:0,nm_tasks_value:nmTasks,nm_tasks_len:nmTasks?nmTasks.length:0,backup_keys_before:bk,ls_total_keys:keys.length,ls_all_keys:keys.slice(0,15),ls_size_kb:Math.round(JSON.stringify(localStorage).length/1024),boot_done:typeof window.bootApp,delegation_ready:typeof window.initDelegation};})()")
 call_result = js("(function(){try{if(typeof window.createFullBackupUI!=='function')return {ok:false,err:'NO_FN',fn_type:typeof window.createFullBackupUI};var r=window.createFullBackupUI();return {ok:true,return_val:r===undefined?'undefined':(typeof r==='object'?JSON.stringify(r):String(r))};}catch(e){return {ok:false,err:String(e.message||e),stack:String(e.stack||'').substring(0,300)};}})()")
