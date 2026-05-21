@@ -1,15 +1,15 @@
 {
   "_comment": "On-demand trigger для AI-Tester. NM-Claude commit'ить новий trigger_ts → health-check на Hetzner (cron */1) бачить → запускає ai-tester.py позачергово. Latency: ~90 сек.",
 
-  "trigger_ts": "2026-05-21T04:44:48.936Z",
+  "trigger_ts": "2026-05-21T04:54:03.613Z",
   "_ts_help": "ISO-8601 з Z-суфіксом. Якщо trigger_ts > last_run_utc у tester-status.json → trigger вважається новим. null = no trigger.",
 
-  "target_scenarios": ["test_3_create_task_persistence", "test_4_backup_create"],
+  "target_scenarios": [],
   "_target_help": "Список сценаріїв для запуску (наприклад ['test_3_create_task_persistence', 'test_4_backup_create']). Порожній = усі активні (як cron). disabled_scenarios з config все одно поважаються.",
 
   "requester": "nm-claude session Ug2Jw debug",
   "_requester_help": "Хто запросив (наприклад 'nm-claude session HKnlM'). Тільки для трекінгу у логах — НЕ впливає на виконання.",
 
-  "note": "Ug2Jw 21.05 04:17 UTC — debug-сесія test_3+test_4 з рясним payload (Council гіпотези: window.saveTask undefined на cold profile + showToast null DOM crash у createFullBackupUI). Чекаємо tester-status.json з diagnostics fields.",
+  "note": "Ug2Jw 21.05 04:54 UTC — фінальна перевірка нової stable baseline. target_scenarios=[] → всі active (test_1/2/3/5/8 з config) = 5/5 expected.",
   "_note_help": "Опційно: чому запросили (наприклад 'після Edit у backup.js — перевірити test_4'). Зберігається у tester-log.md."
 }
