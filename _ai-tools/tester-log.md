@@ -313,3 +313,8 @@ SyntaxError: leading zeros in decimal integer literals are not permitted; use an
 - ❌ `test-18-notes-edit`: EDIT_MODAL_NOT_OPEN: open-note не відкрив edit-модалку
 - ❌ `test-19-habits-add`: HABIT_MODAL_NOT_OPEN
 - ❌ `test-20-habits-toggle`: TOGGLE_NO_EFFECT: log_before=0 log_after=0
+
+## 2026-05-21 09:27 UTC · vnm-20260521-0925 · 1/3 pass
+- ❌ `test-18-notes-view`: VIEW_MODAL_NOT_OPEN: open-note не відкрив #note-view-modal
+- ✅ `test-19-habits-add`: ok
+- ❌ `test-20-habits-toggle`: TOGGLE_NO_EFFECT: log_before=0 log_after=0

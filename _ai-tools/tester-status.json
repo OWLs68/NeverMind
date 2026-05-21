@@ -1,37 +1,30 @@
 {
   "_comment": "Stamped by ai-tester.py. NM-Claude reads at /start.",
-  "last_run_utc": "2026-05-21T09:20:24.520255Z",
+  "last_run_utc": "2026-05-21T09:27:18.675244Z",
   "tester_version": "0.2.0-HKnlM-20.05.2026",
-  "ai_tester_app_version": "nm-20260520-2100",
+  "ai_tester_app_version": "nm-20260521-0925",
   "summary": {
     "date_utc": "2026-05-21",
-    "total_runs_today": 10,
-    "passed_today": 14,
-    "failed_today": 12,
+    "total_runs_today": 11,
+    "passed_today": 15,
+    "failed_today": 14,
     "openai_spent_today_usd": 0.0,
     "openai_budget_remaining_usd": 2.0
   },
   "last_failures": [
     {
-      "test_name": "test-18-notes-edit",
-      "fail_reason": "EDIT_MODAL_NOT_OPEN: open-note не відкрив edit-модалку",
+      "test_name": "test-18-notes-view",
+      "fail_reason": "VIEW_MODAL_NOT_OPEN: open-note не відкрив #note-view-modal",
       "category": "smoke",
-      "ts_utc": "2026-05-21T09:20:13.596357Z",
-      "screenshot_path": "/home/nmtester/screenshots/test-18-notes-edit-20260521-092013.png"
-    },
-    {
-      "test_name": "test-19-habits-add",
-      "fail_reason": "HABIT_MODAL_NOT_OPEN",
-      "category": "smoke",
-      "ts_utc": "2026-05-21T09:20:18.745751Z",
-      "screenshot_path": "/home/nmtester/screenshots/test-19-habits-add-20260521-092018.png"
+      "ts_utc": "2026-05-21T09:27:08.021884Z",
+      "screenshot_path": "/home/nmtester/screenshots/test-18-notes-view-20260521-092708.png"
     },
     {
       "test_name": "test-20-habits-toggle",
       "fail_reason": "TOGGLE_NO_EFFECT: log_before=0 log_after=0",
       "category": "smoke",
-      "ts_utc": "2026-05-21T09:20:24.270468Z",
-      "screenshot_path": "/home/nmtester/screenshots/test-20-habits-toggle-20260521-092024.png"
+      "ts_utc": "2026-05-21T09:27:18.448148Z",
+      "screenshot_path": "/home/nmtester/screenshots/test-20-habits-toggle-20260521-092718.png"
     }
   ],
   "warnings": []
