@@ -1647,6 +1647,42 @@ print(_json.dumps({
 # === Inbox systematic coverage (Ug2Jw post-audit, Roman 21.05) ================
 
 @scenario("ui")
+def test_30_inbox_chat_bar_close():
+    """Inbox → window.openChatBar('inbox') → #inbox-chat-window.open class is added →
+    tap [data-action=close-chat-bar][data-tab=inbox] → .open class видалено.
+
+    Покриває data-action="close-chat-bar" delegation handler chain (8 чатів).
+    """
+    payload = '''
+inject_error_capture()
+goto_url(__URL__)
+wait(2.0)
+inject_error_capture()
+click_sel('[data-tab=inbox]')
+wait(0.4)
+js("if(window.openChatBar)window.openChatBar('inbox')")
+wait(0.4)
+chat_open = js("(function(){var w=document.getElementById('inbox-chat-window');return !!w && w.classList.contains('open');})()")
+click_sel('[data-action=close-chat-bar][data-tab=inbox]')
+wait(0.4)
+chat_closed = js("(function(){var w=document.getElementById('inbox-chat-window');return !w || !w.classList.contains('open');})()")
+errs = get_console_errs()
+print(_json.dumps({"chat_open":bool(chat_open),"chat_closed":bool(chat_closed),"errors":errs[:3]}))
+'''.replace("__URL__", repr(NEVERMIND_URL))
+    try:
+        r = bh(payload, timeout=60)
+        if not r["chat_open"]:
+            return _result("test-30-inbox-chat-close", False, "CHAT_BAR_NOT_OPENED: openChatBar не додала .open class")
+        if not r["chat_closed"]:
+            return _result("test-30-inbox-chat-close", False, "CHAT_BAR_NOT_CLOSED: close-chat-bar handle не зняла .open class")
+        if r["errors"]:
+            return _result("test-30-inbox-chat-close", False, f"console.error: {r['errors']}")
+        return _result("test-30-inbox-chat-close", True)
+    except Exception as e:
+        return _result("test-30-inbox-chat-close", False, f"EXCEPTION: {e}")
+
+
+@scenario("ui")
 def test_29_inbox_deploy_info():
     """Inbox header → tap version label (#deploy-version) → #deploy-info-modal
     відкривається → tap × (close-deploy-info) → закривається.
