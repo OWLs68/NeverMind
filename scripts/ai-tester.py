@@ -855,6 +855,126 @@ print(_json.dumps({"tasks_added": len(new_task_ids), "events_added": len(new_eve
         return _result("test-10-task-classify", False, f"EXCEPTION: {e}")
 
 
+# === Batch 1 (Ug2Jw 21.05.2026) — Globals + Settings UI scenarios =============
+# Per TESTER_SCENARIOS_PLAN.md — UI-first assertions (DOM visibility), не localStorage.
+
+@scenario("ui")
+def test_11_header_buttons():
+    """Header має ⚙️ Settings + ? Help — обидві відкривають свої модалки на Inbox tab.
+
+    UI-first: assertion на display:flex модалок, НЕ на localStorage. Виживає Supabase.
+    """
+    try:
+        r = bh("""
+inject_error_capture()
+click_sel('[data-tab=inbox]')
+wait(0.4)
+click_sel('[data-action=open-settings]')
+wait(0.6)
+settings_visible = js("(function(){var o=document.getElementById('settings-overlay');return !!o && getComputedStyle(o).display!=='none';})()")
+click_sel('[data-action=close-backdrop][data-fn=closeSettings]')
+wait(0.5)
+settings_closed = js("(function(){var o=document.getElementById('settings-overlay');return !o || getComputedStyle(o).display==='none';})()")
+click_sel('[data-action=open-help]')
+wait(0.6)
+help_visible = js("(function(){var o=document.getElementById('help-drawer-panel');return !!o && getComputedStyle(o).display!=='none' && getComputedStyle(o).transform!=='matrix(0, 0, 0, 0, 0, 0)';})()")
+errs = get_console_errs()
+print(_json.dumps({"settings_visible":bool(settings_visible),"settings_closed":bool(settings_closed),"help_visible":bool(help_visible),"errors":errs[:3]}))
+""")
+        if not r["settings_visible"]:
+            return _result("test-11-header-buttons", False, f"SETTINGS_NOT_OPEN: errors={r.get('errors')}")
+        if not r["settings_closed"]:
+            return _result("test-11-header-buttons", False, "SETTINGS_NOT_CLOSED: backdrop tap не закрив модалку")
+        if not r["help_visible"]:
+            return _result("test-11-header-buttons", False, f"HELP_NOT_OPEN: errors={r.get('errors')}")
+        if r["errors"]:
+            return _result("test-11-header-buttons", False, f"console.error: {r['errors']}")
+        return _result("test-11-header-buttons", True)
+    except Exception as e:
+        return _result("test-11-header-buttons", False, f"EXCEPTION: {e}")
+
+
+@scenario("ui")
+def test_12_language_switch():
+    """Settings → Мова → перемикач UK↔EN → перевір що nm_settings.lang оновлюється.
+
+    Pre-mortem: не очищаємо state — повертаємо UK назад наприкінці.
+    """
+    try:
+        r = bh("""
+inject_error_capture()
+click_sel('[data-action=open-settings]')
+wait(0.6)
+lang_btns = js("(function(){var b=document.querySelectorAll('[data-action=set-language]');return Array.from(b).map(function(x){return x.getAttribute('data-lang')||x.textContent.trim();});})()")
+click_sel('[data-action=set-language][data-lang=en]')
+wait(0.4)
+lang_after_en = js("(function(){try{var s=JSON.parse(localStorage.getItem('nm_settings')||'{}');return s.lang||null;}catch(e){return 'ERR:'+e.message;}})()")
+click_sel('[data-action=set-language][data-lang=uk]')
+wait(0.4)
+lang_after_uk = js("(function(){try{var s=JSON.parse(localStorage.getItem('nm_settings')||'{}');return s.lang||null;}catch(e){return 'ERR:'+e.message;}})()")
+errs = get_console_errs()
+print(_json.dumps({"lang_btns":lang_btns,"lang_after_en":lang_after_en,"lang_after_uk":lang_after_uk,"errors":errs[:3]}))
+""")
+        if not r["lang_btns"] or len(r["lang_btns"]) < 2:
+            return _result("test-12-language-switch", False, f"SELECTOR_STALE: language buttons не знайдено (found={r.get('lang_btns')})")
+        if r["lang_after_en"] != "en":
+            return _result("test-12-language-switch", False, f"EN_NOT_SET: nm_settings.lang={r['lang_after_en']!r}")
+        if r["lang_after_uk"] != "uk":
+            return _result("test-12-language-switch", False, f"UK_NOT_RESTORED: nm_settings.lang={r['lang_after_uk']!r}")
+        if r["errors"]:
+            return _result("test-12-language-switch", False, f"console.error: {r['errors']}")
+        return _result("test-12-language-switch", True)
+    except Exception as e:
+        return _result("test-12-language-switch", False, f"EXCEPTION: {e}")
+
+
+@scenario("ui")
+def test_13_legal_pages():
+    """Settings → Юридична інформація → 3 модалки (Impressum / Privacy / Terms) open/close.
+
+    Перевіряє що openImpressum/openPrivacyPolicy/openTerms коректно відкривають
+    #legal-overlay з відповідним body. Передумова: EU Compliance pre-MVP (OBErR).
+    """
+    try:
+        r = bh("""
+inject_error_capture()
+click_sel('[data-action=open-settings]')
+wait(0.6)
+click_sel('[data-fn=openImpressum]')
+wait(0.5)
+impressum_visible = js("(function(){var o=document.getElementById('legal-overlay');return !!o && getComputedStyle(o).display!=='none';})()")
+impressum_body = js("(function(){var b=document.getElementById('legal-overlay-body');return b?(b.textContent||'').slice(0,100):null;})()")
+click_sel('[data-fn=closeLegal]')
+wait(0.4)
+click_sel('[data-fn=openPrivacyPolicy]')
+wait(0.5)
+privacy_visible = js("(function(){var o=document.getElementById('legal-overlay');return !!o && getComputedStyle(o).display!=='none';})()")
+click_sel('[data-fn=closeLegal]')
+wait(0.4)
+click_sel('[data-fn=openTerms]')
+wait(0.5)
+terms_visible = js("(function(){var o=document.getElementById('legal-overlay');return !!o && getComputedStyle(o).display!=='none';})()")
+click_sel('[data-fn=closeLegal]')
+wait(0.3)
+final_closed = js("(function(){var o=document.getElementById('legal-overlay');return !o || getComputedStyle(o).display==='none';})()")
+errs = get_console_errs()
+print(_json.dumps({"impressum_visible":bool(impressum_visible),"impressum_body_sample":impressum_body,"privacy_visible":bool(privacy_visible),"terms_visible":bool(terms_visible),"final_closed":bool(final_closed),"errors":errs[:3]}))
+""")
+        if not r["impressum_visible"]:
+            return _result("test-13-legal-pages", False, f"IMPRESSUM_NOT_OPEN body={r.get('impressum_body_sample')!r} errs={r.get('errors')}")
+        if not r["privacy_visible"]:
+            return _result("test-13-legal-pages", False, "PRIVACY_NOT_OPEN")
+        if not r["terms_visible"]:
+            return _result("test-13-legal-pages", False, "TERMS_NOT_OPEN")
+        if not r["final_closed"]:
+            return _result("test-13-legal-pages", False, "LEGAL_OVERLAY_STUCK_OPEN")
+        if r["errors"]:
+            return _result("test-13-legal-pages", False, f"console.error: {r['errors']}")
+        return _result("test-13-legal-pages", True)
+    except Exception as e:
+        return _result("test-13-legal-pages", False, f"EXCEPTION: {e}")
+
+
 # --- AI command execution (опційно, з tester-commands.md) ---------------------
 SYSTEM_PROMPT = """Ти — AI-тестувальник NeverMind PWA. Користувач описує сценарій українською.
 Поверни ТIЛЬКИ Python-код для browser-harness CDP (без markdown fence, без пояснень).
