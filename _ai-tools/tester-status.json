@@ -1,30 +1,23 @@
 {
   "_comment": "Stamped by ai-tester.py. NM-Claude reads at /start.",
-  "last_run_utc": "2026-05-21T04:35:14.306630Z",
+  "last_run_utc": "2026-05-21T04:40:13.941682Z",
   "tester_version": "0.2.0-HKnlM-20.05.2026",
   "ai_tester_app_version": "nm-20260520-2100",
   "summary": {
     "date_utc": "2026-05-21",
-    "total_runs_today": 3,
-    "passed_today": 0,
-    "failed_today": 6,
+    "total_runs_today": 4,
+    "passed_today": 1,
+    "failed_today": 7,
     "openai_spent_today_usd": 0.0,
     "openai_budget_remaining_usd": 2.0
   },
   "last_failures": [
     {
-      "test_name": "test-3-create-task",
-      "fail_reason": "NO_WRITE: input_val='AAII--TTeesstteerr  2200226600552211--004433550022' save_btn=1 saveTask_fn=function before=6 errs=[] log=[{'ts': 1779337136346, 'type': 'log', 'msg': '[brain-pulse] skip: no-api-key', 'src': '', 'tab': 'inbox', 'stack': None, 'actions': []}, {'ts': 1779337612854, 'type': 'log', 'msg': '[brain-pulse] skip: no-api-key', 'src': '', 'tab': 'inbox', 'stack': None, 'actions': []}, {'ts': 1779338103424, 'type': 'warn', 'msg': '[NM_KEYS] Знайдено 1 nm_* ключ(ів) поза реєстром.\\nДодай у NM_KEYS у boot.js (data/settings/chat/cache/patterns):\\n  - nm_chat\\nІнакше clearAllData() їх не видалить + Supabase backup пропустить.', 'src': '', 'tab': 'inbox', 'stack': None, 'actions': []}]",
-      "category": "smoke",
-      "ts_utc": "2026-05-21T04:35:10.570605Z",
-      "screenshot_path": "/home/nmtester/screenshots/test-3-create-task-20260521-043510.png"
-    },
-    {
       "test_name": "test-4-backup-create",
-      "fail_reason": "NO_BACKUP: seed_ok=True seed_after_settings='{}' seed_after_tasks='[]' UI_fn=function BE_fn=undefined call_ok=True ret=undefined err=None NM_KEYS_present=True NM_KEYS_data_len=20 settings_val='{}' tasks_val='[]' ls_keys=52 ls_sample=['setItem', 'nm_seen_update', 'nm_last_active_day', 'nm_visited_inbox', 'nm_last_active', 'nm_backup_full-manual_2026-05-20T20-52', 'nm_chips_v10_done_ts', 'nm_steps_uuid_migrated_v17', 'nm_owl_board_unified', 'nm_inbox', 'nm_owl_tab_ts_notes', 'nm_board_clean_pji7l_done', 'nm_settings', 'nm_owl_tab_ts_tasks', 'nm_owl_silence_reset_v5'] ls_size_kb=45 keys_b=3 keys_a=0 errs=[] log=[{'ts': 1779338103424, 'type': 'warn', 'msg': '[NM_KEYS] Знайдено 1 nm_* ключ(ів) поза реєстром.\\nДодай у NM_KEYS у boot.js (data/settings/chat/cache/patterns):\\n  - nm_chat\\nІнакше clearAllData() їх не видалить + Supabase backup пропустить.', 'src': '', 'tab': 'inbox', 'stack': None, 'actions': []}, {'ts': 1779338108101, 'type': 'warn', 'msg': '[NM_KEYS] Знайдено 1 nm_* ключ(ів) поза реєстром.\\nДодай у NM_KEYS у boot.js (data/settings/chat/cache/patterns):\\n  - nm_chat\\nІнакше clearAllData() їх не видалить + Supabase backup пропустить.', 'src': '', 'tab': 'inbox', 'stack': None, 'actions': []}, {'ts': 1779338110994, 'type': 'warn', 'msg': '[NM_KEYS] Знайдено 1 nm_* ключ(ів) поза реєстром.\\nДодай у NM_KEYS у boot.js (data/settings/chat/cache/patterns):\\n  - nm_chat\\nІнакше clearAllData() їх не видалить + Supabase backup пропустить.', 'src': '', 'tab': 'inbox', 'stack': No",
+      "fail_reason": "NO_BACKUP: seed_ok=True seed_after_settings='{}' seed_after_tasks='[]' UI_fn=function BE_fn=undefined call_ok=True ret=undefined err=None NM_KEYS_present=True NM_KEYS_data_len=20 settings_val='{}' tasks_val='[]' ls_keys=49 ls_sample=['setItem', 'nm_seen_update', 'nm_last_active_day', 'nm_visited_inbox', 'nm_last_active', 'nm_chips_v10_done_ts', 'nm_steps_uuid_migrated_v17', 'nm_owl_board_unified', 'nm_inbox', 'nm_owl_tab_ts_notes', 'nm_board_clean_pji7l_done', 'nm_settings', 'nm_owl_tab_ts_tasks', 'nm_owl_silence_reset_v5', 'nm_notes_uuid_migrated_v11'] ls_size_kb=35 keys_b=0 keys_a=0 errs=[] log=[{'ts': 1779338403242, 'type': 'warn', 'msg': '[NM_KEYS] Знайдено 1 nm_* ключ(ів) поза реєстром.\\nДодай у NM_KEYS у boot.js (data/settings/chat/cache/patterns):\\n  - nm_chat\\nІнакше clearAllData() їх не видалить + Supabase backup пропустить.', 'src': '', 'tab': 'inbox', 'stack': None, 'actions': []}, {'ts': 1779338407985, 'type': 'warn', 'msg': '[NM_KEYS] Знайдено 1 nm_* ключ(ів) поза реєстром.\\nДодай у NM_KEYS у boot.js (data/settings/chat/cache/patterns):\\n  - nm_chat\\nІнакше clearAllData() їх не видалить + Supabase backup пропустить.', 'src': '', 'tab': 'inbox', 'stack': None, 'actions': []}, {'ts': 1779338410644, 'type': 'warn', 'msg': '[NM_KEYS] Знайдено 1 nm_* ключ(ів) поза реєстром.\\nДодай у NM_KEYS у boot.js (data/settings/chat/cache/patterns):\\n  - nm_chat\\nІнакше clearAllData() їх не видалить + Supabase backup пропустить.', 'src': '', 'tab': 'inbox', 'stack': None, 'actions",
       "category": "smoke",
-      "ts_utc": "2026-05-21T04:35:14.080827Z",
-      "screenshot_path": "/home/nmtester/screenshots/test-4-backup-create-20260521-043514.png"
+      "ts_utc": "2026-05-21T04:40:13.737390Z",
+      "screenshot_path": "/home/nmtester/screenshots/test-4-backup-create-20260521-044013.png"
     }
   ],
   "warnings": []
