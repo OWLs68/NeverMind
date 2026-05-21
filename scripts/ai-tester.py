@@ -300,7 +300,7 @@ def write_status(cfg: dict, prev_status: dict, results: list):
     failures = [
         {
             "test_name": r["name"],
-            "fail_reason": r.get("reason", "")[:300],
+            "fail_reason": r.get("reason", "")[:1500],
             "category": r.get("category", "smoke"),
             "ts_utc": r.get("ts_utc"),
             "screenshot_path": r.get("screenshot_path"),
@@ -566,7 +566,7 @@ except Exception:
     after_arr = []
     after_titles = []
 title_in_after = __TITLE_PY__ in after_titles
-js("var __t=JSON.parse(localStorage.getItem('nm_tasks')||'[]');localStorage.setItem('nm_tasks',JSON.stringify(__t.filter(function(x){return x.title!==__TITLE_JS__;})));")
+js("var __t=JSON.parse(localStorage.getItem('nm_tasks')||'[]');localStorage.setItem('nm_tasks',JSON.stringify(__t.filter(function(x){return x.title!==`__TITLE_RAW__`;})));")
 print(_json.dumps({
     "step":"complete",
     "diag_pre":diag_pre,
@@ -582,7 +582,8 @@ print(_json.dumps({
     payload = payload.replace("__URL__", repr(NEVERMIND_URL))
     payload = payload.replace("__TITLE_REPR__", repr(unique_title))
     payload = payload.replace("__TITLE_PY__", repr(unique_title))
-    payload = payload.replace("__TITLE_JS__", title_js)
+    # __TITLE_RAW__ — без лапок (вставляється у JS backtick template literal)
+    payload = payload.replace("__TITLE_RAW__", unique_title)
     try:
         r = bh(payload, timeout=90)
         # Скорочений summary у reason — повний debug у JSON output (видно у cron.log)
@@ -619,9 +620,9 @@ inject_error_capture()
 goto_url(__URL__)
 wait(2.0)
 inject_error_capture()
-js("if(!localStorage.getItem('nm_settings'))localStorage.setItem('nm_settings','{}');if(!localStorage.getItem('nm_tasks'))localStorage.setItem('nm_tasks','[]');if(!localStorage.getItem('nm_chat'))localStorage.setItem('nm_chat','{}');")
+seed_result = js("(function(){try{localStorage.setItem('nm_settings','{}');localStorage.setItem('nm_tasks','[]');localStorage.setItem('nm_chat','{}');return {ok:true,after_settings:localStorage.getItem('nm_settings'),after_tasks:localStorage.getItem('nm_tasks'),after_chat:localStorage.getItem('nm_chat')};}catch(e){return {ok:false,err:String(e.message||e)};}})()")
 wait(0.3)
-diag = js("(function(){var keys=Object.keys(localStorage);var bk=keys.filter(function(k){return k.indexOf('nm_backup_')===0;});var nmK=window.NM_KEYS;return {createFullBackup_fn:typeof window.createFullBackup,createFullBackupUI_fn:typeof window.createFullBackupUI,NM_KEYS_present:!!nmK,NM_KEYS_data_len:nmK&&nmK.data?nmK.data.length:0,nm_settings_len:(localStorage.getItem('nm_settings')||'').length,nm_tasks_len:(JSON.parse(localStorage.getItem('nm_tasks')||'[]')).length,backup_keys_before:bk,ls_total_keys:keys.length,ls_size_kb:Math.round(JSON.stringify(localStorage).length/1024),boot_done:typeof window.bootApp,delegation_ready:typeof window.initDelegation};})()")
+diag = js("(function(){var keys=Object.keys(localStorage);var bk=keys.filter(function(k){return k.indexOf('nm_backup_')===0;});var nmK=window.NM_KEYS;var nmSet=localStorage.getItem('nm_settings');var nmTasks=localStorage.getItem('nm_tasks');return {createFullBackup_fn:typeof window.createFullBackup,createFullBackupUI_fn:typeof window.createFullBackupUI,createSelectiveBackup_fn:typeof window.createSelectiveBackup,NM_KEYS_present:!!nmK,NM_KEYS_data_len:nmK&&nmK.data?nmK.data.length:0,NM_KEYS_data_sample:nmK&&nmK.data?nmK.data.slice(0,3):null,nm_settings_value:nmSet,nm_settings_len:nmSet?nmSet.length:0,nm_tasks_value:nmTasks,nm_tasks_len:nmTasks?nmTasks.length:0,backup_keys_before:bk,ls_total_keys:keys.length,ls_all_keys:keys.slice(0,15),ls_size_kb:Math.round(JSON.stringify(localStorage).length/1024),boot_done:typeof window.bootApp,delegation_ready:typeof window.initDelegation};})()")
 call_result = js("(function(){try{if(typeof window.createFullBackupUI!=='function')return {ok:false,err:'NO_FN',fn_type:typeof window.createFullBackupUI};var r=window.createFullBackupUI();return {ok:true,return_val:r===undefined?'undefined':(typeof r==='object'?JSON.stringify(r):String(r))};}catch(e){return {ok:false,err:String(e.message||e),stack:String(e.stack||'').substring(0,300)};}})()")
 wait(0.8)
 after_keys_raw = js("JSON.stringify(Object.keys(localStorage).filter(function(k){return k.indexOf('nm_backup_')===0;}))")
@@ -638,6 +639,7 @@ except Exception:
     err_log_tail = []
 before_keys = diag.get('backup_keys_before',[]) if isinstance(diag,dict) else []
 print(_json.dumps({
+    "seed_result":seed_result,
     "diag":diag,
     "call_result":call_result,
     "backup_keys_after":after_keys,
@@ -652,8 +654,9 @@ print(_json.dumps({
         if r.get("delta", 0) < 1:
             diag = r.get("diag", {}) or {}
             call = r.get("call_result", {}) or {}
+            seed = r.get("seed_result", {}) or {}
             return _result("test-4-backup-create", False,
-                f"NO_BACKUP: UI_fn={diag.get('createFullBackupUI_fn')} BE_fn={diag.get('createFullBackup_fn')} call_ok={call.get('ok')} ret={call.get('return_val')} err={call.get('err')} settings_len={len(str(diag.get('nm_settings') or ''))} keys_b={len(diag.get('backup_keys_before',[]))} keys_a={len(r.get('backup_keys_after',[]))} errs={r.get('console_errors')} log={r.get('nm_error_log_tail')}")
+                f"NO_BACKUP: seed_ok={seed.get('ok')} seed_after_settings={seed.get('after_settings')!r} seed_after_tasks={seed.get('after_tasks')!r} UI_fn={diag.get('createFullBackupUI_fn')} BE_fn={diag.get('createFullBackup_fn')} call_ok={call.get('ok')} ret={call.get('return_val')} err={call.get('err')} NM_KEYS_present={diag.get('NM_KEYS_present')} NM_KEYS_data_len={diag.get('NM_KEYS_data_len')} settings_val={diag.get('nm_settings_value')!r} tasks_val={diag.get('nm_tasks_value')!r} ls_keys={diag.get('ls_total_keys')} ls_sample={diag.get('ls_all_keys')} ls_size_kb={diag.get('ls_size_kb')} keys_b={len(diag.get('backup_keys_before',[]))} keys_a={len(r.get('backup_keys_after',[]))} errs={r.get('console_errors')} log={r.get('nm_error_log_tail')}")
         return _result("test-4-backup-create", True)
     except Exception as e:
         return _result("test-4-backup-create", False, f"EXCEPTION: {e}")
