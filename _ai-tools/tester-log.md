@@ -299,3 +299,6 @@ SyntaxError: leading zeros in decimal integer literals are not permitted; use an
 - ✅ `test-11-header-buttons`: ok
 - ❌ `test-12-language-switch`: EN_NOT_SET: nm_settings.lang=None
 - ✅ `test-13-legal-pages`: ok
+
+## 2026-05-21 09:09 UTC · vnm-20260520-2100 · 1/1 pass
+- ✅ `test-12-language-switch`: ok
