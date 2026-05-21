@@ -1,10 +1,10 @@
 {
   "_comment": "On-demand trigger для AI-Tester. NM-Claude commit'ить новий trigger_ts → health-check на Hetzner (cron */1) бачить → запускає ai-tester.py позачергово. Latency: ~90 сек.",
 
-  "trigger_ts": "2026-05-21T09:03:58.003Z",
+  "trigger_ts": "2026-05-21T09:07:47.851Z",
   "_ts_help": "ISO-8601 з Z-суфіксом. Якщо trigger_ts > last_run_utc у tester-status.json → trigger вважається новим. null = no trigger.",
 
-  "target_scenarios": ["test_11_header_buttons", "test_12_language_switch", "test_13_legal_pages"],
+  "target_scenarios": ["test_12_language_switch"],
   "_target_help": "Список сценаріїв для запуску (наприклад ['test_3_create_task_persistence', 'test_4_backup_create']). Порожній = усі активні (як cron). disabled_scenarios з config все одно поважаються.",
 
   "requester": "nm-claude session Ug2Jw debug",
