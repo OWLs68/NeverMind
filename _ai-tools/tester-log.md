@@ -369,3 +369,7 @@ SyntaxError: leading zeros in decimal integer literals are not permitted; use an
 - ✅ `test-23-finance-modal`: ok
 - ✅ `test-25-prod-tab-switch`: ok
 - ✅ `test-26-evening-input`: ok
+
+## 2026-05-21 11:13 UTC · vnm-20260521-0925 · 2/2 pass
+- ✅ `test-5-trash-restore`: ok
+- ✅ `test-8-clear-data`: ok
