@@ -1313,10 +1313,9 @@ print(_json.dumps({"step":"complete","habit_id":str(habit_id),"log_before":log_b
 @scenario("ui")
 def test_21_evening_tab_open():
     """Evening tab → page-evening видима + має summary блок."""
-    try:
-        r = bh("""
+    payload = '''
 inject_error_capture()
-goto_url('https://owls68.github.io/NeverMind/')
+goto_url(__URL__)
 wait(2.0)
 inject_error_capture()
 click_sel('[data-tab=evening]')
@@ -1324,7 +1323,9 @@ wait(0.6)
 page_visible = js("(function(){var p=document.getElementById('page-evening');return !!p && getComputedStyle(p).display!=='none';})()")
 errs = get_console_errs()
 print(_json.dumps({"page_visible":bool(page_visible),"errors":errs[:3]}))
-""")
+'''.replace("__URL__", repr(NEVERMIND_URL))
+    try:
+        r = bh(payload)
         if not r["page_visible"]:
             return _result("test-21-evening-open", False, "PAGE_NOT_VISIBLE: #page-evening не активувалось")
         if r["errors"]:
@@ -1378,10 +1379,9 @@ print(_json.dumps({"modal_visible":bool(modal_visible),"card_in_storage":bool(ca
 @scenario("ui")
 def test_23_finance_modal_open():
     """Finance → ➕ → #fin-tx-modal (dynamically created) видима + має amount/comment поля."""
-    try:
-        r = bh("""
+    payload = '''
 inject_error_capture()
-goto_url('https://owls68.github.io/NeverMind/')
+goto_url(__URL__)
 wait(2.0)
 inject_error_capture()
 click_sel('[data-tab=finance]')
@@ -1392,7 +1392,9 @@ modal_exists = js("(function(){var o=document.getElementById('fin-tx-modal');ret
 js("(function(){var m=document.getElementById('fin-tx-modal');if(m)m.remove();})()")
 errs = get_console_errs()
 print(_json.dumps({"modal_exists":bool(modal_exists),"errors":errs[:3]}))
-""")
+'''.replace("__URL__", repr(NEVERMIND_URL))
+    try:
+        r = bh(payload)
         if not r["modal_exists"]:
             return _result("test-23-finance-modal", False, "FIN_TX_MODAL_NOT_CREATED: openAddTransaction не створила #fin-tx-modal")
         if r["errors"]:
@@ -1464,10 +1466,9 @@ print(_json.dumps({"step":"complete","habit_id":str(habit_id),"modal_visible":bo
 @scenario("ui")
 def test_25_prod_tab_switch():
     """Tasks → switch-prod-tab=habits → prod-tab-indicator transform translateX != 0 + #prod-add-btn data-fn=openAddHabit."""
-    try:
-        r = bh("""
+    payload = '''
 inject_error_capture()
-goto_url('https://owls68.github.io/NeverMind/')
+goto_url(__URL__)
 wait(2.0)
 inject_error_capture()
 click_sel('[data-tab=tasks]')
@@ -1482,7 +1483,9 @@ wait(0.4)
 back_to_tasks_fn = js("(function(){var b=document.getElementById('prod-add-btn');return b?b.getAttribute('data-fn'):null;})()")
 errs = get_console_errs()
 print(_json.dumps({"initial_fn":initial_fn,"after_switch_fn":after_switch_fn,"indicator_transform":indicator_transform,"back_to_tasks_fn":back_to_tasks_fn,"errors":errs[:3]}))
-""")
+'''.replace("__URL__", repr(NEVERMIND_URL))
+    try:
+        r = bh(payload)
         if r.get("initial_fn") != "openAddTask":
             return _result("test-25-prod-tab-switch", False, f"INITIAL_NOT_TASKS: data-fn={r.get('initial_fn')!r}")
         if r.get("after_switch_fn") != "openAddHabit":

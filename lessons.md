@@ -10,6 +10,15 @@
 
 ## 🔄 Робочі патерни (коли X — роблю Y)
 
+### AI-Tester може ловити production bugs АВТОНОМНО — додавати тести агресивно (Ug2Jw 21.05.2026)
+
+- **Контекст:** під час сесії Ug2Jw написав `test_19_habits_add` (Tasks tab → switch-prod-tab=habits → ➕ → fill habit-input-name → Save). Тест запустився, фейл: `HABIT_MODAL_NOT_OPEN`. Я перевірив код → `openAddHabit` визначений у `habits.js:217` АЛЕ НЕ був у `Object.assign(window, {...})` (habits.js:1942). Delegation `call` handler перевіряє `typeof window[fn]==='function'` → false → silent skip → юзер тапає Habits ➕ → нічого не відбувається. **Це B-193 — реальний production bug який міг непоміченим жити тижнями.**
+- **ПЕРШИЙ ВИПАДОК автономного discovery:** AI-Tester виявив production bug САМ, без Pre-mortem/Council/silent-bug-scout/Roman'ового feedback. Тестер просто пробігав сценарій по UI → побачив що щось не працює → fail_reason підказав вектор → grep window.openAddHabit → undefined → root cause.
+- **Цінність інфраструктури підтверджена:** інвестиція ~50 хв у написання 13 нових тестів дала: 16 stable PASS baseline + 1 виявлений real bug. ROI безперечний.
+- **Правило:** додавати тести АГРЕСИВНО, не консервативно. Кожен новий UI element заслуговує тесту (CLAUDE.md правило 13). Чим більше тестів — тим більший шанс автономного discovery наступного latent bug.
+- **Council deep-dive аудит (Ug2Jw post-write):** перевірив систематично — чи нема ще missing window exports такого ж класу. Sonnet агент scanned всі 99 `data-fn` handler імен → grep кожного `Object.assign(window,...)` або `window.X = fn` → 0 missing. B-193 був ЄДИНИМ пропущеним. Решта 98 handlers — covered. Системна якість делегації після OBErR Phase 0-6 — висока.
+- **Сигнал додавати тест:** додав/змінив у сесії: (а) кнопку `data-action`, (б) модалку `id="*-modal"`, (в) поле `id`, (г) swipe-handler, (д) вкладку → ПЕРЕД `/finish` пишу тест (CLAUDE.md правило 13).
+
 ### Pre-mortem ПЕРЕД першим Edit на видимий баг — ловить латентні дірки в тій же функції (Ug2Jw 20.05.2026)
 
 - **Контекст:** При /start побачив у `tester-status.json` traceback: `NameError: name 'take_screenshot' is not defined. Did you mean: 'capture_screenshot'?`. Видимий корінь — 1 typo. Спокуса: Edit рядка 172, commit, готово.
