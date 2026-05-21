@@ -17,12 +17,9 @@
     "test_6_owl_swipe",
     "test_7_modal_close_backdrop",
     "test_9_inbox_finance_subcategory",
-    "test_10_inbox_task_classification",
-    "test_18_notes_view",
-    "test_20_habits_toggle_done",
-    "test_24_habits_edit",
-    "test_27_health_medication_add"
+    "test_10_inbox_task_classification"
   ],
+  "_disabled_help": "Ug2Jw verification — тимчасово enable test_18/20/24/27 щоб подивитись чи fail_reasons вказують на real bugs (як B-193 знайдено через test_19). Залишаються disabled: test_4 (B-192 backup async), test_6/7 (CDP touch), test_9/10 (OpenAI ключ). Після bug-hunt run — повернутись до stable disable list якщо нема real bugs.",
   "_disabled_help": "Ug2Jw 21.05.2026 (фінальний стан): test_3 ENABLE — fixed через JS-direct fill (fill_input bh API подвоює chars). test_4 DISABLE — async delete mystery: createFullBackupUI створює synchronously (af_call=1) АЛЕ через ~0.8s зникає. Не з backup.js (всі removeItem callsites verified). Потребує iPhone screenshot або глибший debug. test_6 (CDP touch фрагільний), test_7 (click_at_xy координати backdrop), test_9+10 (потребують OpenAI ключ у Chrome profile). Stable baseline: test_1/2/3/5/8 = 5/5.",
 
   "max_openai_requests_per_run": 20,
