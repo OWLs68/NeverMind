@@ -975,6 +975,154 @@ print(_json.dumps({"impressum_visible":bool(impressum_visible),"impressum_body_s
         return _result("test-13-legal-pages", False, f"EXCEPTION: {e}")
 
 
+# === Batch 2 (Ug2Jw 21.05.2026) — Inbox + Tasks UI scenarios ==================
+
+@scenario("ui")
+def test_14_inbox_chat_input():
+    """Inbox → tap chat-bar → fill input → перевір що value у DOM (JS-direct, B-191 workaround).
+
+    UI-only: НЕ send, лише input persistence у полі. Send потребує AI ключ.
+    """
+    test_text = "AI-Tester chat input " + datetime.datetime.now(datetime.timezone.utc).strftime('%H%M%S')
+    payload = '''
+inject_error_capture()
+goto_url(__URL__)
+wait(2.0)
+inject_error_capture()
+click_sel('[data-tab=inbox]')
+wait(0.4)
+input_exists = js("(function(){var i=document.getElementById('inbox-input');return !!i && i.tagName==='TEXTAREA';})()")
+js("(function(){var el=document.getElementById('inbox-input');el.focus();el.value=`__TEXT__`;el.dispatchEvent(new Event('input',{bubbles:true}));return el.value;})()")
+wait(0.3)
+value_after = js("document.getElementById('inbox-input').value")
+chat_window_open = js("(function(){var w=document.getElementById('inbox-chat-window');return !!w && getComputedStyle(w).display!=='none';})()")
+js("(function(){var el=document.getElementById('inbox-input');el.value='';el.dispatchEvent(new Event('input',{bubbles:true}));})()")
+errs = get_console_errs()
+print(_json.dumps({"input_exists":bool(input_exists),"value_after":value_after,"chat_window_open":bool(chat_window_open),"errors":errs[:3]}))
+'''
+    payload = payload.replace("__URL__", repr(NEVERMIND_URL))
+    payload = payload.replace("__TEXT__", test_text)
+    try:
+        r = bh(payload, timeout=60)
+        if not r["input_exists"]:
+            return _result("test-14-inbox-chat-input", False, "SELECTOR_STALE: #inbox-input відсутній або не textarea")
+        if r["value_after"] != test_text:
+            return _result("test-14-inbox-chat-input", False, f"INPUT_VALUE_MISMATCH: expected={test_text!r} got={r['value_after']!r}")
+        if r["errors"]:
+            return _result("test-14-inbox-chat-input", False, f"console.error: {r['errors']}")
+        return _result("test-14-inbox-chat-input", True)
+    except Exception as e:
+        return _result("test-14-inbox-chat-input", False, f"EXCEPTION: {e}")
+
+
+@scenario("ui")
+def test_15_tasks_edit():
+    """Створити задачу через UI → tap на картку → edit modal → змінити title → Save → новий title у списку.
+
+    UI-first: assertion на DOM текст у списку, не localStorage.
+    """
+    orig_title = "AI-T Edit Orig " + datetime.datetime.now(datetime.timezone.utc).strftime('%H%M%S')
+    new_title = orig_title + " UPD"
+    payload = '''
+inject_error_capture()
+goto_url(__URL__)
+wait(2.0)
+inject_error_capture()
+click_sel('[data-tab=tasks]')
+wait(0.5)
+click_sel('#prod-add-btn')
+wait(0.8)
+js("(function(){var el=document.getElementById('task-input-title');el.value=`__ORIG__`;el.dispatchEvent(new Event('input',{bubbles:true}));})()")
+wait(0.2)
+click_sel('button[data-fn=saveTask]')
+wait(1.0)
+created_id = js("(function(){var t=JSON.parse(localStorage.getItem('nm_tasks')||'[]');var f=t.find(function(x){return x.title===`__ORIG__`;});return f?f.id:null;})()")
+if not created_id:
+    print(_json.dumps({"step":"create_failed","created_id":created_id}))
+    raise SystemExit(0)
+click_sel('[data-action=task-card-click][data-id="' + str(created_id) + '"]')
+wait(0.6)
+modal_title = js("(function(){var t=document.getElementById('task-modal-title');return t?t.textContent:null;})()")
+input_value = js("document.getElementById('task-input-title').value")
+js("(function(){var el=document.getElementById('task-input-title');el.value=`__NEW__`;el.dispatchEvent(new Event('input',{bubbles:true}));})()")
+wait(0.2)
+click_sel('button[data-fn=saveTask]')
+wait(1.0)
+list_has_new = js("(function(){var items=document.querySelectorAll('[id^=task-item-]');return Array.from(items).some(function(el){return (el.textContent||'').indexOf(`__NEW__`)>=0;});})()")
+js("(function(){var t=JSON.parse(localStorage.getItem('nm_tasks')||'[]');localStorage.setItem('nm_tasks',JSON.stringify(t.filter(function(x){return x.title!==`__NEW__` && x.title!==`__ORIG__`;})));})()")
+errs = get_console_errs()
+print(_json.dumps({"step":"complete","created_id":str(created_id),"modal_title":modal_title,"input_value":input_value,"list_has_new":bool(list_has_new),"errors":errs[:3]}))
+'''
+    payload = payload.replace("__URL__", repr(NEVERMIND_URL))
+    payload = payload.replace("__ORIG__", orig_title)
+    payload = payload.replace("__NEW__", new_title)
+    try:
+        r = bh(payload, timeout=90)
+        if r.get("step") == "create_failed":
+            return _result("test-15-tasks-edit", False, "CREATE_FAILED: задача не створилась перед edit (test_3 проблема?)")
+        if r.get("modal_title") != "Редагувати задачу":
+            return _result("test-15-tasks-edit", False, f"EDIT_MODAL_TITLE_WRONG: expected='Редагувати задачу' got={r.get('modal_title')!r}")
+        if r.get("input_value") != orig_title:
+            return _result("test-15-tasks-edit", False, f"EDIT_INPUT_NOT_PREFILLED: expected={orig_title!r} got={r.get('input_value')!r}")
+        if not r.get("list_has_new"):
+            return _result("test-15-tasks-edit", False, "LIST_NOT_UPDATED: новий title не зявився у списку Tasks")
+        if r.get("errors"):
+            return _result("test-15-tasks-edit", False, f"console.error: {r['errors']}")
+        return _result("test-15-tasks-edit", True)
+    except Exception as e:
+        return _result("test-15-tasks-edit", False, f"EXCEPTION: {e}")
+
+
+@scenario("ui")
+def test_16_tasks_steps_add():
+    """Створити задачу → додати 3 кроки через addTaskStep → save → перевір steps у задачі.
+
+    БЕЗ toggle (потребує touch-detect — нестабільно як test_6/7). Тільки add+persist.
+    """
+    title = "AI-T Steps " + datetime.datetime.now(datetime.timezone.utc).strftime('%H%M%S')
+    payload = '''
+inject_error_capture()
+goto_url(__URL__)
+wait(2.0)
+inject_error_capture()
+click_sel('[data-tab=tasks]')
+wait(0.5)
+click_sel('#prod-add-btn')
+wait(0.8)
+js("(function(){var el=document.getElementById('task-input-title');el.value=`__TITLE__`;el.dispatchEvent(new Event('input',{bubbles:true}));})()")
+wait(0.2)
+addStepFn_type = js("typeof window.addTaskStep")
+js("(function(){var el=document.getElementById('task-step-input');el.value='Step 1';el.dispatchEvent(new Event('input',{bubbles:true}));if(window.addTaskStep)window.addTaskStep();})()")
+wait(0.2)
+js("(function(){var el=document.getElementById('task-step-input');el.value='Step 2';el.dispatchEvent(new Event('input',{bubbles:true}));if(window.addTaskStep)window.addTaskStep();})()")
+wait(0.2)
+js("(function(){var el=document.getElementById('task-step-input');el.value='Step 3';el.dispatchEvent(new Event('input',{bubbles:true}));if(window.addTaskStep)window.addTaskStep();})()")
+wait(0.3)
+steps_in_list = js("(function(){var list=document.getElementById('task-steps-list');return list?list.children.length:0;})()")
+click_sel('button[data-fn=saveTask]')
+wait(1.0)
+saved_steps_count = js("(function(){var t=JSON.parse(localStorage.getItem('nm_tasks')||'[]');var f=t.find(function(x){return x.title===`__TITLE__`;});return f&&f.steps?f.steps.length:-1;})()")
+js("(function(){var t=JSON.parse(localStorage.getItem('nm_tasks')||'[]');localStorage.setItem('nm_tasks',JSON.stringify(t.filter(function(x){return x.title!==`__TITLE__`;})));})()")
+errs = get_console_errs()
+print(_json.dumps({"addStepFn_type":addStepFn_type,"steps_in_modal":steps_in_list,"saved_steps_count":saved_steps_count,"errors":errs[:3]}))
+'''
+    payload = payload.replace("__URL__", repr(NEVERMIND_URL))
+    payload = payload.replace("__TITLE__", title)
+    try:
+        r = bh(payload, timeout=90)
+        if r.get("addStepFn_type") != "function":
+            return _result("test-16-tasks-steps", False, f"addTaskStep_NOT_FN: type={r.get('addStepFn_type')}")
+        if r.get("steps_in_modal") != 3:
+            return _result("test-16-tasks-steps", False, f"STEPS_NOT_RENDERED: expected 3 children у task-steps-list, got {r.get('steps_in_modal')}")
+        if r.get("saved_steps_count") != 3:
+            return _result("test-16-tasks-steps", False, f"STEPS_NOT_SAVED: expected 3 у task.steps, got {r.get('saved_steps_count')}")
+        if r.get("errors"):
+            return _result("test-16-tasks-steps", False, f"console.error: {r['errors']}")
+        return _result("test-16-tasks-steps", True)
+    except Exception as e:
+        return _result("test-16-tasks-steps", False, f"EXCEPTION: {e}")
+
+
 # --- AI command execution (опційно, з tester-commands.md) ---------------------
 SYSTEM_PROMPT = """Ти — AI-тестувальник NeverMind PWA. Користувач описує сценарій українською.
 Поверни ТIЛЬКИ Python-код для browser-harness CDP (без markdown fence, без пояснень).
