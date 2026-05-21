@@ -373,3 +373,9 @@ SyntaxError: leading zeros in decimal integer literals are not permitted; use an
 ## 2026-05-21 11:13 UTC · vnm-20260521-0925 · 2/2 pass
 - ✅ `test-5-trash-restore`: ok
 - ✅ `test-8-clear-data`: ok
+
+## 2026-05-21 12:00 UTC · vnm-20260521-0925 · 0/4 pass
+- ❌ `test-18-notes-view`: VIEW_MODAL_NOT_OPEN: open-note не відкрив #note-view-modal
+- ❌ `test-20-habits-toggle`: TOGGLE_NO_EFFECT: log_before=0 log_after=0
+- ❌ `test-24-habits-edit`: EDIT_MODAL_NOT_OPEN
+- ❌ `test-27-health-medication`: MED_INPUT_NOT_FOUND: жодне input медикаменту не відповідає очікуваним selector'ам
