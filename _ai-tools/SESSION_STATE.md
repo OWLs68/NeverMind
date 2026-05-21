@@ -65,6 +65,40 @@ Bonus: failed-screenshot exception truncate 120 chars (раніше 500+ char tr
 - **test_3 РОЗБЛОКОВАНО** через JS-direct fill (workaround у `28ceb0a`)
 - **screenshot pipeline ПРАЦЮЄ** — реальні шляхи у tester-status.json, Roman може SSH `scp` з `/home/nmtester/screenshots/`
 
+### Стратегічний план тестера (день 2, після обговорення з Romanom)
+
+**Проблема:** 10 hardcoded scripted сценаріїв = поверхневе покриття 300+ кнопок / 40+ модалок / 200+ взаємодій. Roman ловить це і питає системного підходу.
+
+**Рішення — `_ai-tools/TESTER_SCENARIOS_PLAN.md`:** 35 UI-сценаріїв розписаних по 8 вкладках + globals. Готовий план для імплементації. Що покриваємо:
+- ✅ Кнопки / модалки / поля вводу / свайпи / persistence через reload
+- ❌ AI behavior (Roman тестує сам)
+- ❌ iOS-specific quirks (потребує real device — manual smoke)
+- ❌ Login/sync/offline (буде ПIСЛЯ Supabase)
+- ❌ Projects (ще доробляється)
+
+**3 принципи стабільності** (без них через тиждень flaky):
+1. **UI-first assertions** — перевіряємо що юзер бачить на екрані, НЕ що у localStorage. Це переживе Supabase (DOM той самий, storage переїде у БД).
+2. **Test isolation** — кожен тест clean start + cleanup після. Незалежність від попередніх тестів.
+3. **Retry-2x** перед FAIL — network/CDP race conditions нормальні.
+
+**Maintenance rule** (записано у CLAUDE.md правило 13 — Roman явно просив):
+Коли Claude додає у сесії нову кнопку / модалку / поле / swipe → ПЕРЕД `/finish` автоматично пише новий тест + триг`її on-demand run. Без цього тести відстануть протягом 2-3 сесій.
+
+**Supabase considerations:**
+- Тести з `localStorage.getItem('nm_tasks')` впадуть → пишемо UI-assertions
+- `nm_gemini_key` modal зникне → не пишемо тест на неї
+- Поточний `nm_backup_*` стане deprecated → test_4 одразу позначений як «після Supabase видалити»
+- +10 нових тестів додамо ПIСЛЯ Supabase: 4 Auth + 3 Sync + 3 Offline
+
+**Roadmap імплементації:**
+- Batch 1 (5 globals + settings): test_11-15 ~2.5 год
+- Batch 2 (Inbox + Tasks 9 шт): test_16-24 ~4.5 год
+- Batch 3 (Notes + Me/Habits 8 шт): test_25-32 ~4 год
+- Batch 4 (Evening + Health + Finance 11 шт): test_33-43 ~5.5 год
+- TOTAL: **35 нових тестів = ~16-18 годин** автономної роботи Claude
+
+Roman сказав «робимо» — імплементація в наступних сесіях, поточна сесія завершується з планом + документацією.
+
 ### Гілка + контекст
 
 - Гілка: `claude/start-session-Ug2Jw`
