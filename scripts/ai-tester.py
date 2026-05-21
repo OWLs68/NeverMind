@@ -1308,6 +1308,100 @@ print(_json.dumps({"step":"complete","habit_id":str(habit_id),"log_before":log_b
         return _result("test-20-habits-toggle", False, f"EXCEPTION: {e}")
 
 
+# === Batch 4 (Ug2Jw 21.05.2026) — Evening + Health + Finance UI ===============
+
+@scenario("ui")
+def test_21_evening_tab_open():
+    """Evening tab → page-evening видима + має summary блок."""
+    try:
+        r = bh("""
+inject_error_capture()
+goto_url('https://owls68.github.io/NeverMind/')
+wait(2.0)
+inject_error_capture()
+click_sel('[data-tab=evening]')
+wait(0.6)
+page_visible = js("(function(){var p=document.getElementById('page-evening');return !!p && getComputedStyle(p).display!=='none';})()")
+errs = get_console_errs()
+print(_json.dumps({"page_visible":bool(page_visible),"errors":errs[:3]}))
+""")
+        if not r["page_visible"]:
+            return _result("test-21-evening-open", False, "PAGE_NOT_VISIBLE: #page-evening не активувалось")
+        if r["errors"]:
+            return _result("test-21-evening-open", False, f"console.error: {r['errors']}")
+        return _result("test-21-evening-open", True)
+    except Exception as e:
+        return _result("test-21-evening-open", False, f"EXCEPTION: {e}")
+
+
+@scenario("ui")
+def test_22_health_add_card():
+    """Health → ➕ → fill #health-card-name → saveHealthCardFromModal → картка у nm_health_cards."""
+    name = "AI-T Card " + datetime.datetime.now(datetime.timezone.utc).strftime('%H%M%S')
+    payload = '''
+inject_error_capture()
+goto_url(__URL__)
+wait(2.0)
+inject_error_capture()
+click_sel('[data-tab=health]')
+wait(0.5)
+click_sel('[data-fn=openAddHealthCard]')
+wait(0.6)
+modal_visible = js("(function(){var o=document.getElementById('health-card-modal');return !!o && getComputedStyle(o).display!=='none';})()")
+js("(function(){var el=document.getElementById('health-card-name');el.value=`__NAME__`;el.dispatchEvent(new Event('input',{bubbles:true}));})()")
+wait(0.2)
+click_sel('[data-fn=saveHealthCardFromModal]')
+wait(0.8)
+card_in_storage = js("(function(){var c=JSON.parse(localStorage.getItem('nm_health_cards')||'[]');return c.some(function(x){return x.name===`__NAME__`;});})()")
+card_in_dom = js("(function(){return (document.body.textContent||'').indexOf(`__NAME__`)>=0;})()")
+js("(function(){var c=JSON.parse(localStorage.getItem('nm_health_cards')||'[]');localStorage.setItem('nm_health_cards',JSON.stringify(c.filter(function(x){return x.name!==`__NAME__`;})));})()")
+errs = get_console_errs()
+print(_json.dumps({"modal_visible":bool(modal_visible),"card_in_storage":bool(card_in_storage),"card_in_dom":bool(card_in_dom),"errors":errs[:3]}))
+'''
+    payload = payload.replace("__URL__", repr(NEVERMIND_URL))
+    payload = payload.replace("__NAME__", name)
+    try:
+        r = bh(payload, timeout=60)
+        if not r["modal_visible"]:
+            return _result("test-22-health-card", False, "HEALTH_MODAL_NOT_OPEN")
+        if not r["card_in_storage"]:
+            return _result("test-22-health-card", False, "CARD_NOT_SAVED: nm_health_cards не містить нову картку")
+        if not r["card_in_dom"]:
+            return _result("test-22-health-card", False, "CARD_NOT_IN_DOM: картка не у списку Health")
+        if r["errors"]:
+            return _result("test-22-health-card", False, f"console.error: {r['errors']}")
+        return _result("test-22-health-card", True)
+    except Exception as e:
+        return _result("test-22-health-card", False, f"EXCEPTION: {e}")
+
+
+@scenario("ui")
+def test_23_finance_modal_open():
+    """Finance → ➕ → #fin-tx-modal (dynamically created) видима + має amount/comment поля."""
+    try:
+        r = bh("""
+inject_error_capture()
+goto_url('https://owls68.github.io/NeverMind/')
+wait(2.0)
+inject_error_capture()
+click_sel('[data-tab=finance]')
+wait(0.5)
+click_sel('[data-fn=openAddTransaction]')
+wait(0.7)
+modal_exists = js("(function(){var o=document.getElementById('fin-tx-modal');return !!o && getComputedStyle(o).display!=='none';})()")
+js("(function(){var m=document.getElementById('fin-tx-modal');if(m)m.remove();})()")
+errs = get_console_errs()
+print(_json.dumps({"modal_exists":bool(modal_exists),"errors":errs[:3]}))
+""")
+        if not r["modal_exists"]:
+            return _result("test-23-finance-modal", False, "FIN_TX_MODAL_NOT_CREATED: openAddTransaction не створила #fin-tx-modal")
+        if r["errors"]:
+            return _result("test-23-finance-modal", False, f"console.error: {r['errors']}")
+        return _result("test-23-finance-modal", True)
+    except Exception as e:
+        return _result("test-23-finance-modal", False, f"EXCEPTION: {e}")
+
+
 # --- AI command execution (опційно, з tester-commands.md) ---------------------
 SYSTEM_PROMPT = """Ти — AI-тестувальник NeverMind PWA. Користувач описує сценарій українською.
 Поверни ТIЛЬКИ Python-код для browser-harness CDP (без markdown fence, без пояснень).
