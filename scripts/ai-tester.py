@@ -1580,6 +1580,70 @@ print(_json.dumps({"med_rows_before":med_rows_before,"med_rows_after":med_rows_a
         return _result("test-27-health-medication", False, f"EXCEPTION: {e}")
 
 
+# === Batch 6 (Ug2Jw 21.05.2026) — Settings smoke flood (bug-hunt) =============
+
+@scenario("ui")
+def test_28_settings_buttons_flood():
+    """Settings → tap кожну кнопку (Memory, Backup-list, Feedback) → перевір
+    відповідну модалку/toast. Bug-hunt smoke pattern — якщо хоч одна не реагує
+    → кандидат на real bug (window export missing as B-193, чи broken handler).
+    """
+    payload = '''
+inject_error_capture()
+goto_url(__URL__)
+wait(2.0)
+inject_error_capture()
+click_sel('[data-action=open-settings]')
+wait(0.6)
+settings_visible = js("(function(){var o=document.getElementById('settings-overlay');return !!o && getComputedStyle(o).display!=='none';})()")
+
+click_sel('[data-fn=openMemoryModal]')
+wait(0.5)
+memory_visible = js("(function(){var o=document.getElementById('memory-modal');return !!o && getComputedStyle(o).display!=='none';})()")
+js("(function(){var o=document.getElementById('memory-modal');if(o)o.style.display='none';})()")
+wait(0.2)
+
+click_sel('[data-fn=openBackupListModal]')
+wait(0.5)
+backup_list_visible = js("(function(){var o=document.getElementById('backup-list-modal');return !!o && getComputedStyle(o).display!=='none';})()")
+js("(function(){var o=document.getElementById('backup-list-modal');if(o)o.style.display='none';})()")
+wait(0.2)
+
+click_sel('[data-fn=openFeedback]')
+wait(0.4)
+toast_has_show_class = js("(function(){var t=document.getElementById('toast');return !!t && t.classList.contains('show');})()")
+toast_msg_content = js("(function(){var t=document.getElementById('toast-msg');return t?(t.textContent||'').slice(0,80):null;})()")
+
+errs = get_console_errs()
+print(_json.dumps({
+    "settings_visible":bool(settings_visible),
+    "memory_visible":bool(memory_visible),
+    "backup_list_visible":bool(backup_list_visible),
+    "toast_has_show_class":bool(toast_has_show_class),
+    "toast_msg_content":toast_msg_content,
+    "errors":errs[:3]
+}))
+'''.replace("__URL__", repr(NEVERMIND_URL))
+    try:
+        r = bh(payload, timeout=60)
+        if not r["settings_visible"]:
+            return _result("test-28-settings-flood", False, "SETTINGS_NOT_OPEN — base failure")
+        broken = []
+        if not r["memory_visible"]:
+            broken.append("openMemoryModal → #memory-modal НЕ відкрилась")
+        if not r["backup_list_visible"]:
+            broken.append("openBackupListModal → #backup-list-modal НЕ відкрилась")
+        if not r["toast_has_show_class"]:
+            broken.append(f"openFeedback → toast НЕ показався (msg={r.get('toast_msg_content')!r})")
+        if broken:
+            return _result("test-28-settings-flood", False, f"BROKEN HANDLERS: {' | '.join(broken)} | errors={r.get('errors')}")
+        if r["errors"]:
+            return _result("test-28-settings-flood", False, f"console.error: {r['errors']}")
+        return _result("test-28-settings-flood", True)
+    except Exception as e:
+        return _result("test-28-settings-flood", False, f"EXCEPTION: {e}")
+
+
 # --- AI command execution (опційно, з tester-commands.md) ---------------------
 SYSTEM_PROMPT = """Ти — AI-тестувальник NeverMind PWA. Користувач описує сценарій українською.
 Поверни ТIЛЬКИ Python-код для browser-harness CDP (без markdown fence, без пояснень).
