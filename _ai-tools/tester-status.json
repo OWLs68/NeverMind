@@ -1,16 +1,31 @@
 {
   "_comment": "Stamped by ai-tester.py. NM-Claude reads at /start.",
-  "last_run_utc": "2026-05-21T09:33:13.333040Z",
+  "last_run_utc": "2026-05-21T10:37:21.071715Z",
   "tester_version": "0.2.0-HKnlM-20.05.2026",
   "ai_tester_app_version": "nm-20260521-0925",
   "summary": {
     "date_utc": "2026-05-21",
-    "total_runs_today": 12,
-    "passed_today": 18,
-    "failed_today": 14,
+    "total_runs_today": 13,
+    "passed_today": 20,
+    "failed_today": 16,
     "openai_spent_today_usd": 0.0,
     "openai_budget_remaining_usd": 2.0
   },
-  "last_failures": [],
+  "last_failures": [
+    {
+      "test_name": "test-24-habits-edit",
+      "fail_reason": "EDIT_MODAL_NOT_OPEN",
+      "category": "smoke",
+      "ts_utc": "2026-05-21T10:37:09.354172Z",
+      "screenshot_path": "/home/nmtester/screenshots/test-24-habits-edit-20260521-103709.png"
+    },
+    {
+      "test_name": "test-27-health-medication",
+      "fail_reason": "MED_INPUT_NOT_FOUND: жодне input медикаменту не відповідає очікуваним selector'ам",
+      "category": "smoke",
+      "ts_utc": "2026-05-21T10:37:20.806973Z",
+      "screenshot_path": "/home/nmtester/screenshots/test-27-health-medication-20260521-103720.png"
+    }
+  ],
   "warnings": []
 }

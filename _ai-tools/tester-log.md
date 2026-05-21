@@ -323,3 +323,9 @@ SyntaxError: leading zeros in decimal integer literals are not permitted; use an
 - ✅ `test-21-evening-open`: ok
 - ✅ `test-22-health-card`: ok
 - ✅ `test-23-finance-modal`: ok
+
+## 2026-05-21 10:37 UTC · vnm-20260521-0925 · 2/4 pass
+- ❌ `test-24-habits-edit`: EDIT_MODAL_NOT_OPEN
+- ✅ `test-25-prod-tab-switch`: ok
+- ✅ `test-26-evening-input`: ok
+- ❌ `test-27-health-medication`: MED_INPUT_NOT_FOUND: жодне input медикаменту не відповідає очікуваним selector'ам
