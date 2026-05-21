@@ -649,6 +649,8 @@ EAA (мікро-виняток), NIS2 (мікро-виняток), DSA (особ
 
 **Повний журнал виконаного → [`ROADMAP_DONE.md`](ROADMAP_DONE.md):** завершені Active-блоки, Блок 1 малі фікси, 6 фаз Здоров'я, хронологія `✅ Done` з датами (06-19.04.2026), аудит вкладок 15.04.
 
+**Ug2Jw 20-21.05.2026** — AI-Tester Test Coverage Expansion (incremental до HKnlM deploy). 22 нових UI-сценарії написано (test_11→test_32), 19 PASS у stable baseline (5→24 загалом), 3 disabled. `TESTER_SCENARIOS_PLAN.md` — 35 запланованих UI-сценаріїв з принципами стабільності. Знайдено + закрито 1 real production bug B-193 АВТОНОМНО тестером (openAddHabit не у window export → Habits ➕ silent skip). Council 5 паралельних агентів Sonnet аудит + 2× verification (anti-flaky + chaos). Inbox systematic coverage завершено. Залишок 8 тестів до 35 + Tasks/Notes/Me/Evening/Health/Finance systematic — наступні сесії.
+
 Ще глибша історія ("Що мозок вже вміє" з посиланнями на файли і рядки коду) → [`_archive/FEATURES_ROADMAP.md`](\_archive/FEATURES_ROADMAP.md).
 
 ---
