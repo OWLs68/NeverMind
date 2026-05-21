@@ -1644,6 +1644,47 @@ print(_json.dumps({
         return _result("test-28-settings-flood", False, f"EXCEPTION: {e}")
 
 
+# === Inbox systematic coverage (Ug2Jw post-audit, Roman 21.05) ================
+
+@scenario("ui")
+def test_29_inbox_deploy_info():
+    """Inbox header → tap version label (#deploy-version) → #deploy-info-modal
+    відкривається → tap × (close-deploy-info) → закривається.
+
+    Покриває: data-fn="showDeployInfo" call handler chain + dynamic modal creation.
+    """
+    payload = '''
+inject_error_capture()
+goto_url(__URL__)
+wait(2.0)
+inject_error_capture()
+click_sel('[data-tab=inbox]')
+wait(0.4)
+version_visible = js("(function(){var v=document.getElementById('deploy-version');return !!v && getComputedStyle(v).display!=='none';})()")
+click_sel('#deploy-version')
+wait(0.5)
+modal_visible = js("(function(){var m=document.getElementById('deploy-info-modal');return !!m && getComputedStyle(m).display!=='none';})()")
+click_sel('[data-action=close-deploy-info]')
+wait(0.4)
+modal_gone = js("(function(){var m=document.getElementById('deploy-info-modal');return !m || getComputedStyle(m).display==='none';})()")
+errs = get_console_errs()
+print(_json.dumps({"version_visible":bool(version_visible),"modal_visible":bool(modal_visible),"modal_gone":bool(modal_gone),"errors":errs[:3]}))
+'''.replace("__URL__", repr(NEVERMIND_URL))
+    try:
+        r = bh(payload, timeout=60)
+        if not r["version_visible"]:
+            return _result("test-29-inbox-deploy-info", False, "VERSION_LABEL_NOT_VISIBLE")
+        if not r["modal_visible"]:
+            return _result("test-29-inbox-deploy-info", False, "DEPLOY_MODAL_NOT_OPEN — showDeployInfo не створила #deploy-info-modal")
+        if not r["modal_gone"]:
+            return _result("test-29-inbox-deploy-info", False, "DEPLOY_MODAL_NOT_CLOSED — × кнопка не закрила")
+        if r["errors"]:
+            return _result("test-29-inbox-deploy-info", False, f"console.error: {r['errors']}")
+        return _result("test-29-inbox-deploy-info", True)
+    except Exception as e:
+        return _result("test-29-inbox-deploy-info", False, f"EXCEPTION: {e}")
+
+
 # --- AI command execution (опційно, з tester-commands.md) ---------------------
 SYSTEM_PROMPT = """Ти — AI-тестувальник NeverMind PWA. Користувач описує сценарій українською.
 Поверни ТIЛЬКИ Python-код для browser-harness CDP (без markdown fence, без пояснень).
