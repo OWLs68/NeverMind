@@ -615,53 +615,79 @@ def test_4_backup_create():
 
     Ug2Jw debug: dump fn_types, return value, error_log, console errors.
     """
-    # КРИТИЧНО: усі JS strings single-quote, NM_KEYS.data ключі через
-    # JS variable assignment щоб уникнути escape проблем (Ug2Jw 04:18 урок).
+    # RQmdC B-192 debug: monkey-patch localStorage.removeItem/setItem на nm_backup_*
+    # + polling кожні 100мс протягом 1100мс щоб зловити ТОЧНИЙ момент видалення
+    # та stack trace винного коду. Council 3 агентів Sonnet не знайшли причини
+    # через статичний код — час верифікувати runtime спостереженням.
     payload = '''
 inject_error_capture()
 goto_url(__URL__)
 wait(2.0)
 inject_error_capture()
-# Ug2Jw v3: explicit cleanup nm_backup_* ДО seed — гіпотеза квоти
-# (run 04:35: keys_b=3 → keys_a=0 — quota path видаляє і retry setItem fail).
-seed_result = js("(function(){try{var removed=0;Object.keys(localStorage).filter(function(k){return k.indexOf('nm_backup_')===0;}).forEach(function(k){localStorage.removeItem(k);removed++;});localStorage.setItem('nm_settings','{}');localStorage.setItem('nm_tasks','[]');localStorage.setItem('nm_chat','{}');return {ok:true,backups_removed:removed,after_settings:localStorage.getItem('nm_settings'),after_tasks:localStorage.getItem('nm_tasks')};}catch(e){return {ok:false,err:String(e.message||e)};}})()")
+# Cleanup nm_backup_* перед тестом
+js("(function(){Object.keys(localStorage).filter(function(k){return k.indexOf('nm_backup_')===0;}).forEach(function(k){localStorage.removeItem(k);});localStorage.setItem('nm_settings','{}');localStorage.setItem('nm_tasks','[]');localStorage.setItem('nm_chat','{}');return {ok:true};})()")
 wait(0.3)
-diag = js("(function(){var keys=Object.keys(localStorage);var bk=keys.filter(function(k){return k.indexOf('nm_backup_')===0;});var nmK=window.NM_KEYS;var nmSet=localStorage.getItem('nm_settings');var nmTasks=localStorage.getItem('nm_tasks');return {createFullBackup_fn:typeof window.createFullBackup,createFullBackupUI_fn:typeof window.createFullBackupUI,createSelectiveBackup_fn:typeof window.createSelectiveBackup,NM_KEYS_present:!!nmK,NM_KEYS_data_len:nmK&&nmK.data?nmK.data.length:0,NM_KEYS_data_sample:nmK&&nmK.data?nmK.data.slice(0,3):null,nm_settings_value:nmSet,nm_settings_len:nmSet?nmSet.length:0,nm_tasks_value:nmTasks,nm_tasks_len:nmTasks?nmTasks.length:0,backup_keys_before:bk,ls_total_keys:keys.length,ls_all_keys:keys.slice(0,15),ls_size_kb:Math.round(JSON.stringify(localStorage).length/1024),boot_done:typeof window.bootApp,delegation_ready:typeof window.initDelegation};})()")
-call_result = js("(function(){try{if(typeof window.createFullBackupUI!=='function')return {ok:false,err:'NO_FN',fn_type:typeof window.createFullBackupUI};var nmK=window.NM_KEYS;var keys_arg=nmK?[].concat(nmK.data||[],nmK.settings||[],nmK.chat||[]):['nm_tasks','nm_settings'];var snapshot={};var hasData=false;keys_arg.forEach(function(k){if(typeof k!=='string'||!k.startsWith('nm_'))return;if(k.startsWith('nm_backup_'))return;var v=localStorage.getItem(k);if(v!==null){snapshot[k]=v;hasData=true;}});var keys_b4=Object.keys(localStorage).filter(function(k){return k.indexOf('nm_backup_')===0;}).length;var r=window.createFullBackupUI();var keys_af=Object.keys(localStorage).filter(function(k){return k.indexOf('nm_backup_')===0;}).length;return {ok:true,return_val:r===undefined?'undefined':String(r),keys_arg_count:keys_arg.length,snapshot_keys_count:Object.keys(snapshot).length,snapshot_keys_sample:Object.keys(snapshot).slice(0,8),hasData:hasData,keys_b4_call:keys_b4,keys_af_call:keys_af};}catch(e){return {ok:false,err:String(e.message||e),stack:String(e.stack||'').substring(0,300)};}})()")
-wait(0.8)
-after_keys_raw = js("JSON.stringify(Object.keys(localStorage).filter(function(k){return k.indexOf('nm_backup_')===0;}))")
-try:
-    after_keys = _json.loads(after_keys_raw) if after_keys_raw else []
-except Exception:
-    after_keys = []
+# RQmdC: monkey-patch removeItem + setItem на localStorage щоб логувати
+# кожну операцію з ключем nm_backup_* + stack trace винного коду.
+js("(function(){window.__rm_log=[];window.__si_log=[];window.__t0=performance.now();var origRm=localStorage.removeItem.bind(localStorage);var origSi=localStorage.setItem.bind(localStorage);Object.defineProperty(localStorage,'removeItem',{value:function(k){if(typeof k==='string' && k.indexOf('nm_backup_')===0){try{window.__rm_log.push({t:performance.now()-window.__t0,k:k,s:(new Error()).stack.substring(0,2000)});}catch(e){}}return origRm(k);},writable:true,configurable:true});Object.defineProperty(localStorage,'setItem',{value:function(k,v){if(typeof k==='string' && k.indexOf('nm_backup_')===0){try{window.__si_log.push({t:performance.now()-window.__t0,k:k,len:(v?v.length:0),s:(new Error()).stack.substring(0,1500)});}catch(e){}}return origSi(k,v);},writable:true,configurable:true});return {ok:true};})()")
+# Polling schedule — кожні 100мс протягом 1100мс
+js("(function(){window.__poll=[];[0,50,100,200,300,400,500,600,700,800,900,1000,1100].forEach(function(ms){setTimeout(function(){var keys=Object.keys(localStorage).filter(function(k){return k.indexOf('nm_backup_')===0;});window.__poll.push({t:Math.round(performance.now()-window.__t0),n:keys.length,k:keys.slice()});},ms);});return {ok:true};})()")
+# Викликаємо createFullBackupUI() — backup має створитись
+call_result = js("(function(){try{var sync_b4=Object.keys(localStorage).filter(function(k){return k.indexOf('nm_backup_')===0;});var r=window.createFullBackupUI();var sync_af=Object.keys(localStorage).filter(function(k){return k.indexOf('nm_backup_')===0;});return {ok:true,return_val:r===undefined?'undefined':String(r),sync_b4:sync_b4,sync_af:sync_af};}catch(e){return {ok:false,err:String(e.message||e)};}})()")
+# Чекаємо щоб всі polling tick'и виконались
+wait(1.3)
+poll_raw = js("JSON.stringify({poll:window.__poll||[],rm_log:window.__rm_log||[],si_log:window.__si_log||[]})")
 errs = get_console_errs()[:5]
 err_log_raw = get_ls('nm_error_log') or '[]'
 try:
+    poll_data = _json.loads(poll_raw) if poll_raw else {}
     err_log = _json.loads(err_log_raw)
     err_log_tail = err_log[-3:] if isinstance(err_log,list) else []
-except Exception:
+except Exception as e:
+    poll_data = {"_parse_error":str(e),"_raw":(poll_raw[:1500] if isinstance(poll_raw,str) else "")}
     err_log_tail = []
-before_keys = diag.get('backup_keys_before',[]) if isinstance(diag,dict) else []
 print(_json.dumps({
-    "seed_result":seed_result,
-    "diag":diag,
     "call_result":call_result,
-    "backup_keys_after":after_keys,
-    "delta":len(after_keys) - (len(before_keys) if isinstance(before_keys,list) else 0),
+    "poll":poll_data.get("poll",[]),
+    "rm_log":poll_data.get("rm_log",[]),
+    "si_log":poll_data.get("si_log",[]),
     "console_errors":errs,
-    "nm_error_log_tail":err_log_tail,
+    "nm_error_log_tail":err_log_tail
 }))
 '''
     payload = payload.replace("__URL__", repr(NEVERMIND_URL))
     try:
         r = bh(payload, timeout=60)
-        if r.get("delta", 0) < 1:
-            diag = r.get("diag", {}) or {}
-            call = r.get("call_result", {}) or {}
-            seed = r.get("seed_result", {}) or {}
-            return _result("test-4-backup-create", False,
-                f"NO_BACKUP: seed_ok={seed.get('ok')} seed_backups_removed={seed.get('backups_removed')} call_ok={call.get('ok')} ret={call.get('return_val')} keys_arg={call.get('keys_arg_count')} snap_count={call.get('snapshot_keys_count')} snap_sample={call.get('snapshot_keys_sample')} hasData={call.get('hasData')} b4_call={call.get('keys_b4_call')} af_call={call.get('keys_af_call')} err={call.get('err')} NM_KEYS_data_len={diag.get('NM_KEYS_data_len')} settings_val={diag.get('nm_settings_value')!r} tasks_val={diag.get('nm_tasks_value')!r} ls_keys={diag.get('ls_total_keys')} ls_sample={diag.get('ls_all_keys')} ls_size_kb={diag.get('ls_size_kb')} keys_b={len(diag.get('backup_keys_before',[]))} keys_a={len(r.get('backup_keys_after',[]))} errs={r.get('console_errors')} log={r.get('nm_error_log_tail')}")
-        return _result("test-4-backup-create", True)
+        call = r.get("call_result", {}) or {}
+        poll = r.get("poll", []) or []
+        rm_log = r.get("rm_log", []) or []
+        si_log = r.get("si_log", []) or []
+        # Аналіз timeline: коли backup створено (sync_af) vs коли зник
+        final_poll = poll[-1] if poll else {"n": -1}
+        # Шукаємо момент tick де n впав з >0 до 0
+        drop_tick = None
+        for i in range(1, len(poll)):
+            if poll[i-1].get("n", 0) > 0 and poll[i].get("n", 0) == 0:
+                drop_tick = poll[i]
+                break
+        # Перший removeItem(nm_backup_*) виклик ПIСЛЯ createFullBackupUI (sync_af > 0)
+        # — це винуватець. Stack trace з нього вкаже точку.
+        first_rm = None
+        if rm_log and si_log:
+            last_si_t = si_log[-1].get("t", 0)
+            for entry in rm_log:
+                if entry.get("t", 0) > last_si_t:
+                    first_rm = entry
+                    break
+        sync_b4 = call.get("sync_b4", [])
+        sync_af = call.get("sync_af", [])
+        # PASS якщо final_poll показує backup існує
+        if final_poll.get("n", 0) >= 1 and len(sync_af) >= 1:
+            return _result("test-4-backup-create", True)
+        # FAIL — детальний звіт з timeline і stack trace
+        rm_summary = f"rm_count={len(rm_log)} first_rm_t={first_rm.get('t') if first_rm else 'N/A'} first_rm_stack={(first_rm.get('s','')[:600] if first_rm else 'no removeItem after setItem')}"
+        return _result("test-4-backup-create", False,
+            f"NO_BACKUP: call_ok={call.get('ok')} sync_b4={len(sync_b4)} sync_af={len(sync_af)} final_n={final_poll.get('n')} drop_at_ms={drop_tick.get('t') if drop_tick else 'never'} si_count={len(si_log)} {rm_summary} timeline={[(p.get('t'),p.get('n')) for p in poll]} errs={r.get('console_errors')} log={r.get('nm_error_log_tail')}")
     except Exception as e:
         return _result("test-4-backup-create", False, f"EXCEPTION: {e}")
 
@@ -1951,12 +1977,15 @@ def main():
         # Smoke або Full — виконуємо сценарії
         max_tests = cfg.get("max_tests_per_run", 10)
         disabled = set(cfg.get("disabled_scenarios", []))
-        # On-demand: TARGET_SCENARIOS env var звужує до specific тестів (HKnlM trigger)
+        # On-demand: TARGET_SCENARIOS env var звужує до specific тестів (HKnlM trigger).
+        # RQmdC fix: on-demand BYPASS'ить disabled_scenarios — призначення trigger'у
+        # власне debug disabled-тестів. Без bypass'у Roman мав би вручну Edit config.json
+        # перед кожним debug-циклом → накопичення регресій (забути повернути disabled).
         target_env = os.environ.get("TARGET_SCENARIOS", "").strip()
         if target_env:
             targets = set(s.strip() for s in target_env.split(",") if s.strip())
-            active = [fn for fn in SCENARIOS if fn.__name__ in targets and fn.__name__ not in disabled]
-            print(f"[TARGET] on-demand: {sorted(fn.__name__ for fn in active)}")
+            active = [fn for fn in SCENARIOS if fn.__name__ in targets]
+            print(f"[TARGET] on-demand (bypass disabled): {sorted(fn.__name__ for fn in active)}")
         else:
             active = [fn for fn in SCENARIOS[:max_tests] if fn.__name__ not in disabled]
             skipped = [fn.__name__ for fn in SCENARIOS[:max_tests] if fn.__name__ in disabled]

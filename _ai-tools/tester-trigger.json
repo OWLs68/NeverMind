@@ -1,15 +1,15 @@
 {
   "_comment": "On-demand trigger для AI-Tester. NM-Claude commit'ить новий trigger_ts → health-check на Hetzner (cron */1) бачить → запускає ai-tester.py позачергово. Latency: ~90 сек.",
 
-  "trigger_ts": "2026-05-21T12:38:15.772Z",
+  "trigger_ts": "2026-05-22T06:30:00.000Z",
   "_ts_help": "ISO-8601 з Z-суфіксом. Якщо trigger_ts > last_run_utc у tester-status.json → trigger вважається новим. null = no trigger.",
 
-  "target_scenarios": ["test_32_inbox_scroll_chips"],
-  "_target_help": "Список сценаріїв для запуску (наприклад ['test_3_create_task_persistence', 'test_4_backup_create']). Порожній = усі активні (як cron). disabled_scenarios з config все одно поважаються.",
+  "target_scenarios": ["test_4_backup_create"],
+  "_target_help": "Список сценаріїв для запуску (наприклад ['test_3_create_task_persistence', 'test_4_backup_create']). Порожній = усі активні (як cron). On-demand BYPASS'ить disabled_scenarios (RQmdC system fix).",
 
-  "requester": "nm-claude session Ug2Jw debug",
+  "requester": "nm-claude session RQmdC B-192 debug",
   "_requester_help": "Хто запросив (наприклад 'nm-claude session HKnlM'). Тільки для трекінгу у логах — НЕ впливає на виконання.",
 
-  "note": "Ug2Jw Batch 1 (Globals + Settings) — test_11 header buttons + test_12 language switch + test_13 legal pages. Перший раз ці тести запускаються — Pre-mortem ризики: settings backdrop close-backdrop selector може не матчити, data-lang attribute може не існувати, openImpressum/Privacy/Terms можуть не бути експортовані у window.",
+  "note": "RQmdC B-192 monkey-patch debug: test_4 переписаний з polling кожні 100мс протягом 1100мс + monkey-patch на localStorage.removeItem/setItem для nm_backup_* з stack trace. Очікую timeline де backup зникає + stack винного коду. Council 3 агентів Sonnet не знайшли причини у статичному коді — runtime спостереження останній крок перед фіксом.",
   "_note_help": "Опційно: чому запросили (наприклад 'після Edit у backup.js — перевірити test_4'). Зберігається у tester-log.md."
 }
