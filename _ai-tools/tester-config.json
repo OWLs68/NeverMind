@@ -13,7 +13,6 @@
   "_max_tests_help": "Скільки готових сценаріїв виконати за один запуск. Ug2Jw 21.05: підвищено 10→30 щоб ВСІ test_11-27 запускалися у cron-mode (silent-bug-scout критична знахідка — 13 нових тестів написано але max=10 блокував їх). 30 з cushion на майбутні test_28-35. SCENARIOS[:max] + filter(disabled) дає реальні ~18 активних × ~5 сек = ~1.5 хв per cron-run.",
 
   "disabled_scenarios": [
-    "test_4_backup_create",
     "test_6_owl_swipe",
     "test_7_modal_close_backdrop",
     "test_9_inbox_finance_subcategory",
@@ -22,8 +21,7 @@
     "test_20_habits_toggle_done",
     "test_24_habits_edit"
   ],
-  "_disabled_help": "Ug2Jw finальний stable list. test_27 ENABLED після селектор fix (input.med-name замість id/placeholder). 3 залишаються disabled: test_18/20/24 — без iPhone screenshot важко діагностувати (можливо timing або race). Інші: test_4 (B-192 backup async), test_6/7 (CDP touch), test_9/10 (OpenAI ключ). Baseline тепер: 19 active = 18 попередніх + test_27.",
-  "_disabled_help": "Ug2Jw 21.05.2026 (фінальний стан): test_3 ENABLE — fixed через JS-direct fill (fill_input bh API подвоює chars). test_4 DISABLE — async delete mystery: createFullBackupUI створює synchronously (af_call=1) АЛЕ через ~0.8s зникає. Не з backup.js (всі removeItem callsites verified). Потребує iPhone screenshot або глибший debug. test_6 (CDP touch фрагільний), test_7 (click_at_xy координати backdrop), test_9+10 (потребують OpenAI ключ у Chrome profile). Stable baseline: test_1/2/3/5/8 = 5/5.",
+  "_disabled_help": "RQmdC 23.05.2026: test_4 ENABLED — B-192 розслідувано через monkey-patch removeItem + polling, backup НЕ зникає (хибний сигнал старого тесту з окремими CDP-вимірами; verified 3× PASS 14:03/04/05). Переписаний на stability polling (0/500/1000мс) + cleanup після. Залишаються disabled: test_6/7 (CDP touch фрагільний), test_9/10 (потребують OpenAI ключ у Chrome profile), test_18/20/24 (потребують iPhone screenshot). Baseline тепер 23 active (22 + test_4).",
 
   "max_openai_requests_per_run": 20,
   "_openai_help": "Захист від retry-loop. AI-планування використовується тільки для команд природною мовою (НЕ для 10 готових сценаріїв).",

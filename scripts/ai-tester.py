@@ -607,87 +607,50 @@ print(_json.dumps({
 
 @scenario("crud")
 def test_4_backup_create():
-    """Сценарій 4 (OBErR fresh): створити backup → є у nm_backup_* → CLEANUP.
+    """Сценарій 4: createFullBackupUI створює знімок у nm_backup_* і він СТАБIЛЬНИЙ.
 
-    Implementer: createFullBackupUI на <div data-action="call" data-fn="...">
-    (НЕ <button>). Sync — wait(0.5) досить.
-    Pre-mortem #3: cleanup щоб backup не накопичувались (max 3 у backup.js TTL).
-
-    Ug2Jw debug: dump fn_types, return value, error_log, console errors.
+    RQmdC 23.05: B-192 розслідувано через monkey-patch + polling — backup НЕ
+    зникає (хибний сигнал старого тесту з окремими CDP-вимірами). Цей тест тепер
+    перевіряє stability через polling 3 точки (0/500/1000мс) — backup має лишатись
+    живим. Якщо колись реально зникне — drop_at_ms покаже коли. + cleanup після.
     """
-    # RQmdC B-192 debug: monkey-patch localStorage.removeItem/setItem на nm_backup_*
-    # + polling кожні 100мс протягом 1100мс щоб зловити ТОЧНИЙ момент видалення
-    # та stack trace винного коду. Council 3 агентів Sonnet не знайшли причини
-    # через статичний код — час верифікувати runtime спостереженням.
     payload = '''
 inject_error_capture()
 goto_url(__URL__)
 wait(2.0)
 inject_error_capture()
-# Cleanup nm_backup_* перед тестом
-js("(function(){Object.keys(localStorage).filter(function(k){return k.indexOf('nm_backup_')===0;}).forEach(function(k){localStorage.removeItem(k);});localStorage.setItem('nm_settings','{}');localStorage.setItem('nm_tasks','[]');localStorage.setItem('nm_chat','{}');return {ok:true};})()")
+js("(function(){Object.keys(localStorage).filter(function(k){return k.indexOf('nm_backup_')===0;}).forEach(function(k){localStorage.removeItem(k);});return {ok:true};})()")
 wait(0.3)
-# RQmdC: monkey-patch removeItem + setItem на localStorage щоб логувати
-# кожну операцію з ключем nm_backup_* + stack trace винного коду.
-js("(function(){window.__rm_log=[];window.__si_log=[];window.__t0=performance.now();var origRm=localStorage.removeItem.bind(localStorage);var origSi=localStorage.setItem.bind(localStorage);Object.defineProperty(localStorage,'removeItem',{value:function(k){if(typeof k==='string' && k.indexOf('nm_backup_')===0){try{window.__rm_log.push({t:performance.now()-window.__t0,k:k,s:(new Error()).stack.substring(0,2000)});}catch(e){}}return origRm(k);},writable:true,configurable:true});Object.defineProperty(localStorage,'setItem',{value:function(k,v){if(typeof k==='string' && k.indexOf('nm_backup_')===0){try{window.__si_log.push({t:performance.now()-window.__t0,k:k,len:(v?v.length:0),s:(new Error()).stack.substring(0,1500)});}catch(e){}}return origSi(k,v);},writable:true,configurable:true});return {ok:true};})()")
-# Polling schedule — кожні 100мс протягом 1100мс
-js("(function(){window.__poll=[];[0,50,100,200,300,400,500,600,700,800,900,1000,1100].forEach(function(ms){setTimeout(function(){var keys=Object.keys(localStorage).filter(function(k){return k.indexOf('nm_backup_')===0;});window.__poll.push({t:Math.round(performance.now()-window.__t0),n:keys.length,k:keys.slice()});},ms);});return {ok:true};})()")
-# Викликаємо createFullBackupUI() — backup має створитись
-call_result = js("(function(){try{var sync_b4=Object.keys(localStorage).filter(function(k){return k.indexOf('nm_backup_')===0;});var r=window.createFullBackupUI();var sync_af=Object.keys(localStorage).filter(function(k){return k.indexOf('nm_backup_')===0;});return {ok:true,return_val:r===undefined?'undefined':String(r),sync_b4:sync_b4,sync_af:sync_af};}catch(e){return {ok:false,err:String(e.message||e)};}})()")
-# Чекаємо щоб всі polling tick'и виконались
-wait(1.3)
-poll_raw = js("JSON.stringify({poll:window.__poll||[],rm_log:window.__rm_log||[],si_log:window.__si_log||[]})")
-errs = get_console_errs()[:5]
-err_log_raw = get_ls('nm_error_log') or '[]'
+js("(function(){window.__poll=[];window.__t0=performance.now();[0,500,1000].forEach(function(ms){setTimeout(function(){window.__poll.push({t:Math.round(performance.now()-window.__t0),n:Object.keys(localStorage).filter(function(k){return k.indexOf('nm_backup_')===0;}).length});},ms);});return {ok:true};})()")
+call_result = js("(function(){try{var r=window.createFullBackupUI();var sync_af=Object.keys(localStorage).filter(function(k){return k.indexOf('nm_backup_')===0;}).length;return {ok:true,sync_af:sync_af};}catch(e){return {ok:false,err:String(e.message||e)};}})()")
+wait(1.2)
+poll_raw = js("JSON.stringify(window.__poll||[])")
+errs = get_console_errs()[:3]
 try:
-    poll_data = _json.loads(poll_raw) if poll_raw else {}
-    err_log = _json.loads(err_log_raw)
-    err_log_tail = err_log[-3:] if isinstance(err_log,list) else []
-except Exception as e:
-    poll_data = {"_parse_error":str(e),"_raw":(poll_raw[:1500] if isinstance(poll_raw,str) else "")}
-    err_log_tail = []
-print(_json.dumps({
-    "call_result":call_result,
-    "poll":poll_data.get("poll",[]),
-    "rm_log":poll_data.get("rm_log",[]),
-    "si_log":poll_data.get("si_log",[]),
-    "console_errors":errs,
-    "nm_error_log_tail":err_log_tail
-}))
+    poll = _json.loads(poll_raw) if poll_raw else []
+except Exception:
+    poll = []
+# Cleanup — не накопичувати backup між запусками
+js("(function(){Object.keys(localStorage).filter(function(k){return k.indexOf('nm_backup_')===0;}).forEach(function(k){localStorage.removeItem(k);});return {ok:true};})()")
+print(_json.dumps({"call_result":call_result,"poll":poll,"console_errors":errs}))
 '''
     payload = payload.replace("__URL__", repr(NEVERMIND_URL))
     try:
         r = bh(payload, timeout=60)
         call = r.get("call_result", {}) or {}
         poll = r.get("poll", []) or []
-        rm_log = r.get("rm_log", []) or []
-        si_log = r.get("si_log", []) or []
-        # Аналіз timeline: коли backup створено (sync_af) vs коли зник
-        final_poll = poll[-1] if poll else {"n": -1}
-        # Шукаємо момент tick де n впав з >0 до 0
+        sync_af = call.get("sync_af", 0)
+        final_n = poll[-1].get("n", 0) if poll else 0
+        # Шукаємо drop (n>0 → n=0) для діагностики майбутньої регресії
         drop_tick = None
         for i in range(1, len(poll)):
             if poll[i-1].get("n", 0) > 0 and poll[i].get("n", 0) == 0:
                 drop_tick = poll[i]
                 break
-        # Перший removeItem(nm_backup_*) виклик ПIСЛЯ createFullBackupUI (sync_af > 0)
-        # — це винуватець. Stack trace з нього вкаже точку.
-        first_rm = None
-        if rm_log and si_log:
-            last_si_t = si_log[-1].get("t", 0)
-            for entry in rm_log:
-                if entry.get("t", 0) > last_si_t:
-                    first_rm = entry
-                    break
-        sync_b4 = call.get("sync_b4", [])
-        sync_af = call.get("sync_af", [])
-        # PASS якщо final_poll показує backup існує
-        if final_poll.get("n", 0) >= 1 and len(sync_af) >= 1:
+        if sync_af >= 1 and final_n >= 1:
             return _result("test-4-backup-create", True)
-        # FAIL — детальний звіт з timeline і stack trace
-        rm_summary = f"rm_count={len(rm_log)} first_rm_t={first_rm.get('t') if first_rm else 'N/A'} first_rm_stack={(first_rm.get('s','')[:600] if first_rm else 'no removeItem after setItem')}"
         return _result("test-4-backup-create", False,
-            f"NO_BACKUP: call_ok={call.get('ok')} sync_b4={len(sync_b4)} sync_af={len(sync_af)} final_n={final_poll.get('n')} drop_at_ms={drop_tick.get('t') if drop_tick else 'never'} si_count={len(si_log)} {rm_summary} timeline={[(p.get('t'),p.get('n')) for p in poll]} errs={r.get('console_errors')} log={r.get('nm_error_log_tail')}")
+            f"BACKUP_UNSTABLE: call_ok={call.get('ok')} sync_af={sync_af} final_n={final_n} drop_at_ms={drop_tick.get('t') if drop_tick else 'never'} timeline={[(p.get('t'),p.get('n')) for p in poll]} err={call.get('err')} errs={r.get('console_errors')}")
     except Exception as e:
         return _result("test-4-backup-create", False, f"EXCEPTION: {e}")
 
