@@ -1,7 +1,7 @@
 {
   "_comment": "On-demand trigger для AI-Tester. NM-Claude commit'ить новий trigger_ts → health-check на Hetzner (cron */1) бачить → запускає ai-tester.py позачергово. Latency: ~90 сек.",
 
-  "trigger_ts": "2026-05-22T06:30:00.000Z",
+  "trigger_ts": "2026-05-23T14:05:00.000Z",
   "_ts_help": "ISO-8601 з Z-суфіксом. Якщо trigger_ts > last_run_utc у tester-status.json → trigger вважається новим. null = no trigger.",
 
   "target_scenarios": ["test_4_backup_create"],
