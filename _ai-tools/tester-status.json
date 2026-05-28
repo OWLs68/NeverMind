@@ -1,12 +1,12 @@
 {
   "_comment": "Stamped by ai-tester.py. NM-Claude reads at /start.",
-  "last_run_utc": "2026-05-27T17:01:24.187813Z",
+  "last_run_utc": "2026-05-28T02:01:23.253065Z",
   "tester_version": "0.2.0-HKnlM-20.05.2026",
   "ai_tester_app_version": "nm-20260521-0925",
   "summary": {
-    "date_utc": "2026-05-27",
-    "total_runs_today": 2,
-    "passed_today": 46,
+    "date_utc": "2026-05-28",
+    "total_runs_today": 1,
+    "passed_today": 23,
     "failed_today": 0,
     "openai_spent_today_usd": 0.0,
     "openai_budget_remaining_usd": 2.0
