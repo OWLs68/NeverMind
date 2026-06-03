@@ -27,6 +27,7 @@ const BRAIN_TAB_CD = 24 * 60 * 60 * 1000;     // 24 год на вкладку
 
 let _pulseInFlight = false;
 let _debounceTimer = null;
+let _visTimer = null;
 
 export async function brainPulse() {
   if (_pulseInFlight) return;
@@ -120,8 +121,9 @@ export async function brainPulse() {
 }
 
 export function startBrainPulseCycle() {
-  // Перший пульс через 45 сек після старту
-  setTimeout(brainPulse, 45 * 1000);
+  // Перший пульс невдовзі після старту (WML2Z 03.06: було 45с — відчувалось
+  // як «табло застрягло» при відкритті; 5с лишає час даним завантажитись).
+  setTimeout(brainPulse, 5 * 1000);
   // Далі — кожні 10 хв
   setInterval(brainPulse, BRAIN_PULSE_INTERVAL);
   // Debounce на зміни даних (юзер додав транзакцію → може зʼявився budget-warn)
@@ -139,5 +141,21 @@ export function startBrainPulseCycle() {
       clearTimeout(_debounceTimer);
       _debounceTimer = setTimeout(brainPulse, BRAIN_PULSE_DEBOUNCE);
     });
+  }
+
+  // WML2Z 03.06 (скрін «табло 370 год тому»): коли юзер відкриває застосунок
+  // або повертається з фону — оновлюємо табло одразу, не чекаючи наступного
+  // 10-хв тіку. Cooldowns (brain_global 30хв + brain_tab 24год) гасять зайві
+  // виклики → без спаму OpenAI / витрат. visibilitychange + pageshow обидва для
+  // надійності на iOS PWA (bfcache restore не завжди шле один з них).
+  if (typeof document !== 'undefined') {
+    const onResume = () => {
+      if (document.hidden) return;
+      if (typeof window !== 'undefined' && window.__nm_restoring) return;
+      clearTimeout(_visTimer);
+      _visTimer = setTimeout(brainPulse, 2 * 1000);
+    };
+    document.addEventListener('visibilitychange', onResume);
+    if (typeof window !== 'undefined') window.addEventListener('pageshow', onResume);
   }
 }
