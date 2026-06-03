@@ -150,19 +150,28 @@ export function parseContentChips(content) {
       if (depth === 0 && start !== -1) { ranges.push([start, i + 1]); start = -1; }
     }
   }
+  // WML2Z 03.06 (скрін «Список не список»): AI часом генерує JSON чіпів з зайвими
+  // комами (`"steps":null }, },`) — strict JSON.parse кидає, і весь код-блок чіпів
+  // вивалюється сирим текстом у бульбашку чату. Fallback: при невдачі strict-парсу
+  // прибираємо trailing-коми перед }/] і пробуємо ще раз. Прощаємо помилку AI —
+  // юзер бачить кнопки, а не кашу. Lenient-гілка лише при вже-невдалому strict.
+  const parseLenient = (str) => {
+    try { return JSON.parse(str); } catch {}
+    try { return JSON.parse(str.replace(/,(\s*[}\]])/g, '$1')); } catch {}
+    return undefined;
+  };
   let chips = null, cutRange = null;
   for (const [s, e] of ranges) {
-    try {
-      const obj = JSON.parse(content.slice(s, e));
-      // Формат A: канонічна обгортка {"chips":[...]}.
-      if (obj && Array.isArray(obj.chips)) { chips = obj.chips; cutRange = [s, e]; break; }
-      // Формат B (fallback): голий масив [{label, action}, ...]. Пройде тільки якщо ВСІ елементи
-      // мають label+action — інакше це випадковий масив, не чіпи.
-      if (Array.isArray(obj) && obj.length > 0 && obj.every(it => it && typeof it === 'object'
-          && typeof it.label === 'string' && typeof it.action === 'string')) {
-        chips = obj; cutRange = [s, e]; break;
-      }
-    } catch {}
+    const obj = parseLenient(content.slice(s, e));
+    if (obj === undefined) continue;
+    // Формат A: канонічна обгортка {"chips":[...]}.
+    if (obj && Array.isArray(obj.chips)) { chips = obj.chips; cutRange = [s, e]; break; }
+    // Формат B (fallback): голий масив [{label, action}, ...]. Пройде тільки якщо ВСІ елементи
+    // мають label+action — інакше це випадковий масив, не чіпи.
+    if (Array.isArray(obj) && obj.length > 0 && obj.every(it => it && typeof it === 'object'
+        && typeof it.label === 'string' && typeof it.action === 'string')) {
+      chips = obj; cutRange = [s, e]; break;
+    }
   }
   if (cutRange) {
     const text = (content.slice(0, cutRange[0]) + content.slice(cutRange[1]))
