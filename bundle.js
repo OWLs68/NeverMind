@@ -18951,21 +18951,30 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
         }
       }
     }
+    const parseLenient = (str) => {
+      try {
+        return JSON.parse(str);
+      } catch {
+      }
+      try {
+        return JSON.parse(str.replace(/,(\s*[}\]])/g, "$1"));
+      } catch {
+      }
+      return void 0;
+    };
     let chips = null, cutRange = null;
     for (const [s, e] of ranges) {
-      try {
-        const obj = JSON.parse(content.slice(s, e));
-        if (obj && Array.isArray(obj.chips)) {
-          chips = obj.chips;
-          cutRange = [s, e];
-          break;
-        }
-        if (Array.isArray(obj) && obj.length > 0 && obj.every((it) => it && typeof it === "object" && typeof it.label === "string" && typeof it.action === "string")) {
-          chips = obj;
-          cutRange = [s, e];
-          break;
-        }
-      } catch {
+      const obj = parseLenient(content.slice(s, e));
+      if (obj === void 0) continue;
+      if (obj && Array.isArray(obj.chips)) {
+        chips = obj.chips;
+        cutRange = [s, e];
+        break;
+      }
+      if (Array.isArray(obj) && obj.length > 0 && obj.every((it) => it && typeof it === "object" && typeof it.label === "string" && typeof it.action === "string")) {
+        chips = obj;
+        cutRange = [s, e];
+        break;
       }
     }
     if (cutRange) {
