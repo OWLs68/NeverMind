@@ -9,8 +9,8 @@
   "behavior_when_idle": "wait",
   "_idle_help": "Що робити коли немає команд у tester-commands.md і не час за розкладом: wait (нічого) | smoke (10 готових сценаріїв) | full (всі сценарії + випадкові дії)",
 
-  "max_tests_per_run": 30,
-  "_max_tests_help": "Скільки готових сценаріїв виконати за один запуск. Ug2Jw 21.05: підвищено 10→30 щоб ВСІ test_11-27 запускалися у cron-mode (silent-bug-scout критична знахідка — 13 нових тестів написано але max=10 блокував їх). 30 з cushion на майбутні test_28-35. SCENARIOS[:max] + filter(disabled) дає реальні ~18 активних × ~5 сек = ~1.5 хв per cron-run.",
+  "max_tests_per_run": 33,
+  "_max_tests_help": "Скільки готових сценаріїв виконати за один запуск. Ug2Jw 21.05: 10→30. WML2Z 03.06: 30→33 — всього 32 сценарії, при max=30 test_29 і test_30 (позиції 31-32 у SCENARIOS) тихо випадали з cron і ніколи не бігали. 33 покриває всі 32 з cushion. SCENARIOS[:max] + filter(disabled) дає реальні ~25 активних × ~5 сек per cron-run.",
 
   "disabled_scenarios": [
     "test_6_owl_swipe",

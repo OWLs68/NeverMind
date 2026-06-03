@@ -7,7 +7,6 @@ ai-tester.py — NeverMind AI Tester (Hetzner brain)
 
 Запуск (з cron або вручну):
     /home/nmtester/.venv/bin/python3 ai-tester.py --smoke      # 10 сценаріїв
-    /home/nmtester/.venv/bin/python3 ai-tester.py --full       # + LLM команди
     /home/nmtester/.venv/bin/python3 ai-tester.py --cmd "X"    # 1 LLM-команда (тест)
 
 Council Pre-mortem fixes у коді:
@@ -1909,7 +1908,6 @@ def preflight() -> bool:
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--smoke", action="store_true", help="10 готових сценаріїв")
-    parser.add_argument("--full", action="store_true", help="Сценарії + AI-команди")
     parser.add_argument("--cmd", type=str, help="Одна AI-команда (для тесту)")
     parser.add_argument("--force", action="store_true", help="Ігнорувати schedule")
     args = parser.parse_args()
@@ -1937,7 +1935,7 @@ def main():
         # Один AI-command — тестовий запуск без сценаріїв
         results.append(run_ai_command(args.cmd, cfg))
     else:
-        # Smoke або Full — виконуємо сценарії
+        # Виконуємо готові сценарії
         max_tests = cfg.get("max_tests_per_run", 10)
         disabled = set(cfg.get("disabled_scenarios", []))
         # On-demand: TARGET_SCENARIOS env var звужує до specific тестів (HKnlM trigger).
@@ -1961,10 +1959,6 @@ def main():
                 r["screenshot_path"] = screenshot(r["name"])
             results.append(r)
             print(f"{'PASS' if r['passed'] else 'FAIL'} {r['name']}: {r['reason']}")
-
-        if args.full:
-            # TODO: parse tester-commands.md і виконати [ ] команди
-            pass
 
     write_status(cfg, status, results)
     append_log(results)
