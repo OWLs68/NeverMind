@@ -21425,7 +21425,7 @@ ${logLines}
     }
   }
   function startBrainPulseCycle() {
-    setTimeout(brainPulse, 45 * 1e3);
+    setTimeout(brainPulse, 5 * 1e3);
     setInterval(brainPulse, BRAIN_PULSE_INTERVAL);
     if (typeof window !== "undefined") {
       window.addEventListener("nm-data-changed", (e) => {
@@ -21436,8 +21436,18 @@ ${logLines}
         _debounceTimer2 = setTimeout(brainPulse, BRAIN_PULSE_DEBOUNCE);
       });
     }
+    if (typeof document !== "undefined") {
+      const onResume = () => {
+        if (document.hidden) return;
+        if (typeof window !== "undefined" && window.__nm_restoring) return;
+        clearTimeout(_visTimer);
+        _visTimer = setTimeout(brainPulse, 2 * 1e3);
+      };
+      document.addEventListener("visibilitychange", onResume);
+      if (typeof window !== "undefined") window.addEventListener("pageshow", onResume);
+    }
   }
-  var BRAIN_PULSE_INTERVAL, BRAIN_PULSE_DEBOUNCE, BRAIN_TAB_CD, _pulseInFlight, _debounceTimer2;
+  var BRAIN_PULSE_INTERVAL, BRAIN_PULSE_DEBOUNCE, BRAIN_TAB_CD, _pulseInFlight, _debounceTimer2, _visTimer;
   var init_brain_pulse = __esm({
     "src/owl/brain-pulse.js"() {
       init_core();
@@ -21449,6 +21459,7 @@ ${logLines}
       BRAIN_TAB_CD = 24 * 60 * 60 * 1e3;
       _pulseInFlight = false;
       _debounceTimer2 = null;
+      _visTimer = null;
     }
   });
 
