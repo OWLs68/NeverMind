@@ -3463,10 +3463,11 @@ ${lines.join("\n")}`;
       ${resources.map((r, i) => {
       const badgeColors = { "\u041A\u043D\u0438\u0433\u0430": "rgba(99,102,241,0.1)|#6366f1", "\u0421\u043F\u0456\u043B\u044C\u043D\u043E\u0442\u0430": "rgba(234,88,12,0.1)|#ea580c", "\u0406\u043D\u0441\u0442\u0440\u0443\u043C\u0435\u043D\u0442": "rgba(22,163,74,0.1)|#16a34a", "\u0421\u0442\u0430\u0442\u0442\u044F": "rgba(251,191,36,0.15)|#d97706" };
       const [bg, color] = (badgeColors[r.type] || "rgba(30,16,64,0.07)|rgba(30,16,64,0.5)").split("|");
+      const safeUrl = safeHref(r.url);
       return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;${i < resources.length - 1 ? "border-bottom:1px solid rgba(30,16,64,0.05)" : ""}">
           <div style="font-size:9px;font-weight:800;padding:2px 7px;border-radius:5px;flex-shrink:0;background:${bg};color:${color}">${escapeHtml(r.type)}</div>
           <div style="font-size:11px;font-weight:600;color:#1e1040;flex:1;line-height:1.3">${escapeHtml(r.title)}</div>
-          ${r.url ? `<a href="${escapeHtml(r.url)}" target="_blank" style="font-size:11px;font-weight:800;color:${color};text-decoration:none">\u2192</a>` : ""}
+          ${safeUrl ? `<a href="${escapeHtml(safeUrl)}" target="_blank" rel="noopener" style="font-size:11px;font-weight:800;color:${color};text-decoration:none">\u2192</a>` : ""}
         </div>`;
     }).join("")}
     </div>` : ""}
@@ -18880,6 +18881,17 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
   }
   function escapeHtml(s) {
     return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(_RE_DQUOTE, "&quot;").replace(_RE_SQUOTE, "&#39;");
+  }
+  function safeHref(url) {
+    if (!url || typeof url !== "string") return null;
+    const cleaned = url.trim().replace(/[\u0000-\u001F\u007F]/g, "");
+    if (!cleaned) return null;
+    const schemeMatch = cleaned.match(/^([a-z][a-z0-9+.-]*):/i);
+    if (schemeMatch) {
+      const allowed = ["http", "https", "mailto", "tel"];
+      if (!allowed.includes(schemeMatch[1].toLowerCase())) return null;
+    }
+    return cleaned;
   }
   function escapeJsArg(s) {
     const str = String(s ?? "");
