@@ -1,0 +1,43 @@
+name: Secret scanning (gitleaks)
+
+# Security-аудит vdlyeg (10.06.2026), КРОК 4 — сторож секретів на майбутнє.
+# Зараз секретів у коді НЕМА (аудит підтвердив: лише плейсхолдери sk-proj-... ).
+# Цей воркфлоу — профілактика перед Supabase-епохою, коли зʼявляться service keys
+# та інші секрети: gitleaks ловить випадково закомічений ключ/токен ДО того як він
+# потрапить у public repo. push/PR — інкрементальний скан нових комітів;
+# щотижневий cron + ручний dispatch — повний скан історії (fetch-depth: 0).
+#
+# Дефолтні правила gitleaks покривають OpenAI/AWS/GitHub PAT/Stripe/Supabase тощо.
+# Хибних спрацьовок на наш плейсхолдер sk-proj-... немає (немає алфанумерик-хвоста).
+# Якщо знадобиться allowlist — додати .gitleaks.toml у корінь.
+#
+# НЕ блокує auto-merge/deploy (окремий незалежний воркфлоу) — це видимий сигнал,
+# не жорсткий гейт. Перед Supabase можна підняти до гейта, поки — сторож.
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 4 * * 1'  # щопонеділка 04:00 UTC — повний скан історії
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gitleaks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gitleaks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0  # повна історія — щоб scheduled/dispatch скан бачив усі коміти
+
+      - name: Run gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
