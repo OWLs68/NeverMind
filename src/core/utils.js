@@ -90,6 +90,25 @@ export function escapeHtml(s) {
     .replace(_RE_SQUOTE, '&#39;');
 }
 
+// Security-аудит vdlyeg (10.06.2026): безпечний href для посилань з URL від юзера/AI.
+// escapeHtml сам по собі НЕ блокує небезпечні схеми — `javascript:alert()` у href
+// виконається при кліку (XSS). safeHref повертає URL лише якщо схема безпечна, інакше null
+// (тоді посилання не рендеримо). Дозволені схеми: http, https, mailto, tel. Дозволені також
+// відносні шляхи / anchor / протокол-відносні (//) — там схеми немає, виконання коду неможливе.
+// Контрольні символи прибираємо ПЕРЕД перевіркою: браузер ігнорує таб/новий рядок усередині
+// схеми, тож `java\tscript:` спрацював би в обхід наївного regex. Повертаємо вже очищений URL.
+export function safeHref(url) {
+  if (!url || typeof url !== 'string') return null;
+  const cleaned = url.trim().replace(/[\u0000-\u001F\u007F]/g, '');
+  if (!cleaned) return null;
+  const schemeMatch = cleaned.match(/^([a-z][a-z0-9+.-]*):/i);
+  if (schemeMatch) {
+    const allowed = ['http', 'https', 'mailto', 'tel'];
+    if (!allowed.includes(schemeMatch[1].toLowerCase())) return null;
+  }
+  return cleaned;
+}
+
 // B-152 + B-159 fix (LfA6w 07.05.2026): безпечне вкладання у JS-string
 // усередині HTML-атрибуту. Покриває кейс `onclick="foo('${escapeJsArg(name)}')"`
 // де name може містити: апостроф (`Roman's coffee` → SyntaxError),
