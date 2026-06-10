@@ -1,5 +1,10 @@
 # NeverMind — Історія закритих багів (архів)
 
+## Ротовано WML2Z 03.06.2026 — сесія Ug2Jw
+
+- **B-193 закрито** (`54c2e46`) — **`openAddHabit` НЕ у `window` exports → юзер на Habits subtab тапає ➕ → нічого.** Корінь: HKnlM `b6a3d37` зробив `dataset.fn='openAddHabit'` на `#prod-add-btn` при switch на Habits, АЛЕ забув додати `openAddHabit` у `Object.assign(window, {...})` habits.js:1942. Delegation `call` handler перевіряє `typeof window[fn]==='function'` → false → silent skip. **Знайдено:** test_19_habits_add сам показав `HABIT_MODAL_NOT_OPEN`. ПЕРШИЙ real production bug який AI-Tester зловив самостійно. **Фікс:** +1 рядок `openAddHabit,` у window export.
+- **B-190 закрито** (`e993aa7`) — **AI-Tester `screenshot()` ніколи не зберігав скріни — кожен fail приховував причину.** 3 латентні дірки в одній функції `screenshot()`: (1) `take_screenshot` не існує (реальна `capture_screenshot`), (2) `path!r` = PosixPath літерал без pathlib у daemon, (3) `capture_screenshot()` нічого не друкує → `bh()` raise на empty stdout. **Фікс:** `capture_screenshot(str(path))` + явний `print(_json.dumps({}))` + truncate error 120 chars. Урок: 1 видимий баг приховує 2 латентні — Pre-mortem ПЕРЕД Edit розкрив.
+
 ## Ротовано RQmdC 23.05.2026 — сесії HKnlM + DGH6F + e9t3N + nliW8 + db0YY
 
 _Сесія **HKnlM** (19-20.05.2026) — AI-Tester Hetzner deploy + Council 4 паралельних агентів Sonnet (Implementer/Pre-mortem/silent-bug-scout/doc-consistency). 7 commits. 13 проблем знайдено, всі закриті:_
