@@ -4,11 +4,53 @@
 >
 > Старіші сесії (до 6GoDe 19.04) — в [`_archive/SESSION_STATE_archive.md`](../_archive/SESSION_STATE_archive.md).
 
-**Оновлено:** 2026-05-23 (сесія **RQmdC** — B-192 закрито через runtime trace: НЕ баг застосунку, хибний сигнал старого test_4. Council 3 агентів Sonnet → 0 знахідок у статичному коді, бо видалення немає. test_4 переписано + ENABLED (baseline 23). On-demand bypass disabled fix).
+**Оновлено:** 2026-06-03 (сесія **WML2Z** — ремонт AI-тестера (мертвий --full код + max_tests 30→33 щоб test_29/30 не випадали з cron) + 2 реальні баги з телефону: чіпи з кривим JSON вивалювали код у чат → lenient-парсер; табло не оновлювалось на вхід у застосунок → visibilitychange/pageshow тригер. Новий хук-нагадування «не технічною мовою».).
 
 ---
 
-## 🔧 Поточна сесія RQmdC — B-192 розслідування (НЕ баг) + AI-Tester infra (23.05.2026)
+## 🔧 Поточна сесія WML2Z — ремонт тестера + 2 баги з телефону + хук (03.06.2026)
+
+### Зроблено — 5 commits
+
+**1. Ремонт AI-тестера (`651ab85`):**
+- Видалено мертвий `--full` mode (залишок скасованої фічі: docstring + arg + TODO-блок). Grep підтвердив 0 інших залишків.
+- `max_tests_per_run` 30→33 у `tester-config.json`. **Реальна знахідка:** всього 32 сценарії, при ліміті 30 test_29 і test_30 (позиції 31-32 у SCENARIOS) тихо випадали з cron і ніколи не бігали. Підтверджено сьогоднішнім cron-логом (23 ran = 30 sliced − 7 disabled). Це конкретний доказ тези Романа «тестер слабенький».
+- Верифіковано: cron поважає `disabled_scenarios` (напрямок 2) — підтверджено run 11:01 (7 disabled не з'явились).
+
+**2. Чіпи: lenient-парсер кривого JSON (`00b377b`):** скрін «Список не список» — AI згенерував JSON чіпів із зайвими комами (`"steps":null }, },`), strict `JSON.parse` кидав, і весь блок показувався сирим текстом у бульбашці чату. Фікс у `src/core/utils.js parseContentChips`: при невдачі strict-парсу прибираємо trailing-коми (`/,(\s*[}\]])/`) і парсимо ще раз. Один парсер → діє на всі 8 чатів (inbox.js делегує).
+
+**3. Табло: миттєве оновлення на вхід (`0e24085`):** скрін «табло 370 год тому» — при відкритті застосунку табло чекало 45с до першого пульсу, при поверненні з фону — до 10 хв (немає реакції на foreground). Фікс у `src/owl/brain-pulse.js`: `visibilitychange` + `pageshow` → debounced `brainPulse` (2с); cold-start 45с→5с. Cooldowns (brain_global 30хв, brain_tab 24год) гасять спам/витрати. Обидва listener для надійності iOS PWA bfcache.
+
+**4+5. Хук «не технічною мовою» (`9682755` + `c7f80b4`):** новий `UserPromptSubmit` хук у `.claude/settings.json` — нагадування перед кожною відповіддю. Спочатку текст «Пояснюй зрозумілою мовою», за вимогою Романа змінено на «не технічною мовою».
+
+### Обговорено (без виконання)
+
+- **Список покупок → задача з кроками** (Council запущено, але Роман перебив на баг табло). Корінь: «склади список покупок» — детермінована річ (CLAUDE.md правило 12), не має йти в clarify-режим «куди записати». Має одразу ставати задачею-чеклістом де кожен продукт = крок. **Лишилось на наступну сесію** — потребує системного підходу (промпти + flow, не латка).
+- **Архітектурна слабкість чіпів:** система покладається на те що AI ідеально складе JSON у вільному тексті — а він помиляється. Систематичний напрямок (обговорювали) — структуровані відповіді OpenAI (tool_calls/JSON mode) замість парсингу JSON з тексту. Не реалізовано.
+- **Тестер слабкий:** покриває кнопки/модалки, але НЕ зміст AI-відповідей, НЕ iOS. «0 fail» = false confidence. Обидва баги цієї сесії (чіпи, табло) тестер пропустив.
+
+### Ключові рішення
+
+- **Lenient-парсер як fallback, не як основний шлях:** happy-path лишається strict, lenient тільки коли strict уже впав. Прощаємо помилку AI — юзер бачить кнопки, не кашу.
+- **Хук-нагадування — окремий на кожне повідомлення** (Роман обрав попри моє застереження що це дублює rules-reminder.sh і може стати шумом). Текст мінімальний.
+- **Системно, не латкою** (прямий запит Романа): перед фіксом — читати код, шукати корінь, верифікувати.
+
+### Інциденти
+
+- **Council перебито** (`Agent` tool rejected) — запустив 1-й з 5 агентів на баг чіпів, Роман перебив скріном табло. Council не завершено, переключились на баг табло.
+- **Двозначність «Роби»:** на «роби» я почав створювати хук, Роман уточнив що мав на увазі ремонт тестера. Переключився без втрат (хук-Edit не застосувався).
+
+### Метрики
+
+- Коміти: `651ab85` → `c7f80b4` (5 commits)
+- Версії: v1002 → v1004
+- CACHE_NAME: `nm-20260603-1952`
+- Council: 0 завершених (1 запущено, перебито)
+- Build: чистий (node --check + py_compile + json.load усі OK)
+
+---
+
+## 🔧 Сесія RQmdC — B-192 розслідування (НЕ баг) + AI-Tester infra (23.05.2026)
 
 ### Зроблено — 4 commits
 
@@ -60,198 +102,7 @@
 
 ---
 
-## 🔧 Сесія Ug2Jw — AI-Tester повний debug HKnlM хвостів (20-21.05.2026)
-
-### Зроблено — 6 commits, 7 ітерацій on-demand trigger, 2 Council Sonnet агенти
-
-#### Day 1 (вечір 20.05) — screenshot unblock
-
-**`e993aa7` fix(tester): screenshot() — typo + Path repr + missing JSON**
-
-При /start побачив `tester-status.json screenshot_path = "[screenshot failed: NameError: take_screenshot is not defined. Did you mean: capture_screenshot?]"`. Корнево блокувало debug всіх fail'ів.
-
-Pre-mortem ПЕРЕД першим Edit розкрив 2 додаткові латентні дірки в одній 14-рядковій функції:
-1. **typo** `take_screenshot` → `capture_screenshot`
-2. **Path repr** `path!r` = `PosixPath('...')` → `str(path)!r`
-3. **Empty stdout** `bh()` raise при empty → додано `print(_json.dumps({}))`
-
-Bonus: failed-screenshot exception truncate 120 chars (раніше 500+ char traceback у JSON).
-
-#### Day 2 (ранок 21.05) — повний debug debug-сесія коли Roman на роботі
-
-**`daed822` feat(tester): test_3/test_4 debug payload + enable** — розширений діагностичний payload з 15+ полів (diag_pre, console_errors, nm_error_log_tail, call_result, call_ok, etc). Enable test_3+test_4 у config щоб тестер їх запустив. + paralleled Council Sonnet 2 агенти (saveTask flow + createFullBackupUI flow) для гіпотез на коди реальний NM.
-
-**`7284c74` trigger #1 (04:17 UTC)** — on-demand trigger, ai-tester виконав через ~90 сек. Screenshot fix підтверджено працює (`screenshot_path = "/home/nmtester/screenshots/test-3-...png"` без `[failed:...]`). АЛЕ debug payload upadв з SyntaxError на CDP — `\"` escape у JS string через Python triple-quote ламається при JSON serialize.
-
-**`4743cff` fix(tester): JS escape — single-quote + CSS attr без лапок** — системний фікс: усі JS string literals single-quote, CSS attribute селектори без лапок навколо value (`button[data-fn=saveTask]`), Python wrap triple-single-quote (`'''...'''`).
-
-**`7a22347` trigger #2 (04:25)** — re-run показав test_4 повний debug, але test_3 ще fail з `SyntaxError: leading zeros` бо мій `__TITLE_JS__` (JSON.dumps з лапками) встромлювався у Python `"..."` → розрив рядка. Виправлено через JS backtick template literal + raw value replace. + truncate `fail_reason` 300 → 1500 chars (debug повний). + test_4 seed verify (підтверджено seed реально записує `nm_settings='{}'`).
-
-**`28ceb0a` fix: test_3 JS-direct fill + test_4 backup cleanup** — діагностика 04:35 показала 2 нові корені:
-- **test_3:** `fill_input('#task-input-title', 'AI-Tester X')` → input.value = `'AAII--TTeesstteerr  XX'` (КОЖЕН CHAR ПОДВОЄНО). Workaround: JS-direct `el.value = X; dispatchEvent('input')` без keyboard simulation. **PASS після цього.**
-- **test_4:** explicit cleanup nm_backup_* перед seed (припустив quota path 3 backup × 1.5 MB).
-
-**`13591a2` debug: test_4 inline-копія createSelectiveBackup** — після test_3 PASS, test_4 ще fail на ЧИСТОМУ LS (keys_b=0, keys_a=0). Inline-копія `createSelectiveBackup` logіки у тестері показала: **`b4_call=0 → af_call=1` — backup СТВОРЕНО синхронно у JS! Але через wait(0.8s) → 0**. Тобто async видалення.
-
-**`28ceb0a` revert + docs** (фінал) — повернув test_4 у disabled_scenarios (поки не розслідуємо async deletion). Stable baseline тепер: test_1/2/3/5/8 = 5/5 PASS.
-
-### Результати — 7 trigger ітерацій
-
-| # | Час | test_3 | test_4 | Що знайшов |
-|---|-----|--------|--------|-----------|
-| 1 | 04:17 | EXC | EXC | screenshot fix працює (шляхи валідні), debug payload SyntaxError |
-| 2 | 04:25 | EXC | NO_BACKUP | UI_fn=function, BE_fn=undefined, ret=undefined, keys_b=3→0 (mysterious) |
-| 3 | 04:33 | EXC | NO_BACKUP | seed_ok=True, settings_val='{}', ls_keys=49, NM_KEYS_data=20 |
-| 4 | 04:35 | NO_WRITE | NO_BACKUP | **fill_input ПОДВОЄННЯ chars!** (B-191) |
-| 5 | 04:40 | ✅ PASS | NO_BACKUP | JS-direct fill працює; backup ще mystery з keys_b=0→0 |
-| 6 | 04:46 | (skip) | NO_BACKUP | **b4_call=0, af_call=1 — backup synchronously, потім зникає за 0.8s** (B-192) |
-
-### Відкриті баги після Ug2Jw
-
-- **B-192 ВIДКРИТО** — createFullBackupUI створює backup, але async видалення через ~0.8s. Не з backup.js (grep verified). Потребує iPhone screenshot з PWA app або інструментоване logging у backup.js.
-- **B-191 ВIДКРИТО** — `browser-harness fill_input` ПОДВОЮЄ chars у NM textarea. Workaround у тестера (JS-direct). Не блокер для звичайного юзера. Потребує grep `oninput` delegation handlers щоб зрозуміти джерело.
-
-### Закриті
-
-- **B-190 закрито** (`e993aa7`) — screenshot() typo + Path repr + missing JSON
-- **test_3 РОЗБЛОКОВАНО** через JS-direct fill (workaround у `28ceb0a`)
-- **screenshot pipeline ПРАЦЮЄ** — реальні шляхи у tester-status.json, Roman може SSH `scp` з `/home/nmtester/screenshots/`
-
-### Стратегічний план тестера (день 2, після обговорення з Romanom)
-
-**Проблема:** 10 hardcoded scripted сценаріїв = поверхневе покриття 300+ кнопок / 40+ модалок / 200+ взаємодій. Roman ловить це і питає системного підходу.
-
-**Рішення — `_ai-tools/TESTER_SCENARIOS_PLAN.md`:** 35 UI-сценаріїв розписаних по 8 вкладках + globals. Готовий план для імплементації. Що покриваємо:
-- ✅ Кнопки / модалки / поля вводу / свайпи / persistence через reload
-- ❌ AI behavior (Roman тестує сам)
-- ❌ iOS-specific quirks (потребує real device — manual smoke)
-- ❌ Login/sync/offline (буде ПIСЛЯ Supabase)
-- ❌ Projects (ще доробляється)
-
-**3 принципи стабільності** (без них через тиждень flaky):
-1. **UI-first assertions** — перевіряємо що юзер бачить на екрані, НЕ що у localStorage. Це переживе Supabase (DOM той самий, storage переїде у БД).
-2. **Test isolation** — кожен тест clean start + cleanup після. Незалежність від попередніх тестів.
-3. **Retry-2x** перед FAIL — network/CDP race conditions нормальні.
-
-**Maintenance rule** (записано у CLAUDE.md правило 13 — Roman явно просив):
-Коли Claude додає у сесії нову кнопку / модалку / поле / swipe → ПЕРЕД `/finish` автоматично пише новий тест + триг`її on-demand run. Без цього тести відстануть протягом 2-3 сесій.
-
-**Supabase considerations:**
-- Тести з `localStorage.getItem('nm_tasks')` впадуть → пишемо UI-assertions
-- `nm_gemini_key` modal зникне → не пишемо тест на неї
-- Поточний `nm_backup_*` стане deprecated → test_4 одразу позначений як «після Supabase видалити»
-- +10 нових тестів додамо ПIСЛЯ Supabase: 4 Auth + 3 Sync + 3 Offline
-
-**Roadmap імплементації:**
-- Batch 1 (5 globals + settings): test_11-15 ~2.5 год
-- Batch 2 (Inbox + Tasks 9 шт): test_16-24 ~4.5 год
-- Batch 3 (Notes + Me/Habits 8 шт): test_25-32 ~4 год
-- Batch 4 (Evening + Health + Finance 11 шт): test_33-43 ~5.5 год
-- TOTAL: **35 нових тестів = ~16-18 годин** автономної роботи Claude
-
-Roman сказав «робимо» — імплементація в наступних сесіях, поточна сесія завершується з планом + документацією.
-
-### Day 2 (продовження) — 4 Batch нових сценаріїв + B-193 found by tester
-
-Після обговорення «300 кнопок ≠ 10 тестів» Roman повернувся з обідньої перерви — продовжили автономну роботу.
-
-**Batch 1** (`ded99ba` + fix `843bffb`) — 3/3 PASS:
-- test_11_header_buttons — ⚙️ Settings + ? Help модалки
-- test_12_language_switch — set-language UK↔EN з nm_settings.language assertion
-- test_13_legal_pages — Impressum/Privacy/Terms 3 модалки open/close
-
-**Batch 2** (`f43dc64`) — 3/3 PASS:
-- test_14_inbox_chat_input — JS-direct fill (B-191 workaround)
-- test_15_tasks_edit — створити → edit → перевір новий title у DOM
-- test_16_tasks_steps_add — addTaskStep ×3 → save → task.steps.length=3
-
-**Batch 3** (`fb813cc` + B-193 fix `54c2e46`) — 2/4 PASS + 🎯 REAL BUG FOUND:
-- test_17_notes_add PASS
-- test_18_notes_view — disabled (open-note flow складніший, окремий debug)
-- **test_19_habits_add ПIД ЧАС РАН ЗНАЙШОВ B-193:** `openAddHabit` не у window export — HKnlM `b6a3d37` фіксу замикав це через dataset.fn але забув window.openAddHabit. Тестер сам зловив production bug! Фікс: +1 рядок у habits.js:1945. PASS після фіксу.
-- test_20_habits_toggle_done — disabled (toggle-entity-done flow на habit-prod entity потребує окремий debug)
-
-**Batch 4** (`a192c97`) — 3/3 PASS:
-- test_21_evening_tab_open — #page-evening display!=none
-- test_22_health_add_card — fill #health-card-name → saveHealthCardFromModal → DOM+storage
-- test_23_finance_modal_open — #fin-tx-modal (dynamic) visible
-
-**Final stable baseline (24 PASS):**
-test_1/2/3/5/8 (HKnlM) + test_11/12/13/14/15/16/17/19/21/22/23/25/26/27/28/29/30/31/32 (Ug2Jw Batch 1-6) = **24**
-
-**Disabled (потребують окремий debug-цикл):**
-test_4 (B-192 backup async deletion), test_6/7 (CDP touch), test_9/10 (OpenAI key), test_18/20/24 (Ug2Jw нові, складніші flows)
-
-### Цінність тестера підтверджена
-
-- **B-193 знайдено САМ ТЕСТЕРОМ** — перший випадок коли AI-Tester виявив real production bug без Council/Pre-mortem допомоги. Habits subtab ➕ → нічого (silent skip через missing `window.openAddHabit`). Виправлено +1 рядок у habits.js:1945.
-- Усі 35 запланованих сценаріїв з TESTER_SCENARIOS_PLAN.md реалізуються за ~2 ще такі сесії.
-
-### Council аудит (5 паралельних агентів Sonnet, post-Batch 4)
-
-Roman попросив "глибокий аудит зробленого". 4 проблеми знайдено + виправлено:
-
-1. **🚨 max_tests_per_run=10 → 30** (silent-bug-scout). 13 нових тестів написано АЛЕ blocked у cron-mode — SCENARIOS[:10] не доходив до test_11-27. "18 stable PASS" була недосяжна автоматично, тільки on-demand. Тепер усі активні бігають 3×/день.
-2. **Hardcoded URLs у test_21/23/25** (architecture review). 3 тести використовували literal 'https://owls68.github.io/NeverMind/' замість NEVERMIND_URL константи. При custom domain — silent fail. Конвертовано на payload pattern.
-3. **B-191 + B-192 у НЕПРАВИЛЬНIЙ секції BUGS** (doc-consistency). "ВIДКРИТО" баги фізично під ## ✅ Закриті заголовком. Перенесено у 🟡 Середні.
-4. **lessons.md урок «AI-Tester сам знайшов real bug»** (doc-consistency). Відсутній — критичний пропуск після B-193. Додано урок з рекомендацією «додавати тести АГРЕСИВНО».
-
-System-wide missing exports audit: жодних інших B-193-like. Всі 99 data-fn handlers покриті через Object.assign(window) або window.X=fn. Системна якість делегації після OBErR Phase 0-6 — висока.
-
-### Verification — двосторонній (anti-flaky + chaos)
-
-Roman: "Перевіряй все два рази. Перший anti-flaky, другий — несподівано".
-
-1. **#1 anti-flaky:** target=[] → 18/18 PASS повтор. Стабільність підтверджена.
-2. **#2 chaos test_5+test_8 ізольовано:** 2/2 PASS. Architecture agent попередження було false alarm — test_5/test_8 самодостатні (обидва клікають `[data-action="open-settings"]` на старті). Isolation реально працює.
-
-### Bug-hunt run (Roman: "запускай хай шукає баги")
-
-Enable 4 disabled (test_18/20/24/27) → 0/4 PASS. Аналіз fail_reasons:
-- **test_27:** `MED_INPUT_NOT_FOUND` — мій selector помилковий (`input[id*=med-name]` замість `input.med-name` class). Виправлено → PASS. ENABLED у baseline.
-- **test_18/20/24:** стабільно fail без iPhone screenshot. Залишені disabled. **Жодного нового real bug не знайдено** — це або timing/state issues у тесті, або реальні bugs які потребують real device debug.
-
-### Inbox systematic coverage (Roman: "методично, по одній вкладці")
-
-Inventory Inbox section — 4 нових тестів для непокритих handlers (всі PASS):
-- test_29_inbox_deploy_info — tap версії → #deploy-info-modal
-- test_30_inbox_chat_bar_close — openChatBar → close handle → .open class видалено
-- test_31_inbox_owl_toggle — toggle-owl-collapsed smoke (handler не throw)
-- test_32_inbox_scroll_chips — left/right arrows handlers чисті
-
-Не покрито (AI-залежне або CDP touch): chips клики, inbox-item card tap, OWL vertical swipe, send Enter.
-
-**Inbox ЗАВЕРШЕНО.** Наступна вкладка: Tasks (наступна сесія).
-
-### Гілка + контекст
-
-- Гілка: `claude/start-session-Ug2Jw`
-- Коміти: **31** (від `e993aa7` screenshot fix → `782b5d4` test_32 chips)
-- Версії: **v960 → v991** (31 deploys)
-- CACHE_NAME: `nm-20260521-0925`
-- Council Sonnet: 7 паралельних агентів (2 saveTask/backup + 5 системний аудит)
-- Інструменти: 14 on-demand trigger циклів через `tester-trigger.json` + git poll origin/main
-
-### Метрики
-
-- **Stable baseline:** 5 → 24 PASS (+19 нових)
-- **Тести написано:** 22 (test_11 → test_32). З них 19 active PASS, 3 disabled (test_18/20/24)
-- **Real bugs знайдено + закрито:** 1 (B-193 — openAddHabit window export)
-- **Council hypothesis verification:** saveTask + showToast гіпотези спростовано. Реальний корінь test_3 — fill_input doubling (B-191). Урок: гіпотези агентів треба ВЕРИФIКУВАТИ через real run.
-
-### Що далі (для Романа)
-
-1. **`scp` 3 disabled screenshots з сервера** — `/home/nmtester/screenshots/test-{18,20,24}*` (одна команда). Скріни покажуть чи це real bugs у NM чи моя помилка тесту.
-2. **iPhone PWA smoke** — B-192 backup async deletion + B-191 fill_input doubling
-3. **Tasks systematic** наступна сесія — методично по інших вкладках (Notes/Me/Evening/Health/Finance)
-4. **CSP Phase 2 завершити** (~2 год, з HKnlM хвостів)
-
-### Хвости (відкладено)
-
-- ❌ test_6 OWL swipe (CDP Input.dispatchTouchEvent)
-- ❌ test_7 close-backdrop click_at_xy
-- ❌ test_9 + test_10 OpenAI ключ у Chrome profile
-- ❌ test_18/20/24 (Ug2Jw нові — потребують iPhone screenshot)
+## 🔧 Сесія Ug2Jw (20-21.05.2026) — архівовано WML2Z 03.06 → [archive](../_archive/SESSION_STATE_archive.md#-сесія-ug2jw--ai-tester-повний-debug-hknlm-хвостів-20-21052026)
 
 ---
 
@@ -482,6 +333,13 @@ Inventory Inbox section — 4 нових тестів для непокрити�
 ---
 
 ## ⚠️ ДЛЯ НОВОГО ЧАТУ — найважливіше
+
+**🆕 НЕЗАВЕРШЕНЕ WML2Z (03.06) — почати з цього:**
+- **«Склади список покупок» → задача з кроками.** Зараз AI йде в clarify-режим («куди записати?») замість того щоб одразу зробити задачу-чекліст (кожен продукт = крок-галочка). Корінь: детермінована річ (правило 12) віддана на здогад AI. Council запущено але перебито — потребує системного підходу (промпти `src/ai/prompts.js` + flow save_task+steps), не латка. Роман прямо просив системно.
+- **Чіпи через структуровані відповіді OpenAI** (обговорено, не зроблено): зараз парсимо JSON з вільного тексту AI — крихко. Напрямок — tool_calls/JSON mode щоб чіпи приходили структуровано. Велика тема, дотична до Supabase.
+- **Перевірити на iPhone 2 фікси WML2Z:** (1) згорнути/відкрити застосунок → табло оживає за ~2с; (2) попросити список → каша з кодом не вилазить.
+
+---
 
 **🚀 ПРІОРИТЕТ #1 (myshu 11.05): Architecture Refactor продовження.**
 
@@ -731,6 +589,7 @@ DevTools → Application → LocalStorage → шукати `nm_backup_pre-{habit
 
 | ID | Дата | Закрито / Зроблено | Коміти | Гілка | Деталі |
 |---|---|---|---|---|---|
+| **WML2Z** | 03.06 | 🔧 **Ремонт AI-тестера + 2 баги з телефону + хук.** Тестер: видалено мертвий `--full` код + `max_tests` 30→33 (test_29/30 тихо випадали з cron — конкретний доказ «тестер слабкий»). Чіпи: lenient-парсер кривого JSON (`"steps":null }, },`) у `parseContentChips` — скрін «Список не список», код більше не вивалюється у чат. Табло: `visibilitychange`+`pageshow`→`brainPulse` (cold-start 45с→5с) — скрін «370 год тому», табло оживає на вхід у застосунок. Новий `UserPromptSubmit` хук «не технічною мовою». Council запущено на баг чіпів але перебито. CACHE `nm-20260521-0925`→`nm-20260603-1952`. | 5 | `claude/new-session-WML2Z` | [CHANGES §03.06-WML2Z](../docs/CHANGES.md) |
 | **QDIGl** | 05.05 | 🚀 **Розпорядок дня combined timeline (Phase A merge + D TTL + E ROUTINE_RULES) + delete_project tool + B-117 audit fix остаточно + 19 раундів i18n (-319 рядків) + 3 i18n агенти + audit з silent-bug-scout (4 виправлено).** Drag toggle Задачі↔Звички з glass blur. Hotfix `_nearestDateForDayKey` (DevTools console v663). Habit counter «1/4» уніфіковано скрізь + DOW Mon=0 5/5 точок. show_monthly_summary tool у всіх 8 чатах + історичний місяць (березень коли травень). Свайп reminder синк nm_reminders+nm_events. CACHE `nm-20260504-1058` → `nm-20260505-2045`. | 42 | `claude/start-session-QDIGl` | — |
 | **EhxzJ** | 30.04 | 🛠️ **6 OWL-багів закрито (B-109..B-114) + V3 Фази 1 і 1.5.** Ранкове тестування Романа на v494 виявило 5 багів табло і weekly insights — закрито всі за один захід: B-109 (табло занадто велике, аватар 96→76 + line-clamp), B-110 (3 теми в одне повідомлення → правило «одна тема» у промпті), B-111 (минулі події о 19:00 як майбутні → `isPassedToday()` фільтр у `getAIContext`), B-112 (незрозумілий «14%» → формат «X з Y днів»), B-113 (блок «OWL знає тебе» не оновлювався → listener `nm-data-changed` з debounce 5 сек), B-114 (AI плутав закриті задачі і виконані звички → чіткіші лейбли + блок «РОЗРІЗНЕННЯ СУТНОСТЕЙ» у промпті). **V3 Фаза 1**: `_reasoning_log` обовʼязковий у всіх 60 tools (50 INBOX + 9 UI + 1 brain) — zero-shot CoT, dispatcher strip + лог `nm_reasoning_log`. Закриває B-97. **V3 Фаза 1.5**: Dynamic Tool Loading — regex-класифікатор з 12 категорій фільтрує 60→15 tools, лог `nm_tool_filter_log`, fallback на повний набір при 0 або >4 матчах. CACHE_NAME `nm-20260429-2340` → `nm-20260430-0432` (3 bumps). | 12 | `claude/start-session-EhxzJ` | — |
 | **H0DxS** | 29.04 | 🔧 **Фікс-сесія: тижневий контекст звичок + правило проти галюцинацій + 2 баги lRnXU закрито + видалено онбординг.** `getAIContext` тепер дає табло і всім чатам тижневий зріз звичок (done/scheduled на кожну) — корінь бага «OWL знає тебе каже жодної звички за тиждень» при реальних 3/4. Bump `INSIGHTS_VERSION` 2→3 → старий кеш `nm_me_weekly_insights` стає невалідним → AI перегенерує. У `getOWLPersonality()` додано «ПРАВИЛО ЗОВНІШНІХ ФАКТІВ» (на питання про конкретні фільми/книги/особи AI чесно каже «не знаю» — корінь галюцинації сюжету «Кіллхаус» у чаті Вечора) — працює у всіх 8 чатах. Закрито 2 баги lRnXU: (1) «Відкрий звички» з чату Я тепер реально перемикає на підтаб Звички (`switchProdTab('habits')` після `switchTab('tasks')`), (2) блок «🦉 OWL знає тебе» — білий фон 0.85 + темніша рамка 0.35 + тінь, чітко видно на бежевому фоні. Видалено онбординг-модалку при першому вході (поля «імʼя» і «API ключ» доступні у Налаштуваннях). CACHE bump `nm-20260429-2300` → `nm-20260429-2340`. | 4 | `claude/start-session-H0DxS` | — |

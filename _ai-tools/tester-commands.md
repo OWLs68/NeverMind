@@ -17,6 +17,8 @@
 
 ## Активна черга
 
+- [ ] Регресія WML2Z (B-194 чіпи кривий JSON): у page-context виклич `parseContentChips('Текст {"chips":[{"label":"А","action":"chat"},]}')` (зайва кома перед `]`) → перевір що повертає `chips.length===1` і `text` БЕЗ `{`. Якщо chips=null → lenient-fallback зник, код знов вивалюватиметься у чат. (Якщо функція не на window — додати тимчасовий export або тест через UI: clarify-чіпи рендеряться як кнопки, у бульбашці агента немає сирого `"chips"`/`"action":`.)
+- [ ] Регресія WML2Z (B-195 табло на foreground): завантаж сторінку → почисти owl cooldown ключі (`localStorage` `nm_owl_cd_*`) → dispatch `visibilitychange` (hidden→visible) через CDP → перевір що `brainPulse` тригериться у ~5с (новий запис у `nm_reasoning_log` АБО console `[brain-pulse]`). Cooldown без очистки заглушить — це by design.
 - [ ] Регресія Ug2Jw (B-193 openAddHabit window export): Tasks tab → switch-prod-tab=habits → tap #prod-add-btn → перевір що #habit-modal відкривається (display!=none). Якщо silent skip → window export знов зник.
 - [ ] Smoke Ug2Jw (тестер 24 PASS baseline): запусти target=[] → ВСІ 19 активних тестів мають PASS. Якщо хоч один fail — регресія від останнього deploy.
 - [ ] Smoke Ug2Jw (Inbox handlers): target=[test_29,test_30,test_31,test_32] → 4/4 PASS. Покривають deploy-info modal, chat-bar close, OWL toggle, chips scroll arrows.
