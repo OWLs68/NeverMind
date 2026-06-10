@@ -337,7 +337,10 @@ export function renderChips(containerEl, chips, tab, options = {}) {
     let payloadAttr = '';
     if (c.payload && typeof c.payload === 'object') {
       const payload = JSON.stringify(c.payload);
-      payloadAttr = escapeHtml(payload).replace(/"/g, '&quot;');
+      // escapeHtml сам екранує лапки (security-аудит vdlyeg 10.06.2026) —
+      // ручний .replace(/"/g,'&quot;') більше не потрібен. data-chip-payload
+      // читається назад через dataset → браузер декодує сутності, JSON.parse цілий.
+      payloadAttr = escapeHtml(payload);
     }
     return `<div class="owl-chip" data-chip-id="${escapeHtml(id)}" data-chip-text="${escapeHtml(label)}" data-chip-action="${action}" data-chip-target="${escapeHtml(target)}" data-chip-payload="${payloadAttr}">${escapeHtml(label)}</div>`;
   });

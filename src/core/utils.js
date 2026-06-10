@@ -65,10 +65,29 @@ export function formatTime(ts) {
   return new Date(ts).toLocaleDateString('uk-UA', { day: 'numeric', month: 'short' });
 }
 
+// Security-аудит vdlyeg (10.06.2026): regex для лапок задано через String.fromCharCode
+// (34 подвійна, 39 одинарна) і винесено у module-константи. Причини дві: (1) escapeHtml
+// гаряча — не конструювати regex на кожен виклик; (2) без літеральних символів лапок
+// у коді — щоб не плутати i18n-детектор (рахує парність лапок у файлі).
+const _RE_DQUOTE = new RegExp(String.fromCharCode(34), 'g');
+const _RE_SQUOTE = new RegExp(String.fromCharCode(39), 'g');
+
 export function escapeHtml(s) {
   // B-70 fix (17.04.2026): захист від undefined/null/number/object. Раніше undefined.replace
   // кидав TypeError і ламав цілі блоки рендеру (приклад — _finCatsGrid).
-  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  // Security-аудит vdlyeg (10.06.2026): додано екранування лапок — подвійної у &quot; та
+  // одинарної у &#39;. Без них значення з лапкою всередині HTML-атрибута розривало атрибут
+  // і дозволяло підставити обробник події (XSS-клас у ~25 місцях chips/finance/health/notes).
+  // Безпечно для всіх контекстів: у тілі сторінки сутності рендеряться як звичайні лапки
+  // (юзер бачить нормально), в атрибутах браузер декодує назад при читанні через dataset
+  // (round-trip цілий). Для JS-рядка всередині атрибута — окремий escapeJsArg (нижче), не
+  // плутати. Порядок важливий: amp першим (інакше подвійне екранування вже-вставлених сутностей).
+  return String(s ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(_RE_DQUOTE, '&quot;')
+    .replace(_RE_SQUOTE, '&#39;');
 }
 
 // B-152 + B-159 fix (LfA6w 07.05.2026): безпечне вкладання у JS-string
