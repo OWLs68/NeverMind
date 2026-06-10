@@ -6,7 +6,7 @@
 
 import { currentTab, showToast, switchTab } from '../core/nav.js';
 import { generateUUID } from '../core/uuid.js';
-import { escapeHtml, parseContentChips, t } from '../core/utils.js';
+import { escapeHtml, safeHref, parseContentChips, t } from '../core/utils.js';
 import { logUsage } from '../core/usage-meter.js';
 import { callAIWithTools, getAIContext, getOWLPersonality, openChatBar, safeAgentReply, saveChatMsg, INBOX_TOOLS, handleChatError } from '../ai/core.js';
 import { getProjectsChatSystem } from '../ai/prompts.js';
@@ -387,10 +387,13 @@ function renderProjectWorkspace(id) {
       ${resources.map((r,i) => {
         const badgeColors = { 'Книга':'rgba(99,102,241,0.1)|#6366f1', 'Спільнота':'rgba(234,88,12,0.1)|#ea580c', 'Інструмент':'rgba(22,163,74,0.1)|#16a34a', 'Стаття':'rgba(251,191,36,0.15)|#d97706' };
         const [bg, color] = (badgeColors[r.type] || 'rgba(30,16,64,0.07)|rgba(30,16,64,0.5)').split('|');
+        // safeHref блокує javascript:/data: схеми (security-аудит vdlyeg) — посилання
+        // рендеримо лише якщо URL безпечний. rel=noopener проти tabnabbing.
+        const safeUrl = safeHref(r.url);
         return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;${i < resources.length-1 ? 'border-bottom:1px solid rgba(30,16,64,0.05)' : ''}">
           <div style="font-size:9px;font-weight:800;padding:2px 7px;border-radius:5px;flex-shrink:0;background:${bg};color:${color}">${escapeHtml(r.type)}</div>
           <div style="font-size:11px;font-weight:600;color:#1e1040;flex:1;line-height:1.3">${escapeHtml(r.title)}</div>
-          ${r.url ? `<a href="${escapeHtml(r.url)}" target="_blank" style="font-size:11px;font-weight:800;color:${color};text-decoration:none">→</a>` : ''}
+          ${safeUrl ? `<a href="${escapeHtml(safeUrl)}" target="_blank" rel="noopener" style="font-size:11px;font-weight:800;color:${color};text-decoration:none">→</a>` : ''}
         </div>`;
       }).join('')}
     </div>` : ''}
