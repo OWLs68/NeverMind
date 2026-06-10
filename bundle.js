@@ -12052,7 +12052,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
       let payloadAttr = "";
       if (c.payload && typeof c.payload === "object") {
         const payload = JSON.stringify(c.payload);
-        payloadAttr = escapeHtml(payload).replace(/"/g, "&quot;");
+        payloadAttr = escapeHtml(payload);
       }
       return `<div class="owl-chip" data-chip-id="${escapeHtml(id)}" data-chip-text="${escapeHtml(label)}" data-chip-action="${action}" data-chip-target="${escapeHtml(target)}" data-chip-payload="${payloadAttr}">${escapeHtml(label)}</div>`;
     });
@@ -18879,7 +18879,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
     return new Date(ts).toLocaleDateString("uk-UA", { day: "numeric", month: "short" });
   }
   function escapeHtml(s) {
-    return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(_RE_DQUOTE, "&quot;").replace(_RE_SQUOTE, "&#39;");
   }
   function escapeJsArg(s) {
     const str = String(s ?? "");
@@ -19038,11 +19038,13 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
     localStorage.setItem("nm_reminders", JSON.stringify(arr));
     window.dispatchEvent(new CustomEvent("nm-data-changed", { detail: "reminder" }));
   }
-  var NM_RECENT_ACTIONS_KEY, NM_RECENT_ACTIONS_MAX;
+  var _RE_DQUOTE, _RE_SQUOTE, NM_RECENT_ACTIONS_KEY, NM_RECENT_ACTIONS_MAX;
   var init_utils = __esm({
     "src/core/utils.js"() {
       init_inbox();
       init_uuid();
+      _RE_DQUOTE = new RegExp(String.fromCharCode(34), "g");
+      _RE_SQUOTE = new RegExp(String.fromCharCode(39), "g");
       NM_RECENT_ACTIONS_KEY = "nm_recent_actions";
       NM_RECENT_ACTIONS_MAX = 20;
       window.autoResizeTextarea = autoResizeTextarea;
