@@ -3217,3 +3217,10 @@ Bridge-план з 64CXo продовжено — закрито G2 (`parseUaTim
 
 **Коміти:** `f4a1a70` B-192 debug monkey-patch + on-demand bypass disabled · `828f3a5` fix trigger_ts (was in past) · `3409552` B-192 closed: not a bug + archive HKnlM · `5426fea` verify production test_4 trigger
 **Метрики:** 4 commits, v995→v997 (3 auto-deploy від merge циклів, без CACHE bump). Council Sonnet: 3 паралельних read-only. AI-Tester: 1× monkey-patch debug PASS + 1× production verify PASS. Baseline 22→23 (test_4 ENABLED). Closed: B-192 (не баг). Open: B-191 (workaround у тестера).
+
+## 03.06.2026 — сесія WML2Z
+
+**Ремонт AI-тестера + 2 баги з телефону + хук-нагадування.** 5 commits, гілка `claude/new-session-WML2Z`, v1002→v1004. Тестер: видалено мертвий `--full` код + `max_tests` 30→33 (B-196 — test_29/30 тихо випадали з cron, бо 32 сценарії а ліміт 30; конкретний доказ «тестер слабкий»). 2 реальні баги які тестер пропустив: **B-194** — чіпи з кривим JSON (зайві коми) вивалювали весь код у бульбашку чату (скрін «Список не список»), фікс — lenient-fallback у `parseContentChips` прибирає trailing-коми коли strict-парс упав; **B-195** — табло (OWL board) не оновлювалось на вхід у застосунок (чекало 45с/10хв), фікс — `visibilitychange`+`pageshow`→`brainPulse` (cold-start 45с→5с), cooldowns гасять витрати. Новий `UserPromptSubmit` хук-нагадування «не технічною мовою». Council запущено на баг чіпів але перебито переключенням на баг табло. Обговорено (не зроблено): «склади список» → задача з кроками детерміновано; чіпи через структуровані відповіді OpenAI (обидва у ROADMAP Ideas).
+
+**Коміти:** `651ab85` fix(tester) --full + max_tests 30→33 · `9682755` chore(hooks) UserPromptSubmit reminder · `00b377b` fix(chips) lenient коми · `0e24085` fix(brain-pulse) табло на foreground · `c7f80b4` chore(hooks) → 'не технічною мовою'
+**Метрики:** 5 commits, v1002→v1004, CACHE_NAME `nm-20260521-0925`→`nm-20260603-1952`. Closed: B-194, B-195, B-196. Open: B-191 (тестер workaround). Council: 1 запущено/перебито.
