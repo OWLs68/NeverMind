@@ -253,6 +253,24 @@ function checkNestedBackticks(repoRoot) {
   return issues;
 }
 
+// Правило escape-сторож (сесія 7uxlr7 11.06) — запускає scripts/check-escape.js.
+// 4-разовий клас багів одного кореня (notes.js XSS e9t3N → B-157 → SEC-1 → B-197).
+// Юніт-тест перевіряє що escapeHtml/safeHref/escapeJsArg реально нейтралізують
+// апостроф/лапку/небезпечну схему. Якщо хтось знову зламає екранування —
+// push блокується ДО того як 5-й рецидив потрапить на прод.
+function checkEscapeGuard(repoRoot) {
+  const scriptPath = path.join(repoRoot, 'scripts', 'check-escape.js');
+  if (!fs.existsSync(scriptPath)) return null;
+  try {
+    execSync(`node "${scriptPath}"`, { stdio: 'pipe', encoding: 'utf8' });
+    return null; // exit 0 → усе ок
+  } catch (e) {
+    // exit 1 → тести впали. stderr містить деталі що саме зламано.
+    const detail = (e.stderr || e.stdout || '').toString().trim();
+    return detail || 'escape-сторож впав без деталей';
+  }
+}
+
 function countActiveSessionBlocks() {
   if (!fs.existsSync(SESSION_STATE_PATH)) return { count: 0, blocks: [] };
   const content = fs.readFileSync(SESSION_STATE_PATH, 'utf8');
@@ -367,6 +385,20 @@ process.stdin.on('end', () => {
       issues.push(
         `🚨 BACKTICKS У TEMPLATE LITERAL: знайдено raw backticks всередині export const блоку — esbuild прочитає перший як terminator → 'Expected ";"' → 18h CI fail (LfA6w 08.05 → dyhJu 11.05, той самий клас бага 3-й раз).\n${list}\nФікс: прибери backticks з тексту або заескейпи \\\`. Якщо це false positive (легальна вкладена template у \${...}) — додай фразу «pre-push: ok».`
       );
+    }
+
+    // Правило escape-сторож (7uxlr7 11.06) — ЖОРСТКИЙ блок ДО bypass-логіки.
+    // На відміну від решти правил (евристики на тексті/diff з можливим false
+    // positive) це детермінований юніт-тест на реальному коді: або escapeHtml
+    // екранує лапки, або ні. False positive неможливий → bypass-фраза не діє.
+    const escapeFail = checkEscapeGuard(repoRoot);
+    if (escapeFail) {
+      console.error('\n=== 🛡️ ESCAPE-СТОРОЖ (scripts/check-escape.js) — PUSH ЗАБЛОКОВАНО ===\n');
+      console.error('Юніт-тест екранування впав. 4-разовий клас XSS/свайп-багів (notes.js → B-157 → SEC-1 → B-197).');
+      console.error('escapeHtml/safeHref/escapeJsArg у src/core/utils.js зламано або контракт змінено.\n');
+      console.error(escapeFail);
+      console.error('\nФікс обовʼязковий — bypass тут НЕ діє (детермінований тест, не евристика).\n');
+      process.exit(2);
     }
 
     // Правило ротації SESSION_STATE
