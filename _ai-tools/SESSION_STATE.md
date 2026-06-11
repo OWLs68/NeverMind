@@ -28,9 +28,18 @@
 - **CSP** — оцінено: strict не готовий (~20 inline iOS-хаків ontouchend/onmousedown/onmouseover + diagnostics/logger/finance). Report-Only неможливий на GitHub Pages (потребує HTTP-заголовка). Готова чернетка enforcing meta-CSP (головний виграш connect-src 'self' api.openai.com — при XSS ключ не зллється) → деплой+smoke на РЕАЛЬНОМУ iPhone окремою сесією.
 - **Ключ OpenAI у localStorage** — справжній фікс = Supabase Edge Functions (у плані).
 
+### Архітектурна підготовка (11.06) — deep research + узгоджений план міграції
+
+Після security-фіксів — велика стратегічна робота:
+- **Закрито з хмари ще:** B-197 (notes.js escapeJsArg→escapeHtml), B-200 (task-chat крос-задача race), DRY `invalidateFinanceBoard()`, промпт-фікс «склади список», #3 escape-аудит (чисто). Council: silent-bug-scout (знайшов B-198/199/200), dry-finder, doc-checker.
+- **Deep research:** 5 паралельних web-агентів (PowerSync/Electric, RxDB/Triplit/Evolu/Dexie/TinyBase, Replicache/Zero/Automerge/Yjs, Supabase-native, local-first теорія) + клон Mastra + код-аудит. З джерелами.
+- **Рішення (повний план → `docs/SUPABASE_MIGRATION_PLAN.md`):** фундамент-first; PWA→Capacitor пізніше; DIY-sync на власному action-log (НЕ важкий движок — усі ламають 345 синхронних читань); HLC+field-LWW+IndexedDB+persist+tombstones+pull-on-reconnect; health структурно ізольований (Art.9); ключ→Edge+per-user ліміти; 47 інструментів off OpenAI + один callLLM під Mastra (Фаза 4).
+- **Mastra оцінено:** Apache 2.0, Node-сервіс (НЕ Supabase Edge), тіла інструментів переписати на Postgres → тільки після Supabase. Фаза 4.
+- **3 виправлення brain прийнято:** HLC>серверний час, field>row LWW, IndexedDB+persist>localStorage (iOS-евікція).
+
 ### Метрики
 
-- Коміти: `8c2f7fa` → `185354e` (4), усе на `claude/new-session-vdlyeg`, запушено
+- Коміти: `8c2f7fa` → `b436290` (10 з security + B-197/B-200/DRY/промпт), усе на `claude/new-session-vdlyeg`, запушено
 - CACHE_NAME: `nm-20260610-0945`
 - Council: 3 агенти Sonnet (SEC-1 регресія, усі read-only)
 - Build: node --check + check-imports + i18n + YAML — усе чисте
@@ -315,14 +324,21 @@
 
 ## ⚠️ ДЛЯ НОВОГО ЧАТУ — найважливіше
 
-**🔐 НЕЗАВЕРШЕНЕ vdlyeg (10.06) — хвости аудиту безпеки:**
-- ~~B-197 notes.js data-folder~~ ✅ ЗАКРИТО (`870b790`) — escapeJsArg→escapeHtml. Системний аудит notes.js: тільки ці 2 точки, решта файлу чиста.
-- **CSP на реальному iPhone.** Готова чернетка enforcing meta-CSP у звіті vdlyeg (`default-src 'self'; script-src 'self' 'unsafe-inline'; connect-src 'self' https://api.openai.com; ...`). Деплоїти + smoke ТІЛЬКИ маючи iPhone — перевірити що ~20 inline iOS-хаків не зламались. Головний виграш connect-src: при XSS ключ не зллється на чужий сервер.
+**🚀 ПОЧАТИ З ЦЬОГО — Supabase-міграція, ФАЗА 1 (узгоджено vdlyeg 11.06).**
+> Спершу прочитай **`docs/SUPABASE_MIGRATION_PLAN.md`** — повний узгоджений план (фундамент-first, порядок фаз, DIY-sync на action-log з HLC+field-LWW+IndexedDB, health структурно ізольований, AI-шар під Mastra, неочевидні стіни). Це durable-артефакт цієї сесії.
+- **Фаза 1 = троє воріт (без Supabase ще):** (1) єдиний шар запису — усі дані через `saveX()` (закрити `nm_settings` ×10 прямих, `nm_quit_log` обхід, додати `saveSettings()`); (2) структурний `nm-data-changed` → `{type,action,id}` (9 слухачів); (3) конверт сутності — ISO-час + `user_id`-заглушка + `updatedAt` + `hlc`-поле скрізь.
+- **+ структуровані чіпи** (надійність без Supabase): tool `send_chips` → tool_calls, прибрати парсинг JSON з тексту (B-194 клас). 6/8 чатів вже на tool_calls.
+- **Принцип:** мінімально у фічах, повно у фундаменті. НЕ доробляти фічі (мозок заміниться Mastra — Фаза 4).
+- **3 виправлення моєї sync-частини від brain (прийняті):** HLC замість серверного часу; field-level не row-level LWW; IndexedDB+persist() не localStorage (iOS-евікція).
+- **Mastra = Фаза 4, не зараз.** Тіла 47 інструментів треба переписати на Postgres — можливо тільки ПІСЛЯ Supabase.
 
-**🆕 НЕЗАВЕРШЕНЕ WML2Z (03.06):**
-- **«Склади список покупок» → задача з кроками.** Зараз AI йде в clarify-режим («куди записати?») замість того щоб одразу зробити задачу-чекліст (кожен продукт = крок-галочка). Корінь: детермінована річ (правило 12) віддана на здогад AI. Council запущено але перебито — потребує системного підходу (промпти `src/ai/prompts.js` + flow save_task+steps), не латка. Роман прямо просив системно.
-- **Чіпи через структуровані відповіді OpenAI** (обговорено, не зроблено): зараз парсимо JSON з вільного тексту AI — крихко. Напрямок — tool_calls/JSON mode щоб чіпи приходили структуровано. Велика тема, дотична до Supabase.
-- **Перевірити на iPhone 2 фікси WML2Z:** (1) згорнути/відкрити застосунок → табло оживає за ~2с; (2) попросити список → каша з кодом не вилазить.
+**🔐 ХВОСТИ vdlyeg (security) — потребують реального iPhone:**
+- **CSP на iPhone.** Готова чернетка enforcing meta-CSP. Деплой+smoke ТІЛЬКИ маючи iPhone (~20 inline iOS-хаків не зламати). Виграш connect-src: при XSS ключ не зллється.
+- **B-198/B-199** (свайп/backdrop фінмодалок) — фікс у спільному swipe-core, smoke на пристрої. **B-191** тестер.
+
+**🆕 WML2Z (частково зроблено):**
+- ✅ «Склади список» — промпт-фікс (`44aff12`), AI питає «що додати». **Smoke за тобою на iPhone.**
+- **Чіпи структуровано** — тепер це частина Фази 1 вище.
 
 ---
 

@@ -12,6 +12,12 @@
 
 > **Виконане → [`ROADMAP_DONE.md`](ROADMAP_DONE.md).** Сюди переходять завершені блоки.
 
+**🚀 SUPABASE-МІГРАЦІЯ — УЗГОДЖЕНИЙ ПЛАН (vdlyeg 11.06.2026).** Повний план → **[`docs/SUPABASE_MIGRATION_PLAN.md`](docs/SUPABASE_MIGRATION_PLAN.md)** (deep research 5 web-агентів + клон Mastra + код-аудит).
+> **Порядок фаз (рішення Романа):** 1) логи+баги+прибирання (НЕ доробляти фічі); 2) Supabase мінімум + ФУНДАМЕНТ; 3) запуск+контент (free, монетизацію відчепити); 4) Mastra-мозок окремо.
+> **Принцип:** мінімально у фічах, повно у фундаменті (двері в один бік закласти зараз).
+> **Sync:** DIY на власному action-log (НЕ Electric/PowerSync — ламають 345 синхронних читань) — HLC + field-LWW + IndexedDB/persist + tombstones + pull-on-reconnect.
+> **Фаза 1 (наступна сесія, без Supabase):** троє воріт (єдиний `saveX()` шар + структурний `nm-data-changed` {type,action,id} + конверт сутності з hlc/user_id/ISO) + структуровані чіпи (`send_chips` tool).
+
 **✅ Рефакторинг документації + «мозок» Claude — ЗАВЕРШЕНО 20.04.2026 (сесія g05tu).** 5 фаз, 6 комітів. Деталі → `ROADMAP_DONE.md` секція "Завершені Active-блоки".
 
 ---
