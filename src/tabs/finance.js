@@ -12,6 +12,7 @@
 import { currentTab, showToast } from '../core/nav.js';
 import { generateUUID } from '../core/uuid.js';
 import { escapeHtml, t } from '../core/utils.js';
+import { updateSettings } from '../core/settings.js';
 import { addToTrash, showUndoToast } from '../core/trash.js';
 import { SWIPE_DELETE_THRESHOLD, applySwipeTrail, clearSwipeTrail, attachSwipeDelete } from '../ui/swipe-delete.js';
 import { getAIContext, getOWLPersonality, openChatBar, safeAgentReply, saveChatMsg } from '../ai/core.js';
@@ -77,9 +78,7 @@ export function getCurrency() {
 }
 
 export function setCurrency(symbol) {
-  const s = JSON.parse(localStorage.getItem('nm_settings') || '{}');
-  s.currency = symbol;
-  localStorage.setItem('nm_settings', JSON.stringify(s));
+  updateSettings({ currency: symbol });
   ['₴','$','€'].forEach(c => {
     const map = {'₴':'uah','$':'usd','€':'eur'};
     const btn = document.getElementById('btn-currency-' + map[c]);

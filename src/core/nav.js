@@ -3,6 +3,7 @@
 // ============================================================
 import { updateErrorLogBtn } from './logger.js';
 import { escapeHtml, t } from './utils.js';
+import { getSettings, updateSettings } from './settings.js';
 import { animateTabSwitch, NM_KEYS, applyBoardOverlays } from './boot.js';
 import {
   createFullBackup, listBackups, getBackupInfo, restoreBackup,
@@ -799,9 +800,7 @@ export function openSettings() {
 }
 
 function setOwlModeSetting(mode) {
-  const settings = JSON.parse(localStorage.getItem('nm_settings') || '{}');
-  settings.owl_mode = mode;
-  localStorage.setItem('nm_settings', JSON.stringify(settings));
+  updateSettings({ owl_mode: mode });
   updateOwlModeUI(mode);
   showToast(t('nav.toast.owl_mode_changed', 'Стиль OWL змінено'));
 }
@@ -838,9 +837,7 @@ export function closeSettings() {
 }
 
 function setLanguage(lang) {
-  const s = JSON.parse(localStorage.getItem('nm_settings') || '{}');
-  s.language = lang;
-  localStorage.setItem('nm_settings', JSON.stringify(s));
+  updateSettings({ language: lang });
   ['uk','en','nl'].forEach(l => {
     const btn = document.getElementById('btn-lang-' + l);
     if (btn) {
@@ -1118,7 +1115,7 @@ function saveSettings() {
   // Без цього після введення ключа табло мовчить аж до наступного data-change або 60-хв watchdog.
   try { window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'api-key' })); } catch(_) {}
 
-  const settings = JSON.parse(localStorage.getItem('nm_settings') || '{}');
+  const settings = getSettings();
   const wakeEl   = document.getElementById('input-wake-up');
   const wstartEl = document.getElementById('input-work-start');
   const wendEl   = document.getElementById('input-work-end');
@@ -1129,8 +1126,7 @@ function saveSettings() {
     workEnd:   wendEl   ? (wendEl.value   || '18:00') : (settings.schedule?.workEnd   || '18:00'),
     bedTime:   bedEl    ? (bedEl.value    || '23:00') : (settings.schedule?.bedTime   || '23:00'),
   };
-  Object.assign(settings, { name, age, weight, height, profileNotes, schedule });
-  localStorage.setItem('nm_settings', JSON.stringify(settings));
+  updateSettings({ name, age, weight, height, profileNotes, schedule });
 
   if (memory) localStorage.setItem('nm_memory', memory);
 
