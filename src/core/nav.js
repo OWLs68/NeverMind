@@ -23,6 +23,7 @@ import {
   isMigrationDone,
   markMigrationDone,
   getLegacyMemoryText,
+  saveMemory,
 } from '../ai/memory.js';
 import { tryBoardUpdate } from '../owl/proactive.js';
 import { renderEvening } from '../tabs/evening.js';
@@ -823,7 +824,7 @@ export function closeSettings() {
   // Save memory edits before closing (null-safe — input може ще не бути в DOM)
   try {
     const memEl = document.getElementById('input-memory');
-    if (memEl) localStorage.setItem('nm_memory', memEl.value);
+    if (memEl) saveMemory(memEl.value);
   } catch(e) {}
   // calendar-pattern: scale(0)+opacity:0 → setTimeout 300ms → display:none
   const overlay = document.getElementById('settings-overlay');
@@ -1128,7 +1129,7 @@ function saveSettings() {
   };
   updateSettings({ name, age, weight, height, profileNotes, schedule });
 
-  if (memory) localStorage.setItem('nm_memory', memory);
+  if (memory) saveMemory(memory);
 
   updateKeyStatus(!!key);
   setTimeout(() => closeSettings(), 600);

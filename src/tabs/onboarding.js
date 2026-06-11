@@ -7,6 +7,7 @@ import { currentTab, showToast, switchTab, updateKeyStatus } from '../core/nav.j
 import { getAIContext, getOWLPersonality, safeAgentReply } from '../ai/core.js';
 import { logUsage } from '../core/usage-meter.js';
 import { getSettings, updateSettings } from '../core/settings.js';
+import { saveMemory } from '../ai/memory.js';
 import { addInboxChatMsg } from './inbox.js';
 import { getProjects, saveProjects } from './projects.js';
 import { generateUUID } from '../core/uuid.js';
@@ -724,8 +725,7 @@ async function finishSurvey() {
       try {
         const parsed = JSON.parse(reply.replace(/```json|```/g, '').trim());
         if (parsed.memory) {
-          localStorage.setItem('nm_memory', parsed.memory);
-          localStorage.setItem('nm_memory_ts', Date.now().toString());
+          saveMemory(parsed.memory, { aiStamp: true });
         }
         if (parsed.advice) {
           addInboxChatMsg('agent', parsed.advice);
@@ -933,8 +933,7 @@ export async function saveGuideTopicAnswer(userText) {
     if (data?.usage) logUsage('onboarding', data.usage, data.model);
     const updated = data.choices?.[0]?.message?.content?.trim();
     if (updated) {
-      localStorage.setItem('nm_memory', updated);
-      localStorage.setItem('nm_memory_ts', Date.now().toString());
+      saveMemory(updated, { aiStamp: true });
     }
   } catch(e) {}
 }

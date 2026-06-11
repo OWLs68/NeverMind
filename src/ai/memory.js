@@ -77,6 +77,19 @@ export function getFactsRaw() {
   }
 }
 
+// Канонічний запис текстової памʼяті OWL (nm_memory) — Supabase Фаза 1, Ворота 1.
+// Раніше 4 місця (nav.js ×2 ручне редагування, onboarding.js ×2 AI-резюме) писали
+// напряму БЕЗ події → «один мозок» (board/brain-pulse) не знав про оновлення памʼяті,
+// тоді як факти (_saveFacts нижче) сповіщають з B-151. Тепер один шлях + dispatch.
+// aiStamp: true лише коли памʼять оновив AI — nm_memory_ts керує авто-рефрешем
+// раз на день (shouldRefreshMemory у nav.js); ручне редагування ts НЕ ставить,
+// інакше відкладало б плановий AI-рефреш.
+export function saveMemory(text, { aiStamp = false } = {}) {
+  localStorage.setItem('nm_memory', text);
+  if (aiStamp) localStorage.setItem('nm_memory_ts', Date.now().toString());
+  try { window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'memory' })); } catch(e) {}
+}
+
 function _saveFacts(facts) {
   // Hard limit — видаляємо найстаріші за ts коли більше 100
   let trimmed = facts;
