@@ -8,7 +8,7 @@ import { callAIWithTools, getAIContext, openChatBar, safeAgentReply, saveChatMsg
 import { getFinanceChatSystem } from '../ai/prompts.js';
 import { dispatchChatToolCalls } from '../ai/tool-dispatcher.js';
 import { shouldClarify } from '../owl/clarify-guard.js';
-import { tryBoardUpdate } from '../owl/proactive.js';
+import { invalidateFinanceBoard } from '../owl/proactive.js';
 import { renderChips } from '../owl/chips.js';
 import {
   getFinance, formatMoney, getCurrency,
@@ -114,7 +114,7 @@ export async function sendFinanceBarMessage() {
       // Залишається owl-board signal для save_finance.
       for (const tc of msg.tool_calls) {
         if (tc.function.name === 'save_finance') {
-          try { localStorage.setItem('nm_owl_tab_ts_finance', '0'); tryBoardUpdate('finance'); } catch(e) {}
+          invalidateFinanceBoard();
         }
       }
       // Verify Loop: показуємо msg.content якщо AI дав.
