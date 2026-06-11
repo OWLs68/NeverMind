@@ -4,11 +4,40 @@
 >
 > Старіші сесії (до 6GoDe 19.04) — в [`_archive/SESSION_STATE_archive.md`](../_archive/SESSION_STATE_archive.md).
 
-**Оновлено:** 2026-06-03 (сесія **WML2Z** — ремонт AI-тестера (мертвий --full код + max_tests 30→33 щоб test_29/30 не випадали з cron) + 2 реальні баги з телефону: чіпи з кривим JSON вивалювали код у чат → lenient-парсер; табло не оновлювалось на вхід у застосунок → visibilitychange/pageshow тригер. Новий хук-нагадування «не технічною мовою».).
+**Оновлено:** 2026-06-10 (сесія **vdlyeg** — аудит безпеки за бібліотекою Anthropic-Cybersecurity-Skills + 4 кореневі фікси: escapeHtml екранує лапки (XSS-клас у ~25 місцях), safeHref проти javascript:-посилань, CI command-injection через env, gitleaks secret-scanning. CSP оцінено-відкладено (інлайн iOS-хаки + GitHub Pages не дає Report-Only). Нова знахідка B-197 notes.js data-folder.).
 
 ---
 
-## 🔧 Поточна сесія WML2Z — ремонт тестера + 2 баги з телефону + хук (03.06.2026)
+## 🔧 Поточна сесія vdlyeg — аудит безпеки + 4 кореневі фікси (10.06.2026)
+
+### Зроблено — 4 commits (8c2f7fa → 185354e), усе запушено
+
+Аудит за 9 навичками з `Anthropic-Cybersecurity-Skills` (клоновано, читано SKILL.md як чеклист захисту) × реальний код NeverMind. Кожен фікс кореневий, не латка.
+
+**SEC-1 escapeHtml + лапки (`8c2f7fa`):** `src/core/utils.js` escapeHtml екранував лише `& < >`, НЕ лапки → значення з лапкою у `attr="${escapeHtml(x)}"` розривало атрибут і дозволяло підставити обробник події (XSS у ~25 місцях). Фікс: екранує `&quot;`/`&#39;` (regex через String.fromCharCode у module-константах — гаряча функція + не плутати i18n-детектор). Один корінь → всі місця. Прибрано дубль-костур chips.js:340. **Council 3 агенти Sonnet** (round-trip dataset цілий, нема не-HTML sinks, render-regression — хибнопозитив перевірено по коду). 8/8 unit.
+
+**SEC-2 safeHref (`1370a9c`):** `projects.js:393` рендерив `<a href>` з URL ресурсу через escapeHtml — javascript:alert() виконувався при кліку. Новий `safeHref(url)` (http/https/mailto/tel + відносні, інакше null; стрипає контрольні символи проти `java⇥script:` обходу) + rel=noopener. 16/16 unit. Static import.
+
+**SEC-3 CI command injection (`be7bd1d`):** `github.ref_name` + workflow_dispatch inputs йшли прямо у `run:` shell. Винесено у `env:`, беруться як `"$VAR"`. auto-merge.yml ×2, auto-merge-tester.yml ×3, claude-security.yml. YAML 4/4.
+
+**SEC-4 gitleaks (`185354e`):** новий `.github/workflows/gitleaks.yml` (push/PR + щотижневий повний скан). Профілактика перед Supabase.
+
+### Відкладено / далі
+
+- **B-197** (нова) — `notes.js:458,530` `data-folder` через escapeJsArg замість escapeHtml → папка з апострофом (`O'Brien`) не видаляється свайпом. 3-й escape-дефект у notes.js. Системний фікс: escapeJsArg→escapeHtml + правило «data-* → escapeHtml». Чекає «Роби».
+- **CSP** — оцінено: strict не готовий (~20 inline iOS-хаків ontouchend/onmousedown/onmouseover + diagnostics/logger/finance). Report-Only неможливий на GitHub Pages (потребує HTTP-заголовка). Готова чернетка enforcing meta-CSP (головний виграш connect-src 'self' api.openai.com — при XSS ключ не зллється) → деплой+smoke на РЕАЛЬНОМУ iPhone окремою сесією.
+- **Ключ OpenAI у localStorage** — справжній фікс = Supabase Edge Functions (у плані).
+
+### Метрики
+
+- Коміти: `8c2f7fa` → `185354e` (4), усе на `claude/new-session-vdlyeg`, запушено
+- CACHE_NAME: `nm-20260610-0945`
+- Council: 3 агенти Sonnet (SEC-1 регресія, усі read-only)
+- Build: node --check + check-imports + i18n + YAML — усе чисте
+
+---
+
+## 🔧 Сесія WML2Z — ремонт тестера + 2 баги з телефону + хук (03.06.2026)
 
 ### Зроблено — 5 commits
 
@@ -50,55 +79,7 @@
 
 ---
 
-## 🔧 Сесія RQmdC — B-192 розслідування (НЕ баг) + AI-Tester infra (23.05.2026)
-
-### Зроблено — 4 commits
-
-**B-192 закрито — backup НЕ зникає, хибний сигнал старого тесту.**
-
-Симптом (з Ug2Jw): `createFullBackupUI` створює знімок, за ~0.8с зникає. Гіпотеза — async TTL-cleanup.
-
-1. **`f4a1a70` Council 3 паралельних агентів Sonnet** (точки видалення `nm_backup_*` / async scheduler / pre-mortem 5 шляхів) прочитали `backup.js` + `boot.js` + `nav.js` + owl модулі + sw.js. **0 реальних знахідок** — топ-гіпотези (cleanupOldBackups лексикографічна race, runMigrations v17 повторний backup) вимагали повторного boot якого у сценарії немає. Голова верифікувала кожну проти коду → жодна не трималась.
-
-2. **Runtime-датчик замість патчу на гіпотезах** (`f4a1a70`) — переписав test_4: monkey-patch на `localStorage.removeItem/setItem` для `nm_backup_*` з `performance.now()` + stack trace 2000 chars + polling кожні 100мс протягом 1100мс. Якби видалення реальне — `rm_log` зловив би зі stack.
-
-3. **Результат:** on-demand trigger × 3 поспіль (14:03/04/05 UTC) → **усі PASS**. Backup живий усі 1100мс, `rm_log` порожній. **Корінь хибного сигналу:** старий test_4 міряв `keys_af` і `after_keys` через ОКРЕМI CDP `Runtime.evaluate` з `wait(0.8)` між ними → таймінг/race у вимірі давав хибний 0. Реальний механізм backup робочий.
-
-4. **Фінальний test_4** (`3409552`) переписаний на stability polling (0/500/1000мс) + cleanup після, **ENABLED** у baseline (22 → 23 active). Верифіковано прод-версією на 14:15 UTC — PASS.
-
-5. **Системний infra-фікс:** `ai-tester.py` on-demand `TARGET_SCENARIOS` тепер BYPASS'ить `disabled_scenarios` (раніше disabled блокувало навіть прицільний trigger → Roman мусив би Edit config перед кожним debug-циклом).
-
-6. **Шпаргалка iPhone smoke 10 пунктів** дана Роману для ручного проходу (Backup/Restore/Кошик/OWL swipe/step-check/calc grid/close-backdrop/Enter chat/save-settings/Legal). Відкладено на Романа.
-
-### Обговорено (без виконання)
-
-- **CSP Phase 2 — частково заблокована iPhone:** 6 з 12 inline можна зробити автономно (4× oninput closure + 2× addTaskStep preventDefault); 6× `ontouchend="this.focus()"` iOS-клавіатури хак потребує реального iPhone тесту перед видаленням. Чесне застереження дано Роману перед вибором.
-- **Architecture Refactor Сесія 4** (`execute-action.js` один executor для 4 dispatch-точок) — альтернатива CSP, повна сесія коду без iPhone-залежностей.
-- **`scripts/ai-tester.py` = 1982 рядки** (>1500 стоп-правило з /audit). Тестера треба розбити окремою сесією через `/refactor-large` ~2-3 год + synchро з Hetzner deploy. Не блокер поточної задачі.
-
-### Ключові рішення
-
-- **Runtime-датчик ПЕРЕД патчем прод-коду** (правило CLAUDE.md «гіпотеза агента ≠ факт»): коли симптом «щось зникає async» і Council не знаходить винного — monkey-patch + polling доводить чи подія реальна. Запатчити backup.js на гіпотезі = «лагодити» неіснуючу проблему і маскувати реальну причину (артефакт виміру).
-- **On-demand TARGET_SCENARIOS bypass disabled_scenarios** — системний (не лоскут): призначення прицільного trigger'у власне debug disabled-тестів. Інакше Roman мусив би Edit config перед кожним циклом → накопичення регресій (забути повернути).
-- **HKnlM архівовано RQmdC** — pre-push hook коректно зловив 3 активних блоки. Архівація провадилась тут, не на /finish — корисний сторож SK6E2.
-
-### Інциденти
-
-- **Перший `trigger_ts` 06:30 < last_run 15:01** — я орієнтувався на застарілий tester-status.json (06:01) з мого репо-snapshot, реальний серверний last_run був 15:01 22.05. Health-check ігнорував як старий. Виправлено на свіжий час (`828f3a5`). Затримка ~10 хв.
-- **Pre-push hook заблокував перший docs-push** (3 активних блоки RQmdC+Ug2Jw+HKnlM > дозволених 2). Правильна реакція: архівував HKnlM у `_archive/SESSION_STATE_archive.md` + stub-посилання у живому SESSION_STATE → push пройшов.
-
-### Метрики
-
-- Коміти: `f4a1a70` → `5426fea` (4 commits)
-- Версії: v995 → v997 (3 auto-deploy від merge циклів — без CACHE bump бо тільки scripts/+docs)
-- CACHE_NAME: `nm-20260521-0925` (з Ug2Jw, НЕ чіпали)
-- Council Sonnet: 3 паралельних агенти (всі read-only, корисний негативний результат)
-- AI-Tester runs: 1× monkey-patch debug (PASS) + 1× production verify (PASS), baseline 22→23
-
-### Відкриті баги після RQmdC
-
-- **B-191** — `fill_input` подвоює chars (workaround у тестера, не блокер юзера)
-- B-155/B-156 — гіпотетичні
+## 🔧 Сесія RQmdC (23.05.2026) — архівовано vdlyeg 10.06 → [archive](../_archive/SESSION_STATE_archive.md#-сесія-rqmdc--b-192-розслідування-не-баг--ai-tester-infra-23052026)
 
 ---
 
@@ -334,7 +315,11 @@
 
 ## ⚠️ ДЛЯ НОВОГО ЧАТУ — найважливіше
 
-**🆕 НЕЗАВЕРШЕНЕ WML2Z (03.06) — почати з цього:**
+**🔐 НЕЗАВЕРШЕНЕ vdlyeg (10.06) — хвости аудиту безпеки:**
+- **B-197 — escape-аудит notes.js системно.** `data-folder` через escapeJsArg (рядки 458/530) → папка з апострофом не видаляється свайпом. Це 3-й escape-дефект у notes.js поспіль — Роман просив НЕ латати точково, а пройтись по ВСІХ escape/data-attr точках за раз (вже промаплено: тільки ці 2 = escapeJsArg→escapeHtml; решта файлу чиста). Правило: `data-*` → завжди escapeHtml.
+- **CSP на реальному iPhone.** Готова чернетка enforcing meta-CSP у звіті vdlyeg (`default-src 'self'; script-src 'self' 'unsafe-inline'; connect-src 'self' https://api.openai.com; ...`). Деплоїти + smoke ТІЛЬКИ маючи iPhone — перевірити що ~20 inline iOS-хаків не зламались. Головний виграш connect-src: при XSS ключ не зллється на чужий сервер.
+
+**🆕 НЕЗАВЕРШЕНЕ WML2Z (03.06):**
 - **«Склади список покупок» → задача з кроками.** Зараз AI йде в clarify-режим («куди записати?») замість того щоб одразу зробити задачу-чекліст (кожен продукт = крок-галочка). Корінь: детермінована річ (правило 12) віддана на здогад AI. Council запущено але перебито — потребує системного підходу (промпти `src/ai/prompts.js` + flow save_task+steps), не латка. Роман прямо просив системно.
 - **Чіпи через структуровані відповіді OpenAI** (обговорено, не зроблено): зараз парсимо JSON з вільного тексту AI — крихко. Напрямок — tool_calls/JSON mode щоб чіпи приходили структуровано. Велика тема, дотична до Supabase.
 - **Перевірити на iPhone 2 фікси WML2Z:** (1) згорнути/відкрити застосунок → табло оживає за ~2с; (2) попросити список → каша з кодом не вилазить.
