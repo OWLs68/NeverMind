@@ -88,6 +88,30 @@
 - **Правило:** для `data-*` атрибутів використовувати `escapeHtml()` (тільки HTML-escape `&<>`). Браузер декодує HTML entities при читанні dataset → отримуємо оригінал.
 - **Підтверджений кейс JMQuT:** Pre-mortem Council Sonnet знайшов баг ПЕРЕД деплоєм при міграції notes.js на delegation. 4 точки виправлено: `safeFolder` → `escapeHtml(folder)`. Той самий патерн застосовано у health.js (`data-time` через `escapeHtml`).
 - **Сигнал для майбутніх міграцій:** коли міграруєш `onclick="fn('${escapeJsArg(x)}')"` → `data-action="X" data-x="${...}"` — ОБОВ'ЯЗКОВО замінити `escapeJsArg` на `escapeHtml`. Інакше silent fail на даних з апострофами / лапками / backslash.
+- **🔁 РЕЦИДИВ vdlyeg 10.06 (B-197):** JMQuT нібито виправив «4 точки», але `notes.js:458/530` (`data-folder` на `.folder-item-wrap` — зовнішня обгортка свайпу) лишились на `escapeJsArg` → папка з апострофом не видалялась свайпом. **3-й раз поспіль** цей самий клас у notes.js (раніше :186 stored XSS, :355). **Урок про урок:** коли фіксиш escape-клас — НЕ «4 точки», а `grep -n "escapeJsArg" file.js` і ВСI до нуля за раз + перевір що кожна нова data-* точка йде через escapeHtml. Не «знайшов візуально декілька». Системний фікс vdlyeg: прибрав escapeJsArg з import notes.js взагалі → нова поява = одразу видно.
+
+### escapeHtml МУСИТЬ екранувати лапки — XSS через розрив атрибута (vdlyeg 10.06.2026)
+
+- **Контекст:** `escapeHtml` екранував лише `& < >`, НЕ лапки. У ~25 місцях значення йшло в HTML-атрибут: `data-x="${escapeHtml(v)}"`, `value="${escapeHtml(v)}"`, `title="${escapeHtml(v)}"`.
+- **БАГ (XSS-клас):** значення з подвійною лапкою розривало атрибут → можна підставити обробник події: `v = 'a" onmouseover="alert(1)'` → `<div data-x="a" onmouseover="alert(1)">`. Виконання коду в DOM. Сьогодні self-XSS (один юзер) / AI-indirect, але stored-XSS після Supabase (чужі дані).
+- **Фікс:** escapeHtml тепер екранує і `"`→`&quot;`, `'`→`&#39;`. Один корінь → всі 25 місць. Безпечно: у body сутності рендеряться як лапки; в атрибутах браузер декодує назад при читанні dataset (round-trip цілий — підтверджено Council 3 агенти + 8/8 unit).
+- **Тех-нюанс:** regex лапок через `String.fromCharCode(34/39)` у module-константах — (а) не конструювати regex на кожен виклик гарячої функції, (б) без літеральних лапок у коді (вони плутали i18n-детектор парності → той рахував коментарі як необгорнуті рядки).
+- **Правило:** HTML-escaper для одного юзера = недостатньо «& < >». Завжди й лапки. `escapeHtml` тепер безпечний для body І attr контексту; `escapeJsArg` — окремо тільки для JS-рядка в `onclick`.
+
+### safeHref — escapeHtml НЕ блокує javascript: у посиланнях (vdlyeg 10.06.2026)
+
+- **Контекст:** `<a href="${escapeHtml(url)}">` з URL від юзера/AI (ресурс проекту). escapeHtml екранує символи, але НЕ перевіряє СХЕМУ.
+- **БАГ:** `url = 'javascript:alert(document.cookie)'` проходить escapeHtml без змін → клік виконує JS (XSS). `data:`/`vbscript:` так само.
+- **Фікс:** `safeHref(url)` у utils.js — повертає URL лише зі схемою http/https/mailto/tel (або відносний/anchor), інакше null (посилання не рендеримо). Контрольні символи стрипаються ПЕРЕД перевіркою (`java\tscript:` — браузер ігнорує таб у схемі → обхід наївного regex). + `rel=noopener` проти tabnabbing.
+- **Правило:** будь-який `href`/`src` з URL від юзера/AI → через safeHref, не лише escapeHtml. escapeHtml ≠ валідація схеми.
+
+### CI: ніколи не інтерполювати github-контекст прямо у run: shell (vdlyeg 10.06.2026)
+
+- **Контекст:** `git merge ${{ github.ref_name }}` прямо у `run:` крок GitHub Actions.
+- **БАГ (command injection):** назва гілки може містити shell-метасимволи (`$(...)`, backtick, `;`). При інтерполяції у shell вони виконаються у runner з `contents:write`. Те саме для `${{ inputs.* }}` з workflow_dispatch (вільний текст).
+- **Фікс:** виносити у `env:` блок кроку, у shell брати як `"$REF_NAME"` у лапках. GitHub-контрольовані скаляри (`github.sha`, `github.event_name` — hex/enum) безпечні, але звичка має бути одна.
+- **Правило:** будь-який `${{ }}` що йде у `run:` shell і НЕ є фіксованим enum/hex → через env + лапки. Це документований GitHub hardening-патерн.
+
 
 ### Council 5 агентів — НЕ після 5-ї невдачі а після 2-ї (MPVly-day2 06.05)
 - **Якщо 2 спроби фіксити одне і те ж не дають результату** → STOP + Council 5 паралельних агентів Sonnet (Critic / Стратег / Свіжий погляд / iOS quirk hunter / Виконавець). Кожен читає код самостійно через Read/Grep.

@@ -3224,3 +3224,22 @@ Bridge-план з 64CXo продовжено — закрито G2 (`parseUaTim
 
 **Коміти:** `651ab85` fix(tester) --full + max_tests 30→33 · `9682755` chore(hooks) UserPromptSubmit reminder · `00b377b` fix(chips) lenient коми · `0e24085` fix(brain-pulse) табло на foreground · `c7f80b4` chore(hooks) → 'не технічною мовою'
 **Метрики:** 5 commits, v1002→v1004, CACHE_NAME `nm-20260521-0925`→`nm-20260603-1952`. Closed: B-194, B-195, B-196. Open: B-191 (тестер workaround). Council: 1 запущено/перебито.
+
+## 10.06.2026 — сесія vdlyeg
+
+**Аудит безпеки за бібліотекою Anthropic-Cybersecurity-Skills + 4 кореневі фікси + B-197.** 7 commits, гілка `claude/new-session-vdlyeg`, CACHE `nm-20260603-1952`→`nm-20260610-1015`. Метод: клоновано репо з 754 навичками, читано 9 SKILL.md (web-pentest WSTG, SQL/NoSQL/template injection, SSRF, CSRF, prompt-injection, secrets-scanning) як чеклист ЗАХИСТУ × реальний код NeverMind (file:line, не з памʼяті). Контекст загрози: соло-юзер, локальний PWA, без бекенду/БД/кукі → SQL/NoSQL/SSRF/CSRF/XXE = N/A зараз (релевантні на Supabase). Критичних дірок під поточну архітектуру нема.
+
+**SEC-1 escapeHtml + лапки (`8c2f7fa`)** — XSS-клас через розрив атрибута. `escapeHtml` (`src/core/utils.js`) екранував лише `& < >` → значення з лапкою в `attr="${escapeHtml(x)}"` розривало атрибут і дозволяло підставити обробник події у ~25 місцях (chips/finance/health/notes/projects/nav). Фікс: екранує `"`→`&quot;`, `'`→`&#39;` (regex через String.fromCharCode у module-константах). Один корінь → всі місця. Прибрано дубль-костур chips.js. Верифіковано: Council 3 агенти Sonnet (round-trip dataset цілий, нема не-HTML sinks), 8/8 unit, node --check. «Регресія» finance-modals.js:421/439 від агента — хибнопозитив (перевірено по коду).
+
+**SEC-2 safeHref (`1370a9c`)** — javascript:-посилання. `projects.js:393` рендерив `<a href>` з URL ресурсу через escapeHtml — `javascript:alert()` виконувався при кліку. Новий `safeHref(url)` (http/https/mailto/tel + відносні, інакше null; стрипає контрольні символи проти `java⇥script:` обходу) + `rel=noopener`. 16/16 unit.
+
+**SEC-3 CI command injection (`be7bd1d`)** — `github.ref_name` + workflow_dispatch inputs йшли прямо у `run:` shell (метасимволи → виконання у runner з contents:write). Винесено у `env:`, беруться як `"$VAR"`. auto-merge.yml ×2, auto-merge-tester.yml ×3, claude-security.yml. YAML 4/4.
+
+**SEC-4 gitleaks (`185354e`)** — новий `.github/workflows/gitleaks.yml` (push/PR + щотижневий повний скан історії). Профілактика перед Supabase. Зараз секретів нема.
+
+**B-197 (`870b790`)** — `notes.js:458/530` `data-folder` на `.folder-item-wrap` через escapeJsArg → свайп-видалення не знаходило нотатки папки з апострофом. 3-й escape-рецидив у notes.js. Системний фікс: escapeJsArg→escapeHtml + прибрано escapeJsArg з import. Правило: data-* → завжди escapeHtml.
+
+**Відкладено (потребують реального iPhone / Supabase):** CSP (оцінено — strict не готовий через ~20 inline iOS-хаків; Report-Only неможливий на GitHub Pages; готова чернетка enforcing meta-CSP з connect-src 'self' api.openai.com — деплой+smoke на пристрої окремо); ключ OpenAI у localStorage (справжній фікс = Supabase Edge Functions).
+
+**Коміти:** `8c2f7fa` escapeHtml лапки · `1370a9c` safeHref · `be7bd1d` CI env injection · `185354e` gitleaks · `f41d97b` docs vdlyeg+архів RQmdC · `870b790` B-197 notes.js · `6b7c155` docs B-197 closed
+**Метрики:** 7 commits (+docs), Council 3 Sonnet (SEC-1 регресія, read-only). Closed: B-197 + 4 security finding. Open: B-191 (тестер).

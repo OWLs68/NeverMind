@@ -87,15 +87,21 @@ EAA (мікро-виняток), NIS2 (мікро-виняток), DSA (особ
    - **Прогрес DGH6F:** Phase 1 — 4 латентні дірки Pre-mortem + 7 Council post-аудит фіксів (B-185). `createSelectiveBackup` має quota check (4 MB budget) + `restoreBackup` має `__nm_restoring` lock + 4 listener guards + migration flag reset + nm-data-changed dispatch. `NM_KEYS` audit +44 ключі (B-184 — `clearAllData` залишав events/reminders/routine/allergies/action_log). Boot-time `_assertAllKeysKnown()` сторож.
    - **Залишок Phase 2:** `createFullBackup()` (зараз тільки selective) + JSON export (для пере-storage перенесення) + Restore UI у Налаштуваннях («Відкат до знімка» + список з `listBackups()` + `getBackupInfo()`).
 
-**Дрібні фікси у поточній сесії e9t3N (вже у роботі):**
+**Security Hardening — прогрес (оновлено vdlyeg 10.06.2026):**
 
 - ✅ Stored XSS у notes.js:186 — закрито `3aa1569` (escapeHtml у datalist)
-- ⏳ Prompt injection захист у 8 системних промптів (`src/ai/prompts.js`)
-- ⏳ AI-тестер screenshot: base64 → локальний шлях (контракт + workflow guard)
-- ⏳ GitHub Actions SHA pin
+- ✅ **escapeHtml екранує лапки** — XSS-клас через розрив атрибута, ~25 місць закрито одним коренем (vdlyeg `8c2f7fa`)
+- ✅ **safeHref** — javascript:/data: у посиланнях блоковано (vdlyeg `1370a9c`)
+- ✅ **CI command injection** — github.ref_name/inputs через env (vdlyeg `be7bd1d`)
+- ✅ **gitleaks secret-scanning** у CI (vdlyeg `185354e`)
+- ✅ `npm audit` у CI (auto-merge.yml, e9t3N)
+- ✅ Claude Security GitHub Action (`claude-security.yml`)
+- ✅ AI-тестер screenshot: base64 → локальний шлях (e9t3N workflow guard)
+- ⏳ **CSP (Content-Security-Policy)** — оцінено vdlyeg: strict не готовий (~20 inline iOS-хаків ontouchend/onmousedown/onmouseover + diagnostics/logger/finance oninput); Report-Only неможливий на GitHub Pages (потребує HTTP-заголовка). Готова чернетка enforcing meta-CSP (головний виграш `connect-src 'self' api.openai.com` — при XSS ключ не зллється). Деплой + smoke на РЕАЛЬНОМУ iPhone окремою сесією. Фази: (1) ~20 inline-хаків → delegation; (2) CSP-meta + smoke; (3) прибрати 'unsafe-inline' зі script-src.
+- ⏳ **Ключ OpenAI у localStorage** — справжній фікс = Supabase Edge Functions (ключ на сервері, юзер не бачить). До того — XSS може вкрасти ключ (пом'якшено connect-src у CSP-чернетці).
+- ⏳ Prompt injection захист у 8 системних промптів (`src/ai/prompts.js`) — низький ризик зараз (tools лише локальні, нічого не екснфільтрують); важливо при email-bridge
+- ⏳ GitHub Actions SHA pin (зараз tag-піни @v6 — узгоджено з конвенцією репо)
 - ⏳ Dependabot config
-- ⏳ `npm audit` у CI
-- ⏳ Claude Security GitHub Action
 
 **Auth flow рішення** (1 сесія обговорення перед Supabase):
 - Magic link (рекомендую — без пароля = неможливо phishing) vs email/password vs OAuth
