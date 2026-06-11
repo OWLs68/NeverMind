@@ -4243,6 +4243,7 @@ ${lines.join("\n\n")}`;
     generateBoardMessage: () => generateBoardMessage,
     getBoardContext: () => getBoardContext,
     getTabBoardContext: () => getTabBoardContext,
+    invalidateFinanceBoard: () => invalidateFinanceBoard,
     tryBoardUpdate: () => tryBoardUpdate,
     tryTabBoardUpdate: () => tryTabBoardUpdate
   });
@@ -5188,6 +5189,13 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
     if (tab === "inbox") return tryOwlBoardUpdate();
     return tryTabBoardUpdate(tab);
   }
+  function invalidateFinanceBoard() {
+    try {
+      localStorage.setItem("nm_owl_tab_ts_finance", "0");
+      tryBoardUpdate("finance");
+    } catch (e) {
+    }
+  }
   function _showInstantReaction(tab) {
     const actions = getRecentActions();
     const now = Date.now();
@@ -6096,11 +6104,7 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
         dispatchChatToolCalls(msg.tool_calls, addFinanceChatMsg, text);
         for (const tc of msg.tool_calls) {
           if (tc.function.name === "save_finance") {
-            try {
-              localStorage.setItem("nm_owl_tab_ts_finance", "0");
-              tryBoardUpdate("finance");
-            } catch (e) {
-            }
+            invalidateFinanceBoard();
           }
         }
         if (msg.content) {
@@ -6310,11 +6314,7 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     saveFinance(getFinance().filter((t2) => t2.id !== txId));
     if (item) addToTrash("finance", item);
     renderFinance();
-    try {
-      localStorage.setItem("nm_owl_tab_ts_finance", "0");
-      tryBoardUpdate("finance");
-    } catch (e) {
-    }
+    invalidateFinanceBoard();
     if (item) showUndoToast(t("finance.toast.tx_deleted", "\u041E\u043F\u0435\u0440\u0430\u0446\u0456\u044E \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E"), () => {
       const txs = getFinance();
       txs.unshift(item);
@@ -25992,11 +25992,7 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
     renderFinance();
     _finEditId = null;
     _finTxComment = "";
-    try {
-      localStorage.setItem("nm_owl_tab_ts_finance", "0");
-      tryBoardUpdate("finance");
-    } catch (e) {
-    }
+    invalidateFinanceBoard();
   }
   function deleteFinTransaction() {
     if (!_finEditId) return;
@@ -26004,21 +26000,13 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
     saveFinance(getFinance().filter((tx) => tx.id !== _finEditId));
     closeFinTxModal();
     renderFinance();
-    try {
-      localStorage.setItem("nm_owl_tab_ts_finance", "0");
-      tryBoardUpdate("finance");
-    } catch (e) {
-    }
+    invalidateFinanceBoard();
     if (item) showUndoToast(t("finance.tx.deleted_toast", "\u0422\u0440\u0430\u043D\u0437\u0430\u043A\u0446\u0456\u044E \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E"), () => {
       const txs = getFinance();
       txs.unshift(item);
       saveFinance(txs);
       renderFinance();
-      try {
-        localStorage.setItem("nm_owl_tab_ts_finance", "0");
-        tryBoardUpdate("finance");
-      } catch (e) {
-      }
+      invalidateFinanceBoard();
     });
     _finEditId = null;
   }
@@ -26119,11 +26107,7 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
     saveFinBudget({ total, categories });
     closeFinBudgetModal();
     renderFinance();
-    try {
-      localStorage.setItem("nm_owl_tab_ts_finance", "0");
-      tryBoardUpdate("finance");
-    } catch (e) {
-    }
+    invalidateFinanceBoard();
   }
   function toggleFinEditMode() {
     setFinEditMode(!getFinEditMode());
