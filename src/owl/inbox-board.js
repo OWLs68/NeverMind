@@ -6,6 +6,7 @@
 import { currentTab, switchTab, showToast } from '../core/nav.js';
 import { escapeHtml, parseContentChips, getReminders, saveReminders } from '../core/utils.js';
 import { generateUUID } from '../core/uuid.js';
+import { updateSettings } from '../core/settings.js';
 import { activeChatBar, callOwlChat, closeChatBar, lastChatClosedTs, openChatBar, restoreChatUI, setActiveChatBar } from '../ai/core.js';
 import { _owlTabApplyState, _owlTabStates, renderTabBoard } from './board.js';
 import { getTabMessages, saveTabMessage, replaceUnified, getUnifiedBoard, getCurrentMessage } from './unified-storage.js';
@@ -1251,9 +1252,7 @@ export function handleScheduleAnswer(text) {
   // Якщо жодного часу не знайдено — не перехоплюємо, пускаємо далі до AI
   if (found === 0) return false;
   localStorage.removeItem('nm_owl_schedule_pending');
-  const s = JSON.parse(localStorage.getItem('nm_settings') || '{}');
-  s.schedule = schedule;
-  localStorage.setItem('nm_settings', JSON.stringify(s));
+  updateSettings({ schedule });
   try {
     addInboxChatMsg('agent', `Розклад збережено: підйом ${schedule.wakeUp}, робота ${schedule.workStart}–${schedule.workEnd}, спати ${schedule.bedTime}. Можеш змінити в Налаштуваннях.`);
   } catch(e) {}

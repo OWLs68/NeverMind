@@ -15,6 +15,7 @@
 // ============================================================
 
 import { switchTab, openSettings } from '../core/nav.js';
+import { updateSettings } from '../core/settings.js';
 
 // ===== UI_TOOLS — function definitions для OpenAI =====
 export const UI_TOOLS = [
@@ -227,9 +228,7 @@ export function handleUITool(name, args) {
         return { text: 'Відкрив Аналітику Фінансів.' };
 
       case 'set_owl_mode': {
-        const settings = JSON.parse(localStorage.getItem('nm_settings') || '{}');
-        settings.owl_mode = args.mode;
-        localStorage.setItem('nm_settings', JSON.stringify(settings));
+        updateSettings({ owl_mode: args.mode });
         const label = { coach: 'Тренер', partner: 'Партнер', mentor: 'Наставник' }[args.mode] || args.mode;
         return { text: `Характер OWL: ${label}.` };
       }

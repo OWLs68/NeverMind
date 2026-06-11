@@ -6,6 +6,7 @@
 import { currentTab, showToast, switchTab, updateKeyStatus } from '../core/nav.js';
 import { getAIContext, getOWLPersonality, safeAgentReply } from '../ai/core.js';
 import { logUsage } from '../core/usage-meter.js';
+import { getSettings, updateSettings } from '../core/settings.js';
 import { addInboxChatMsg } from './inbox.js';
 import { getProjects, saveProjects } from './projects.js';
 import { generateUUID } from '../core/uuid.js';
@@ -705,9 +706,7 @@ async function finishSurvey() {
     workEnd:   parseScheduleTime(scheduleAnswer, [/до\s*(\d{1,2})/i, /закінчую\s*о?\s*(\d{1,2})/i], '18:00'),
     bedTime:   parseScheduleTime(scheduleAnswer, [/сплю\s*о?\s*(\d{1,2})/i, /лягаю\s*о?\s*(\d{1,2})/i, /о\s*(\d{1,2})\s*спати/i], '23:00'),
   };
-  const updSettings = JSON.parse(localStorage.getItem('nm_settings') || '{}');
-  updSettings.schedule = parsedSchedule;
-  localStorage.setItem('nm_settings', JSON.stringify(updSettings));
+  updateSettings({ schedule: parsedSchedule });
 
   const answersText = surveyAnswers.map((a, i) => `Питання ${i+1}: ${a.q}\nВідповідь: ${a.a}`).join('\n\n');
   const prompt = `Ти — OWL, агент NeverMind. Користувач ${name} тільки що відповів на питання онбордингу:\n\n${answersText}\n\nЗроби дві речі:\n1. Збережи ключові факти про користувача у форматі короткого резюме (4-6 речень) — це піде в памʼять агента.\n2. Дай 2-3 конкретні практичні поради як використовувати NeverMind саме для цієї людини. Порекомендуй конкретні вкладки або функції.\n\nФормат відповіді — ТІЛЬКИ валідний JSON:\n{"memory": "текст для памʼяті", "advice": "персональні поради 2-3 речення"}`;
@@ -961,10 +960,9 @@ function obNext(step) {
     const name = document.getElementById('ob-name').value.trim();
     const age = document.getElementById('ob-age').value.trim();
     if (!name) { showToast(t('onb.toast.need_name', 'Введи імʼя')); return; }
-    const settings = JSON.parse(localStorage.getItem('nm_settings') || '{}');
-    settings.name = name;
-    if (age) settings.age = age;
-    localStorage.setItem('nm_settings', JSON.stringify(settings));
+    const patch = { name };
+    if (age) patch.age = age;
+    updateSettings(patch);
     document.getElementById('ob-step-1').style.display = 'none';
     document.getElementById('ob-step-2').style.display = 'block';
   } else if (step === 2) {
@@ -978,9 +976,7 @@ function obNext(step) {
     // Дефолтно вибрати "partner"
     selectOwlMode('partner');
   } else if (step === 'owl') {
-    const settings = JSON.parse(localStorage.getItem('nm_settings') || '{}');
-    if (!settings.owl_mode) settings.owl_mode = 'partner';
-    localStorage.setItem('nm_settings', JSON.stringify(settings));
+    if (!getSettings().owl_mode) updateSettings({ owl_mode: 'partner' });
     document.getElementById('ob-step-owl').style.display = 'none';
     document.getElementById('ob-step-consent').style.display = 'block';
   }
@@ -993,9 +989,7 @@ function obSkipKey() {
 }
 
 function selectOwlMode(mode) {
-  const settings = JSON.parse(localStorage.getItem('nm_settings') || '{}');
-  settings.owl_mode = mode;
-  localStorage.setItem('nm_settings', JSON.stringify(settings));
+  updateSettings({ owl_mode: mode });
   ['coach','partner','mentor'].forEach(m => {
     const card = document.getElementById('owl-card-' + m);
     if (!card) return;
