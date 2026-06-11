@@ -1374,6 +1374,25 @@
     }
   });
 
+  // src/core/settings.js
+  function getSettings() {
+    try {
+      return JSON.parse(localStorage.getItem("nm_settings") || "{}");
+    } catch {
+      return {};
+    }
+  }
+  function updateSettings(patch) {
+    const s = getSettings();
+    Object.assign(s, patch);
+    localStorage.setItem("nm_settings", JSON.stringify(s));
+    return s;
+  }
+  var init_settings = __esm({
+    "src/core/settings.js"() {
+    }
+  });
+
   // src/ai/ui-tools.js
   function handleUITool(name, args) {
     try {
@@ -1454,9 +1473,7 @@
           }
           return { text: "\u0412\u0456\u0434\u043A\u0440\u0438\u0432 \u0410\u043D\u0430\u043B\u0456\u0442\u0438\u043A\u0443 \u0424\u0456\u043D\u0430\u043D\u0441\u0456\u0432." };
         case "set_owl_mode": {
-          const settings = JSON.parse(localStorage.getItem("nm_settings") || "{}");
-          settings.owl_mode = args.mode;
-          localStorage.setItem("nm_settings", JSON.stringify(settings));
+          updateSettings({ owl_mode: args.mode });
           const label = { coach: "\u0422\u0440\u0435\u043D\u0435\u0440", partner: "\u041F\u0430\u0440\u0442\u043D\u0435\u0440", mentor: "\u041D\u0430\u0441\u0442\u0430\u0432\u043D\u0438\u043A" }[args.mode] || args.mode;
           return { text: `\u0425\u0430\u0440\u0430\u043A\u0442\u0435\u0440 OWL: ${label}.` };
         }
@@ -1510,6 +1527,7 @@
   var init_ui_tools = __esm({
     "src/ai/ui-tools.js"() {
       init_nav();
+      init_settings();
       UI_TOOLS = [
         {
           type: "function",
@@ -2988,9 +3006,7 @@ ${lines.join("\n")}`;
     };
     if (found === 0) return false;
     localStorage.removeItem("nm_owl_schedule_pending");
-    const s = JSON.parse(localStorage.getItem("nm_settings") || "{}");
-    s.schedule = schedule;
-    localStorage.setItem("nm_settings", JSON.stringify(s));
+    updateSettings({ schedule });
     try {
       addInboxChatMsg("agent", `\u0420\u043E\u0437\u043A\u043B\u0430\u0434 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E: \u043F\u0456\u0434\u0439\u043E\u043C ${schedule.wakeUp}, \u0440\u043E\u0431\u043E\u0442\u0430 ${schedule.workStart}\u2013${schedule.workEnd}, \u0441\u043F\u0430\u0442\u0438 ${schedule.bedTime}. \u041C\u043E\u0436\u0435\u0448 \u0437\u043C\u0456\u043D\u0438\u0442\u0438 \u0432 \u041D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445.`);
     } catch (e) {
@@ -3003,6 +3019,7 @@ ${lines.join("\n")}`;
       init_nav();
       init_utils();
       init_uuid();
+      init_settings();
       init_core();
       init_board();
       init_unified_storage();
@@ -6191,9 +6208,7 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     return s.currency || "\u20B4";
   }
   function setCurrency(symbol) {
-    const s = JSON.parse(localStorage.getItem("nm_settings") || "{}");
-    s.currency = symbol;
-    localStorage.setItem("nm_settings", JSON.stringify(s));
+    updateSettings({ currency: symbol });
     ["\u20B4", "$", "\u20AC"].forEach((c) => {
       const map = { "\u20B4": "uah", "$": "usd", "\u20AC": "eur" };
       const btn = document.getElementById("btn-currency-" + map[c]);
@@ -6662,6 +6677,7 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
       init_nav();
       init_uuid();
       init_utils();
+      init_settings();
       init_trash();
       init_swipe_delete();
       init_core();
@@ -16900,9 +16916,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
       workEnd: parseScheduleTime(scheduleAnswer, [/до\s*(\d{1,2})/i, /закінчую\s*о?\s*(\d{1,2})/i], "18:00"),
       bedTime: parseScheduleTime(scheduleAnswer, [/сплю\s*о?\s*(\d{1,2})/i, /лягаю\s*о?\s*(\d{1,2})/i, /о\s*(\d{1,2})\s*спати/i], "23:00")
     };
-    const updSettings = JSON.parse(localStorage.getItem("nm_settings") || "{}");
-    updSettings.schedule = parsedSchedule;
-    localStorage.setItem("nm_settings", JSON.stringify(updSettings));
+    updateSettings({ schedule: parsedSchedule });
     const answersText = surveyAnswers.map((a, i) => `\u041F\u0438\u0442\u0430\u043D\u043D\u044F ${i + 1}: ${a.q}
 \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C: ${a.a}`).join("\n\n");
     const prompt2 = `\u0422\u0438 \u2014 OWL, \u0430\u0433\u0435\u043D\u0442 NeverMind. \u041A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447 ${name} \u0442\u0456\u043B\u044C\u043A\u0438 \u0449\u043E \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0432 \u043D\u0430 \u043F\u0438\u0442\u0430\u043D\u043D\u044F \u043E\u043D\u0431\u043E\u0440\u0434\u0438\u043D\u0433\u0443:
@@ -17109,10 +17123,9 @@ ${userText}
         showToast(t("onb.toast.need_name", "\u0412\u0432\u0435\u0434\u0438 \u0456\u043C\u02BC\u044F"));
         return;
       }
-      const settings = JSON.parse(localStorage.getItem("nm_settings") || "{}");
-      settings.name = name;
-      if (age) settings.age = age;
-      localStorage.setItem("nm_settings", JSON.stringify(settings));
+      const patch = { name };
+      if (age) patch.age = age;
+      updateSettings(patch);
       document.getElementById("ob-step-1").style.display = "none";
       document.getElementById("ob-step-2").style.display = "block";
     } else if (step === 2) {
@@ -17128,9 +17141,7 @@ ${userText}
       document.getElementById("ob-step-owl").style.display = "block";
       selectOwlMode("partner");
     } else if (step === "owl") {
-      const settings = JSON.parse(localStorage.getItem("nm_settings") || "{}");
-      if (!settings.owl_mode) settings.owl_mode = "partner";
-      localStorage.setItem("nm_settings", JSON.stringify(settings));
+      if (!getSettings().owl_mode) updateSettings({ owl_mode: "partner" });
       document.getElementById("ob-step-owl").style.display = "none";
       document.getElementById("ob-step-consent").style.display = "block";
     }
@@ -17141,9 +17152,7 @@ ${userText}
     selectOwlMode("partner");
   }
   function selectOwlMode(mode) {
-    const settings = JSON.parse(localStorage.getItem("nm_settings") || "{}");
-    settings.owl_mode = mode;
-    localStorage.setItem("nm_settings", JSON.stringify(settings));
+    updateSettings({ owl_mode: mode });
     ["coach", "partner", "mentor"].forEach((m) => {
       const card = document.getElementById("owl-card-" + m);
       if (!card) return;
@@ -17168,6 +17177,7 @@ ${userText}
       init_nav();
       init_core();
       init_usage_meter();
+      init_settings();
       init_inbox();
       init_projects();
       init_uuid();
@@ -23822,9 +23832,7 @@ ${logLines}
     }
   }
   function setOwlModeSetting(mode) {
-    const settings = JSON.parse(localStorage.getItem("nm_settings") || "{}");
-    settings.owl_mode = mode;
-    localStorage.setItem("nm_settings", JSON.stringify(settings));
+    updateSettings({ owl_mode: mode });
     updateOwlModeUI(mode);
     showToast(t("nav.toast.owl_mode_changed", "\u0421\u0442\u0438\u043B\u044C OWL \u0437\u043C\u0456\u043D\u0435\u043D\u043E"));
   }
@@ -23860,9 +23868,7 @@ ${logLines}
     }, 300);
   }
   function setLanguage(lang) {
-    const s = JSON.parse(localStorage.getItem("nm_settings") || "{}");
-    s.language = lang;
-    localStorage.setItem("nm_settings", JSON.stringify(s));
+    updateSettings({ language: lang });
     ["uk", "en", "nl"].forEach((l) => {
       const btn = document.getElementById("btn-lang-" + l);
       if (btn) {
@@ -24017,7 +24023,7 @@ ${logLines}
       window.dispatchEvent(new CustomEvent("nm-data-changed", { detail: "api-key" }));
     } catch (_) {
     }
-    const settings = JSON.parse(localStorage.getItem("nm_settings") || "{}");
+    const settings = getSettings();
     const wakeEl = document.getElementById("input-wake-up");
     const wstartEl = document.getElementById("input-work-start");
     const wendEl = document.getElementById("input-work-end");
@@ -24028,8 +24034,7 @@ ${logLines}
       workEnd: wendEl ? wendEl.value || "18:00" : settings.schedule?.workEnd || "18:00",
       bedTime: bedEl ? bedEl.value || "23:00" : settings.schedule?.bedTime || "23:00"
     };
-    Object.assign(settings, { name, age, weight, height, profileNotes, schedule });
-    localStorage.setItem("nm_settings", JSON.stringify(settings));
+    updateSettings({ name, age, weight, height, profileNotes, schedule });
     if (memory) localStorage.setItem("nm_memory", memory);
     updateKeyStatus(!!key);
     setTimeout(() => closeSettings(), 600);
@@ -24497,6 +24502,7 @@ ${legacy}`;
     "src/core/nav.js"() {
       init_logger();
       init_utils();
+      init_settings();
       init_boot();
       init_backup();
       init_trash();
