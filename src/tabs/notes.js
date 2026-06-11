@@ -6,7 +6,7 @@
 
 import { currentTab, showToast } from '../core/nav.js';
 import { generateUUID } from '../core/uuid.js';
-import { escapeHtml, escapeJsArg, formatTime, parseContentChips, t } from '../core/utils.js';
+import { escapeHtml, formatTime, parseContentChips, t } from '../core/utils.js';
 import { logUsage } from '../core/usage-meter.js';
 import { addToTrash, showUndoToast } from '../core/trash.js';
 import { callAI, callAIWithTools, getAIContext, getOWLPersonality, openChatBar, safeAgentReply, saveChatMsg, INBOX_TOOLS, handleChatError } from '../ai/core.js';
@@ -455,7 +455,11 @@ export function renderNotes(searchQuery = '') {
       const allMeta = getFoldersMeta();
       const childCards = children.map(child => {
         const childCount = notes.filter(n => (n.folder || t('notes.default_folder', 'Загальне')) === child).length;
-        const safeChild = escapeJsArg(child);
+        // B-197 (vdlyeg 10.06): data-* атрибути екрануємо через escapeHtml, НЕ escapeJsArg.
+        // escapeJsArg давав JS-екранований варіант який dataset не декодує назад, тож свайп
+        // не знаходив нотатки папки з апострофом у назві. escapeHtml (після КРОК 1 екранує й
+        // лапки) дає цілий round-trip через dataset: data-folder читається = оригінал.
+        const safeChild = escapeHtml(child);
         const meta = allMeta[child] || {};
         const colorDef = meta.colorKey && FOLDER_COLOR_PALETTE[meta.colorKey] ? FOLDER_COLOR_PALETTE[meta.colorKey] : null;
         const fc = colorDef ? { bg: colorDef.bg, border: 'rgba(255,255,255,0.5)' } : getFolderColor(child);
@@ -527,7 +531,7 @@ export function renderNotes(searchQuery = '') {
       // (хоча validNotes filter вже відсіює — друга лінія оборони).
       const firstText = (items[0] && typeof items[0].text === 'string') ? items[0].text : '';
       const preview = firstText.length > 60 ? firstText.substring(0,60) + '…' : firstText;
-      const safeFolder = escapeJsArg(folder);
+      const safeFolder = escapeHtml(folder); // B-197: data-* → escapeHtml, не escapeJsArg (див. safeChild вище)
       const key = btoa(unescape(encodeURIComponent(folder))).replace(/[^a-zA-Z0-9]/g, '_');
       const pinBadge = meta.pinned ? '<div style="position:absolute;top:8px;right:8px;font-size:10px;opacity:0.4">📌</div>' : '';
       const desc = meta.desc ? `<div style="font-size:11px;color:rgba(30,16,64,0.38);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(meta.desc)}</div>` : `<div style="font-size:12px;color:rgba(30,16,64,0.45);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(preview)}</div>`;

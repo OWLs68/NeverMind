@@ -24,7 +24,7 @@
 
 ### Відкладено / далі
 
-- **B-197** (нова) — `notes.js:458,530` `data-folder` через escapeJsArg замість escapeHtml → папка з апострофом (`O'Brien`) не видаляється свайпом. 3-й escape-дефект у notes.js. Системний фікс: escapeJsArg→escapeHtml + правило «data-* → escapeHtml». Чекає «Роби».
+- **B-197 ЗАКРИТО** (`870b790`) — `notes.js:458,530` `data-folder` через escapeJsArg → папка з апострофом не видалялась свайпом. Фікс: escapeJsArg→escapeHtml у обох точках + прибрано escapeJsArg з import. Правило: data-* → завжди escapeHtml.
 - **CSP** — оцінено: strict не готовий (~20 inline iOS-хаків ontouchend/onmousedown/onmouseover + diagnostics/logger/finance). Report-Only неможливий на GitHub Pages (потребує HTTP-заголовка). Готова чернетка enforcing meta-CSP (головний виграш connect-src 'self' api.openai.com — при XSS ключ не зллється) → деплой+smoke на РЕАЛЬНОМУ iPhone окремою сесією.
 - **Ключ OpenAI у localStorage** — справжній фікс = Supabase Edge Functions (у плані).
 
@@ -316,7 +316,7 @@
 ## ⚠️ ДЛЯ НОВОГО ЧАТУ — найважливіше
 
 **🔐 НЕЗАВЕРШЕНЕ vdlyeg (10.06) — хвости аудиту безпеки:**
-- **B-197 — escape-аудит notes.js системно.** `data-folder` через escapeJsArg (рядки 458/530) → папка з апострофом не видаляється свайпом. Це 3-й escape-дефект у notes.js поспіль — Роман просив НЕ латати точково, а пройтись по ВСІХ escape/data-attr точках за раз (вже промаплено: тільки ці 2 = escapeJsArg→escapeHtml; решта файлу чиста). Правило: `data-*` → завжди escapeHtml.
+- ~~B-197 notes.js data-folder~~ ✅ ЗАКРИТО (`870b790`) — escapeJsArg→escapeHtml. Системний аудит notes.js: тільки ці 2 точки, решта файлу чиста.
 - **CSP на реальному iPhone.** Готова чернетка enforcing meta-CSP у звіті vdlyeg (`default-src 'self'; script-src 'self' 'unsafe-inline'; connect-src 'self' https://api.openai.com; ...`). Деплоїти + smoke ТІЛЬКИ маючи iPhone — перевірити що ~20 inline iOS-хаків не зламались. Головний виграш connect-src: при XSS ключ не зллється на чужий сервер.
 
 **🆕 НЕЗАВЕРШЕНЕ WML2Z (03.06):**
