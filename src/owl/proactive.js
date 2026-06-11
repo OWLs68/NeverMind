@@ -1163,6 +1163,13 @@ export function tryBoardUpdate(tab) {
   return tryTabBoardUpdate(tab);
 }
 
+// DRY (vdlyeg 10.06): скидає таймстемп табло Фінансів і тригерить оновлення.
+// Раніше цей рядок копіювався дослівно у 6 місцях (finance.js + finance-modals.js
+// ×4 + finance-chat.js). Один helper → зміна логіки у одному місці.
+export function invalidateFinanceBoard() {
+  try { localStorage.setItem('nm_owl_tab_ts_finance', '0'); tryBoardUpdate('finance'); } catch(e) {}
+}
+
 // === Єдиний реактивний listener для ВСІХ вкладок (включно з inbox) ===
 let _boardUpdateTimer = null;
 const BOARD_UPDATE_DELAY = 5000;

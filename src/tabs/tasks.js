@@ -366,7 +366,12 @@ function openTaskChat(id) {
   const systemPrompt = `${getOWLPersonality()} Допомагаєш реально виконати задачу. НЕ хвали задачу і не кажи що вона "чудова" чи "чітка" — це лестощі. Перше повідомлення: оціни задачу чесно (1 речення) — чи вона конкретна, чи є дедлайн, чи є підводні камені. Потім запитай один конкретний уточнюючий факт або що вже зроблено. Максимум 3 речення. Відповідай українською.${aiContext ? '\n\n' + aiContext : ''}`;
   const taskInfo = `Задача: ${task.title}${task.desc ? '\nОпис: ' + task.desc : ''}${steps ? '\nКроки:\n' + steps : ''}`;
 
+  const chatIdAtCall = taskChatId;
   callAI(systemPrompt, taskInfo, {}, 'tasks-background').then(reply => {
+    // B-200 (vdlyeg 10.06): відповідь могла прилетіти після того як юзер закрив
+    // чат або відкрив ІНШУ задачу → taskChatId уже інший. Тоді відповідь застаріла:
+    // не чіпаємо DOM і не пишемо її у чужу історію.
+    if (taskChatId !== chatIdAtCall) return;
     const el = document.getElementById('task-chat-intro');
     if (el) el.textContent = reply || t('tasks.tell_more', 'Розкажи більше про цю задачу.');
     taskChatHistory.push({ role: 'assistant', content: reply || '' });

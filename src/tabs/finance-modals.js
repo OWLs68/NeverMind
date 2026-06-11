@@ -8,7 +8,7 @@ import { showToast } from '../core/nav.js';
 import { generateUUID } from '../core/uuid.js';
 import { escapeHtml, t } from '../core/utils.js';
 import { addToTrash, showUndoToast } from '../core/trash.js';
-import { tryBoardUpdate } from '../owl/proactive.js';
+import { invalidateFinanceBoard } from '../owl/proactive.js';
 import { setupModalSwipeClose } from './tasks.js';
 import {
   getFinance, saveFinance, renderFinance, formatMoney, getCurrency,
@@ -325,7 +325,7 @@ export function saveFinTransaction() {
   renderFinance();
   _finEditId = null;
   _finTxComment = '';
-  try { localStorage.setItem('nm_owl_tab_ts_finance', '0'); tryBoardUpdate('finance'); } catch(e) {}
+  invalidateFinanceBoard();
 }
 
 export function deleteFinTransaction() {
@@ -334,10 +334,10 @@ export function deleteFinTransaction() {
   saveFinance(getFinance().filter(tx => tx.id !== _finEditId));
   closeFinTxModal();
   renderFinance();
-  try { localStorage.setItem('nm_owl_tab_ts_finance', '0'); tryBoardUpdate('finance'); } catch(e) {}
+  invalidateFinanceBoard();
   if (item) showUndoToast(t('finance.tx.deleted_toast', 'Транзакцію видалено'), () => {
     const txs = getFinance(); txs.unshift(item); saveFinance(txs); renderFinance();
-    try { localStorage.setItem('nm_owl_tab_ts_finance', '0'); tryBoardUpdate('finance'); } catch(e) {}
+    invalidateFinanceBoard();
   });
   _finEditId = null;
 }
@@ -442,7 +442,7 @@ export function saveFinBudgetFromModal() {
   saveFinBudget({ total, categories });
   closeFinBudgetModal();
   renderFinance();
-  try { localStorage.setItem('nm_owl_tab_ts_finance', '0'); tryBoardUpdate('finance'); } catch(e) {}
+  invalidateFinanceBoard();
 }
 // === Модалка категорії ===
 export function toggleFinEditMode() {

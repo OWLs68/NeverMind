@@ -15,7 +15,7 @@ import { escapeHtml, t } from '../core/utils.js';
 import { addToTrash, showUndoToast } from '../core/trash.js';
 import { SWIPE_DELETE_THRESHOLD, applySwipeTrail, clearSwipeTrail, attachSwipeDelete } from '../ui/swipe-delete.js';
 import { getAIContext, getOWLPersonality, openChatBar, safeAgentReply, saveChatMsg } from '../ai/core.js';
-import { tryBoardUpdate } from '../owl/proactive.js';
+import { invalidateFinanceBoard } from '../owl/proactive.js';
 import { getInbox, saveInbox, renderInbox, addInboxChatMsg } from './inbox.js';
 import { processUniversalAction } from './habits.js';
 import { setupModalSwipeClose } from './tasks.js';
@@ -244,7 +244,7 @@ function _deleteFinTxById(txId) {
   saveFinance(getFinance().filter(t => t.id !== txId));
   if (item) addToTrash('finance', item);
   renderFinance();
-  try { localStorage.setItem('nm_owl_tab_ts_finance', '0'); tryBoardUpdate('finance'); } catch(e) {}
+  invalidateFinanceBoard();
   if (item) showUndoToast(t('finance.toast.tx_deleted', 'Операцію видалено'), () => {
     const txs = getFinance(); txs.unshift(item); saveFinance(txs); renderFinance();
   });
