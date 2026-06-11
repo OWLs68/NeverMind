@@ -1692,6 +1692,14 @@
       return [];
     }
   }
+  function saveMemory(text, { aiStamp = false } = {}) {
+    localStorage.setItem("nm_memory", text);
+    if (aiStamp) localStorage.setItem("nm_memory_ts", Date.now().toString());
+    try {
+      window.dispatchEvent(new CustomEvent("nm-data-changed", { detail: "memory" }));
+    } catch (e) {
+    }
+  }
   function _saveFacts(facts) {
     let trimmed = facts;
     if (trimmed.length > MAX_FACTS) {
@@ -16942,8 +16950,7 @@ ${answersText}
         try {
           const parsed = JSON.parse(reply.replace(/```json|```/g, "").trim());
           if (parsed.memory) {
-            localStorage.setItem("nm_memory", parsed.memory);
-            localStorage.setItem("nm_memory_ts", Date.now().toString());
+            saveMemory(parsed.memory, { aiStamp: true });
           }
           if (parsed.advice) {
             addInboxChatMsg("agent", parsed.advice);
@@ -17098,8 +17105,7 @@ ${userText}
       if (data?.usage) logUsage("onboarding", data.usage, data.model);
       const updated = data.choices?.[0]?.message?.content?.trim();
       if (updated) {
-        localStorage.setItem("nm_memory", updated);
-        localStorage.setItem("nm_memory_ts", Date.now().toString());
+        saveMemory(updated, { aiStamp: true });
       }
     } catch (e) {
     }
@@ -17178,6 +17184,7 @@ ${userText}
       init_core();
       init_usage_meter();
       init_settings();
+      init_memory();
       init_inbox();
       init_projects();
       init_uuid();
@@ -23852,7 +23859,7 @@ ${logLines}
   function closeSettings() {
     try {
       const memEl = document.getElementById("input-memory");
-      if (memEl) localStorage.setItem("nm_memory", memEl.value);
+      if (memEl) saveMemory(memEl.value);
     } catch (e) {
     }
     const overlay = document.getElementById("settings-overlay");
@@ -24035,7 +24042,7 @@ ${logLines}
       bedTime: bedEl ? bedEl.value || "23:00" : settings.schedule?.bedTime || "23:00"
     };
     updateSettings({ name, age, weight, height, profileNotes, schedule });
-    if (memory) localStorage.setItem("nm_memory", memory);
+    if (memory) saveMemory(memory);
     updateKeyStatus(!!key);
     setTimeout(() => closeSettings(), 600);
   }
