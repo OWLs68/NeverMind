@@ -8676,7 +8676,7 @@ ${recent}`;
         const allMeta2 = getFoldersMeta();
         const childCards = children.map((child) => {
           const childCount = notes.filter((n) => (n.folder || t("notes.default_folder", "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435")) === child).length;
-          const safeChild = escapeJsArg(child);
+          const safeChild = escapeHtml(child);
           const meta = allMeta2[child] || {};
           const colorDef = meta.colorKey && FOLDER_COLOR_PALETTE[meta.colorKey] ? FOLDER_COLOR_PALETTE[meta.colorKey] : null;
           const fc = colorDef ? { bg: colorDef.bg, border: "rgba(255,255,255,0.5)" } : getFolderColor(child);
@@ -8733,7 +8733,7 @@ ${recent}`;
       const fc = colorDef ? { bg: colorDef.bg, border: "rgba(255,255,255,0.5)" } : getFolderColor(folder);
       const firstText = items[0] && typeof items[0].text === "string" ? items[0].text : "";
       const preview = firstText.length > 60 ? firstText.substring(0, 60) + "\u2026" : firstText;
-      const safeFolder = escapeJsArg(folder);
+      const safeFolder = escapeHtml(folder);
       const key = btoa(unescape(encodeURIComponent(folder))).replace(/[^a-zA-Z0-9]/g, "_");
       const pinBadge = meta.pinned ? '<div style="position:absolute;top:8px;right:8px;font-size:10px;opacity:0.4">\u{1F4CC}</div>' : "";
       const desc = meta.desc ? `<div style="font-size:11px;color:rgba(30,16,64,0.38);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(meta.desc)}</div>` : `<div style="font-size:12px;color:rgba(30,16,64,0.45);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(preview)}</div>`;
@@ -18892,11 +18892,6 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       if (!allowed.includes(schemeMatch[1].toLowerCase())) return null;
     }
     return cleaned;
-  }
-  function escapeJsArg(s) {
-    const str = String(s ?? "");
-    const jsEscaped = str.replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, '\\"').replace(/\n/g, "\\n").replace(/\r/g, "\\r");
-    return jsEscaped.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   }
   function extractJsonBlocks(text) {
     if (!text) return [];
