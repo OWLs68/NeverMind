@@ -3985,3 +3985,58 @@ ROADMAP додано блок «🚨 Pre-EU-MVP Compliance» з 6 пунктам
 4. **EU Compliance pre-MVP** — VAT OSS вибір (Paddle/Lemonsqueezy), Impressum, 14-day withdrawal, Privacy Policy DPF. ~1 день разом.
 
 ---
+
+
+## 🔧 Сесія RQmdC — B-192 розслідування (НЕ баг) + AI-Tester infra (23.05.2026)
+> Заархівовано vdlyeg 10.06.2026 з живого SESSION_STATE.
+
+
+### Зроблено — 4 commits
+
+**B-192 закрито — backup НЕ зникає, хибний сигнал старого тесту.**
+
+Симптом (з Ug2Jw): `createFullBackupUI` створює знімок, за ~0.8с зникає. Гіпотеза — async TTL-cleanup.
+
+1. **`f4a1a70` Council 3 паралельних агентів Sonnet** (точки видалення `nm_backup_*` / async scheduler / pre-mortem 5 шляхів) прочитали `backup.js` + `boot.js` + `nav.js` + owl модулі + sw.js. **0 реальних знахідок** — топ-гіпотези (cleanupOldBackups лексикографічна race, runMigrations v17 повторний backup) вимагали повторного boot якого у сценарії немає. Голова верифікувала кожну проти коду → жодна не трималась.
+
+2. **Runtime-датчик замість патчу на гіпотезах** (`f4a1a70`) — переписав test_4: monkey-patch на `localStorage.removeItem/setItem` для `nm_backup_*` з `performance.now()` + stack trace 2000 chars + polling кожні 100мс протягом 1100мс. Якби видалення реальне — `rm_log` зловив би зі stack.
+
+3. **Результат:** on-demand trigger × 3 поспіль (14:03/04/05 UTC) → **усі PASS**. Backup живий усі 1100мс, `rm_log` порожній. **Корінь хибного сигналу:** старий test_4 міряв `keys_af` і `after_keys` через ОКРЕМI CDP `Runtime.evaluate` з `wait(0.8)` між ними → таймінг/race у вимірі давав хибний 0. Реальний механізм backup робочий.
+
+4. **Фінальний test_4** (`3409552`) переписаний на stability polling (0/500/1000мс) + cleanup після, **ENABLED** у baseline (22 → 23 active). Верифіковано прод-версією на 14:15 UTC — PASS.
+
+5. **Системний infra-фікс:** `ai-tester.py` on-demand `TARGET_SCENARIOS` тепер BYPASS'ить `disabled_scenarios` (раніше disabled блокувало навіть прицільний trigger → Roman мусив би Edit config перед кожним debug-циклом).
+
+6. **Шпаргалка iPhone smoke 10 пунктів** дана Роману для ручного проходу (Backup/Restore/Кошик/OWL swipe/step-check/calc grid/close-backdrop/Enter chat/save-settings/Legal). Відкладено на Романа.
+
+### Обговорено (без виконання)
+
+- **CSP Phase 2 — частково заблокована iPhone:** 6 з 12 inline можна зробити автономно (4× oninput closure + 2× addTaskStep preventDefault); 6× `ontouchend="this.focus()"` iOS-клавіатури хак потребує реального iPhone тесту перед видаленням. Чесне застереження дано Роману перед вибором.
+- **Architecture Refactor Сесія 4** (`execute-action.js` один executor для 4 dispatch-точок) — альтернатива CSP, повна сесія коду без iPhone-залежностей.
+- **`scripts/ai-tester.py` = 1982 рядки** (>1500 стоп-правило з /audit). Тестера треба розбити окремою сесією через `/refactor-large` ~2-3 год + synchро з Hetzner deploy. Не блокер поточної задачі.
+
+### Ключові рішення
+
+- **Runtime-датчик ПЕРЕД патчем прод-коду** (правило CLAUDE.md «гіпотеза агента ≠ факт»): коли симптом «щось зникає async» і Council не знаходить винного — monkey-patch + polling доводить чи подія реальна. Запатчити backup.js на гіпотезі = «лагодити» неіснуючу проблему і маскувати реальну причину (артефакт виміру).
+- **On-demand TARGET_SCENARIOS bypass disabled_scenarios** — системний (не лоскут): призначення прицільного trigger'у власне debug disabled-тестів. Інакше Roman мусив би Edit config перед кожним циклом → накопичення регресій (забути повернути).
+- **HKnlM архівовано RQmdC** — pre-push hook коректно зловив 3 активних блоки. Архівація провадилась тут, не на /finish — корисний сторож SK6E2.
+
+### Інциденти
+
+- **Перший `trigger_ts` 06:30 < last_run 15:01** — я орієнтувався на застарілий tester-status.json (06:01) з мого репо-snapshot, реальний серверний last_run був 15:01 22.05. Health-check ігнорував як старий. Виправлено на свіжий час (`828f3a5`). Затримка ~10 хв.
+- **Pre-push hook заблокував перший docs-push** (3 активних блоки RQmdC+Ug2Jw+HKnlM > дозволених 2). Правильна реакція: архівував HKnlM у `_archive/SESSION_STATE_archive.md` + stub-посилання у живому SESSION_STATE → push пройшов.
+
+### Метрики
+
+- Коміти: `f4a1a70` → `5426fea` (4 commits)
+- Версії: v995 → v997 (3 auto-deploy від merge циклів — без CACHE bump бо тільки scripts/+docs)
+- CACHE_NAME: `nm-20260521-0925` (з Ug2Jw, НЕ чіпали)
+- Council Sonnet: 3 паралельних агенти (всі read-only, корисний негативний результат)
+- AI-Tester runs: 1× monkey-patch debug (PASS) + 1× production verify (PASS), baseline 22→23
+
+### Відкриті баги після RQmdC
+
+- **B-191** — `fill_input` подвоює chars (workaround у тестера, не блокер юзера)
+- B-155/B-156 — гіпотетичні
+
+---
