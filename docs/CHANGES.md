@@ -3243,3 +3243,10 @@ Bridge-план з 64CXo продовжено — закрито G2 (`parseUaTim
 
 **Коміти:** `8c2f7fa` escapeHtml лапки · `1370a9c` safeHref · `be7bd1d` CI env injection · `185354e` gitleaks · `f41d97b` docs vdlyeg+архів RQmdC · `870b790` B-197 notes.js · `6b7c155` docs B-197 closed
 **Метрики:** 7 commits (+docs), Council 3 Sonnet (SEC-1 регресія, read-only). Closed: B-197 + 4 security finding. Open: B-191 (тестер).
+
+## 11.06.2026 — сесія vdlyeg (продовження: архітектура)
+
+Велика стратегічна підготовка до Supabase. Закрито з хмари: B-197 (notes.js escapeJsArg→escapeHtml), B-200 (task-chat крос-задача race), DRY `invalidateFinanceBoard()`, промпт-фікс «склади список → питати вміст». Deep research (5 паралельних web-агентів + клон Mastra + код-аудит) → узгоджений план міграції у `docs/SUPABASE_MIGRATION_PLAN.md`: фундамент-first, DIY-sync на action-log (HLC+field-LWW+IndexedDB), health структурно ізольований, ключ→Edge+ліміти, Mastra=Фаза 4. Узгоджено з brain/Fable (3 виправлення sync прийнято: HLC>серверний час, field>row, IndexedDB>localStorage).
+
+**Коміти:** `870b790` B-197 · `d0955e1` B-200+DRY · `44aff12` промпт список · `+docs` (план міграції + session-state + roadmap)
+**Метрики:** ~13 комітів (security+архітектура), CACHE_NAME `nm-20260610-1115`, новий `docs/SUPABASE_MIGRATION_PLAN.md`
