@@ -253,22 +253,28 @@ function checkNestedBackticks(repoRoot) {
   return issues;
 }
 
-// Правило escape-сторож (сесія 7uxlr7 11.06) — запускає scripts/check-escape.js.
-// 4-разовий клас багів одного кореня (notes.js XSS e9t3N → B-157 → SEC-1 → B-197).
-// Юніт-тест перевіряє що escapeHtml/safeHref/escapeJsArg реально нейтралізують
-// апостроф/лапку/небезпечну схему. Якщо хтось знову зламає екранування —
-// push блокується ДО того як 5-й рецидив потрапить на прод.
-function checkEscapeGuard(repoRoot) {
-  const scriptPath = path.join(repoRoot, 'scripts', 'check-escape.js');
-  if (!fs.existsSync(scriptPath)) return null;
-  try {
-    execSync(`node "${scriptPath}"`, { stdio: 'pipe', encoding: 'utf8' });
-    return null; // exit 0 → усе ок
-  } catch (e) {
-    // exit 1 → тести впали. stderr містить деталі що саме зламано.
-    const detail = (e.stderr || e.stdout || '').toString().trim();
-    return detail || 'escape-сторож впав без деталей';
+// Детерміновані юніт-сторожі (запускаються перед кожним push).
+// Кожен — самодостатній node-скрипт у scripts/ що exit 1 при провалі.
+//   check-escape.js — escapeHtml/safeHref/escapeJsArg (4-разовий XSS/свайп клас:
+//                     notes.js e9t3N → B-157 → SEC-1 → B-197).
+//   check-entity.js — конверт сутності stampEntity (Supabase «двері в один бік»:
+//                     форма id/user_id/created_at/updated_at/deleted_at/hlc).
+// Це НЕ евристики на тексті — або тест проходить, або ні. False positive
+// неможливий → жорсткий блок, bypass-фраза не діє.
+const UNIT_GUARD_SCRIPTS = ['check-escape.js', 'check-entity.js'];
+
+function runUnitGuards(repoRoot) {
+  for (const name of UNIT_GUARD_SCRIPTS) {
+    const scriptPath = path.join(repoRoot, 'scripts', name);
+    if (!fs.existsSync(scriptPath)) continue; // сторож прибрали — не блокуємо
+    try {
+      execSync(`node "${scriptPath}"`, { stdio: 'pipe', encoding: 'utf8', timeout: 15000 });
+    } catch (e) {
+      const detail = ((e.stdout || '') + '\n' + (e.stderr || '')).toString().trim();
+      return { script: name, detail: detail || (name + ' впав без деталей') };
+    }
   }
+  return null; // усі пройшли
 }
 
 function countActiveSessionBlocks() {
@@ -387,16 +393,15 @@ process.stdin.on('end', () => {
       );
     }
 
-    // Правило escape-сторож (7uxlr7 11.06) — ЖОРСТКИЙ блок ДО bypass-логіки.
+    // Правило юніт-сторожі (7uxlr7 11.06) — ЖОРСТКИЙ блок ДО bypass-логіки.
     // На відміну від решти правил (евристики на тексті/diff з можливим false
-    // positive) це детермінований юніт-тест на реальному коді: або escapeHtml
-    // екранує лапки, або ні. False positive неможливий → bypass-фраза не діє.
-    const escapeFail = checkEscapeGuard(repoRoot);
-    if (escapeFail) {
-      console.error('\n=== 🛡️ ESCAPE-СТОРОЖ (scripts/check-escape.js) — PUSH ЗАБЛОКОВАНО ===\n');
-      console.error('Юніт-тест екранування впав. 4-разовий клас XSS/свайп-багів (notes.js → B-157 → SEC-1 → B-197).');
-      console.error('escapeHtml/safeHref/escapeJsArg у src/core/utils.js зламано або контракт змінено.\n');
-      console.error(escapeFail);
+    // positive) це детерміновані юніт-тести на реальному коді: або escapeHtml
+    // екранує лапки / конверт сутності цілий, або ні. False positive
+    // неможливий → bypass-фраза не діє.
+    const unitFail = runUnitGuards(repoRoot);
+    if (unitFail) {
+      console.error(`\n=== 🛡️ ЮНІТ-СТОРОЖ (scripts/${unitFail.script}) — PUSH ЗАБЛОКОВАНО ===\n`);
+      console.error(unitFail.detail);
       console.error('\nФікс обовʼязковий — bypass тут НЕ діє (детермінований тест, не евристика).\n');
       process.exit(2);
     }
