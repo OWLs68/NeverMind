@@ -253,6 +253,18 @@
       ts: Date.now()
     };
   }
+  function makeFinance({ type, amount, category, comment = "", ts, subcategory } = {}) {
+    const tx = {
+      id: generateUUID(),
+      type,
+      amount,
+      category,
+      comment,
+      ts: ts != null ? ts : Date.now()
+    };
+    if (subcategory) tx.subcategory = subcategory;
+    return tx;
+  }
   var init_entity_factories = __esm({
     "src/data/entity-factories.js"() {
       init_uuid();
@@ -2967,7 +2979,7 @@ ${lines.join("\n")}`;
         saveFinCats(cats);
       }
       const txs = getFinance();
-      txs.unshift({ id: generateUUID(), type, amount, category, comment: action.comment || originalText, ts: Date.now() });
+      txs.unshift(makeFinance({ type, amount, category, comment: action.comment || originalText }));
       saveFinance(txs);
       if (currentTab === "finance") renderFinance();
       const sign = type === "expense" ? "-" : "+";
@@ -6655,8 +6667,7 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     const aiSuggestedSubcategory = subRes.aiSuggested;
     const ts = resolveFinanceDate(parsed.date, originalText, Date.now());
     const txs = getFinance();
-    const tx = { id: generateUUID(), type, amount, category, comment, ts };
-    if (subcategory) tx.subcategory = subcategory;
+    const tx = makeFinance({ type, amount, category, comment, ts, subcategory });
     txs.unshift(tx);
     saveFinance(txs);
     logAction("save_finance", {
@@ -6756,6 +6767,7 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     "src/tabs/finance.js"() {
       init_nav();
       init_uuid();
+      init_entity_factories();
       init_utils();
       init_settings();
       init_trash();
@@ -25795,6 +25807,7 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
   // src/tabs/finance-modals.js
   init_nav();
   init_uuid();
+  init_entity_factories();
   init_utils();
   init_trash();
   init_proactive();
@@ -26085,7 +26098,7 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
       const idx = txs.findIndex((x) => x.id === _finEditId);
       if (idx !== -1) txs[idx] = { ...txs[idx], ...baseFields };
     } else {
-      txs.unshift({ id: generateUUID(), ...baseFields });
+      txs.unshift(makeFinance(baseFields));
     }
     saveFinance(txs);
     closeFinTxModal();
