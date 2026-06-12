@@ -542,6 +542,7 @@ export const INBOX_TOOLS = [
   { type: "function", function: { name: "update_project_tempo", description: "Оновити темп проекту (поточний / прискорений / ідеальний).", parameters: { type: "object", properties: { _reasoning_log: { type: "string", description: "CoT — 1-2 речення українською. ОБОВʼЯЗКОВО (див. REASONING_LOG_RULE)." }, project_id: { type: "string" }, tempoNow: { type: "string" }, tempoMore: { type: "string" }, tempoIdeal: { type: "string" }, comment: { type: "string" } }, required: ["_reasoning_log","project_id"], additionalProperties: false } } },
   { type: "function", function: { name: "update_project_risks", description: "Записати ризики або занепокоєння проекту.", parameters: { type: "object", properties: { _reasoning_log: { type: "string", description: "CoT — 1-2 речення українською. ОБОВʼЯЗКОВО (див. REASONING_LOG_RULE)." }, project_id: { type: "string" }, risks: { type: "string" }, comment: { type: "string" } }, required: ["_reasoning_log","project_id", "risks"], additionalProperties: false } } },
   { type: "function", function: { name: "set_project_budget", description: "Встановити плановий бюджет проекту (загальна сума) та/або додати планову статтю витрат. НЕ для запису фактичних витрат — фактичні витрати рахуються з вкладки Фінанси за тегом проекту.", parameters: { type: "object", properties: { _reasoning_log: { type: "string", description: "CoT — 1-2 речення українською. ОБОВʼЯЗКОВО (див. REASONING_LOG_RULE)." }, project_id: { type: "string" }, total: { type: "number", description: "Загальний плановий бюджет" }, item_name: { type: "string", description: "Назва планової статті витрат" }, item_amount: { type: "number", description: "Сума статті" }, comment: { type: "string" } }, required: ["_reasoning_log","project_id"], additionalProperties: false } } },
+  { type: "function", function: { name: "set_project_brief", description: "Зберегти РОЗУМІННЯ проекту — що це за проект, головна ціль, контекст. Викликай коли юзер розповів про суть проекту (текстом або по фото). Це основа для всіх подальших порад. Перезаписує попередній brief повним оновленим описом.", parameters: { type: "object", properties: { _reasoning_log: { type: "string", description: "CoT — 1-2 речення українською. ОБОВʼЯЗКОВО (див. REASONING_LOG_RULE)." }, project_id: { type: "string" }, brief: { type: "string", description: "2-5 речень: що це за проект, головна ціль, ключовий контекст. Своїми словами, по суті." }, comment: { type: "string" } }, required: ["_reasoning_log","project_id","brief"], additionalProperties: false } } },
   // --- ВИКОНАННЯ ---
   { type: "function", function: { name: "complete_habit", description: "Відмітити звичку(и) як виконані сьогодні. Юзер каже що зробив щось зі списку звичок.", parameters: { type: "object", properties: { _reasoning_log: { type: "string", description: "CoT — 1-2 речення українською. ОБОВʼЯЗКОВО (див. REASONING_LOG_RULE)." }, habit_ids: { type: "array", items: { type: "string" }, description: "UUID звичок зі списку" }, comment: { type: "string", description: "Коротке підтвердження" } }, required: ["_reasoning_log","habit_ids","comment"], additionalProperties: false } } },
   { type: "function", function: { name: "complete_task", description: "Закрити задачу(і) як виконані. Юзер каже що зробив щось з активних задач. ОБОВʼЯЗКОВО task_ids має містити ТIЛЬКИ ID з контекстної секції 'Активні задачі'. НIКОЛИ не вигадуй ID.", strict: true, parameters: { type: "object", properties: { _reasoning_log: { type: "string", description: "CoT — 1-2 речення українською. ОБОВʼЯЗКОВО (див. REASONING_LOG_RULE)." }, task_ids: { type: "array", items: { type: "string" }, description: "ID задач зі списку активних (тільки реальні з контексту)" }, comment: { type: "string", description: "Коротке підтвердження" } }, required: ["_reasoning_log","task_ids","comment"], additionalProperties: false } } },
@@ -788,6 +789,7 @@ ID задач, звичок, подій є в КОНТЕКСТ ДАНИХ вищ
 export function getProjectsChatSystem({ activeProject, projectsContext, activeSteps }) {
   const contextBlock = activeProject
     ? `Активний проект: "${activeProject.name}" (${activeProject.progress || 0}%). ID=${activeProject.id}. Підзаголовок: ${activeProject.subtitle || ''}.
+Суть проекту (що це): ${activeProject.brief ? activeProject.brief : 'НЕ ВІДОМА — спершу зрозумій проект перш ніж радити (set_project_brief).'}
 Кроки:
 ${activeSteps || 'немає кроків'}`
     : projectsContext;
@@ -806,11 +808,14 @@ ${BASE_CHAT_RULES}
 - Темп → update_project_tempo (tempoNow/tempoMore/tempoIdeal)
 - Ризики → update_project_risks
 - Бюджет → set_project_budget (total = плановий бюджет; item_name+item_amount = планова стаття)
+- Розуміння проекту (що це, ціль, контекст) → set_project_brief
 - Нові проекти → create_project
 - Універсальні → save_task / create_event / save_note / save_finance / save_moment / save_memory_fact / set_reminder тощо
 - Навігація → UI tools (switch_tab, open_memory тощо)
 
 ПРАВИЛА (project-специфіка):
+- 🚨 СПОЧАТКУ ЗРОЗУМІЙ, ПОТІМ РАДЬ. Якщо «Суть проекту» нижче порожня — НЕ давай порад/кроків/бюджету наосліп. Спершу розпитай що це за проект, яка головна ціль, контекст. Коли зрозумів — виклич set_project_brief щоб зберегти розуміння. Аж тоді пропонуй план/ризики/бюджет.
+- Якщо юзер скинув фото — опиши що бачиш і вплети у розуміння проекту (set_project_brief).
 - Не вигадуй даних яких нема у контексті. Якщо незрозуміло — перепитуй.
 - Витрата/дохід стосується активного проекту → save_finance з project_id=ID активного проекту (фактичні витрати йдуть у бюджет проекту).
 

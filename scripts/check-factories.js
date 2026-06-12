@@ -91,6 +91,8 @@ const { pathToFileURL } = require('url');
   const p1 = makeProject({ name: 'Сайт', subtitle: 'лендінг' });
   pk('id — UUID', UUID_RE.test(p1.id));
   pk('name/subtitle збережені', p1.name === 'Сайт' && p1.subtitle === 'лендінг');
+  pk('brief порожній за замовч.', p1.brief === '');
+  pk('images — порожній масив (forward-compat Supabase)', Array.isArray(p1.images) && p1.images.length === 0);
   pk('subtitle дефолт пустий', makeProject({ name: 'x' }).subtitle === '');
   pk('progress 0 + steps []', p1.progress === 0 && Array.isArray(p1.steps) && p1.steps.length === 0);
   pk('budget форма {total,spent,items}', p1.budget && p1.budget.total === 0 && p1.budget.spent === 0 && Array.isArray(p1.budget.items));

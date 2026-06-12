@@ -394,6 +394,13 @@ reg('project-chat-prompt', (data) => {
     window.sendProjectsBarPrompt(data.prompt);
   }
 });
+// project-image-pick — data-on-change на прихованому file-input у барі проектів.
+// Юзер вибрав фото → OWL «бачить» його (vision) і вплітає у розуміння проекту.
+reg('project-image-pick', (data, el) => {
+  if (typeof window !== 'undefined' && typeof window.handleProjectImagePick === 'function') {
+    window.handleProjectImagePick(data, el);
+  }
+});
 // open-notes-folder — cross-tab navigation з projects → notes з папкою.
 // Інкапсулює switchTab + setTimeout(150) для openNotesFolder. 150ms потрібен
 // щоб Notes-вкладка зрендерилась перед спробою відкрити папку (notes.js:233

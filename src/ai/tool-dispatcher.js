@@ -208,7 +208,8 @@ function _handleMemoryOrFinCatTool(name, args, addMsg) {
 function _handleProjectTool(name, args, addMsg) {
   if (!['complete_project_step', 'add_project_step', 'update_project_progress',
         'add_project_decision', 'add_project_metric', 'add_project_resource',
-        'update_project_tempo', 'update_project_risks', 'set_project_budget'].includes(name)) return false;
+        'update_project_tempo', 'update_project_risks', 'set_project_budget',
+        'set_project_brief'].includes(name)) return false;
 
   const projs = getProjects();
   const p = projs.find(x => x.id === args.project_id);
@@ -271,6 +272,11 @@ function _handleProjectTool(name, args, addMsg) {
       p.lastActivity = Date.now();
       break;
     }
+    case 'set_project_brief': {
+      if (args.brief) p.brief = String(args.brief);
+      p.lastActivity = Date.now();
+      break;
+    }
   }
   saveProjects(projs);
   if (currentTab === 'projects') renderProjects();
@@ -285,6 +291,7 @@ function _handleProjectTool(name, args, addMsg) {
     update_project_tempo: '✓ Темп оновлено',
     update_project_risks: '✓ Ризики записано',
     set_project_budget: `✓ Бюджет оновлено${typeof args.total === 'number' ? `: ${args.total}` : ''}`,
+    set_project_brief: '✓ Зрозумів проект — записав суть',
   };
   addMsg('agent', labels[name] + (args.comment ? ` · ${args.comment}` : ''));
   return true;

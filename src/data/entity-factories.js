@@ -65,6 +65,8 @@ export function makeProject({ name, subtitle = '' } = {}) {
   return stampEntity({
     name,
     subtitle,
+    brief: '',          // що це за проект — суть/ціль/контекст (OWL розуміє ПЕРШ ніж радити)
+    images: [],         // про запас під Supabase Storage (зараз не зберігаємо самі фото — памʼять iOS)
     progress: 0,
     steps: [],
     budget: { total: 0, spent: 0, items: [] },

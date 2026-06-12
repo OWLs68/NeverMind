@@ -923,6 +923,7 @@ async function generateProjectFirstSteps(projectName) {
   const systemPrompt = `${getOWLPersonality()} Юзер щойно створив проект "${projectName}" і відповів на питання інтерв'ю. На основі ЙОГО відповідей заповни картку проекту.
 Відповідай ТIЛЬКИ JSON (без markdown):
 {
+ "brief": "2-3 речення — що це за проект, головна ціль і ключовий контекст (з відповідей юзера)",
  "steps": ["крок 1","крок 2","крок 3"],            // 3 конкретні перші дії, 4-8 слів, реальні на цьому тижні
  "tempoNow": "коли буде готово при поточному темпі, напр. ~6 міс",
  "tempoMore": "коли при +1 год/день, напр. ~3 міс",
@@ -959,6 +960,7 @@ async function generateProjectFirstSteps(projectName) {
       const ivId = localStorage.getItem('nm_project_interview_id');
       const p = (ivId && projects.find(pr => String(pr.id) === ivId)) || projects.find(pr => pr.name === projectName);
       if (p) {
+        if ((parsed.brief || parsed.summary) && !p.brief) p.brief = String(parsed.brief || parsed.summary);
         if (Array.isArray(parsed.steps) && parsed.steps.length > 0 && (p.steps || []).length === 0) {
           p.steps = parsed.steps.map(s => ({ id: generateUUID(), text: s, done: false }));
         }
