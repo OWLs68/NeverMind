@@ -247,6 +247,26 @@
     }
   });
 
+  // src/data/entity-factories.js
+  function makeEvent({ title, date, time = null, endTime = null, priority = "normal", recurringId } = {}) {
+    const ev = {
+      id: generateUUID(),
+      title,
+      date,
+      time,
+      endTime,
+      priority,
+      createdAt: Date.now()
+    };
+    if (recurringId != null) ev.recurringId = recurringId;
+    return ev;
+  }
+  var init_entity_factories = __esm({
+    "src/data/entity-factories.js"() {
+      init_uuid();
+    }
+  });
+
   // src/owl/unified-storage.js
   function _normalizeChipForStorage(c) {
     const obj = typeof c === "string" ? { label: c, action: "chat" } : { ...c };
@@ -10194,7 +10214,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
           return { ok: true };
         }
         case "create_event": {
-          const ev = { id: generateUUID(), title: args.title || t("default.event_title", "\u041F\u043E\u0434\u0456\u044F"), date: args.date, time: args.time || null, priority: args.priority || "normal", createdAt: Date.now() };
+          const ev = makeEvent({ title: args.title || t("default.event_title", "\u041F\u043E\u0434\u0456\u044F"), date: args.date, time: args.time || null, priority: args.priority || "normal" });
           const res = addEventDedup(ev);
           if (!res.added) return { ok: true, duplicate: true };
           logAction("create_event", args, ev.id, null, "evening");
@@ -10207,7 +10227,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
         }
         case "set_reminder": {
           const dateISO = args.date || (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
-          const ev = { id: generateUUID(), title: "\u23F0 " + (args.text || t("default.reminder_title", "\u041D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F")), date: dateISO, time: args.time || null, priority: "important", createdAt: Date.now() };
+          const ev = makeEvent({ title: "\u23F0 " + (args.text || t("default.reminder_title", "\u041D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F")), date: dateISO, time: args.time || null, priority: "important" });
           const res = addEventDedup(ev);
           if (!res.added) return { ok: true, duplicate: true };
           logAction("set_reminder", args, null, null, "evening");
@@ -10398,6 +10418,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
       init_tasks();
       init_habits();
       init_habit_classifier();
+      init_entity_factories();
       init_notes();
       init_calendar();
       init_finance();
@@ -14026,7 +14047,7 @@ ${CHIP_PROMPT_RULES}`;
       if (!title) return false;
       const eventDetected = _detectEventFromTask(title);
       if (eventDetected) {
-        const ev = { id: generateUUID(), title: eventDetected.title || title, date: eventDetected.date, time: null, priority: parsed.priority || "normal", createdAt: Date.now() };
+        const ev = makeEvent({ title: eventDetected.title || title, date: eventDetected.date, time: null, priority: parsed.priority || "normal" });
         const res = addEventDedup(ev);
         if (!res.added) {
           addMsg("agent", t("habits.event.dup", '\u0422\u0430\u043A\u0430 \u043F\u043E\u0434\u0456\u044F "{title}" \u0432\u0436\u0435 \u0454 \u0432 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440\u0456.', { title: ev.title }));
@@ -14393,7 +14414,7 @@ ${CHIP_PROMPT_RULES}`;
       if (parsed.time) {
         conflict = getEvents().find((e) => e.date === resolvedDate && e.time === parsed.time && e.title !== title);
       }
-      const ev = { id: generateUUID(), title, date: resolvedDate, time: parsed.time || null, endTime, priority: parsed.priority || "normal", createdAt: Date.now() };
+      const ev = makeEvent({ title, date: resolvedDate, time: parsed.time || null, endTime, priority: parsed.priority || "normal" });
       const res = addEventDedup(ev);
       if (!res.added) {
         addMsg("agent", t("habits.event.dup", '\u0422\u0430\u043A\u0430 \u043F\u043E\u0434\u0456\u044F "{title}" \u0432\u0436\u0435 \u0454 \u0432 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440\u0456.', { title }));
@@ -14941,6 +14962,7 @@ ${CHIP_PROMPT_RULES}`;
       init_usage_meter();
       init_uuid();
       init_habit_classifier();
+      init_entity_factories();
       init_trash();
       init_core();
       init_prompts();
@@ -18215,7 +18237,7 @@ ${aiContext}`;
             if (action.time) {
               conflict = getEvents().find((e) => e.date === action.date && e.time === action.time && e.title !== action.title);
             }
-            const ev = { id: generateUUID(), title: action.title || t("inbox.event.default_title", "\u041F\u043E\u0434\u0456\u044F"), date: action.date, time: action.time || null, endTime, priority: action.priority || "normal", createdAt: Date.now() };
+            const ev = makeEvent({ title: action.title || t("inbox.event.default_title", "\u041F\u043E\u0434\u0456\u044F"), date: action.date, time: action.time || null, endTime, priority: action.priority || "normal" });
             const res = addEventDedup(ev);
             if (!res.added) {
               addInboxChatMsg("agent", t("inbox.chat.event_dupe", '\u0422\u0430\u043A\u0430 \u043F\u043E\u0434\u0456\u044F "{title}" \u0432\u0436\u0435 \u0454 \u0432 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440\u0456.', { title: ev.title }));
@@ -18613,7 +18635,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       const taskTitle = parsed.task_title || savedText;
       const eventDetected = _detectEventFromTask(taskTitle);
       if (eventDetected) {
-        const ev = { id: generateUUID(), title: eventDetected.title || taskTitle, date: eventDetected.date, time: null, priority: parsed.priority || "normal", createdAt: Date.now() };
+        const ev = makeEvent({ title: eventDetected.title || taskTitle, date: eventDetected.date, time: null, priority: parsed.priority || "normal" });
         const res = addEventDedup(ev);
         if (!res.added) {
           addInboxChatMsg("agent", t("inbox.chat.event_dupe", '\u0422\u0430\u043A\u0430 \u043F\u043E\u0434\u0456\u044F "{title}" \u0432\u0436\u0435 \u0454 \u0432 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440\u0456.', { title: ev.title }));
@@ -18689,7 +18711,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
     if (cat === "event") {
       const eventDetected = _detectEventDate(savedText);
       if (eventDetected) {
-        const ev = { id: generateUUID(), title: eventDetected.title || savedText, date: eventDetected.date, time: null, priority: "normal", createdAt: Date.now() };
+        const ev = makeEvent({ title: eventDetected.title || savedText, date: eventDetected.date, time: null, priority: "normal" });
         const res = addEventDedup(ev);
         if (!res.added) {
           addInboxChatMsg("agent", t("inbox.chat.event_dupe", '\u0422\u0430\u043A\u0430 \u043F\u043E\u0434\u0456\u044F "{title}" \u0432\u0436\u0435 \u0454 \u0432 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440\u0456.', { title: ev.title }));
@@ -18817,6 +18839,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       init_calendar();
       init_habits();
       init_habit_classifier();
+      init_entity_factories();
       init_notes();
       init_finance();
       init_evening();
