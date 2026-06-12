@@ -21,6 +21,8 @@
 //
 // Створено: 10.05.2026 dyhJu (G4 Bridge-плану + B-166 фікс одним системним кроком).
 
+import { hasExplicitClockTime, parseUaTimeOfDay } from './ua-time-parser.js';
+
 // === Регекси (приватні) ===
 
 // PAST_INDICATORS — слова часу + plural дієслова -ли + singular -в/-ла.
@@ -105,6 +107,49 @@ export function convertPastEventToMoment(toolCalls, text) {
   const out = toolCalls.slice();
   out[evtIdx] = newTc;
   console.warn('[guard] convertPastEventToMoment: minулий час → save_moment');
+  return out;
+}
+
+/**
+ * Явний годинниковий час у запиті + AI повертає save_task → конверсія у
+ * create_event. «Подзвонити на сервіс завтра о 12:00» має КОНКРЕТНИЙ час → це
+ * запланована подія (показується в Календарі/Розпорядку дня), а не задача
+ * (задача має лише дату, без слота часу — тому в розпорядок не потрапляла).
+ * Правило 12: детермінований сигнал (явний час) → код, не промпт.
+ *
+ * Захист від хибних конверсій: НЕ конвертуємо якщо (а) AI вже зробив
+ * create_event, (б) минулий час у тексті (це не майбутня подія), (в) задача
+ * має кроки (подія їх не має — втратили б дані багатокрокової задачі).
+ */
+export function convertTaskToEventOnTime(toolCalls, text) {
+  if (!Array.isArray(toolCalls) || toolCalls.length === 0) return toolCalls;
+  if (!text || !hasExplicitClockTime(text)) return toolCalls;
+  if (PAST_INDICATORS_RE.test(text)) return toolCalls;
+  if (_has(toolCalls, 'create_event')) return toolCalls;
+  const taskIdx = _findIdx(toolCalls, 'save_task');
+  if (taskIdx === -1) return toolCalls;
+  let taskArgs = {};
+  try { taskArgs = JSON.parse(toolCalls[taskIdx].function.arguments || '{}'); }
+  catch (e) { console.warn('[guard] convertTaskToEventOnTime: parse failed', e); return toolCalls; }
+  // Багатокрокова задача — лишаємо задачею (подія не має steps).
+  if (Array.isArray(taskArgs.steps) && taskArgs.steps.length > 0) return toolCalls;
+  const eventArgs = {
+    _reasoning_log: 'Auto-convert save_task to create_event (explicit clock time in user text -> scheduled event)',
+    title: taskArgs.title || text,
+    date: taskArgs.due_date || null,        // null → create_event handler спарсить дату з тексту
+    time: parseUaTimeOfDay(text) || null,
+    end_time: null,
+    priority: taskArgs.priority || 'normal',
+    comment: taskArgs.comment || ''
+  };
+  const oldTc = toolCalls[taskIdx];
+  const newTc = {
+    ...oldTc,
+    function: { ...oldTc.function, name: 'create_event', arguments: JSON.stringify(eventArgs) }
+  };
+  const out = toolCalls.slice();
+  out[taskIdx] = newTc;
+  console.warn('[guard] convertTaskToEventOnTime: явний час → create_event');
   return out;
 }
 
@@ -217,5 +262,8 @@ export function applyAllGuards(toolCalls, text) {
   tc = dropTaskOnFinance(tc);
   tc = dropTaskOnComplete(tc);
   tc = dropEventOnMoment(tc);
+  // Останнім: save_task що ВИЖИВ усі dedup + має явний час → create_event
+  // (щоб не конвертувати задачу яку щойно дропнули як finance/complete-дубль).
+  tc = convertTaskToEventOnTime(tc, text);
   return tc;
 }
