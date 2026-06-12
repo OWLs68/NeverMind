@@ -3973,9 +3973,9 @@ ${lines.join("\n")}`;
     }
     const aiContext = getAIContext();
     const systemPrompt = `${getOWLPersonality()} \u0429\u043E\u0439\u043D\u043E \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E \u043D\u043E\u0432\u0438\u0439 \u043F\u0440\u043E\u0435\u043A\u0442 "${projectName}"${projectSubtitle ? ` \u2014 "${projectSubtitle}"` : ""}.
-\u0422\u0432\u043E\u044F \u0440\u043E\u043B\u044C \u2014 \u043F\u0435\u0440\u0441\u043E\u043D\u0430\u043B\u044C\u043D\u0438\u0439 \u043D\u0430\u0441\u0442\u0430\u0432\u043D\u0438\u043A. \u041F\u043E\u0441\u0442\u0430\u0432 \u041E\u0414\u041D\u0415 \u043F\u0435\u0440\u0448\u0435 \u043F\u0438\u0442\u0430\u043D\u043D\u044F \u0449\u043E\u0431 \u043A\u0440\u0430\u0449\u0435 \u0437\u0440\u043E\u0437\u0443\u043C\u0456\u0442\u0438 \u0446\u0435\u0439 \u043F\u0440\u043E\u0435\u043A\u0442.
-\u041F\u0438\u0442\u0430\u0439 \u043F\u0440\u043E \u0441\u0442\u0430\u0440\u0442\u043E\u0432\u0438\u0439 \u043A\u0430\u043F\u0456\u0442\u0430\u043B \u0430\u0431\u043E \u0440\u0435\u0441\u0443\u0440\u0441\u0438. \u041A\u043E\u0440\u043E\u0442\u043A\u043E, \u043F\u043E-\u043B\u044E\u0434\u0441\u044C\u043A\u0438, \u0431\u0435\u0437 \u0437\u0430\u0439\u0432\u0438\u0445 \u0441\u043B\u0456\u0432.
-\u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u0422\u0456\u043B\u044C\u043A\u0438 \u0442\u0435\u043A\u0441\u0442, \u0431\u0435\u0437 JSON.
+\u0422\u0432\u043E\u044F \u0440\u043E\u043B\u044C \u2014 \u043F\u0435\u0440\u0441\u043E\u043D\u0430\u043B\u044C\u043D\u0438\u0439 \u043D\u0430\u0441\u0442\u0430\u0432\u043D\u0438\u043A. \u0426\u0435 \u041F\u0415\u0420\u0428\u0415 \u043F\u0438\u0442\u0430\u043D\u043D\u044F \u0456\u043D\u0442\u0435\u0440\u0432'\u044E \u2014 \u0442\u0438 \u0449\u0435 \u043D\u0435 \u0437\u043D\u0430\u0454\u0448 \u0449\u043E \u0446\u0435 \u0437\u0430 \u043F\u0440\u043E\u0435\u043A\u0442.
+\u041F\u043E\u0441\u0442\u0430\u0432 \u041E\u0414\u041D\u0415 \u043A\u043E\u0440\u043E\u0442\u043A\u0435 \u0412\u0406\u0414\u041A\u0420\u0418\u0422\u0415 \u043F\u0438\u0442\u0430\u043D\u043D\u044F \u0449\u043E\u0431 \u0437\u0440\u043E\u0437\u0443\u043C\u0456\u0442\u0438 \u0441\u0443\u0442\u044C \u0456 \u0433\u043E\u043B\u043E\u0432\u043D\u0443 \u0446\u0456\u043B\u044C \u043F\u0440\u043E\u0435\u043A\u0442\u0443 (\u043F\u0440\u043E \u0449\u043E \u0432\u0456\u043D, \u0447\u043E\u0433\u043E \u0445\u043E\u0447\u0435\u0448 \u0434\u043E\u0441\u044F\u0433\u0442\u0438, \u043D\u0430 \u044F\u043A\u043E\u043C\u0443 \u0435\u0442\u0430\u043F\u0456). \u041D\u0415 \u043F\u0438\u0442\u0430\u0439 \u043E\u0434\u0440\u0430\u0437\u0443 \u043F\u0440\u043E \u0433\u0440\u043E\u0448\u0456/\u0434\u0435\u0434\u043B\u0430\u0439\u043D \u2014 \u0441\u043F\u0435\u0440\u0448\u0443 \u0437\u0440\u043E\u0437\u0443\u043C\u0456\u0439 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442.
+\u041A\u043E\u0440\u043E\u0442\u043A\u043E, \u043F\u043E-\u043B\u044E\u0434\u0441\u044C\u043A\u0438, \u0431\u0435\u0437 \u0437\u0430\u0439\u0432\u0438\u0445 \u0441\u043B\u0456\u0432. \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u0422\u0456\u043B\u044C\u043A\u0438 \u0442\u0435\u043A\u0441\u0442, \u0431\u0435\u0437 JSON.
 ${aiContext ? "\n\n" + aiContext : ""}`;
     try {
       const res = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -3994,10 +3994,9 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
       if (reply) {
         setTimeout(() => {
           addInboxChatMsg("agent", reply);
-          localStorage.setItem("nm_guide_waiting_topic", "project_" + Date.now());
-          const shownTopics = JSON.parse(localStorage.getItem("nm_guide_shown_topics") || "[]");
           localStorage.setItem("nm_project_interview_step", "1");
           localStorage.setItem("nm_project_interview_name", projectName);
+          localStorage.setItem("nm_project_interview_lastq", reply);
         }, 500);
       }
     } catch (e) {
@@ -17159,22 +17158,8 @@ ${answersText}
     const projectStep = parseInt(localStorage.getItem("nm_project_interview_step") || "0");
     const projectName = localStorage.getItem("nm_project_interview_name") || "";
     if (projectStep > 0 && projectName) {
-      const projectQuestions = [
-        t("projects.iv.q_hours", '\u0421\u043A\u0456\u043B\u044C\u043A\u0438 \u0433\u043E\u0434\u0438\u043D \u043D\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C \u0440\u0435\u0430\u043B\u044C\u043D\u043E \u043C\u043E\u0436\u0435\u0448 \u0432\u043A\u043B\u0430\u0434\u0430\u0442\u0438 \u0432 "{name}"?', { name: projectName }),
-        t("projects.iv.q_team", "\u0425\u0442\u043E \u0434\u043E\u043F\u043E\u043C\u0430\u0433\u0430\u0442\u0438\u043C\u0435 \u2014 \u0446\u0435 \u0441\u043E\u043B\u043E-\u043F\u0440\u043E\u0435\u043A\u0442 \u0447\u0438 \u0454 \u043A\u043E\u043C\u0430\u043D\u0434\u0430/\u043F\u0430\u0440\u0442\u043D\u0435\u0440\u0438?"),
-        t("projects.iv.q_deadline", "\u042F\u043A\u0438\u0439 \u0440\u0435\u0430\u043B\u0456\u0441\u0442\u0438\u0447\u043D\u0438\u0439 \u0434\u0435\u0434\u043B\u0430\u0439\u043D \u0434\u043B\u044F \u043F\u0435\u0440\u0448\u043E\u0433\u043E \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442\u0443?"),
-        t("projects.iv.q_fears", "\u0429\u043E \u043D\u0430\u0439\u0431\u0456\u043B\u044C\u0448\u0435 \u043B\u044F\u043A\u0430\u0454 \u0430\u0431\u043E \u0442\u0443\u0440\u0431\u0443\u0454 \u0442\u0435\u0431\u0435 \u0432 \u0446\u044C\u043E\u043C\u0443 \u043F\u0440\u043E\u0435\u043A\u0442\u0456?"),
-        t("projects.iv.q_metric", '\u042F\u043A \u0437\u0440\u043E\u0437\u0443\u043C\u0456\u0454\u0448 \u0449\u043E "{name}" \u0432\u0434\u0430\u0432\u0441\u044F \u2014 \u0437\u0430 \u044F\u043A\u0438\u043C \u043E\u0434\u043D\u0438\u043C \u043F\u043E\u043A\u0430\u0437\u043D\u0438\u043A\u043E\u043C?', { name: projectName })
-      ];
-      if (projectStep <= projectQuestions.length) {
-        addInboxChatMsg("agent", projectQuestions[projectStep - 1]);
-        localStorage.setItem("nm_guide_last_ts", Date.now().toString());
-        localStorage.setItem("nm_project_interview_step", (projectStep + 1).toString());
-        return;
-      }
-      localStorage.removeItem("nm_project_interview_step");
-      localStorage.removeItem("nm_project_interview_name");
-      setTimeout(() => generateProjectFirstSteps(projectName), 800);
+      localStorage.setItem("nm_guide_last_ts", Date.now().toString());
+      continueProjectInterview(projectName);
       return;
     }
     const shownTips = JSON.parse(localStorage.getItem("nm_guide_shown_tips") || "[]");
@@ -17214,6 +17199,7 @@ ${answersText}
     const step = parseInt(localStorage.getItem("nm_project_interview_step") || "0");
     if (step <= 0) return;
     if (!text || !text.trim()) return;
+    const lastQ = localStorage.getItem("nm_project_interview_lastq") || "\u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C";
     let buf = [];
     try {
       buf = JSON.parse(localStorage.getItem("nm_project_interview_answers") || "[]");
@@ -17221,9 +17207,63 @@ ${answersText}
       buf = [];
     }
     if (!Array.isArray(buf)) buf = [];
-    buf.push({ q: _PROJECT_IV_LABELS[step] || "\u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C", a: text.trim() });
+    buf.push({ q: lastQ, a: text.trim() });
     if (buf.length > 10) buf = buf.slice(-10);
     localStorage.setItem("nm_project_interview_answers", JSON.stringify(buf));
+  }
+  async function continueProjectInterview(projectName) {
+    const step = parseInt(localStorage.getItem("nm_project_interview_step") || "0");
+    const key = localStorage.getItem("nm_gemini_key");
+    let answers = [];
+    try {
+      answers = JSON.parse(localStorage.getItem("nm_project_interview_answers") || "[]");
+    } catch (e) {
+      answers = [];
+    }
+    const priorQA = Array.isArray(answers) && answers.length ? answers.map((x) => `\u041F\u0438\u0442\u0430\u043D\u043D\u044F: ${x.q}
+\u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C: ${x.a}`).join("\n\n") : "(\u043F\u043E\u043A\u0438 \u043D\u0435\u043C\u0430\u0454 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0435\u0439)";
+    const finish = () => {
+      localStorage.removeItem("nm_project_interview_step");
+      localStorage.removeItem("nm_project_interview_name");
+      localStorage.removeItem("nm_project_interview_lastq");
+      setTimeout(() => generateProjectFirstSteps(projectName), 800);
+    };
+    if (!key || step >= PROJECT_IV_MAX_Q) {
+      finish();
+      return;
+    }
+    const systemPrompt = `${getOWLPersonality()} \u0422\u0438 \u043F\u0440\u043E\u0432\u043E\u0434\u0438\u0448 \u043A\u043E\u0440\u043E\u0442\u043A\u0435 \u0436\u0438\u0432\u0435 \u0456\u043D\u0442\u0435\u0440\u0432'\u044E \u043F\u0440\u043E \u043D\u043E\u0432\u0438\u0439 \u043F\u0440\u043E\u0435\u043A\u0442 "${projectName}" \u0449\u043E\u0431 \u0441\u043A\u043B\u0430\u0441\u0442\u0438 \u043F\u043B\u0430\u043D.
+\u0423\u0436\u0435 \u0432\u0456\u0434\u043E\u043C\u043E \u0437 \u0440\u043E\u0437\u043C\u043E\u0432\u0438:
+${priorQA}
+
+\u041F\u043E\u0441\u0442\u0430\u0432 \u041E\u0414\u041D\u0415 \u043D\u0430\u0441\u0442\u0443\u043F\u043D\u0435 \u043A\u043E\u0440\u043E\u0442\u043A\u0435 \u043F\u0438\u0442\u0430\u043D\u043D\u044F \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E, \u044F\u043A\u0435 \u043B\u043E\u0433\u0456\u0447\u043D\u043E \u0432\u0438\u043F\u043B\u0438\u0432\u0430\u0454 \u0437 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0435\u0439 \u044E\u0437\u0435\u0440\u0430 \u0456 \u0434\u043E\u043F\u043E\u043C\u043E\u0436\u0435 \u0441\u043A\u043B\u0430\u0441\u0442\u0438 \u043F\u043B\u0430\u043D: \u0443\u0442\u043E\u0447\u043D\u0438 \u0446\u0456\u043B\u044C, \u0440\u0435\u0441\u0443\u0440\u0441\u0438/\u0433\u0440\u043E\u0448\u0456, \u0447\u0430\u0441, \u043A\u043E\u043C\u0430\u043D\u0434\u0443, \u0434\u0435\u0434\u043B\u0430\u0439\u043D, \u0440\u0438\u0437\u0438\u043A\u0438 \u0430\u0431\u043E \u044F\u043A \u0432\u0438\u043C\u0456\u0440\u044F\u0442\u0438 \u0443\u0441\u043F\u0456\u0445. \u041D\u0415 \u043F\u043E\u0432\u0442\u043E\u0440\u044E\u0439 \u0442\u0435 \u0449\u043E \u0432\u0436\u0435 \u043F\u0438\u0442\u0430\u0432. \u041F\u043E-\u043B\u044E\u0434\u0441\u044C\u043A\u0438, \u0431\u0435\u0437 \u043F\u0440\u0435\u0430\u043C\u0431\u0443\u043B\u0438.
+\u041A\u043E\u043B\u0438 \u0456\u043D\u0444\u043E\u0440\u043C\u0430\u0446\u0456\u0457 \u0432\u0436\u0435 \u0414\u041E\u0421\u0422\u0410\u0422\u041D\u042C\u041E (\u0437\u0440\u043E\u0437\u0443\u043C\u0456\u043B\u0430 \u0446\u0456\u043B\u044C + \u0440\u0435\u0441\u0443\u0440\u0441\u0438/\u0447\u0430\u0441 + \u0445\u043E\u0447\u0430 \u0431 \u0440\u0438\u0437\u0438\u043A \u0447\u0438 \u043C\u0435\u0442\u0440\u0438\u043A\u0430, \u043E\u0440\u0456\u0454\u043D\u0442\u043E\u0432\u043D\u043E 3-4 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456) \u2014 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0420I\u0412\u041D\u041E \u043E\u0434\u043D\u0438\u043C \u0441\u043B\u043E\u0432\u043E\u043C ENOUGH \u0456 \u043D\u0456\u0447\u0438\u043C \u0431\u0456\u043B\u044C\u0448\u0435.
+\u0422\u0456\u043B\u044C\u043A\u0438 \u0442\u0435\u043A\u0441\u0442 \u043F\u0438\u0442\u0430\u043D\u043D\u044F \u0410\u0411\u041E ENOUGH.`;
+    try {
+      const res = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}` },
+        body: JSON.stringify({
+          model: "gpt-4o-mini",
+          messages: [{ role: "system", content: systemPrompt }],
+          max_tokens: 80,
+          temperature: 0.7
+        })
+      });
+      const data = await res.json();
+      if (data?.usage) logUsage("onboarding", data.usage, data.model);
+      const reply = (data.choices?.[0]?.message?.content || "").trim();
+      if (!reply || /^enough\b/i.test(reply) || reply.toUpperCase() === "ENOUGH") {
+        finish();
+        return;
+      }
+      addInboxChatMsg("agent", reply);
+      localStorage.setItem("nm_project_interview_step", (step + 1).toString());
+      localStorage.setItem("nm_project_interview_lastq", reply);
+      localStorage.setItem("nm_guide_last_ts", Date.now().toString());
+    } catch (e) {
+      finish();
+    }
   }
   async function generateProjectFirstSteps(projectName) {
     const key = localStorage.getItem("nm_gemini_key");
@@ -17302,6 +17342,7 @@ ${aiContext}` }
       }
       localStorage.removeItem("nm_project_interview_answers");
       localStorage.removeItem("nm_project_interview_id");
+      localStorage.removeItem("nm_project_interview_lastq");
       if (Array.isArray(parsed.steps) && parsed.steps.length > 0) {
         const stepsText = parsed.steps.map((s, i) => `${i + 1}. ${s}`).join("\n");
         const summary = parsed.summary || t("projects.iv.first_steps", "\u041F\u0435\u0440\u0448\u0456 \u043A\u0440\u043E\u043A\u0438 \u0434\u043B\u044F \u0441\u0442\u0430\u0440\u0442\u0443:");
@@ -17417,7 +17458,7 @@ ${userText}
     }, 400);
     updateKeyStatus(!!localStorage.getItem("nm_gemini_key"));
   }
-  var UPDATE_VERSION, UPDATE_SLIDES, SLIDES, currentSlide, _slidesIsUpdate, _slidesFromOnboarding, HELP_CONTENT, FIRST_VISIT_TIPS, _helpOpen, HELP_ICONS, SURVEY_QUESTIONS, surveyAnswers, surveyStep, surveyWaiting, OWL_GUIDE_TOPICS, OWL_APP_TIPS, _PROJECT_IV_LABELS;
+  var UPDATE_VERSION, UPDATE_SLIDES, SLIDES, currentSlide, _slidesIsUpdate, _slidesFromOnboarding, HELP_CONTENT, FIRST_VISIT_TIPS, _helpOpen, HELP_ICONS, SURVEY_QUESTIONS, surveyAnswers, surveyStep, surveyWaiting, OWL_GUIDE_TOPICS, OWL_APP_TIPS, PROJECT_IV_MAX_Q;
   var init_onboarding = __esm({
     "src/tabs/onboarding.js"() {
       init_nav();
@@ -17873,14 +17914,7 @@ ${userText}
         { key: "tip_owl_mode", msg: "\u0412 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445 \u043C\u043E\u0436\u043D\u0430 \u0437\u043C\u0456\u043D\u0438\u0442\u0438 \u0445\u0430\u0440\u0430\u043A\u0442\u0435\u0440 OWL \u2014 \u0422\u0440\u0435\u043D\u0435\u0440 (\u043F\u0440\u044F\u043C\u0438\u0439), \u041F\u0430\u0440\u0442\u043D\u0435\u0440 (\u0442\u0435\u043F\u043B\u0438\u0439), \u0430\u0431\u043E \u041D\u0430\u0441\u0442\u0430\u0432\u043D\u0438\u043A (\u043C\u0443\u0434\u0440\u0438\u0439). \u042F\u043A\u0438\u0439 \u0442\u043E\u0431\u0456 \u0431\u043B\u0438\u0436\u0447\u0435?" },
         { key: "tip_memory", msg: "\u0412\u0441\u0435 \u0449\u043E \u0442\u0438 \u0440\u043E\u0437\u043F\u043E\u0432\u0456\u0434\u0430\u0454\u0448 \u2014 \u044F \u0437\u0430\u043F\u0430\u043C\u02BC\u044F\u0442\u043E\u0432\u0443\u044E. \u0412 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445 \u0454 \u0440\u043E\u0437\u0434\u0456\u043B \u041F\u0430\u043C\u02BC\u044F\u0442\u044C \u0434\u0435 \u043C\u043E\u0436\u043D\u0430 \u043F\u043E\u0434\u0438\u0432\u0438\u0442\u0438\u0441\u044C \u0456 \u0432\u0456\u0434\u0440\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0449\u043E \u044F \u0437\u043D\u0430\u044E \u043F\u0440\u043E \u0442\u0435\u0431\u0435." }
       ];
-      _PROJECT_IV_LABELS = {
-        1: "\u0421\u0442\u0430\u0440\u0442\u043E\u0432\u0438\u0439 \u043A\u0430\u043F\u0456\u0442\u0430\u043B / \u0440\u0435\u0441\u0443\u0440\u0441\u0438",
-        2: "\u0413\u043E\u0434\u0438\u043D \u043D\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C",
-        3: "\u041A\u043E\u043C\u0430\u043D\u0434\u0430 / \u043F\u0430\u0440\u0442\u043D\u0435\u0440\u0438",
-        4: "\u0420\u0435\u0430\u043B\u0456\u0441\u0442\u0438\u0447\u043D\u0438\u0439 \u0434\u0435\u0434\u043B\u0430\u0439\u043D",
-        5: "\u0429\u043E \u043D\u0430\u0439\u0431\u0456\u043B\u044C\u0448\u0435 \u043B\u044F\u043A\u0430\u0454",
-        6: "\u041C\u0435\u0442\u0440\u0438\u043A\u0430 \u0443\u0441\u043F\u0456\u0445\u0443"
-      };
+      PROJECT_IV_MAX_Q = 6;
       Object.assign(window, {
         openHelp,
         closeHelp,
@@ -23336,7 +23370,8 @@ ${logLines}
           "nm_project_interview_name",
           "nm_project_interview_step",
           "nm_project_interview_answers",
-          "nm_project_interview_id"
+          "nm_project_interview_id",
+          "nm_project_interview_lastq"
         ],
         // Чат-историки (→ Supabase chat_messages)
         chat: [
