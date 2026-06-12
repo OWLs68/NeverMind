@@ -16,7 +16,10 @@
 > **Порядок фаз (рішення Романа):** 1) логи+баги+прибирання (НЕ доробляти фічі); 2) Supabase мінімум + ФУНДАМЕНТ; 3) запуск+контент (free, монетизацію відчепити); 4) Mastra-мозок окремо.
 > **Принцип:** мінімально у фічах, повно у фундаменті (двері в один бік закласти зараз).
 > **Sync:** DIY на власному action-log (НЕ Electric/PowerSync — ламають 345 синхронних читань) — HLC + field-LWW + IndexedDB/persist + tombstones + pull-on-reconnect.
-> **Фаза 1 (наступна сесія, без Supabase):** троє воріт (єдиний `saveX()` шар + структурний `nm-data-changed` {type,action,id} + конверт сутності з hlc/user_id/ISO) + структуровані чіпи (`send_chips` tool).
+> **Фаза 1 (без Supabase) — ПРОГРЕС після 7uxlr7 (12.06):**
+> - ✅ **Ворота 1** (єдиний шар запису) — канонічні сеттери settings/memory/quit_log + 5 фабрик сутностей (`src/data/entity-factories.js`).
+> - ✅ **Ворота 3** (конверт сутності) — `stampEntity` у 5 фабриках (habit/event/task/moment/finance). Date.now id → UUID.
+> - ⏳ **Лишилось:** проекти (makeProject + конверт); **Ворота 2** (структурний `nm-data-changed` {type,action,id} — 7/9 слухачів ламаються, strangler-shim, потребує iPhone-smoke); структуровані чіпи (`send_chips`); maintenance конверта на edit'ах → Фаза 2.
 
 **✅ Рефакторинг документації + «мозок» Claude — ЗАВЕРШЕНО 20.04.2026 (сесія g05tu).** 5 фаз, 6 комітів. Деталі → `ROADMAP_DONE.md` секція "Завершені Active-блоки".
 
