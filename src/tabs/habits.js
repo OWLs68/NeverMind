@@ -8,7 +8,7 @@ import { escapeHtml, logRecentAction, extractJsonBlocks, parseContentChips, leve
 import { logUsage } from '../core/usage-meter.js';
 import { generateUUID } from '../core/uuid.js';
 import { makeHabit } from '../data/habit-classifier.js';
-import { makeEvent } from '../data/entity-factories.js';
+import { makeEvent, makeTask } from '../data/entity-factories.js';
 import { addToTrash, showUndoToast } from '../core/trash.js';
 import { callAIWithTools, getAIContext, getOWLPersonality, safeAgentReply, INBOX_TOOLS, handleChatError } from '../ai/core.js';
 import { UI_TOOLS_RULES, BASE_CHAT_RULES } from '../ai/prompts.js';
@@ -1022,9 +1022,7 @@ export function processUniversalAction(parsed, originalText, addMsg) {
       return true;
     }
     const steps = Array.isArray(parsed.steps) ? parsed.steps.map(s => ({ id: generateUUID(), text: s, done: false })) : [];
-    const newTask = { id: generateUUID(), title, desc: parsed.desc || '', steps, status: 'active', createdAt: Date.now() };
-    if (parsed.dueDate) newTask.dueDate = parsed.dueDate;
-    if (parsed.priority && ['important','critical'].includes(parsed.priority)) newTask.priority = parsed.priority;
+    const newTask = makeTask({ title, desc: parsed.desc || '', steps, dueDate: parsed.dueDate, priority: parsed.priority });
     const tasks = getTasks();
     tasks.unshift(newTask);
     saveTasks(tasks);
@@ -1905,7 +1903,7 @@ export async function sendTasksBarMessage() {
         const title = (parsed.title || '').trim();
         if (title) {
           const steps = Array.isArray(parsed.steps) ? parsed.steps.map(s => ({ id: generateUUID(), text: s, done: false })) : [];
-          tasks.unshift({ id: generateUUID(), title, desc: parsed.desc || '', steps, status: 'active', createdAt: Date.now() });
+          tasks.unshift(makeTask({ title, desc: parsed.desc || '', steps }));
           saveTasks(tasks); renderTasks();
           addTaskBarMsg('agent', '✅ Задачу "' + title + '" створено!');
         }

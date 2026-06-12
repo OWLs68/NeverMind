@@ -7,6 +7,7 @@ import { showToast } from '../core/nav.js';
 import { escapeHtml, logRecentAction, extractJsonBlocks, parseContentChips, t } from '../core/utils.js';
 import { logUsage } from '../core/usage-meter.js';
 import { generateUUID } from '../core/uuid.js';
+import { makeTask } from '../data/entity-factories.js';
 import { addToTrash, showUndoToast } from '../core/trash.js';
 import { callAI, getAIContext, getOWLPersonality, openChatBar, saveChatMsg, handleChatError } from '../ai/core.js';
 import { renderChips } from '../owl/chips.js';
@@ -166,7 +167,7 @@ function saveTask() {
       tasks[idx] = { ...tasks[idx], title, desc, steps: tempSteps, updatedAt: Date.now() };
     }
   } else {
-    tasks.unshift({ id: generateUUID(), title, desc, steps: tempSteps, status: 'active', createdAt: Date.now() });
+    tasks.unshift(makeTask({ title, desc, steps: tempSteps }));
   }
 
   saveTasks(tasks);
