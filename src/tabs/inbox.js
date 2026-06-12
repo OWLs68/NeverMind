@@ -22,6 +22,7 @@ import { getTasks, saveTasks, renderTasks, autoGenerateTaskSteps } from './tasks
 import { getEvents, saveEvents, addEventDedup } from './calendar.js';
 import { getHabits, saveHabits, getHabitLog, saveHabitLog, renderHabits, renderProdHabits, processUniversalAction } from './habits.js';
 import { makeHabit } from '../data/habit-classifier.js';
+import { makeEvent } from '../data/entity-factories.js';
 import { addNoteFromInbox, getNotes, saveNotes } from './notes.js';
 import { getFinance, saveFinance, renderFinance, formatMoney, processFinanceAction,
   createFinCategory, updateFinCategory, deleteFinCategory, mergeFinCategories, addFinSubcategory, findFinCatByName } from './finance.js';
@@ -721,7 +722,7 @@ ${aiContext}`;
           if (action.time) {
             conflict = getEvents().find(e => e.date === action.date && e.time === action.time && e.title !== action.title);
           }
-          const ev = { id: generateUUID(), title: action.title || t('inbox.event.default_title', 'Подія'), date: action.date, time: action.time || null, endTime, priority: action.priority || 'normal', createdAt: Date.now() };
+          const ev = makeEvent({ title: action.title || t('inbox.event.default_title', 'Подія'), date: action.date, time: action.time || null, endTime, priority: action.priority || 'normal' });
           const res = addEventDedup(ev);
           if (!res.added) { addInboxChatMsg('agent', t('inbox.chat.event_dupe', 'Така подія "{title}" вже є в календарі.', { title: ev.title })); continue; }
           // G3: action-log ТIЛЬКИ якщо подія справді нова (dedup ok). Conditional —
@@ -1165,7 +1166,7 @@ async function processSaveAction(parsed, originalText) {
     const taskTitle = parsed.task_title || savedText;
     const eventDetected = _detectEventFromTask(taskTitle);
     if (eventDetected) {
-      const ev = { id: generateUUID(), title: eventDetected.title || taskTitle, date: eventDetected.date, time: null, priority: parsed.priority || 'normal', createdAt: Date.now() };
+      const ev = makeEvent({ title: eventDetected.title || taskTitle, date: eventDetected.date, time: null, priority: parsed.priority || 'normal' });
       const res = addEventDedup(ev);
       if (!res.added) { addInboxChatMsg('agent', t('inbox.chat.event_dupe', 'Така подія "{title}" вже є в календарі.', { title: ev.title })); return; }
       const dateObj = new Date(eventDetected.date);
@@ -1246,7 +1247,7 @@ async function processSaveAction(parsed, originalText) {
     const eventDetected = _detectEventDate(savedText);
     if (eventDetected) {
       // Календарна подія — зберігаємо в nm_events
-      const ev = { id: generateUUID(), title: eventDetected.title || savedText, date: eventDetected.date, time: null, priority: 'normal', createdAt: Date.now() };
+      const ev = makeEvent({ title: eventDetected.title || savedText, date: eventDetected.date, time: null, priority: 'normal' });
       const res = addEventDedup(ev);
       if (!res.added) {
         addInboxChatMsg('agent', t('inbox.chat.event_dupe', 'Така подія "{title}" вже є в календарі.', { title: ev.title }));
