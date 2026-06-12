@@ -12012,7 +12012,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
         const matches = stems.filter((s) => hStems.some((hs) => hs === s));
         if (matches.length >= 1 && matches.length >= stems.length * 0.5) {
           if (h.type === "quit") {
-            const quitLog = JSON.parse(localStorage.getItem("nm_quit_log") || "{}");
+            const quitLog = getQuitLog();
             if (quitLog[h.id]?.lastHeld === todayISO2) return false;
           } else {
             if (log[today]?.[h.id]) return false;
@@ -12228,11 +12228,11 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
       const matches = chipStems.filter((cs) => habitStems.some((hs) => hs === cs));
       if (matches.length >= 1 && matches.length >= chipStems.length * 0.5) {
         if (habit.type === "quit") {
-          const quitLog = JSON.parse(localStorage.getItem("nm_quit_log") || "{}");
+          const quitLog = getQuitLog();
           if (!quitLog[habit.id]) quitLog[habit.id] = { streak: 0, relapses: [] };
           quitLog[habit.id].lastHeld = todayISO2;
           if (!quitLog[habit.id].streakStart) quitLog[habit.id].streakStart = todayISO2;
-          localStorage.setItem("nm_quit_log", JSON.stringify(quitLog));
+          saveQuitLog(quitLog);
           renderHabits();
           renderProdHabits();
           const msg = `\u2713 "${habit.name}" \u2014 \u0442\u0440\u0438\u043C\u0430\u0454\u0448\u0441\u044F!`;
