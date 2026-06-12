@@ -386,6 +386,14 @@ reg('toggle-project-step', (data) => {
     window.toggleProjectStep(data.projectId, data.stepId);
   }
 });
+// project-chat-prompt — кнопка-підказка у порожньому воркспейсі. Вставляє
+// готове прохання у чат проектів і шле (OWL наповнює проект через tools).
+reg('project-chat-prompt', (data) => {
+  if (!data.prompt) return;
+  if (typeof window !== 'undefined' && typeof window.sendProjectsBarPrompt === 'function') {
+    window.sendProjectsBarPrompt(data.prompt);
+  }
+});
 // open-notes-folder — cross-tab navigation з projects → notes з папкою.
 // Інкапсулює switchTab + setTimeout(150) для openNotesFolder. 150ms потрібен
 // щоб Notes-вкладка зрендерилась перед спробою відкрити папку (notes.js:233

@@ -123,13 +123,14 @@ function renderProjectsList() {
       </div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:${visibleSteps.length ? 8 : 0}px">
         ${p.tempo ? `<span style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:600">${t('projects.card.tempo_prefix', 'При темпі')}: ~${escapeHtml(p.tempo)}</span>` : '<span></span>'}
-        ${silenceWarn ? `<span style="font-size:10px;font-weight:700;color:#c2410c">${t('projects.card.silence_days', '{n} дн. тиші', { n: silenceDays })}</span>` : ''}
+        ${silenceWarn ? `<span style="font-size:10px;font-weight:700;color:#c2790a">${t('projects.card.silence_days', '{n} дн без оновлень', { n: silenceDays })}</span>` : ''}
       </div>
       ${visibleSteps.length > 0 ? visibleSteps.map(s => `
         <div style="display:flex;align-items:center;gap:8px;padding:4px 0">
           <div style="width:16px;height:16px;border-radius:5px;border:1.5px solid ${s.done ? '#3d2e1e' : 'rgba(30,16,64,0.18)'};background:${s.done ? '#3d2e1e' : 'rgba(255,255,255,0.65)'};display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:9px;color:white">${s.done ? '✓' : ''}</div>
           <div style="font-size:12px;font-weight:${!s.done && s === nextStep ? 700 : 500};color:${s.done ? 'rgba(30,16,64,0.3)' : (!s.done && s === nextStep ? '#1e1040' : 'rgba(30,16,64,0.55)')};${s.done ? 'text-decoration:line-through' : ''};flex:1">${!s.done && s === nextStep ? '→ ' : ''}${escapeHtml(s.text)}</div>
-        </div>`).join('') : ''}
+        </div>`).join('') : `
+        <div style="font-size:11px;font-weight:600;color:rgba(30,16,64,0.4);padding:4px 0;font-style:italic">${t('projects.card.no_steps', 'Кроки ще не додані — відкрий і запитай OWL')}</div>`}
       <!-- Нотатки -->
       <div style="margin-top:${visibleSteps.length ? 8 : 0}px;display:flex;align-items:center;gap:6px;background:rgba(255,255,255,0.45);border:1px dashed rgba(30,16,64,0.12);border-radius:9px;padding:6px 9px">
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.3)" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/></svg>
@@ -228,6 +229,16 @@ function renderProjectWorkspace(id) {
   const risks = p.risks || '';
   const resources = p.resources || [];
   const spentPct = budget.total > 0 ? Math.min(100, Math.round(budget.spent / budget.total * 100)) : 0;
+  // Темп показуємо лише коли OWL його реально порахував — інакше три «?» виглядають
+  // як поломка (Council 7uxlr7: головна точка «не розумію» для нового проекту).
+  const hasTempo = [p.tempoNow, p.tempoMore, p.tempoIdeal].some(v => v && v !== '?');
+  const isNewProject = steps.length === 0;
+  const noteCount = _countProjectNotes(p.name);
+  const emptyChips = isNewProject ? [
+    { label: t('projects.empty.chip_plan', '📋 Склади план'), prompt: t('projects.empty.prompt_plan', 'Склади план перших кроків для цього проекту') },
+    { label: t('projects.empty.chip_budget', '💰 Бюджет і темп'), prompt: t('projects.empty.prompt_budget', 'Допоможи оцінити бюджет і темп роботи для цього проекту') },
+    { label: t('projects.empty.chip_risks', '⚠️ Які ризики'), prompt: t('projects.empty.prompt_risks', 'Які головні ризики і складнощі в цьому проекті?') },
+  ] : [];
 
   const scrollEl = document.getElementById('projects-scroll');
   if (!scrollEl) return;
@@ -253,22 +264,30 @@ function renderProjectWorkspace(id) {
       <div style="height:6px;background:rgba(30,16,64,0.07);border-radius:4px;overflow:hidden;margin-bottom:10px">
         <div style="height:100%;width:${pct}%;background:#3d2e1e;border-radius:4px;transition:width 0.5s"></div>
       </div>
-      <!-- 3 сценарії -->
-      <div style="display:flex;gap:5px">
+      ${hasTempo ? `<div style="display:flex;gap:5px">
         <div style="flex:1;border-radius:9px;padding:7px 5px;text-align:center;background:rgba(30,16,64,0.04);border:1px solid rgba(30,16,64,0.07)">
-          <div style="font-size:13px;font-weight:800;color:#1e1040">${p.tempoNow || '?'}</div>
+          <div style="font-size:13px;font-weight:800;color:#1e1040">${escapeHtml(p.tempoNow && p.tempoNow !== '?' ? p.tempoNow : '—')}</div>
           <div style="font-size:9px;font-weight:600;color:rgba(30,16,64,0.38);margin-top:1px">${t('projects.tempo.now', 'зараз')}</div>
         </div>
         <div style="flex:1;border-radius:9px;padding:7px 5px;text-align:center;background:rgba(234,88,12,0.06);border:1px solid rgba(234,88,12,0.12)">
-          <div style="font-size:13px;font-weight:800;color:#ea580c">${p.tempoMore || '?'}</div>
+          <div style="font-size:13px;font-weight:800;color:#ea580c">${escapeHtml(p.tempoMore && p.tempoMore !== '?' ? p.tempoMore : '—')}</div>
           <div style="font-size:9px;font-weight:600;color:rgba(234,88,12,0.5);margin-top:1px">${t('projects.tempo.more', '+1год/день')}</div>
         </div>
         <div style="flex:1;border-radius:9px;padding:7px 5px;text-align:center;background:rgba(22,163,74,0.06);border:1px solid rgba(22,163,74,0.14)">
-          <div style="font-size:13px;font-weight:800;color:#16a34a">${p.tempoIdeal || '?'}</div>
+          <div style="font-size:13px;font-weight:800;color:#16a34a">${escapeHtml(p.tempoIdeal && p.tempoIdeal !== '?' ? p.tempoIdeal : '—')}</div>
           <div style="font-size:9px;font-weight:600;color:rgba(22,163,74,0.5);margin-top:1px">${t('projects.tempo.ideal', 'ідеально')}</div>
         </div>
-      </div>
+      </div>` : ''}
     </div>
+
+    ${isNewProject ? `<div class="card-glass" style="text-align:center">
+      <div style="font-size:26px;margin-bottom:6px">✨</div>
+      <div style="font-size:14px;font-weight:800;color:#1e1040;margin-bottom:4px">${t('projects.empty.title', 'Проект щойно створено')}</div>
+      <div style="font-size:12px;font-weight:500;color:rgba(30,16,64,0.5);line-height:1.5;margin-bottom:12px">${t('projects.empty.hint', 'Розкажи OWL знизу про ціль і ресурси — він складе план кроків, порахує темп і підкаже ризики.')}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center">
+        ${emptyChips.map(c => `<button data-action="project-chat-prompt" data-prompt="${escapeHtml(c.prompt)}" style="font-size:12px;font-weight:700;color:#3d2e1e;background:rgba(61,46,30,0.08);border:1px solid rgba(61,46,30,0.15);border-radius:10px;padding:7px 12px;cursor:pointer">${escapeHtml(c.label)}</button>`).join('')}
+      </div>
+    </div>` : ''}
 
     <!-- Бюджет -->
     ${budget.total > 0 || budget.items.length > 0 ? `<div class="card-glass">
@@ -350,7 +369,7 @@ function renderProjectWorkspace(id) {
       </div>
       <div style="flex:1">
         <div style="font-size:13px;font-weight:700;color:#1e1040">${t('projects.notes.title', 'Нотатки проекту')}</div>
-        <div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:600;margin-top:1px">${t('projects.notes.count_in_folder', '{n} записів у папці "{name}" →', { n: _countProjectNotes(p.name), name: escapeHtml(p.name) })}</div>
+        <div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:600;margin-top:1px">${noteCount > 0 ? t('projects.notes.count_in_folder', '{n} записів у папці "{name}" →', { n: noteCount, name: escapeHtml(p.name) }) : t('projects.notes.empty_cta', 'Додай першу думку по проекту →')}</div>
       </div>
       <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.25)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
     </div>
@@ -577,6 +596,17 @@ export function addProjectsChatMsg(role, text, _noSave = false, chips = null) {
   if (!_noSave) saveChatMsg('projects', role, text, chips);
 }
 
+// Кнопка-підказка з порожнього воркспейсу: вставляє готове прохання у поле
+// чату проектів і надсилає. Чат використовує INBOX_TOOLS + dispatcher — тобто
+// OWL реально викликає add_project_step / update_project_tempo / set_project_budget
+// з контекстом activeProject (наповнює проект, не просто відповідає текстом).
+export function sendProjectsBarPrompt(text) {
+  const input = document.getElementById('projects-bar-input');
+  if (!input || !text) return;
+  input.value = text;
+  sendProjectsBarMessage();
+}
+
 export async function sendProjectsBarMessage() {
   if (projectsBarLoading) return;
   const input = document.getElementById('projects-bar-input');
@@ -634,6 +664,6 @@ export async function sendProjectsBarMessage() {
 // === WINDOW EXPORTS (HTML handlers only) ===
 Object.assign(window, {
   openAddProject, saveNewProject, closeProjectModal,
-  sendProjectsBarMessage, openProjectWorkspace, closeProjectWorkspace,
+  sendProjectsBarMessage, sendProjectsBarPrompt, openProjectWorkspace, closeProjectWorkspace,
   toggleProjectTimeline, toggleProjectStep, switchTab,
 });
