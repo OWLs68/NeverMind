@@ -1,5 +1,17 @@
 # NeverMind — Історія закритих багів (архів)
 
+## Ротовано 7uxlr7 12.06.2026 — сесії WML2Z + RQmdC
+
+_Сесія **WML2Z** (03.06.2026):_
+
+- **B-194 закрито** (`00b377b`) — **чіпи з кривим JSON вивалюють весь код у бульбашку чату.** «склади список покупок» → AI згенерував JSON чіпів із зайвими комами → strict `JSON.parse` кидав → сирий текст замість кнопок. **Фікс:** lenient-fallback у `parseContentChips` (прибрати trailing-коми, парсити ще раз). Happy-path strict. Корінь глибший (структуровані відповіді OpenAI) — не закрито.
+- **B-195 закрито** (`0e24085`) — **табло не оновлюється на вхід.** Чекало 45с / 10хв, без visibility-тригера. **Фікс:** `visibilitychange`+`pageshow` → debounced brainPulse, cold-start 45→5с, cooldowns гасять спам.
+- **B-196 закрито** (`651ab85`) — **test_29/30 ніколи не бігали у cron** (max_tests_per_run=30 < 32 сценаріїв). **Фікс:** 30→33 + прибрано мертвий `--full`.
+
+_Сесія **RQmdC** (23.05.2026):_
+
+- **B-192 закрито** (`f4a1a70`) — **«backup зникає за 0.8с» = ХИБНИЙ сигнал старого test_4, НЕ баг.** Council 3 агенти не знайшли винного коду (видалення немає). Голова верифікувала через runtime (monkey-patch removeItem/setItem + polling 1100мс) → 3×PASS, rm_log порожній. Корінь: старий test_4 вимірював через окремі CDP-виклики з wait(0.8) — race у вимірі. **Фікс:** test_4 на stability polling. **Урок:** runtime-датчик ДОВОДИТЬ перш ніж патчити прод за гіпотезою.
+
 ## Ротовано WML2Z 03.06.2026 — сесія Ug2Jw
 
 - **B-193 закрито** (`54c2e46`) — **`openAddHabit` НЕ у `window` exports → юзер на Habits subtab тапає ➕ → нічого.** Корінь: HKnlM `b6a3d37` зробив `dataset.fn='openAddHabit'` на `#prod-add-btn` при switch на Habits, АЛЕ забув додати `openAddHabit` у `Object.assign(window, {...})` habits.js:1942. Delegation `call` handler перевіряє `typeof window[fn]==='function'` → false → silent skip. **Знайдено:** test_19_habits_add сам показав `HABIT_MODAL_NOT_OPEN`. ПЕРШИЙ real production bug який AI-Tester зловив самостійно. **Фікс:** +1 рядок `openAddHabit,` у window export.
