@@ -272,6 +272,25 @@
       ts: Date.now()
     });
   }
+  function makeProject({ name, subtitle = "" } = {}) {
+    return stampEntity({
+      name,
+      subtitle,
+      progress: 0,
+      steps: [],
+      budget: { total: 0, spent: 0, items: [] },
+      metrics: [],
+      decisions: [],
+      resources: [],
+      risks: "",
+      tempoNow: "?",
+      tempoMore: "?",
+      tempoIdeal: "?",
+      notesPreview: "",
+      lastActivity: Date.now(),
+      createdAt: Date.now()
+    });
+  }
   function makeFinance({ type, amount, category, comment = "", ts, subcategory } = {}) {
     const tx = {
       type,
@@ -3555,24 +3574,7 @@ ${lines.join("\n")}`;
   }
   function createProjectProgrammatic(name, subtitle = "") {
     const projects = getProjects();
-    const newProject = {
-      id: generateUUID(),
-      name,
-      subtitle,
-      progress: 0,
-      steps: [],
-      budget: { total: 0, spent: 0, items: [] },
-      metrics: [],
-      decisions: [],
-      resources: [],
-      risks: "",
-      tempoNow: "?",
-      tempoMore: "?",
-      tempoIdeal: "?",
-      notesPreview: "",
-      lastActivity: Date.now(),
-      createdAt: Date.now()
-    };
+    const newProject = makeProject({ name, subtitle });
     projects.unshift(newProject);
     saveProjects(projects);
     return newProject;
@@ -3920,24 +3922,7 @@ ${lines.join("\n")}`;
     if (!name) return;
     const subtitle = (document.getElementById("project-input-subtitle").value || "").trim();
     const projects = getProjects();
-    const newProject = {
-      id: generateUUID(),
-      name,
-      subtitle,
-      progress: 0,
-      steps: [],
-      budget: { total: 0, spent: 0, items: [] },
-      metrics: [],
-      decisions: [],
-      resources: [],
-      risks: "",
-      tempoNow: "?",
-      tempoMore: "?",
-      tempoIdeal: "?",
-      notesPreview: "",
-      lastActivity: Date.now(),
-      createdAt: Date.now()
-    };
+    const newProject = makeProject({ name, subtitle });
     projects.unshift(newProject);
     saveProjects(projects);
     closeProjectModal();
@@ -4120,7 +4105,7 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
   var init_projects = __esm({
     "src/tabs/projects.js"() {
       init_nav();
-      init_uuid();
+      init_entity_factories();
       init_utils();
       init_usage_meter();
       init_core();
