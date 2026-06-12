@@ -57,6 +57,30 @@ export function makeMoment({ text = '', mood = 'neutral' } = {}) {
   });
 }
 
+// Проект (nm_projects). Будувався у 2 місцях (projects.js createProjectProgrammatic
+// AI-шлях + saveNewProject ручна модалка) — форма була ідентична, скопійована.
+// Вкладені структури (steps/budget/metrics/decisions/resources) — під-сутності,
+// народжуються порожніми; їх власний конверт — окрема задача (як health 3B-8).
+export function makeProject({ name, subtitle = '' } = {}) {
+  return stampEntity({
+    name,
+    subtitle,
+    progress: 0,
+    steps: [],
+    budget: { total: 0, spent: 0, items: [] },
+    metrics: [],
+    decisions: [],
+    resources: [],
+    risks: '',
+    tempoNow: '?',
+    tempoMore: '?',
+    tempoIdeal: '?',
+    notesPreview: '',
+    lastActivity: Date.now(),
+    createdAt: Date.now(),
+  });
+}
+
 // Фінансова транзакція (nm_finance). Будувалась у 3 місцях (finance.js createTx,
 // finance-modals ручне, inbox-board AI). ⚠️ ts — це ДАТА транзакції (може бути
 // минулою через resolveFinanceDate / вибір юзера), НЕ завжди Date.now() — тому

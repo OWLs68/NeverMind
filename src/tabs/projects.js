@@ -5,7 +5,7 @@
 // ============================================================
 
 import { currentTab, showToast, switchTab } from '../core/nav.js';
-import { generateUUID } from '../core/uuid.js';
+import { makeProject } from '../data/entity-factories.js';
 import { escapeHtml, safeHref, parseContentChips, t } from '../core/utils.js';
 import { logUsage } from '../core/usage-meter.js';
 import { callAIWithTools, getAIContext, getOWLPersonality, openChatBar, safeAgentReply, saveChatMsg, INBOX_TOOLS, handleChatError } from '../ai/core.js';
@@ -62,24 +62,7 @@ export function findProjectByName(query) {
 
 export function createProjectProgrammatic(name, subtitle = '') {
   const projects = getProjects();
-  const newProject = {
-    id: generateUUID(),
-    name: name,
-    subtitle: subtitle,
-    progress: 0,
-    steps: [],
-    budget: { total: 0, spent: 0, items: [] },
-    metrics: [],
-    decisions: [],
-    resources: [],
-    risks: '',
-    tempoNow: '?',
-    tempoMore: '?',
-    tempoIdeal: '?',
-    notesPreview: '',
-    lastActivity: Date.now(),
-    createdAt: Date.now(),
-  };
+  const newProject = makeProject({ name, subtitle });
   projects.unshift(newProject);
   saveProjects(projects);
   return newProject;
@@ -471,24 +454,7 @@ function saveNewProject() {
   if (!name) return;
   const subtitle = (document.getElementById('project-input-subtitle').value || '').trim();
   const projects = getProjects();
-  const newProject = {
-    id: generateUUID(),
-    name,
-    subtitle,
-    progress: 0,
-    steps: [],
-    budget: { total: 0, spent: 0, items: [] },
-    metrics: [],
-    decisions: [],
-    resources: [],
-    risks: '',
-    tempoNow: '?',
-    tempoMore: '?',
-    tempoIdeal: '?',
-    notesPreview: '',
-    lastActivity: Date.now(),
-    createdAt: Date.now(),
-  };
+  const newProject = makeProject({ name, subtitle });
   projects.unshift(newProject);
   saveProjects(projects);
   closeProjectModal();

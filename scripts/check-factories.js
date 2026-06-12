@@ -11,7 +11,7 @@ const { pathToFileURL } = require('url');
 
 (async () => {
   const mod = await import(pathToFileURL(path.join(__dirname, '..', 'src', 'data', 'entity-factories.js')).href);
-  const { makeEvent, makeTask, makeMoment, makeFinance } = mod;
+  const { makeEvent, makeTask, makeMoment, makeFinance, makeProject } = mod;
 
   let passed = 0;
   const failures = [];
@@ -84,6 +84,19 @@ const { pathToFileURL } = require('url');
   fk('subcategory доданий коли є', makeFinance({ type: 'expense', amount: 1, category: 'x', subcategory: 'кава' }).subcategory === 'кава');
   fk('subcategory undefined → відсутній', !('subcategory' in makeFinance({ type: 'e', amount: 1, category: 'x', subcategory: undefined })));
 
+  // --- makeProject ---
+  const pk = (label, cond) => { if (cond) passed++; else failures.push('✗ makeProject: ' + label); };
+  const p1 = makeProject({ name: 'Сайт', subtitle: 'лендінг' });
+  pk('id — UUID', UUID_RE.test(p1.id));
+  pk('name/subtitle збережені', p1.name === 'Сайт' && p1.subtitle === 'лендінг');
+  pk('subtitle дефолт пустий', makeProject({ name: 'x' }).subtitle === '');
+  pk('progress 0 + steps []', p1.progress === 0 && Array.isArray(p1.steps) && p1.steps.length === 0);
+  pk('budget форма {total,spent,items}', p1.budget && p1.budget.total === 0 && p1.budget.spent === 0 && Array.isArray(p1.budget.items));
+  pk('metrics/decisions/resources — порожні масиви', [p1.metrics, p1.decisions, p1.resources].every(a => Array.isArray(a) && a.length === 0));
+  pk('risks пустий + tempo "?"', p1.risks === '' && p1.tempoNow === '?' && p1.tempoMore === '?' && p1.tempoIdeal === '?');
+  pk('lastActivity + createdAt — числа', typeof p1.lastActivity === 'number' && typeof p1.createdAt === 'number');
+  pk('два makeProject → різні id', makeProject({ name: 'a' }).id !== makeProject({ name: 'b' }).id);
+
   // --- Ворота 3: кожна фабрика загорнута у stampEntity (конверт сутності) ---
   const ENV = ['id', 'user_id', 'created_at', 'updated_at', 'deleted_at', 'hlc'];
   const hasEnv = (o) => ENV.every(k => k in o);
@@ -92,6 +105,7 @@ const { pathToFileURL } = require('url');
   ek('makeTask має конверт stampEntity', hasEnv(t1));
   ek('makeMoment має конверт stampEntity', hasEnv(m1));
   ek('makeFinance має конверт stampEntity', hasEnv(f1));
+  ek('makeProject має конверт stampEntity', hasEnv(p1));
   ek('конверт: created_at — ISO рядок', /^\d{4}-\d{2}-\d{2}T/.test(e1.created_at));
   ek('конверт: user_id заглушка null', e1.user_id === null);
   ek('легасі ts/createdAt поряд з конвертом (не злам)', typeof m1.ts === 'number' && typeof t1.createdAt === 'number');
