@@ -187,6 +187,7 @@
 
 | Дата | Сесія | Зміна |
 |------|-------|-------|
+| 12.06.2026 | qpzj7k | **`set_project_budget` — новий project-tool.** Закриває розрив (Council-аудит вкладки Проекти): з 8 project-tools був відсутній бюджет → секція «Бюджет проекту» лишалась мертвою для нових проектів. Параметри: `project_id`, `total` (плановий бюджет), `item_name`+`item_amount` (планова стаття). Фактичні витрати — НЕ через цей tool (рахуються з Фінансів за тегом проекту, Фаза 3). Handler у `tool-dispatcher.js` `_handleProjectTool`. Project-tools: 8 → **9.** |
 | 17.05.2026 | JMQuT | 🚨 **EU AI Act Health Isolation — видалено 11 health AI-tools + 1 UI tool (`export_health_card`).** Загалом: -12 tools. AI більше НЕ створює медкартки/ліки/алергії. UI Health-вкладка повністю функціональна (юзер сам редагує). Деталі: `docs/AI_ACT_COMPLIANCE.md`. |
 | 18.04.2026 | VJF2M | Створено документ. 39 готових tools + 14 у планах (4.17). |
 | 18.04.2026 | VJF2M | Реалізовано 8 з 14 UI Tools (`src/ai/ui-tools.js`): switch_tab, open_memory, open_settings, set_finance_period, open_finance_analytics, set_theme, set_owl_mode, export_health_card. 6 заблокованих (open_record/open_trash/calendar_jump_to/filter_tasks/clear_chat/toggle_owl_board) — винесено у підпункти 4.17.B (потребують нової інфраструктури). **Загалом 47 tools живих.** |
