@@ -8,7 +8,7 @@
 //
 // makeHabit живе у habit-classifier.js (тісно звʼязана з inferHabitType).
 
-import { generateUUID } from '../core/uuid.js';
+import { stampEntity } from '../core/entity.js';
 
 // Подія календаря (nm_events). Раніше будувалась у 7 місцях (inbox ×3, habits ×2,
 // evening ×2) — десь з endTime, десь без → неконсистентна форма. Фабрика завжди дає
@@ -17,7 +17,6 @@ import { generateUUID } from '../core/uuid.js';
 // мають власну loop-логіку з createdAt+i і фабрику не використовують).
 export function makeEvent({ title, date, time = null, endTime = null, priority = 'normal', recurringId } = {}) {
   const ev = {
-    id: generateUUID(),
     title,
     date,
     time,
@@ -26,7 +25,7 @@ export function makeEvent({ title, date, time = null, endTime = null, priority =
     createdAt: Date.now(),
   };
   if (recurringId != null) ev.recurringId = recurringId;
-  return ev;
+  return stampEntity(ev);
 }
 
 // Задача (nm_tasks). Раніше будувалась у 5 місцях (manual modal, inbox, 2× habits,
@@ -36,7 +35,6 @@ export function makeEvent({ title, date, time = null, endTime = null, priority =
 // готовим. dueDate/priority додаємо лише коли валідні (форма як була).
 export function makeTask({ title, desc = '', steps = [], dueDate, priority } = {}) {
   const task = {
-    id: generateUUID(),
     title,
     desc,
     steps: Array.isArray(steps) ? steps : [],
@@ -45,19 +43,18 @@ export function makeTask({ title, desc = '', steps = [], dueDate, priority } = {
   };
   if (dueDate) task.dueDate = dueDate;
   if (priority && ['normal', 'important', 'critical'].includes(priority)) task.priority = priority;
-  return task;
+  return stampEntity(task);
 }
 
 // Момент (nm_moments) — короткий запис настрою/думки. Будувався у 3 місцях
 // (evening manual, evening-actions, inbox). Поле часу — ts (не createdAt, як у
 // інших сутностей — історично).
 export function makeMoment({ text = '', mood = 'neutral' } = {}) {
-  return {
-    id: generateUUID(),
+  return stampEntity({
     text,
     mood,
     ts: Date.now(),
-  };
+  });
 }
 
 // Фінансова транзакція (nm_finance). Будувалась у 3 місцях (finance.js createTx,
@@ -67,7 +64,6 @@ export function makeMoment({ text = '', mood = 'neutral' } = {}) {
 // додаємо лише коли є (форма як була).
 export function makeFinance({ type, amount, category, comment = '', ts, subcategory } = {}) {
   const tx = {
-    id: generateUUID(),
     type,
     amount,
     category,
@@ -75,5 +71,5 @@ export function makeFinance({ type, amount, category, comment = '', ts, subcateg
     ts: ts != null ? ts : Date.now(),
   };
   if (subcategory) tx.subcategory = subcategory;
-  return tx;
+  return stampEntity(tx);
 }

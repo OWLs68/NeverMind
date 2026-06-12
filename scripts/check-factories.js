@@ -84,6 +84,18 @@ const { pathToFileURL } = require('url');
   fk('subcategory доданий коли є', makeFinance({ type: 'expense', amount: 1, category: 'x', subcategory: 'кава' }).subcategory === 'кава');
   fk('subcategory undefined → відсутній', !('subcategory' in makeFinance({ type: 'e', amount: 1, category: 'x', subcategory: undefined })));
 
+  // --- Ворота 3: кожна фабрика загорнута у stampEntity (конверт сутності) ---
+  const ENV = ['id', 'user_id', 'created_at', 'updated_at', 'deleted_at', 'hlc'];
+  const hasEnv = (o) => ENV.every(k => k in o);
+  const ek = (label, cond) => { if (cond) passed++; else failures.push('✗ конверт: ' + label); };
+  ek('makeEvent має конверт stampEntity', hasEnv(e1));
+  ek('makeTask має конверт stampEntity', hasEnv(t1));
+  ek('makeMoment має конверт stampEntity', hasEnv(m1));
+  ek('makeFinance має конверт stampEntity', hasEnv(f1));
+  ek('конверт: created_at — ISO рядок', /^\d{4}-\d{2}-\d{2}T/.test(e1.created_at));
+  ek('конверт: user_id заглушка null', e1.user_id === null);
+  ek('легасі ts/createdAt поряд з конвертом (не злам)', typeof m1.ts === 'number' && typeof t1.createdAt === 'number');
+
   if (failures.length > 0) {
     console.error(`\n=== ❌ FACTORIES СТОРОЖ: ${failures.length} провалів (${passed} ок) ===\n`);
     console.error(failures.join('\n'));

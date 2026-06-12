@@ -59,6 +59,8 @@ const { pathToFileURL } = require('url');
 
   const h1 = makeHabit({ name: 'Кинути курити' });
   ck('id — валідний UUID (не Date.now)', UUID_RE.test(h1.id));
+  ck('має конверт stampEntity (Ворота 3)', ['id', 'user_id', 'created_at', 'updated_at', 'deleted_at', 'hlc'].every(k => k in h1));
+  ck('легасі createdAt поряд з конвертом', typeof h1.createdAt === 'number');
   ck('quit-назва → type quit', h1.type === 'quit');
   ck('quit → emoji 🚫', h1.emoji === '🚫');
   ck('default days = всі 7', Array.isArray(h1.days) && h1.days.length === 7);

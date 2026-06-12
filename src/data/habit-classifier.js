@@ -10,7 +10,7 @@
 // «тримаюсь»), не build-звичкою з відсотками. Гард — backstop у точках
 // створення з AI; ручна модалка має явний перемикач і його не чіпає.
 
-import { generateUUID } from '../core/uuid.js';
+import { stampEntity } from '../core/entity.js';
 
 // startsWith по словах (не includes по підрядку) — щоб «скинути вагу» НЕ
 // ловилось як quit через підрядок «кину».
@@ -31,12 +31,13 @@ export function inferHabitType(name) {
 // розбіжностями → quit-баг 7uxlr7 жив у 4 копіях. Тут також закрито Supabase-
 // несумісність: id ЗАВЖДИ generateUUID (inbox.js раніше id: Date.now() — колізії +
 // не валідний uuid). type через inferHabitType якщо не заданий явно (ручна модалка
-// дає свій), emoji за типом якщо не заданий. Це майбутній чокпойнт для stampEntity
-// (конверт, Ворота 3 Supabase) — додати тут і він покриє всі точки створення.
+// дає свій), emoji за типом якщо не заданий. Ворота 3 Supabase: загорнуто у
+// stampEntity — кожна нова звичка отримує конверт (id-uuid, user_id, created_at,
+// updated_at, deleted_at, hlc). Легасі createdAt лишається поряд (старий код його
+// читає) — дублювання тимчасове, при Supabase-міграції зллється у created_at.
 export function makeHabit({ name, details = '', days, targetCount = 1, type, emoji } = {}) {
   const habitType = type || inferHabitType(name);
-  return {
-    id: generateUUID(),
+  return stampEntity({
     name,
     details,
     emoji: emoji || (habitType === 'quit' ? '🚫' : '⭕'),
@@ -44,5 +45,5 @@ export function makeHabit({ name, details = '', days, targetCount = 1, type, emo
     targetCount,
     type: habitType,
     createdAt: Date.now(),
-  };
+  });
 }
