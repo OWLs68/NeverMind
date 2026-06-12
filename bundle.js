@@ -229,7 +229,7 @@
   var init_habit_classifier = __esm({
     "src/data/habit-classifier.js"() {
       QUIT_PREFIXES = ["\u043A\u0438\u043D\u0443", "\u043A\u0438\u043D\u044C", "\u043F\u043E\u043A\u0438\u043D\u0443", "\u0431\u0440\u043E\u0441", "\u0432\u0456\u0434\u043C\u043E\u0432", "\u043F\u0435\u0440\u0435\u0441\u0442", "\u043F\u043E\u0437\u0431\u0443", "\u0437\u0430\u0432'\u044F\u0437"];
-      QUIT_NEG_RE = /(^|\s)не\s+(пал|кур|пи|вжива|їст|жер)/;
+      QUIT_NEG_RE = /(^|\s)(не|менше)\s+(пал|кур|пи|вжива|їст|жер)/;
     }
   });
 
@@ -23893,7 +23893,7 @@ ${logLines}
   function closeSettings() {
     try {
       const memEl = document.getElementById("input-memory");
-      if (memEl) saveMemory(memEl.value);
+      if (memEl && memEl.value !== (localStorage.getItem("nm_memory") || "")) saveMemory(memEl.value);
     } catch (e) {
     }
     const overlay = document.getElementById("settings-overlay");
