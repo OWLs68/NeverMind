@@ -29,7 +29,7 @@ import { getFinance, saveFinance, renderFinance, formatMoney, processFinanceActi
 import { getMoments, saveMoments, generateMomentSummary } from './evening.js';
 import { getProjects, saveProjects, startProjectInboxInterview, createProjectProgrammatic, deleteProjectProgrammatic, findProjectByName } from './projects.js';
 import { getRoutine, saveRoutine } from './calendar.js';
-import { handleSurveyAnswer, maybeAskGuideQuestion, saveGuideTopicAnswer } from './onboarding.js';
+import { handleSurveyAnswer, maybeAskGuideQuestion, saveGuideTopicAnswer, captureProjectInterviewAnswer } from './onboarding.js';
 import { renderChips } from '../owl/chips.js';
 // Фаза 2 (15.04 6v2eR) — Здоров'я tool handlers
 // Health imports REMOVED (EU AI Act compliance JMQuT 17.05.2026) — AI більше не редагує health-дані.
@@ -466,6 +466,8 @@ export async function sendToAI(fromChip = false) {
   // НЕ фокусуємо input після відправки — щоб не відкривався чат автоматично
   // Зберігаємо відповідь якщо OWL чекав відповідь по темі провідника
   try { saveGuideTopicAnswer(text); } catch(e) {}
+  // qpzj7k: ловимо відповіді інтерв'ю по проекту у буфер (раніше губились).
+  try { captureProjectInterviewAnswer(text); } catch(e) {}
   if (handleSurveyAnswer(text)) return;
   try { if (handleScheduleAnswer(text)) return; } catch(e) {}
 
@@ -690,7 +692,7 @@ ${aiContext}`;
           addInboxChatMsg('agent', t('inbox.proj.creating', 'Створюю проект "{name}"...', { name: action.name || text }));
           const newProject = createProjectProgrammatic(action.name || text, action.subtitle || '');
           addInboxChatMsg('agent', t('inbox.proj.created', '✅ Проект "{name}" створено', { name: newProject.name }));
-          setTimeout(() => startProjectInboxInterview(newProject.name, newProject.subtitle), 600);
+          setTimeout(() => startProjectInboxInterview(newProject.name, newProject.subtitle, newProject.id), 600);
         } else if (action.action === 'delete_project') {
           // QDIGl 04.05: tool delete_project. Шукаємо за project_id (точний)
           // або за project_name (fuzzy >=3 літер). Якщо нема — повідомляємо

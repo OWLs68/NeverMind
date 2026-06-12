@@ -796,16 +796,17 @@ function owlGuideNextTip() {
       // NpBmN audit fix #7: оновлюємо last_ts на кожному питанні інтерв'ю,
       // інакше після фінального Q5 cooldown=0 → одразу random tip без 3хв паузи.
       localStorage.setItem('nm_guide_last_ts', Date.now().toString());
-      if (projectStep < projectQuestions.length) {
-        localStorage.setItem('nm_project_interview_step', (projectStep + 1).toString());
-      } else {
-        // Після всіх питань — генеруємо перші кроки
-        localStorage.removeItem('nm_project_interview_step');
-        localStorage.removeItem('nm_project_interview_name');
-        setTimeout(() => generateProjectFirstSteps(projectName), 1500);
-      }
+      localStorage.setItem('nm_project_interview_step', (projectStep + 1).toString());
       return;
     }
+    // projectStep > кількості питань → усі питання поставлені, останню відповідь
+    // вже захоплено (captureProjectAnswer). Тепер генеруємо план з усіх відповідей.
+    // (qpzj7k: раніше генерація стартувала ОДРАЗУ після показу Q5 — до відповіді,
+    // і всі відповіді губились. Тепер генерація чекає фінальну відповідь.)
+    localStorage.removeItem('nm_project_interview_step');
+    localStorage.removeItem('nm_project_interview_name');
+    setTimeout(() => generateProjectFirstSteps(projectName), 800);
+    return;
   }
 
   const shownTips = JSON.parse(localStorage.getItem('nm_guide_shown_tips') || '[]');
@@ -858,12 +859,55 @@ export function maybeAskGuideQuestion() {
   setTimeout(() => owlGuideNextTip(), 1200); // невелика пауза після відповіді агента
 }
 
+// qpzj7k: ловить відповідь юзера на питання інтерв'ю по проекту у буфер.
+// Раніше всі 5-6 відповідей (капітал/час/команда/дедлайн/страхи/метрика)
+// губились — нікуди не зберігались, і generateProjectFirstSteps вигадував
+// кроки лише з назви. Тепер буфер живить генерацію темпу/ризиків/бюджету.
+const _PROJECT_IV_LABELS = {
+  1: 'Стартовий капітал / ресурси',
+  2: 'Годин на тиждень',
+  3: 'Команда / партнери',
+  4: 'Реалістичний дедлайн',
+  5: 'Що найбільше лякає',
+  6: 'Метрика успіху',
+};
+export function captureProjectInterviewAnswer(text) {
+  const step = parseInt(localStorage.getItem('nm_project_interview_step') || '0');
+  if (step <= 0) return;
+  if (!text || !text.trim()) return;
+  let buf = [];
+  try { buf = JSON.parse(localStorage.getItem('nm_project_interview_answers') || '[]'); } catch(e) { buf = []; }
+  if (!Array.isArray(buf)) buf = [];
+  buf.push({ q: _PROJECT_IV_LABELS[step] || 'Відповідь', a: text.trim() });
+  // Захист від розростання — інтерв'ю максимум ~6 питань.
+  if (buf.length > 10) buf = buf.slice(-10);
+  localStorage.setItem('nm_project_interview_answers', JSON.stringify(buf));
+}
+
 async function generateProjectFirstSteps(projectName) {
   const key = localStorage.getItem('nm_gemini_key');
   if (!key) return;
   const aiContext = getAIContext();
-  const systemPrompt = `${getOWLPersonality()} На основі розмови про проект "${projectName}" — запропонуй перші 3 конкретні кроки для старту. Кожен крок — одна дія, 4-8 слів, реальна і досяжна на цьому тижні.
-Відповідай ТІЛЬКИ JSON: {"steps":["крок 1","крок 2","крок 3"],"summary":"1 речення — що це за проект і з чого починати"}`;
+  // Зібрані відповіді інтерв'ю — головне джерело для наповнення проекту.
+  let answers = [];
+  try { answers = JSON.parse(localStorage.getItem('nm_project_interview_answers') || '[]'); } catch(e) { answers = []; }
+  const interviewBlock = Array.isArray(answers) && answers.length
+    ? answers.map(x => `${x.q}: ${x.a}`).join('\n')
+    : '(юзер не відповів на питання)';
+  const systemPrompt = `${getOWLPersonality()} Юзер щойно створив проект "${projectName}" і відповів на питання інтерв'ю. На основі ЙОГО відповідей заповни картку проекту.
+Відповідай ТIЛЬКИ JSON (без markdown):
+{
+ "steps": ["крок 1","крок 2","крок 3"],            // 3 конкретні перші дії, 4-8 слів, реальні на цьому тижні
+ "tempoNow": "коли буде готово при поточному темпі, напр. ~6 міс",
+ "tempoMore": "коли при +1 год/день, напр. ~3 міс",
+ "tempoIdeal": "в ідеальному темпі, напр. ~6 тижнів",
+ "risks": "1-2 речення — головні ризики та що з ними робити (з відповіді 'що лякає')",
+ "successMetric": "один показник успіху з відповіді юзера, напр. 'Клієнти' / 'Дохід'",
+ "successValue": "цільове значення якщо назвав, інакше 'ціль'",
+ "budgetTotal": число або null,                     // плановий бюджет зі 'стартового капіталу', тільки якщо назвав суму
+ "summary": "1 тепле речення — що це за проект і з чого починати"
+}
+Не вигадуй те чого юзер не казав — порожнє поле краще ніж вигадка.`;
   try {
     const res = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -872,9 +916,9 @@ async function generateProjectFirstSteps(projectName) {
         model: 'gpt-4o-mini',
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: `Проект: ${projectName}\n\n${aiContext}` }
+          { role: 'user', content: `Проект: ${projectName}\n\nВідповіді юзера:\n${interviewBlock}\n\nКонтекст:\n${aiContext}` }
         ],
-        max_tokens: 200,
+        max_tokens: 400,
         temperature: 0.6
       })
     });
@@ -883,18 +927,38 @@ async function generateProjectFirstSteps(projectName) {
     const reply = data.choices?.[0]?.message?.content?.trim();
     if (!reply) return;
     const parsed = JSON.parse(reply.replace(/```json|```/g, '').trim());
-    if (parsed.steps && parsed.steps.length > 0) {
-      // Зберігаємо кроки в проект
-      try {
-        const projects = getProjects();
-        const p = projects.find(pr => pr.name === projectName);
-        if (p && p.steps.length === 0) {
+    // Наповнюємо проект (за id якщо є — інакше за назвою; id надійніший проти збігу назв).
+    try {
+      const projects = getProjects();
+      const ivId = localStorage.getItem('nm_project_interview_id');
+      const p = (ivId && projects.find(pr => String(pr.id) === ivId)) || projects.find(pr => pr.name === projectName);
+      if (p) {
+        if (Array.isArray(parsed.steps) && parsed.steps.length > 0 && (p.steps || []).length === 0) {
           p.steps = parsed.steps.map(s => ({ id: generateUUID(), text: s, done: false }));
-          saveProjects(projects);
         }
-      } catch(e) {}
+        if (parsed.tempoNow) p.tempoNow = String(parsed.tempoNow);
+        if (parsed.tempoMore) p.tempoMore = String(parsed.tempoMore);
+        if (parsed.tempoIdeal) p.tempoIdeal = String(parsed.tempoIdeal);
+        if (parsed.risks && !p.risks) p.risks = String(parsed.risks);
+        if (parsed.successMetric) {
+          if (!p.metrics) p.metrics = [];
+          if (p.metrics.length === 0) p.metrics.push({ label: String(parsed.successMetric), value: String(parsed.successValue || '—'), color: '#3d2e1e' });
+        }
+        if (typeof parsed.budgetTotal === 'number' && parsed.budgetTotal > 0) {
+          if (!p.budget) p.budget = { total: 0, spent: 0, items: [] };
+          if (!p.budget.total) p.budget.total = parsed.budgetTotal;
+        }
+        p.lastActivity = Date.now();
+        saveProjects(projects);
+      }
+    } catch(e) {}
+    // Прибираємо буфер після використання.
+    localStorage.removeItem('nm_project_interview_answers');
+    localStorage.removeItem('nm_project_interview_id');
+    if (Array.isArray(parsed.steps) && parsed.steps.length > 0) {
       const stepsText = parsed.steps.map((s, i) => `${i+1}. ${s}`).join('\n');
-      addInboxChatMsg('agent', `${parsed.summary || 'Перші кроки для старту:'}\n\n${stepsText}\n\nКроки збережені у воркспейсі проекту.`);
+      const summary = parsed.summary || t('projects.iv.first_steps', 'Перші кроки для старту:');
+      addInboxChatMsg('agent', `${summary}\n\n${stepsText}\n\n${t('projects.iv.saved_note', 'Кроки, темп і ризики збережені у воркспейсі проекту.')}`);
     }
   } catch(e) {}
 }

@@ -208,7 +208,7 @@ function _handleMemoryOrFinCatTool(name, args, addMsg) {
 function _handleProjectTool(name, args, addMsg) {
   if (!['complete_project_step', 'add_project_step', 'update_project_progress',
         'add_project_decision', 'add_project_metric', 'add_project_resource',
-        'update_project_tempo', 'update_project_risks'].includes(name)) return false;
+        'update_project_tempo', 'update_project_risks', 'set_project_budget'].includes(name)) return false;
 
   const projs = getProjects();
   const p = projs.find(x => x.id === args.project_id);
@@ -261,6 +261,16 @@ function _handleProjectTool(name, args, addMsg) {
       p.risks = args.risks || '';
       break;
     }
+    case 'set_project_budget': {
+      if (!p.budget) p.budget = { total: 0, spent: 0, items: [] };
+      if (typeof args.total === 'number') p.budget.total = args.total;
+      if (args.item_name && typeof args.item_amount === 'number') {
+        if (!p.budget.items) p.budget.items = [];
+        p.budget.items.push({ name: args.item_name, amount: args.item_amount });
+      }
+      p.lastActivity = Date.now();
+      break;
+    }
   }
   saveProjects(projs);
   if (currentTab === 'projects') renderProjects();
@@ -274,6 +284,7 @@ function _handleProjectTool(name, args, addMsg) {
     add_project_resource: `✓ Ресурс "${args.title}" додано`,
     update_project_tempo: '✓ Темп оновлено',
     update_project_risks: '✓ Ризики записано',
+    set_project_budget: `✓ Бюджет оновлено${typeof args.total === 'number' ? `: ${args.total}` : ''}`,
   };
   addMsg('agent', labels[name] + (args.comment ? ` · ${args.comment}` : ''));
   return true;
@@ -401,7 +412,7 @@ export function dispatchChatToolCalls(toolCalls, addMsg, originalText) {
       if (currentTab !== 'inbox') {
         setTimeout(() => { try { switchTab('inbox'); } catch(e) {} }, 400);
       }
-      setTimeout(() => { try { startProjectInboxInterview(newProject.name, newProject.subtitle); } catch(e) {} }, 700);
+      setTimeout(() => { try { startProjectInboxInterview(newProject.name, newProject.subtitle, newProject.id); } catch(e) {} }, 700);
       any = true;
       continue;
     }
