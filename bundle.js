@@ -218,10 +218,31 @@
     }
   });
 
+  // src/core/entity.js
+  function nowISO() {
+    return (/* @__PURE__ */ new Date()).toISOString();
+  }
+  function stampEntity(rec = {}) {
+    const ts = nowISO();
+    return {
+      ...rec,
+      id: rec.id ?? generateUUID(),
+      user_id: rec.user_id ?? null,
+      created_at: rec.created_at ?? ts,
+      updated_at: ts,
+      deleted_at: rec.deleted_at ?? null,
+      hlc: rec.hlc ?? null
+    };
+  }
+  var init_entity = __esm({
+    "src/core/entity.js"() {
+      init_uuid();
+    }
+  });
+
   // src/data/entity-factories.js
   function makeEvent({ title, date, time = null, endTime = null, priority = "normal", recurringId } = {}) {
     const ev = {
-      id: generateUUID(),
       title,
       date,
       time,
@@ -230,11 +251,10 @@
       createdAt: Date.now()
     };
     if (recurringId != null) ev.recurringId = recurringId;
-    return ev;
+    return stampEntity(ev);
   }
   function makeTask({ title, desc = "", steps = [], dueDate, priority } = {}) {
     const task = {
-      id: generateUUID(),
       title,
       desc,
       steps: Array.isArray(steps) ? steps : [],
@@ -243,19 +263,17 @@
     };
     if (dueDate) task.dueDate = dueDate;
     if (priority && ["normal", "important", "critical"].includes(priority)) task.priority = priority;
-    return task;
+    return stampEntity(task);
   }
   function makeMoment({ text = "", mood = "neutral" } = {}) {
-    return {
-      id: generateUUID(),
+    return stampEntity({
       text,
       mood,
       ts: Date.now()
-    };
+    });
   }
   function makeFinance({ type, amount, category, comment = "", ts, subcategory } = {}) {
     const tx = {
-      id: generateUUID(),
       type,
       amount,
       category,
@@ -263,11 +281,11 @@
       ts: ts != null ? ts : Date.now()
     };
     if (subcategory) tx.subcategory = subcategory;
-    return tx;
+    return stampEntity(tx);
   }
   var init_entity_factories = __esm({
     "src/data/entity-factories.js"() {
-      init_uuid();
+      init_entity();
     }
   });
 
@@ -280,8 +298,7 @@
   }
   function makeHabit({ name, details = "", days, targetCount = 1, type, emoji } = {}) {
     const habitType = type || inferHabitType(name);
-    return {
-      id: generateUUID(),
+    return stampEntity({
       name,
       details,
       emoji: emoji || (habitType === "quit" ? "\u{1F6AB}" : "\u2B55"),
@@ -289,12 +306,12 @@
       targetCount,
       type: habitType,
       createdAt: Date.now()
-    };
+    });
   }
   var QUIT_PREFIXES, QUIT_NEG_RE;
   var init_habit_classifier = __esm({
     "src/data/habit-classifier.js"() {
-      init_uuid();
+      init_entity();
       QUIT_PREFIXES = ["\u043A\u0438\u043D\u0443", "\u043A\u0438\u043D\u044C", "\u043F\u043E\u043A\u0438\u043D\u0443", "\u0431\u0440\u043E\u0441", "\u0432\u0456\u0434\u043C\u043E\u0432", "\u043F\u0435\u0440\u0435\u0441\u0442", "\u043F\u043E\u0437\u0431\u0443", "\u0437\u0430\u0432'\u044F\u0437"];
       QUIT_NEG_RE = /(^|\s)(не|менше)\s+(пал|кур|пи|вжива|їст|жер)/;
     }
