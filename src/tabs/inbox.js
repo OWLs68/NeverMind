@@ -22,7 +22,7 @@ import { getTasks, saveTasks, renderTasks, autoGenerateTaskSteps } from './tasks
 import { getEvents, saveEvents, addEventDedup } from './calendar.js';
 import { getHabits, saveHabits, getHabitLog, saveHabitLog, renderHabits, renderProdHabits, processUniversalAction } from './habits.js';
 import { makeHabit } from '../data/habit-classifier.js';
-import { makeEvent } from '../data/entity-factories.js';
+import { makeEvent, makeTask, makeMoment } from '../data/entity-factories.js';
 import { addNoteFromInbox, getNotes, saveNotes } from './notes.js';
 import { getFinance, saveFinance, renderFinance, formatMoney, processFinanceAction,
   createFinCategory, updateFinCategory, deleteFinCategory, mergeFinCategories, addFinSubcategory, findFinCatByName } from './finance.js';
@@ -1174,14 +1174,12 @@ async function processSaveAction(parsed, originalText) {
       addInboxChatMsg('agent', t('inbox.event.added_simple', '📅 Подію "{title}" додано в календар на {day}', { title: ev.title, day: dayStr }));
       return;
     }
-    const taskId = generateUUID();
     const tasks = getTasks();
     const taskSteps = Array.isArray(parsed.task_steps) && parsed.task_steps.length > 0
       ? parsed.task_steps.map(s => ({ id: generateUUID(), text: s, done: false }))
       : [];
-    const newTask = { id: taskId, title: taskTitle, desc: savedText !== taskTitle ? savedText : '', steps: taskSteps, status: 'active', createdAt: Date.now() };
-    if (parsed.dueDate) newTask.dueDate = parsed.dueDate;
-    if (parsed.priority && ['normal','important','critical'].includes(parsed.priority)) newTask.priority = parsed.priority;
+    const newTask = makeTask({ title: taskTitle, desc: savedText !== taskTitle ? savedText : '', steps: taskSteps, dueDate: parsed.dueDate, priority: parsed.priority });
+    const taskId = newTask.id;
     tasks.unshift(newTask);
     saveTasks(tasks);
     if (taskSteps.length === 0) autoGenerateTaskSteps(taskId, taskTitle);
@@ -1261,7 +1259,7 @@ async function processSaveAction(parsed, originalText) {
       const mood = parsed.mood || (/добре|чудово|супер|відмінно|весело|щасли/i.test(savedText) ? 'positive' :
                    /погано|жахливо|сумно|нудно|важко|втомив/i.test(savedText) ? 'negative' : 'neutral');
       const moments = getMoments();
-      const newMoment = { id: generateUUID(), text: savedText, mood, ts: Date.now() };
+      const newMoment = makeMoment({ text: savedText, mood });
       moments.push(newMoment);
       saveMoments(moments);
       generateMomentSummary(newMoment.id, savedText);

@@ -11,7 +11,7 @@ const { pathToFileURL } = require('url');
 
 (async () => {
   const mod = await import(pathToFileURL(path.join(__dirname, '..', 'src', 'data', 'entity-factories.js')).href);
-  const { makeEvent } = mod;
+  const { makeEvent, makeTask, makeMoment } = mod;
 
   let passed = 0;
   const failures = [];
@@ -41,6 +41,35 @@ const { pathToFileURL } = require('url');
 
   // консистентна форма: усі базові поля присутні завжди
   ck('усі базові поля присутні', ['id', 'title', 'date', 'time', 'endTime', 'priority', 'createdAt'].every(k => k in e1));
+
+  // --- makeTask ---
+  const tk = (label, cond) => { if (cond) passed++; else failures.push('✗ makeTask: ' + label); };
+  const t1 = makeTask({ title: 'Купити хліб' });
+  tk('id — UUID', UUID_RE.test(t1.id));
+  tk('title збережений', t1.title === 'Купити хліб');
+  tk('desc дефолт пустий', t1.desc === '');
+  tk('steps дефолт []', Array.isArray(t1.steps) && t1.steps.length === 0);
+  tk('status active', t1.status === 'active');
+  tk('createdAt число', typeof t1.createdAt === 'number');
+  tk('dueDate ВІДСУТНІЙ коли не заданий', !('dueDate' in t1));
+  tk('priority ВІДСУТНІЙ коли не заданий', !('priority' in t1));
+
+  const t2 = makeTask({ title: 'Звіт', desc: 'до пятниці', steps: [{ id: 'x', text: 'крок', done: false }], dueDate: '2026-06-20', priority: 'important' });
+  tk('desc переданий', t2.desc === 'до пятниці');
+  tk('steps передані', t2.steps.length === 1);
+  tk('dueDate доданий коли заданий', t2.dueDate === '2026-06-20');
+  tk('priority доданий коли валідний', t2.priority === 'important');
+  tk('priority normal приймається (уніфікація)', makeTask({ title: 'a', priority: 'normal' }).priority === 'normal');
+  tk('priority невалідний — ВІДСУТНІЙ', !('priority' in makeTask({ title: 'a', priority: 'хто' })));
+
+  // --- makeMoment ---
+  const mk = (label, cond) => { if (cond) passed++; else failures.push('✗ makeMoment: ' + label); };
+  const m1 = makeMoment({ text: 'Гарний ранок', mood: 'happy' });
+  mk('id — UUID', UUID_RE.test(m1.id));
+  mk('text збережений', m1.text === 'Гарний ранок');
+  mk('mood збережений', m1.mood === 'happy');
+  mk('ts число (не createdAt)', typeof m1.ts === 'number' && !('createdAt' in m1));
+  mk('mood дефолт neutral', makeMoment({ text: 'x' }).mood === 'neutral');
 
   if (failures.length > 0) {
     console.error(`\n=== ❌ FACTORIES СТОРОЖ: ${failures.length} провалів (${passed} ок) ===\n`);

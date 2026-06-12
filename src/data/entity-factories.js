@@ -28,3 +28,34 @@ export function makeEvent({ title, date, time = null, endTime = null, priority =
   if (recurringId != null) ev.recurringId = recurringId;
   return ev;
 }
+
+// Задача (nm_tasks). Раніше будувалась у 5 місцях (manual modal, inbox, 2× habits,
+// inbox-board) + умовні dueDate/priority дописувались окремими if'ами після (з різними
+// списками валідних priority: inbox мав 'normal', habits — ні; уніфіковано — 'normal' =
+// дефолт, результат той самий). steps — масив крок-обʼєктів (під-сутності), передається
+// готовим. dueDate/priority додаємо лише коли валідні (форма як була).
+export function makeTask({ title, desc = '', steps = [], dueDate, priority } = {}) {
+  const task = {
+    id: generateUUID(),
+    title,
+    desc,
+    steps: Array.isArray(steps) ? steps : [],
+    status: 'active',
+    createdAt: Date.now(),
+  };
+  if (dueDate) task.dueDate = dueDate;
+  if (priority && ['normal', 'important', 'critical'].includes(priority)) task.priority = priority;
+  return task;
+}
+
+// Момент (nm_moments) — короткий запис настрою/думки. Будувався у 3 місцях
+// (evening manual, evening-actions, inbox). Поле часу — ts (не createdAt, як у
+// інших сутностей — історично).
+export function makeMoment({ text = '', mood = 'neutral' } = {}) {
+  return {
+    id: generateUUID(),
+    text,
+    mood,
+    ts: Date.now(),
+  };
+}

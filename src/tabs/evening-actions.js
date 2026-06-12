@@ -25,7 +25,7 @@ import { generateUUID } from '../core/uuid.js';
 import { getTasks, saveTasks, renderTasks } from './tasks.js';
 import { getHabits, saveHabits, getHabitLog, saveHabitLog, renderHabits, renderProdHabits } from './habits.js';
 import { makeHabit } from '../data/habit-classifier.js';
-import { makeEvent } from '../data/entity-factories.js';
+import { makeEvent, makeMoment } from '../data/entity-factories.js';
 import { getNotes, saveNotes, addNoteFromInbox, renderNotes } from './notes.js';
 import { getEvents, saveEvents, addEventDedup } from './calendar.js';
 import { getFinance, saveFinance, renderFinance, processFinanceAction } from './finance.js';
@@ -133,7 +133,7 @@ export function dispatchEveningTool(name, args, addMsg = () => {}) {
       case 'save_moment': {
         // save_moment теж нереверсиво поки. Залишаємо як було.
         const moments = getMoments();
-        moments.push({ id: generateUUID(), text: args.text || '', mood: args.mood || 'neutral', ts: Date.now() });
+        moments.push(makeMoment({ text: args.text || '', mood: args.mood || 'neutral' }));
         saveMoments(moments);
         logRecentAction('save_moment', (args.text || '').slice(0, 40), 'evening');
         return { ok: true };
