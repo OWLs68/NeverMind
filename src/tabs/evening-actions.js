@@ -25,6 +25,7 @@ import { generateUUID } from '../core/uuid.js';
 import { getTasks, saveTasks, renderTasks } from './tasks.js';
 import { getHabits, saveHabits, getHabitLog, saveHabitLog, renderHabits, renderProdHabits } from './habits.js';
 import { makeHabit } from '../data/habit-classifier.js';
+import { makeEvent } from '../data/entity-factories.js';
 import { getNotes, saveNotes, addNoteFromInbox, renderNotes } from './notes.js';
 import { getEvents, saveEvents, addEventDedup } from './calendar.js';
 import { getFinance, saveFinance, renderFinance, processFinanceAction } from './finance.js';
@@ -147,7 +148,7 @@ export function dispatchEveningTool(name, args, addMsg = () => {}) {
         return { ok: true };
       }
       case 'create_event': {
-        const ev = { id: generateUUID(), title: args.title || t('default.event_title', 'Подія'), date: args.date, time: args.time || null, priority: args.priority || 'normal', createdAt: Date.now() };
+        const ev = makeEvent({ title: args.title || t('default.event_title', 'Подія'), date: args.date, time: args.time || null, priority: args.priority || 'normal' });
         const res = addEventDedup(ev);
         if (!res.added) return { ok: true, duplicate: true };
         // G3: ТIЛЬКИ якщо added — пишемо action-log (conditional dedup)
@@ -166,7 +167,7 @@ export function dispatchEveningTool(name, args, addMsg = () => {}) {
       case 'set_reminder': {
         // MVP: reminder як подія у календарі. Conditional dedup → manual logAction.
         const dateISO = args.date || new Date().toISOString().slice(0, 10);
-        const ev = { id: generateUUID(), title: '⏰ ' + (args.text || t('default.reminder_title', 'Нагадування')), date: dateISO, time: args.time || null, priority: 'important', createdAt: Date.now() };
+        const ev = makeEvent({ title: '⏰ ' + (args.text || t('default.reminder_title', 'Нагадування')), date: dateISO, time: args.time || null, priority: 'important' });
         const res = addEventDedup(ev);
         if (!res.added) return { ok: true, duplicate: true };
         // set_reminder reverse через delete_reminder by text fuzzy (без ID)

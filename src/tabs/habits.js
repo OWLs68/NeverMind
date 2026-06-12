@@ -8,6 +8,7 @@ import { escapeHtml, logRecentAction, extractJsonBlocks, parseContentChips, leve
 import { logUsage } from '../core/usage-meter.js';
 import { generateUUID } from '../core/uuid.js';
 import { makeHabit } from '../data/habit-classifier.js';
+import { makeEvent } from '../data/entity-factories.js';
 import { addToTrash, showUndoToast } from '../core/trash.js';
 import { callAIWithTools, getAIContext, getOWLPersonality, safeAgentReply, INBOX_TOOLS, handleChatError } from '../ai/core.js';
 import { UI_TOOLS_RULES, BASE_CHAT_RULES } from '../ai/prompts.js';
@@ -1011,7 +1012,7 @@ export function processUniversalAction(parsed, originalText, addMsg) {
     // Fallback: якщо AI створив task але це схоже на подію — конвертуємо в event
     const eventDetected = _detectEventFromTask(title);
     if (eventDetected) {
-      const ev = { id: generateUUID(), title: eventDetected.title || title, date: eventDetected.date, time: null, priority: parsed.priority || 'normal', createdAt: Date.now() };
+      const ev = makeEvent({ title: eventDetected.title || title, date: eventDetected.date, time: null, priority: parsed.priority || 'normal' });
       const res = addEventDedup(ev);
       if (!res.added) { addMsg('agent', t('habits.event.dup', 'Така подія "{title}" вже є в календарі.', { title: ev.title })); return true; }
       const dateObj = new Date(eventDetected.date);
@@ -1376,7 +1377,7 @@ export function processUniversalAction(parsed, originalText, addMsg) {
     if (parsed.time) {
       conflict = getEvents().find(e => e.date === resolvedDate && e.time === parsed.time && e.title !== title);
     }
-    const ev = { id: generateUUID(), title, date: resolvedDate, time: parsed.time || null, endTime, priority: parsed.priority || 'normal', createdAt: Date.now() };
+    const ev = makeEvent({ title, date: resolvedDate, time: parsed.time || null, endTime, priority: parsed.priority || 'normal' });
     const res = addEventDedup(ev);
     if (!res.added) { addMsg('agent', t('habits.event.dup', 'Така подія "{title}" вже є в календарі.', { title })); return true; }
     const dateObj = new Date(resolvedDate);
