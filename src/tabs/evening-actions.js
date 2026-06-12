@@ -24,6 +24,7 @@
 import { generateUUID } from '../core/uuid.js';
 import { getTasks, saveTasks, renderTasks } from './tasks.js';
 import { getHabits, saveHabits, getHabitLog, saveHabitLog, renderHabits, renderProdHabits } from './habits.js';
+import { inferHabitType } from '../data/habit-classifier.js';
 import { getNotes, saveNotes, addNoteFromInbox, renderNotes } from './notes.js';
 import { getEvents, saveEvents, addEventDedup } from './calendar.js';
 import { getFinance, saveFinance, renderFinance, processFinanceAction } from './finance.js';
@@ -139,7 +140,8 @@ export function dispatchEveningTool(name, args, addMsg = () => {}) {
       case 'save_habit': {
         withActionLog('save_habit', args, () => {
           const habits = getHabits();
-          habits.unshift({ id: generateUUID(), name: args.name, details: args.details || '', days: Array.isArray(args.days) ? args.days : [0,1,2,3,4,5,6], targetCount: args.target_count || 1, type: 'build', createdAt: Date.now() });
+          const habitType = inferHabitType(args.name);
+          habits.unshift({ id: generateUUID(), name: args.name, details: args.details || '', emoji: habitType === 'quit' ? '🚫' : '⭕', days: Array.isArray(args.days) ? args.days : [0,1,2,3,4,5,6], targetCount: args.target_count || 1, type: habitType, createdAt: Date.now() });
           saveHabits(habits);
           renderHabits();
         }, 'evening');
