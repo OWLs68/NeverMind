@@ -291,7 +291,7 @@
       createdAt: Date.now()
     });
   }
-  function makeFinance({ type, amount, category, comment = "", ts, subcategory } = {}) {
+  function makeFinance({ type, amount, category, comment = "", ts, subcategory, projectId } = {}) {
     const tx = {
       type,
       amount,
@@ -300,6 +300,7 @@
       ts: ts != null ? ts : Date.now()
     };
     if (subcategory) tx.subcategory = subcategory;
+    if (projectId) tx.projectId = projectId;
     return stampEntity(tx);
   }
   var init_entity_factories = __esm({
@@ -3620,13 +3621,14 @@ ${lines.join("\n")}`;
       </div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:${visibleSteps.length ? 8 : 0}px">
         ${p.tempo ? `<span style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:600">${t("projects.card.tempo_prefix", "\u041F\u0440\u0438 \u0442\u0435\u043C\u043F\u0456")}: ~${escapeHtml(p.tempo)}</span>` : "<span></span>"}
-        ${silenceWarn ? `<span style="font-size:10px;font-weight:700;color:#c2410c">${t("projects.card.silence_days", "{n} \u0434\u043D. \u0442\u0438\u0448\u0456", { n: silenceDays })}</span>` : ""}
+        ${silenceWarn ? `<span style="font-size:10px;font-weight:700;color:#c2790a">${t("projects.card.silence_days", "{n} \u0434\u043D \u0431\u0435\u0437 \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u044C", { n: silenceDays })}</span>` : ""}
       </div>
       ${visibleSteps.length > 0 ? visibleSteps.map((s) => `
         <div style="display:flex;align-items:center;gap:8px;padding:4px 0">
           <div style="width:16px;height:16px;border-radius:5px;border:1.5px solid ${s.done ? "#3d2e1e" : "rgba(30,16,64,0.18)"};background:${s.done ? "#3d2e1e" : "rgba(255,255,255,0.65)"};display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:9px;color:white">${s.done ? "\u2713" : ""}</div>
           <div style="font-size:12px;font-weight:${!s.done && s === nextStep ? 700 : 500};color:${s.done ? "rgba(30,16,64,0.3)" : !s.done && s === nextStep ? "#1e1040" : "rgba(30,16,64,0.55)"};${s.done ? "text-decoration:line-through" : ""};flex:1">${!s.done && s === nextStep ? "\u2192 " : ""}${escapeHtml(s.text)}</div>
-        </div>`).join("") : ""}
+        </div>`).join("") : `
+        <div style="font-size:11px;font-weight:600;color:rgba(30,16,64,0.4);padding:4px 0;font-style:italic">${t("projects.card.no_steps", "\u041A\u0440\u043E\u043A\u0438 \u0449\u0435 \u043D\u0435 \u0434\u043E\u0434\u0430\u043D\u0456 \u2014 \u0432\u0456\u0434\u043A\u0440\u0438\u0439 \u0456 \u0437\u0430\u043F\u0438\u0442\u0430\u0439 OWL")}</div>`}
       <!-- \u041D\u043E\u0442\u0430\u0442\u043A\u0438 -->
       <div style="margin-top:${visibleSteps.length ? 8 : 0}px;display:flex;align-items:center;gap:6px;background:rgba(255,255,255,0.45);border:1px dashed rgba(30,16,64,0.12);border-radius:9px;padding:6px 9px">
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.3)" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/></svg>
@@ -3708,7 +3710,21 @@ ${lines.join("\n")}`;
     const decisions = p.decisions || [];
     const risks = p.risks || "";
     const resources = p.resources || [];
-    const spentPct = budget.total > 0 ? Math.min(100, Math.round(budget.spent / budget.total * 100)) : 0;
+    let projectSpent = 0;
+    try {
+      projectSpent = getFinance().filter((tx) => tx && tx.projectId === p.id && tx.type === "expense").reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0);
+    } catch (e) {
+    }
+    const budgetSpent = projectSpent || budget.spent || 0;
+    const spentPct = budget.total > 0 ? Math.min(100, Math.round(budgetSpent / budget.total * 100)) : 0;
+    const hasTempo = [p.tempoNow, p.tempoMore, p.tempoIdeal].some((v) => v && v !== "?");
+    const isNewProject = steps.length === 0;
+    const noteCount = _countProjectNotes(p.name);
+    const emptyChips = isNewProject ? [
+      { label: t("projects.empty.chip_plan", "\u{1F4CB} \u0421\u043A\u043B\u0430\u0434\u0438 \u043F\u043B\u0430\u043D"), prompt: t("projects.empty.prompt_plan", "\u0421\u043A\u043B\u0430\u0434\u0438 \u043F\u043B\u0430\u043D \u043F\u0435\u0440\u0448\u0438\u0445 \u043A\u0440\u043E\u043A\u0456\u0432 \u0434\u043B\u044F \u0446\u044C\u043E\u0433\u043E \u043F\u0440\u043E\u0435\u043A\u0442\u0443") },
+      { label: t("projects.empty.chip_budget", "\u{1F4B0} \u0411\u044E\u0434\u0436\u0435\u0442 \u0456 \u0442\u0435\u043C\u043F"), prompt: t("projects.empty.prompt_budget", "\u0414\u043E\u043F\u043E\u043C\u043E\u0436\u0438 \u043E\u0446\u0456\u043D\u0438\u0442\u0438 \u0431\u044E\u0434\u0436\u0435\u0442 \u0456 \u0442\u0435\u043C\u043F \u0440\u043E\u0431\u043E\u0442\u0438 \u0434\u043B\u044F \u0446\u044C\u043E\u0433\u043E \u043F\u0440\u043E\u0435\u043A\u0442\u0443") },
+      { label: t("projects.empty.chip_risks", "\u26A0\uFE0F \u042F\u043A\u0456 \u0440\u0438\u0437\u0438\u043A\u0438"), prompt: t("projects.empty.prompt_risks", "\u042F\u043A\u0456 \u0433\u043E\u043B\u043E\u0432\u043D\u0456 \u0440\u0438\u0437\u0438\u043A\u0438 \u0456 \u0441\u043A\u043B\u0430\u0434\u043D\u043E\u0449\u0456 \u0432 \u0446\u044C\u043E\u043C\u0443 \u043F\u0440\u043E\u0435\u043A\u0442\u0456?") }
+    ] : [];
     const scrollEl = document.getElementById("projects-scroll");
     if (!scrollEl) return;
     scrollEl.innerHTML = `
@@ -3732,32 +3748,43 @@ ${lines.join("\n")}`;
       <div style="height:6px;background:rgba(30,16,64,0.07);border-radius:4px;overflow:hidden;margin-bottom:10px">
         <div style="height:100%;width:${pct}%;background:#3d2e1e;border-radius:4px;transition:width 0.5s"></div>
       </div>
-      <!-- 3 \u0441\u0446\u0435\u043D\u0430\u0440\u0456\u0457 -->
-      <div style="display:flex;gap:5px">
+      ${hasTempo ? `<div style="display:flex;gap:5px">
         <div style="flex:1;border-radius:9px;padding:7px 5px;text-align:center;background:rgba(30,16,64,0.04);border:1px solid rgba(30,16,64,0.07)">
-          <div style="font-size:13px;font-weight:800;color:#1e1040">${p.tempoNow || "?"}</div>
+          <div style="font-size:13px;font-weight:800;color:#1e1040">${escapeHtml(p.tempoNow && p.tempoNow !== "?" ? p.tempoNow : "\u2014")}</div>
           <div style="font-size:9px;font-weight:600;color:rgba(30,16,64,0.38);margin-top:1px">${t("projects.tempo.now", "\u0437\u0430\u0440\u0430\u0437")}</div>
         </div>
         <div style="flex:1;border-radius:9px;padding:7px 5px;text-align:center;background:rgba(234,88,12,0.06);border:1px solid rgba(234,88,12,0.12)">
-          <div style="font-size:13px;font-weight:800;color:#ea580c">${p.tempoMore || "?"}</div>
+          <div style="font-size:13px;font-weight:800;color:#ea580c">${escapeHtml(p.tempoMore && p.tempoMore !== "?" ? p.tempoMore : "\u2014")}</div>
           <div style="font-size:9px;font-weight:600;color:rgba(234,88,12,0.5);margin-top:1px">${t("projects.tempo.more", "+1\u0433\u043E\u0434/\u0434\u0435\u043D\u044C")}</div>
         </div>
         <div style="flex:1;border-radius:9px;padding:7px 5px;text-align:center;background:rgba(22,163,74,0.06);border:1px solid rgba(22,163,74,0.14)">
-          <div style="font-size:13px;font-weight:800;color:#16a34a">${p.tempoIdeal || "?"}</div>
+          <div style="font-size:13px;font-weight:800;color:#16a34a">${escapeHtml(p.tempoIdeal && p.tempoIdeal !== "?" ? p.tempoIdeal : "\u2014")}</div>
           <div style="font-size:9px;font-weight:600;color:rgba(22,163,74,0.5);margin-top:1px">${t("projects.tempo.ideal", "\u0456\u0434\u0435\u0430\u043B\u044C\u043D\u043E")}</div>
         </div>
-      </div>
+      </div>` : ""}
     </div>
 
+    ${isNewProject ? `<div class="card-glass" style="text-align:center">
+      <div style="font-size:26px;margin-bottom:6px">\u2728</div>
+      <div style="font-size:14px;font-weight:800;color:#1e1040;margin-bottom:4px">${t("projects.empty.title", "\u041F\u0440\u043E\u0435\u043A\u0442 \u0449\u043E\u0439\u043D\u043E \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E")}</div>
+      <div style="font-size:12px;font-weight:500;color:rgba(30,16,64,0.5);line-height:1.5;margin-bottom:12px">${t("projects.empty.hint", "\u0420\u043E\u0437\u043A\u0430\u0436\u0438 OWL \u0437\u043D\u0438\u0437\u0443 \u043F\u0440\u043E \u0446\u0456\u043B\u044C \u0456 \u0440\u0435\u0441\u0443\u0440\u0441\u0438 \u2014 \u0432\u0456\u043D \u0441\u043A\u043B\u0430\u0434\u0435 \u043F\u043B\u0430\u043D \u043A\u0440\u043E\u043A\u0456\u0432, \u043F\u043E\u0440\u0430\u0445\u0443\u0454 \u0442\u0435\u043C\u043F \u0456 \u043F\u0456\u0434\u043A\u0430\u0436\u0435 \u0440\u0438\u0437\u0438\u043A\u0438.")}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center">
+        ${emptyChips.map((c) => `<button data-action="project-chat-prompt" data-prompt="${escapeHtml(c.prompt)}" style="font-size:12px;font-weight:700;color:#3d2e1e;background:rgba(61,46,30,0.08);border:1px solid rgba(61,46,30,0.15);border-radius:10px;padding:7px 12px;cursor:pointer">${escapeHtml(c.label)}</button>`).join("")}
+      </div>
+    </div>` : ""}
+
     <!-- \u0411\u044E\u0434\u0436\u0435\u0442 -->
-    ${budget.total > 0 || budget.items.length > 0 ? `<div class="card-glass">
+    ${budget.total > 0 || budget.items.length > 0 || budgetSpent > 0 ? `<div class="card-glass">
       <div class="section-label" style="margin-bottom:8px">${t("projects.section.budget", "\u0411\u044E\u0434\u0436\u0435\u0442 \u043F\u0440\u043E\u0435\u043A\u0442\u0443")}</div>
       ${budget.total > 0 ? `<div style="display:flex;justify-content:space-between;margin-bottom:5px">
         <span style="font-size:12px;font-weight:700;color:#1e1040">${t("projects.budget.spent", "\u0412\u0438\u0442\u0440\u0430\u0447\u0435\u043D\u043E")}</span>
-        <span style="font-size:12px;font-weight:900;color:#c2410c">${getCurrency()}${budget.spent} / ${getCurrency()}${budget.total}</span>
+        <span style="font-size:12px;font-weight:900;color:#c2410c">${getCurrency()}${budgetSpent} / ${getCurrency()}${budget.total}</span>
       </div>
       <div style="height:4px;background:rgba(30,16,64,0.07);border-radius:3px;overflow:hidden;margin-bottom:8px">
         <div style="height:100%;width:${spentPct}%;background:#c2410c;border-radius:3px"></div>
+      </div>` : budgetSpent > 0 ? `<div style="display:flex;justify-content:space-between;margin-bottom:8px">
+        <span style="font-size:12px;font-weight:700;color:#1e1040">${t("projects.budget.spent", "\u0412\u0438\u0442\u0440\u0430\u0447\u0435\u043D\u043E")}</span>
+        <span style="font-size:12px;font-weight:900;color:#c2410c">${getCurrency()}${budgetSpent}</span>
       </div>` : ""}
       ${budget.items.map((item, i) => `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;${i < budget.items.length - 1 ? "border-bottom:1px solid rgba(30,16,64,0.05)" : ""}">
         <span style="font-size:12px;font-weight:600;color:rgba(30,16,64,0.55)">${escapeHtml(item.name)}</span>
@@ -3829,7 +3856,7 @@ ${lines.join("\n")}`;
       </div>
       <div style="flex:1">
         <div style="font-size:13px;font-weight:700;color:#1e1040">${t("projects.notes.title", "\u041D\u043E\u0442\u0430\u0442\u043A\u0438 \u043F\u0440\u043E\u0435\u043A\u0442\u0443")}</div>
-        <div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:600;margin-top:1px">${t("projects.notes.count_in_folder", '{n} \u0437\u0430\u043F\u0438\u0441\u0456\u0432 \u0443 \u043F\u0430\u043F\u0446\u0456 "{name}" \u2192', { n: _countProjectNotes(p.name), name: escapeHtml(p.name) })}</div>
+        <div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:600;margin-top:1px">${noteCount > 0 ? t("projects.notes.count_in_folder", '{n} \u0437\u0430\u043F\u0438\u0441\u0456\u0432 \u0443 \u043F\u0430\u043F\u0446\u0456 "{name}" \u2192', { n: noteCount, name: escapeHtml(p.name) }) : t("projects.notes.empty_cta", "\u0414\u043E\u0434\u0430\u0439 \u043F\u0435\u0440\u0448\u0443 \u0434\u0443\u043C\u043A\u0443 \u043F\u043E \u043F\u0440\u043E\u0435\u043A\u0442\u0443 \u2192")}</div>
       </div>
       <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="rgba(30,16,64,0.25)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
     </div>
@@ -3895,11 +3922,13 @@ ${lines.join("\n")}`;
   function _syncProjectStepToTasks(project, step) {
     try {
       if (!step.done) return;
+      const stepTitle = (step.text || "").trim().toLowerCase();
+      if (!stepTitle) return;
       const tasks = getTasks();
-      const match = tasks.find((t2) => t2.status === "active" && t2.title.toLowerCase().includes(step.text.toLowerCase().substring(0, 15)));
-      if (match) {
-        match.status = "done";
-        match.completedAt = Date.now();
+      const matches = tasks.filter((t2) => t2.status === "active" && (t2.title || "").trim().toLowerCase() === stepTitle);
+      if (matches.length === 1) {
+        matches[0].status = "done";
+        matches[0].completedAt = Date.now();
         saveTasks(tasks);
       }
     } catch (e) {
@@ -3927,10 +3956,13 @@ ${lines.join("\n")}`;
     saveProjects(projects);
     closeProjectModal();
     openProjectWorkspace(newProject.id);
-    setTimeout(() => startProjectInboxInterview(name, subtitle), 600);
+    setTimeout(() => startProjectInboxInterview(name, subtitle, newProject.id), 600);
   }
-  async function startProjectInboxInterview(projectName, projectSubtitle) {
+  async function startProjectInboxInterview(projectName, projectSubtitle, projectId) {
     if (currentTab !== "inbox") switchTab("inbox");
+    localStorage.removeItem("nm_project_interview_answers");
+    if (projectId) localStorage.setItem("nm_project_interview_id", String(projectId));
+    else localStorage.removeItem("nm_project_interview_id");
     const key = localStorage.getItem("nm_gemini_key");
     if (!key) {
       setTimeout(() => addInboxChatMsg(
@@ -4040,6 +4072,12 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
     if (projectsBarHistory.length > 20) projectsBarHistory = projectsBarHistory.slice(-20);
     if (!_noSave) saveChatMsg("projects", role, text, chips);
   }
+  function sendProjectsBarPrompt(text) {
+    const input = document.getElementById("projects-bar-input");
+    if (!input || !text) return;
+    input.value = text;
+    sendProjectsBarMessage();
+  }
   async function sendProjectsBarMessage() {
     if (projectsBarLoading) return;
     const input = document.getElementById("projects-bar-input");
@@ -4128,6 +4166,7 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
         saveNewProject,
         closeProjectModal,
         sendProjectsBarMessage,
+        sendProjectsBarPrompt,
         openProjectWorkspace,
         closeProjectWorkspace,
         toggleProjectTimeline,
@@ -6711,7 +6750,7 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     const aiSuggestedSubcategory = subRes.aiSuggested;
     const ts = resolveFinanceDate(parsed.date, originalText, Date.now());
     const txs = getFinance();
-    const tx = makeFinance({ type, amount, category, comment, ts, subcategory });
+    const tx = makeFinance({ type, amount, category, comment, ts, subcategory, projectId: parsed.project_id });
     txs.unshift(tx);
     saveFinance(txs);
     logAction("save_finance", {
@@ -8206,7 +8245,8 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
       "add_project_metric",
       "add_project_resource",
       "update_project_tempo",
-      "update_project_risks"
+      "update_project_risks",
+      "set_project_budget"
     ].includes(name)) return false;
     const projs = getProjects();
     const p = projs.find((x) => x.id === args.project_id);
@@ -8267,6 +8307,16 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
         p.risks = args.risks || "";
         break;
       }
+      case "set_project_budget": {
+        if (!p.budget) p.budget = { total: 0, spent: 0, items: [] };
+        if (typeof args.total === "number") p.budget.total = args.total;
+        if (args.item_name && typeof args.item_amount === "number") {
+          if (!p.budget.items) p.budget.items = [];
+          p.budget.items.push({ name: args.item_name, amount: args.item_amount });
+        }
+        p.lastActivity = Date.now();
+        break;
+      }
     }
     saveProjects(projs);
     if (currentTab === "projects") renderProjects();
@@ -8278,7 +8328,8 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
       add_project_metric: `\u2713 \u041C\u0435\u0442\u0440\u0438\u043A\u0430 "${args.label}: ${args.value}" \u0434\u043E\u0434\u0430\u043D\u0430`,
       add_project_resource: `\u2713 \u0420\u0435\u0441\u0443\u0440\u0441 "${args.title}" \u0434\u043E\u0434\u0430\u043D\u043E`,
       update_project_tempo: "\u2713 \u0422\u0435\u043C\u043F \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043E",
-      update_project_risks: "\u2713 \u0420\u0438\u0437\u0438\u043A\u0438 \u0437\u0430\u043F\u0438\u0441\u0430\u043D\u043E"
+      update_project_risks: "\u2713 \u0420\u0438\u0437\u0438\u043A\u0438 \u0437\u0430\u043F\u0438\u0441\u0430\u043D\u043E",
+      set_project_budget: `\u2713 \u0411\u044E\u0434\u0436\u0435\u0442 \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043E${typeof args.total === "number" ? `: ${args.total}` : ""}`
     };
     addMsg("agent", labels[name] + (args.comment ? ` \xB7 ${args.comment}` : ""));
     return true;
@@ -8387,7 +8438,7 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
         }
         setTimeout(() => {
           try {
-            startProjectInboxInterview(newProject.name, newProject.subtitle);
+            startProjectInboxInterview(newProject.name, newProject.subtitle, newProject.id);
           } catch (e) {
           }
         }, 700);
@@ -12839,12 +12890,14 @@ ${BASE_CHAT_RULES}
 - \u0420\u0435\u0441\u0443\u0440\u0441\u0438 \u2192 add_project_resource (type: \u041A\u043D\u0438\u0433\u0430/\u0421\u043F\u0456\u043B\u044C\u043D\u043E\u0442\u0430/\u0406\u043D\u0441\u0442\u0440\u0443\u043C\u0435\u043D\u0442/\u0421\u0442\u0430\u0442\u0442\u044F + title + url)
 - \u0422\u0435\u043C\u043F \u2192 update_project_tempo (tempoNow/tempoMore/tempoIdeal)
 - \u0420\u0438\u0437\u0438\u043A\u0438 \u2192 update_project_risks
+- \u0411\u044E\u0434\u0436\u0435\u0442 \u2192 set_project_budget (total = \u043F\u043B\u0430\u043D\u043E\u0432\u0438\u0439 \u0431\u044E\u0434\u0436\u0435\u0442; item_name+item_amount = \u043F\u043B\u0430\u043D\u043E\u0432\u0430 \u0441\u0442\u0430\u0442\u0442\u044F)
 - \u041D\u043E\u0432\u0456 \u043F\u0440\u043E\u0435\u043A\u0442\u0438 \u2192 create_project
 - \u0423\u043D\u0456\u0432\u0435\u0440\u0441\u0430\u043B\u044C\u043D\u0456 \u2192 save_task / create_event / save_note / save_finance / save_moment / save_memory_fact / set_reminder \u0442\u043E\u0449\u043E
 - \u041D\u0430\u0432\u0456\u0433\u0430\u0446\u0456\u044F \u2192 UI tools (switch_tab, open_memory \u0442\u043E\u0449\u043E)
 
 \u041F\u0420\u0410\u0412\u0418\u041B\u0410 (project-\u0441\u043F\u0435\u0446\u0438\u0444\u0456\u043A\u0430):
 - \u041D\u0435 \u0432\u0438\u0433\u0430\u0434\u0443\u0439 \u0434\u0430\u043D\u0438\u0445 \u044F\u043A\u0438\u0445 \u043D\u0435\u043C\u0430 \u0443 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0456. \u042F\u043A\u0449\u043E \u043D\u0435\u0437\u0440\u043E\u0437\u0443\u043C\u0456\u043B\u043E \u2014 \u043F\u0435\u0440\u0435\u043F\u0438\u0442\u0443\u0439.
+- \u0412\u0438\u0442\u0440\u0430\u0442\u0430/\u0434\u043E\u0445\u0456\u0434 \u0441\u0442\u043E\u0441\u0443\u0454\u0442\u044C\u0441\u044F \u0430\u043A\u0442\u0438\u0432\u043D\u043E\u0433\u043E \u043F\u0440\u043E\u0435\u043A\u0442\u0443 \u2192 save_finance \u0437 project_id=ID \u0430\u043A\u0442\u0438\u0432\u043D\u043E\u0433\u043E \u043F\u0440\u043E\u0435\u043A\u0442\u0443 (\u0444\u0430\u043A\u0442\u0438\u0447\u043D\u0456 \u0432\u0438\u0442\u0440\u0430\u0442\u0438 \u0439\u0434\u0443\u0442\u044C \u0443 \u0431\u044E\u0434\u0436\u0435\u0442 \u043F\u0440\u043E\u0435\u043A\u0442\u0443).
 
 \u0406\u043D\u0430\u043A\u0448\u0435 \u2014 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0442\u0435\u043A\u0441\u0442\u043E\u043C 1-3 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E.
 
@@ -13255,7 +13308,7 @@ ${CHIP_PROMPT_RULES}`;
         { type: "function", function: { name: "save_habit", description: "\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u041D\u041E\u0412\u0423 \u0440\u0435\u0433\u0443\u043B\u044F\u0440\u043D\u0443 \u043F\u043E\u0432\u0442\u043E\u0440\u044E\u0432\u0430\u043D\u0443 \u0437\u0432\u0438\u0447\u043A\u0443. \u0429\u043E\u0434\u043D\u044F, \u043A\u043E\u0436\u0435\u043D \u0440\u0430\u043D\u043E\u043A, \u0442\u0440\u0438\u0447\u0456 \u043D\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C.", parameters: { type: "object", properties: { _reasoning_log: { type: "string", description: "CoT \u2014 1-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u041E\u0411\u041E\u0412\u02BC\u042F\u0417\u041A\u041E\u0412\u041E (\u0434\u0438\u0432. REASONING_LOG_RULE)." }, name: { type: "string", description: "\u041D\u0430\u0437\u0432\u0430 2-4 \u0441\u043B\u043E\u0432\u0430" }, details: { type: "string", description: "\u0414\u0435\u0442\u0430\u043B\u0456 \u044F\u043A\u0449\u043E \u0454" }, days: { type: "array", items: { type: "integer" }, description: "\u0414\u043D\u0456 \u0442\u0438\u0436\u043D\u044F: 0=\u041F\u043D,1=\u0412\u0442,2=\u0421\u0440,3=\u0427\u0442,4=\u041F\u0442,5=\u0421\u0431,6=\u041D\u0434. \u041F\u043E\u0440\u043E\u0436\u043D\u0456\u0439 \u043C\u0430\u0441\u0438\u0432 = \u0449\u043E\u0434\u043D\u044F" }, target_count: { type: "integer", description: "\u0420\u0430\u0437\u0456\u0432 \u043D\u0430 \u0434\u0435\u043D\u044C (8 \u0441\u043A\u043B\u044F\u043D\u043E\u043A = 8). \u0417\u0430 \u0437\u0430\u043C\u043E\u0432\u0447\u0443\u0432\u0430\u043D\u043D\u044F\u043C 1" }, comment: { type: "string", description: "\u041A\u043E\u0440\u043E\u0442\u043A\u0430 \u0440\u0435\u043C\u0430\u0440\u043A\u0430" } }, required: ["_reasoning_log", "name", "comment"], additionalProperties: false } } },
         { type: "function", function: { name: "save_moment", description: "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u043C\u043E\u043C\u0435\u043D\u0442 \u0434\u043D\u044F \u2014 \u0449\u043E \u0421\u0422\u0410\u041B\u041E\u0421\u042F (\u043C\u0438\u043D\u0443\u043B\u0438\u0439 \u0447\u0430\u0441), \u043A\u043E\u0440\u043E\u0442\u043A\u0438\u0439 \u0444\u0430\u043A\u0442 \u0411\u0415\u0417 \u0434\u0430\u0442\u0438 \u0432 \u043C\u0430\u0439\u0431\u0443\u0442\u043D\u044C\u043E\u043C\u0443: \u043F\u043E\u0457\u0445\u0430\u0432, \u0437\u0443\u0441\u0442\u0440\u0456\u0432\u0441\u044F, \u043F\u043E\u0431\u0430\u0447\u0438\u0432, \u0431\u0443\u0432 \u043D\u0430, \u0436\u0430\u0440\u0438\u043B\u0438, \u043F\u0438\u043B\u0438. \u{1F6AB} \u0417\u0410\u0411\u041E\u0420\u041E\u041D\u0415\u041D\u041E \u0432\u0438\u043A\u043B\u0438\u043A\u0430\u0442\u0438 create_event \u043F\u0430\u0440\u0430\u043B\u0435\u043B\u044C\u043D\u043E \u0437 save_moment \u2014 \u043E\u0431\u0435\u0440\u0438 \u041E\u0414\u041D\u0415. \u041C\u0438\u043D\u0443\u043B\u0438\u0439 \u0447\u0430\u0441 = save_moment. \u041C\u0430\u0439\u0431\u0443\u0442\u043D\u0454 = create_event.", strict: true, parameters: { type: "object", properties: { _reasoning_log: { type: "string", description: "CoT \u2014 1-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u041E\u0411\u041E\u0412\u02BC\u042F\u0417\u041A\u041E\u0412\u041E (\u0434\u0438\u0432. REASONING_LOG_RULE)." }, text: { type: "string", description: "\u0422\u0435\u043A\u0441\u0442 \u043C\u043E\u043C\u0435\u043D\u0442\u0443" }, mood: { type: "string", enum: ["positive", "neutral", "negative"] }, date: { type: ["string", "null"], description: "YYYY-MM-DD \u0434\u0430\u0442\u0430 \u041A\u041E\u041B\u0418 \u0446\u0435 \u0441\u0442\u0430\u043B\u043E\u0441\u044F. \u0412\u0418\u041A\u041E\u0420\u0418\u0421\u0422\u041E\u0412\u0423\u0419 null \u044F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u041D\u0415 \u0432\u043A\u0430\u0437\u0430\u0432 \u0434\u0430\u0442\u0443 \u042F\u0412\u041D\u041E \u2014 \u043A\u043E\u0434 \u0441\u0430\u043C \u0441\u043F\u0430\u0440\u0441\u0438\u0442\u044C \xAB\u0432\u0447\u043E\u0440\u0430\xBB/\xABN \u0434\u043D\u0456\u0432 \u0442\u043E\u043C\u0443\xBB/etc \u0447\u0435\u0440\u0435\u0437 ua-time-parser. \u041DI\u041A\u041E\u041B\u0418 \u043D\u0435 \u0432\u0438\u0433\u0430\u0434\u0443\u0439 \u0434\u0430\u0442\u0443 \u044F\u043A\u0449\u043E \u0442\u0435\u043A\u0441\u0442 \u044E\u0437\u0435\u0440\u0430 \u043D\u0435 \u043C\u0456\u0441\u0442\u0438\u0442\u044C \u0447\u0430\u0441\u043E\u0432\u043E\u0433\u043E \u043C\u0430\u0440\u043A\u0435\u0440\u0430. \u041D\u0435 \u043C\u0430\u0439\u0431\u0443\u0442\u043D\u0456 \u2014 \u0446\u0435 create_event." }, comment: { type: "string", description: "\u041A\u043E\u0440\u043E\u0442\u043A\u0430 \u0440\u0435\u043C\u0430\u0440\u043A\u0430" } }, required: ["_reasoning_log", "text", "mood", "date", "comment"], additionalProperties: false } } },
         { type: "function", function: { name: "create_event", description: "\u0417\u0430\u043F\u043B\u0430\u043D\u043E\u0432\u0430\u043D\u0430 \u043F\u043E\u0434\u0456\u044F \u0437 \u0434\u0430\u0442\u043E\u044E \u0432 \u041C\u0410\u0419\u0411\u0423\u0422\u041D\u042C\u041E\u041C\u0423: \u043F\u0440\u0438\u0457\u0437\u0434, \u0437\u0443\u0441\u0442\u0440\u0456\u0447, \u0434\u0435\u043D\u044C \u043D\u0430\u0440\u043E\u0434\u0436\u0435\u043D\u043D\u044F, \u043A\u043E\u043D\u0446\u0435\u0440\u0442, \u0432\u0456\u0437\u0438\u0442, \u043F\u0440\u0438\u0439\u043E\u043C, \u0440\u0435\u0439\u0441. \u041F\u041E\u0414\u0406\u042F = \u0444\u0430\u043A\u0442 \u0449\u043E \u0421\u0422\u0410\u041D\u0415\u0422\u042C\u0421\u042F, \u043D\u0435 \u0434\u0456\u044F \u044F\u043A\u0443 \u0442\u0440\u0435\u0431\u0430 \u0437\u0440\u043E\u0431\u0438\u0442\u0438. \u{1F6AB} \u0417\u0410\u0411\u041E\u0420\u041E\u041D\u0415\u041D\u041E: \u041D\u0415 \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0434\u043B\u044F \u0440\u0435\u0444\u043B\u0435\u043A\u0441\u0456\u0439, \u043F\u0456\u0434\u0441\u0443\u043C\u043A\u0456\u0432 \u0434\u043D\u044F, \u043E\u043F\u0438\u0441\u0456\u0432 \u0442\u043E\u0433\u043E \u0449\u043E \u0412\u0416\u0415 \u0421\u0422\u0410\u041B\u041E\u0421\u042F, \u0435\u043C\u043E\u0446\u0456\u0439, \u043E\u043F\u043E\u0432\u0456\u0434\u0430\u043D\u044C \u043F\u0440\u043E \u043C\u0438\u043D\u0443\u043B\u0435 \u2014 \u0446\u0435 save_moment \u0430\u0431\u043E save_note.", strict: true, parameters: { type: "object", properties: { _reasoning_log: { type: "string", description: "CoT \u2014 1-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u041E\u0411\u041E\u0412\u02BC\u042F\u0417\u041A\u041E\u0412\u041E (\u0434\u0438\u0432. REASONING_LOG_RULE)." }, title: { type: "string", description: "\u041D\u0430\u0437\u0432\u0430 2-5 \u0441\u043B\u0456\u0432" }, date: { type: ["string", "null"], description: "YYYY-MM-DD \u044F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u0432\u043A\u0430\u0437\u0430\u0432 \u042F\u0412\u041D\u041E (\xAB\u0437\u0430\u0432\u0442\u0440\u0430\xBB/\xAB\u0443 \u0432\u0456\u0432\u0442\u043E\u0440\u043E\u043A\xBB/\xAB15 \u0442\u0440\u0430\u0432\u043D\u044F\xBB). null \u044F\u043A\u0449\u043E \u043D\u0435\u043C\u0430\u0454 \u0447\u0430\u0441\u043E\u0432\u043E\u0433\u043E \u043C\u0430\u0440\u043A\u0435\u0440\u0430 \u2014 \u043A\u043E\u0434 \u0441\u0430\u043C \u0441\u043F\u0430\u0440\u0441\u0438\u0442\u044C \u0447\u0435\u0440\u0435\u0437 ua-time-parser. \u041DI\u041A\u041E\u041B\u0418 \u043D\u0435 \u0432\u0438\u0433\u0430\u0434\u0443\u0439 \u0434\u0430\u0442\u0443." }, time: { type: ["string", "null"], description: "HH:MM \u0422I\u041B\u042C\u041A\u0418 \u044F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u0441\u043A\u0430\u0437\u0430\u0432 \u042F\u0412\u041D\u0423 \u0433\u043E\u0434\u0438\u043D\u0443: '\u043E 19', '10 \u0440\u0430\u043D\u043A\u0443', '\u043F\u0456\u0441\u043B\u044F \u043E\u0431\u0456\u0434\u0443'. \u0411\u0415\u0417 \u042F\u0412\u041D\u041E\u0407 \u0413\u041E\u0414\u0418\u041D\u0418 \u2014 null. \u0417\u0410\u0411\u041E\u0420\u041E\u041D\u0415\u041D\u041E: '\u0442\u0440\u0435\u043D\u0443\u0432\u0430\u043D\u043D\u044F\u2192\u0432\u0435\u0447\u0456\u0440', '\u043E\u0431\u0456\u0434\u219213:00' (\u0446\u0435 \u0430\u0441\u043E\u0446\u0456\u0430\u0446\u0456\u0457, \u043D\u0435 \u0432\u043A\u0430\u0437\u0456\u0432\u043A\u0438)." }, end_time: { type: ["string", "null"], description: "HH:MM \u043A\u0456\u043D\u0435\u0446\u044C \u044F\u043A\u0449\u043E \u0454 \u0442\u0440\u0438\u0432\u0430\u043B\u0456\u0441\u0442\u044C: '\u0437 14 \u0434\u043E 16' \u2192 16:00; '\u043D\u0430 \u0433\u043E\u0434\u0438\u043D\u0443' \u2192 time+1. \u0411\u0435\u0437 \u044F\u0432\u043D\u043E\u0457 \u0442\u0440\u0438\u0432\u0430\u043B\u043E\u0441\u0442\u0456 \u2014 null." }, priority: { type: ["string", "null"], enum: ["normal", "important", "critical", null], description: "null \u044F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u043D\u0435 \u0432\u043A\u0430\u0437\u0430\u0432 \u0432\u0430\u0436\u043B\u0438\u0432\u043E\u0441\u0442\u0456" }, comment: { type: "string", description: "\u041A\u043E\u0440\u043E\u0442\u043A\u0430 \u0440\u0435\u043C\u0430\u0440\u043A\u0430" } }, required: ["_reasoning_log", "title", "date", "time", "end_time", "priority", "comment"], additionalProperties: false } } },
-        { type: "function", function: { name: "save_finance", description: "\u0417\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u0432\u0438\u0442\u0440\u0430\u0442\u0443 \u0430\u0431\u043E \u0434\u043E\u0445\u0456\u0434 \u2014 \u0454 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0430 \u0441\u0443\u043C\u0430 \u0433\u0440\u043E\u0448\u0435\u0439.", parameters: { type: "object", properties: { _reasoning_log: { type: "string", description: "CoT \u2014 1-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u041E\u0411\u041E\u0412\u02BC\u042F\u0417\u041A\u041E\u0412\u041E (\u0434\u0438\u0432. REASONING_LOG_RULE)." }, fin_type: { type: "string", enum: ["expense", "income"] }, amount: { type: "number", description: "\u0421\u0443\u043C\u0430" }, category: { type: "string", description: "\u0411\u0435\u0440\u0438 \u0422I\u041B\u042C\u041A\u0418 \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443 '\u041A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457 \u0432\u0438\u0442\u0440\u0430\u0442 \u0437 \u043F\u0456\u0434\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F\u043C\u0438' (\u0434\u043B\u044F expense) \u0430\u0431\u043E '\u041A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457 \u0434\u043E\u0445\u043E\u0434\u0456\u0432 \u0437 \u043F\u0456\u0434\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F\u043C\u0438' (\u0434\u043B\u044F income). \u{1F6AB} \u0417\u0410\u0411\u041E\u0420\u041E\u041D\u0415\u041D\u041E \u0432\u0438\u0433\u0430\u0434\u0443\u0432\u0430\u0442\u0438 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457 \u044F\u043A\u0438\u0445 \u043D\u0435\u043C\u0430\u0454 \u0443 \u044E\u0437\u0435\u0440\u0430. \u042F\u043A\u0449\u043E \u043D\u0435\u043C\u0430\u0454 \u043F\u0456\u0434\u0445\u043E\u0434\u044F\u0449\u043E\u0457 \u2014 \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 '\u0406\u043D\u0448\u0435' (\u0432\u043E\u043D\u0430 \u0437\u0430\u0432\u0436\u0434\u0438 \u0454 \u0437\u0430 \u0437\u0430\u043C\u043E\u0432\u0447\u0443\u0432\u0430\u043D\u043D\u044F\u043C)." }, subcategory: { type: "string", description: "\u041E\u041F\u0426\u0406\u0419\u041D\u0415 \u043F\u043E\u043B\u0435. \u042F\u043A\u0449\u043E \u0443 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0456 '\u041A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457 \u0432\u0438\u0442\u0440\u0430\u0442 \u0437 \u043F\u0456\u0434\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F\u043C\u0438' \u0441\u043F\u0438\u0441\u043E\u043A \u0404 \u2014 \u0441\u043F\u0440\u043E\u0431\u0443\u0439 \u043F\u0456\u0434\u0456\u0431\u0440\u0430\u0442\u0438 \u043D\u0430\u0439\u0431\u043B\u0438\u0436\u0447\u0443 \u0437\u0430 \u0456\u043C\u0435\u043D\u043D\u0438\u043A\u043E\u043C \u044E\u0437\u0435\u0440\u0430 ('80 \u0431\u0435\u043D\u0437\u0438\u043D' \u2192 \u0422\u0440\u0430\u043D\u0441\u043F\u043E\u0440\u0442/\u041F\u0430\u043B\u0438\u0432\u043E, '50 \u043A\u0430\u0432\u0430' \u2192 \u0407\u0436\u0430/\u041A\u0430\u0444\u0435). \u{1F6AB} \u0417\u0410\u0411\u041E\u0420\u041E\u041D\u0415\u041D\u041E \u0432\u0438\u0433\u0430\u0434\u0443\u0432\u0430\u0442\u0438 \u043F\u0456\u0434\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457 \u044F\u043A\u0438\u0445 \u041D\u0415\u041C\u0410\u0404 \u0443 \u0441\u043F\u0438\u0441\u043A\u0443 '\u041A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457 \u0432\u0438\u0442\u0440\u0430\u0442 \u0437 \u043F\u0456\u0434\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F\u043C\u0438'. \u042F\u043A\u0449\u043E \u043D\u0435\u043C\u0430\u0454 \u043F\u0456\u0434\u0445\u043E\u0434\u044F\u0449\u043E\u0457 \u0443 \u044E\u0437\u0435\u0440\u0430 \u2014 \u041F\u0420\u041E\u041F\u0423\u0421\u0422\u0418 \u043F\u043E\u043B\u0435 \u0411\u0415\u0417 \u043F\u0435\u0440\u0435\u043F\u0438\u0442\u0443. \u041A\u0440\u0430\u0449\u0435 \u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E \u043D\u0456\u0436 \u0432\u0438\u0433\u0430\u0434\u043A\u0430. \u{1F6AB} \u041DI\u041A\u041E\u041B\u0418 \u043D\u0435 \u0437\u0430\u043F\u0438\u0442\u0443\u0439 \u044E\u0437\u0435\u0440\u0430 \u0443 content \u043F\u0440\u043E \u043F\u0456\u0434\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E \u2014 \u0446\u0435 \u043E\u043F\u0446\u0456\u0439\u043D\u0430 \u043C\u0435\u0442\u0430\u0434\u0430\u0442\u0430, \u043D\u0435 \u0431\u043B\u043E\u043A\u0443\u0454 save_finance." }, fin_comment: { type: "string", description: "\u041A\u043E\u0440\u043E\u0442\u043A\u0438\u0439 \u043E\u043F\u0438\u0441 \u0411\u0415\u0417 \u0441\u0443\u043C\u0438, 1-3 \u0441\u043B\u043E\u0432\u0430" }, date: { type: "string", description: "YYYY-MM-DD \u0442\u0456\u043B\u044C\u043A\u0438 \u044F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u0432\u043A\u0430\u0437\u0430\u0432 \u0434\u0430\u0442\u0443 \u0430\u0431\u043E \u0432\u0447\u043E\u0440\u0430/\u043F\u043E\u0437\u0430\u0432\u0447\u043E\u0440\u0430" } }, required: ["_reasoning_log", "fin_type", "amount", "category", "fin_comment"], additionalProperties: false } } },
+        { type: "function", function: { name: "save_finance", description: "\u0417\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u0432\u0438\u0442\u0440\u0430\u0442\u0443 \u0430\u0431\u043E \u0434\u043E\u0445\u0456\u0434 \u2014 \u0454 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0430 \u0441\u0443\u043C\u0430 \u0433\u0440\u043E\u0448\u0435\u0439.", parameters: { type: "object", properties: { _reasoning_log: { type: "string", description: "CoT \u2014 1-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u041E\u0411\u041E\u0412\u02BC\u042F\u0417\u041A\u041E\u0412\u041E (\u0434\u0438\u0432. REASONING_LOG_RULE)." }, fin_type: { type: "string", enum: ["expense", "income"] }, amount: { type: "number", description: "\u0421\u0443\u043C\u0430" }, category: { type: "string", description: "\u0411\u0435\u0440\u0438 \u0422I\u041B\u042C\u041A\u0418 \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443 '\u041A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457 \u0432\u0438\u0442\u0440\u0430\u0442 \u0437 \u043F\u0456\u0434\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F\u043C\u0438' (\u0434\u043B\u044F expense) \u0430\u0431\u043E '\u041A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457 \u0434\u043E\u0445\u043E\u0434\u0456\u0432 \u0437 \u043F\u0456\u0434\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F\u043C\u0438' (\u0434\u043B\u044F income). \u{1F6AB} \u0417\u0410\u0411\u041E\u0420\u041E\u041D\u0415\u041D\u041E \u0432\u0438\u0433\u0430\u0434\u0443\u0432\u0430\u0442\u0438 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457 \u044F\u043A\u0438\u0445 \u043D\u0435\u043C\u0430\u0454 \u0443 \u044E\u0437\u0435\u0440\u0430. \u042F\u043A\u0449\u043E \u043D\u0435\u043C\u0430\u0454 \u043F\u0456\u0434\u0445\u043E\u0434\u044F\u0449\u043E\u0457 \u2014 \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 '\u0406\u043D\u0448\u0435' (\u0432\u043E\u043D\u0430 \u0437\u0430\u0432\u0436\u0434\u0438 \u0454 \u0437\u0430 \u0437\u0430\u043C\u043E\u0432\u0447\u0443\u0432\u0430\u043D\u043D\u044F\u043C)." }, subcategory: { type: "string", description: "\u041E\u041F\u0426\u0406\u0419\u041D\u0415 \u043F\u043E\u043B\u0435. \u042F\u043A\u0449\u043E \u0443 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0456 '\u041A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457 \u0432\u0438\u0442\u0440\u0430\u0442 \u0437 \u043F\u0456\u0434\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F\u043C\u0438' \u0441\u043F\u0438\u0441\u043E\u043A \u0404 \u2014 \u0441\u043F\u0440\u043E\u0431\u0443\u0439 \u043F\u0456\u0434\u0456\u0431\u0440\u0430\u0442\u0438 \u043D\u0430\u0439\u0431\u043B\u0438\u0436\u0447\u0443 \u0437\u0430 \u0456\u043C\u0435\u043D\u043D\u0438\u043A\u043E\u043C \u044E\u0437\u0435\u0440\u0430 ('80 \u0431\u0435\u043D\u0437\u0438\u043D' \u2192 \u0422\u0440\u0430\u043D\u0441\u043F\u043E\u0440\u0442/\u041F\u0430\u043B\u0438\u0432\u043E, '50 \u043A\u0430\u0432\u0430' \u2192 \u0407\u0436\u0430/\u041A\u0430\u0444\u0435). \u{1F6AB} \u0417\u0410\u0411\u041E\u0420\u041E\u041D\u0415\u041D\u041E \u0432\u0438\u0433\u0430\u0434\u0443\u0432\u0430\u0442\u0438 \u043F\u0456\u0434\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457 \u044F\u043A\u0438\u0445 \u041D\u0415\u041C\u0410\u0404 \u0443 \u0441\u043F\u0438\u0441\u043A\u0443 '\u041A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457 \u0432\u0438\u0442\u0440\u0430\u0442 \u0437 \u043F\u0456\u0434\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F\u043C\u0438'. \u042F\u043A\u0449\u043E \u043D\u0435\u043C\u0430\u0454 \u043F\u0456\u0434\u0445\u043E\u0434\u044F\u0449\u043E\u0457 \u0443 \u044E\u0437\u0435\u0440\u0430 \u2014 \u041F\u0420\u041E\u041F\u0423\u0421\u0422\u0418 \u043F\u043E\u043B\u0435 \u0411\u0415\u0417 \u043F\u0435\u0440\u0435\u043F\u0438\u0442\u0443. \u041A\u0440\u0430\u0449\u0435 \u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E \u043D\u0456\u0436 \u0432\u0438\u0433\u0430\u0434\u043A\u0430. \u{1F6AB} \u041DI\u041A\u041E\u041B\u0418 \u043D\u0435 \u0437\u0430\u043F\u0438\u0442\u0443\u0439 \u044E\u0437\u0435\u0440\u0430 \u0443 content \u043F\u0440\u043E \u043F\u0456\u0434\u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E \u2014 \u0446\u0435 \u043E\u043F\u0446\u0456\u0439\u043D\u0430 \u043C\u0435\u0442\u0430\u0434\u0430\u0442\u0430, \u043D\u0435 \u0431\u043B\u043E\u043A\u0443\u0454 save_finance." }, fin_comment: { type: "string", description: "\u041A\u043E\u0440\u043E\u0442\u043A\u0438\u0439 \u043E\u043F\u0438\u0441 \u0411\u0415\u0417 \u0441\u0443\u043C\u0438, 1-3 \u0441\u043B\u043E\u0432\u0430" }, date: { type: "string", description: "YYYY-MM-DD \u0442\u0456\u043B\u044C\u043A\u0438 \u044F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u0432\u043A\u0430\u0437\u0430\u0432 \u0434\u0430\u0442\u0443 \u0430\u0431\u043E \u0432\u0447\u043E\u0440\u0430/\u043F\u043E\u0437\u0430\u0432\u0447\u043E\u0440\u0430" }, project_id: { type: "string", description: "\u041E\u041F\u0426\u0406\u0419\u041D\u0415. UUID \u0430\u043A\u0442\u0438\u0432\u043D\u043E\u0433\u043E \u043F\u0440\u043E\u0435\u043A\u0442\u0443 \u044F\u043A\u0449\u043E \u0432\u0438\u0442\u0440\u0430\u0442\u0430/\u0434\u043E\u0445\u0456\u0434 \u043F\u0440\u044F\u043C\u043E \u0441\u0442\u043E\u0441\u0443\u0454\u0442\u044C\u0441\u044F \u043D\u044C\u043E\u0433\u043E (\u0431\u0435\u0440\u0438 \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443 '\u0410\u043A\u0442\u0438\u0432\u043D\u0438\u0439 \u043F\u0440\u043E\u0435\u043A\u0442 ID=...'). \u0422\u0430\u043A \u0444\u0430\u043A\u0442\u0438\u0447\u043D\u0456 \u0432\u0438\u0442\u0440\u0430\u0442\u0438 \u043F\u0440\u043E\u0435\u043A\u0442\u0443 \u0440\u0430\u0445\u0443\u044E\u0442\u044C\u0441\u044F \u0443 \u0439\u043E\u0433\u043E \u0431\u044E\u0434\u0436\u0435\u0442\u0456. \u041D\u0415 \u0432\u0438\u0433\u0430\u0434\u0443\u0439 \u2014 \u043B\u0438\u0448\u0435 \u0440\u0435\u0430\u043B\u044C\u043D\u0438\u0439 ID \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443, \u0456\u043D\u0430\u043A\u0448\u0435 \u043F\u0440\u043E\u043F\u0443\u0441\u0442\u0438." } }, required: ["_reasoning_log", "fin_type", "amount", "category", "fin_comment"], additionalProperties: false } } },
         { type: "function", function: { name: "create_project", description: "\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u043F\u0440\u043E\u0435\u043A\u0442 \u2014 \u043C\u0430\u0441\u0448\u0442\u0430\u0431\u043D\u0430 \u0434\u043E\u0432\u0433\u043E\u0441\u0442\u0440\u043E\u043A\u043E\u0432\u0430 \u0446\u0456\u043B\u044C \u043D\u0430 \u0442\u0438\u0436\u043D\u0456/\u043C\u0456\u0441\u044F\u0446\u0456: \u0440\u0435\u043C\u043E\u043D\u0442, \u0437\u0430\u043F\u0443\u0441\u043A \u0431\u0456\u0437\u043D\u0435\u0441\u0443, \u0440\u043E\u0437\u0440\u043E\u0431\u043A\u0430 \u0434\u043E\u0434\u0430\u0442\u043A\u0443, \u043E\u0440\u0433\u0430\u043D\u0456\u0437\u0430\u0446\u0456\u044F \u0432\u0435\u0441\u0456\u043B\u043B\u044F.", parameters: { type: "object", properties: { _reasoning_log: { type: "string", description: "CoT \u2014 1-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u041E\u0411\u041E\u0412\u02BC\u042F\u0417\u041A\u041E\u0412\u041E (\u0434\u0438\u0432. REASONING_LOG_RULE)." }, name: { type: "string", description: "\u041D\u0430\u0437\u0432\u0430 2-5 \u0441\u043B\u0456\u0432" }, subtitle: { type: "string", description: "\u041F\u0456\u0434\u0437\u0430\u0433\u043E\u043B\u043E\u0432\u043E\u043A" }, comment: { type: "string", description: "\u0420\u0435\u043C\u0430\u0440\u043A\u0430" } }, required: ["_reasoning_log", "name"], additionalProperties: false } } },
         // --- ПРОЕКТИ — кроки і деталі (Фаза 4 Gg3Fy 20.04.2026 "Один мозок V2") ---
         { type: "function", function: { name: "complete_project_step", description: "\u0412\u0456\u0434\u043C\u0456\u0442\u0438\u0442\u0438 \u043A\u0440\u043E\u043A \u043F\u0440\u043E\u0435\u043A\u0442\u0443 \u044F\u043A \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u0438\u0439. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 '\u0437\u0430\u043A\u0440\u0438\u0432 \u043A\u0440\u043E\u043A X', '\u0437\u0440\u043E\u0431\u0438\u0432 Y'.", parameters: { type: "object", properties: { _reasoning_log: { type: "string", description: "CoT \u2014 1-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u041E\u0411\u041E\u0412\u02BC\u042F\u0417\u041A\u041E\u0412\u041E (\u0434\u0438\u0432. REASONING_LOG_RULE)." }, project_id: { type: "string" }, step_id: { type: "string" }, comment: { type: "string" } }, required: ["_reasoning_log", "project_id", "step_id"], additionalProperties: false } } },
@@ -13266,6 +13319,7 @@ ${CHIP_PROMPT_RULES}`;
         { type: "function", function: { name: "add_project_resource", description: "\u0414\u043E\u0434\u0430\u0442\u0438 \u0440\u0435\u0441\u0443\u0440\u0441 \u0434\u043E \u043F\u0440\u043E\u0435\u043A\u0442\u0443 (\u043A\u043D\u0438\u0433\u0430, \u0441\u043F\u0456\u043B\u044C\u043D\u043E\u0442\u0430, \u0456\u043D\u0441\u0442\u0440\u0443\u043C\u0435\u043D\u0442, \u0441\u0442\u0430\u0442\u0442\u044F).", parameters: { type: "object", properties: { _reasoning_log: { type: "string", description: "CoT \u2014 1-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u041E\u0411\u041E\u0412\u02BC\u042F\u0417\u041A\u041E\u0412\u041E (\u0434\u0438\u0432. REASONING_LOG_RULE)." }, project_id: { type: "string" }, type: { type: "string", enum: ["\u041A\u043D\u0438\u0433\u0430", "\u0421\u043F\u0456\u043B\u044C\u043D\u043E\u0442\u0430", "\u0406\u043D\u0441\u0442\u0440\u0443\u043C\u0435\u043D\u0442", "\u0421\u0442\u0430\u0442\u0442\u044F"] }, title: { type: "string" }, url: { type: "string" }, comment: { type: "string" } }, required: ["_reasoning_log", "project_id", "type", "title"], additionalProperties: false } } },
         { type: "function", function: { name: "update_project_tempo", description: "\u041E\u043D\u043E\u0432\u0438\u0442\u0438 \u0442\u0435\u043C\u043F \u043F\u0440\u043E\u0435\u043A\u0442\u0443 (\u043F\u043E\u0442\u043E\u0447\u043D\u0438\u0439 / \u043F\u0440\u0438\u0441\u043A\u043E\u0440\u0435\u043D\u0438\u0439 / \u0456\u0434\u0435\u0430\u043B\u044C\u043D\u0438\u0439).", parameters: { type: "object", properties: { _reasoning_log: { type: "string", description: "CoT \u2014 1-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u041E\u0411\u041E\u0412\u02BC\u042F\u0417\u041A\u041E\u0412\u041E (\u0434\u0438\u0432. REASONING_LOG_RULE)." }, project_id: { type: "string" }, tempoNow: { type: "string" }, tempoMore: { type: "string" }, tempoIdeal: { type: "string" }, comment: { type: "string" } }, required: ["_reasoning_log", "project_id"], additionalProperties: false } } },
         { type: "function", function: { name: "update_project_risks", description: "\u0417\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u0440\u0438\u0437\u0438\u043A\u0438 \u0430\u0431\u043E \u0437\u0430\u043D\u0435\u043F\u043E\u043A\u043E\u0454\u043D\u043D\u044F \u043F\u0440\u043E\u0435\u043A\u0442\u0443.", parameters: { type: "object", properties: { _reasoning_log: { type: "string", description: "CoT \u2014 1-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u041E\u0411\u041E\u0412\u02BC\u042F\u0417\u041A\u041E\u0412\u041E (\u0434\u0438\u0432. REASONING_LOG_RULE)." }, project_id: { type: "string" }, risks: { type: "string" }, comment: { type: "string" } }, required: ["_reasoning_log", "project_id", "risks"], additionalProperties: false } } },
+        { type: "function", function: { name: "set_project_budget", description: "\u0412\u0441\u0442\u0430\u043D\u043E\u0432\u0438\u0442\u0438 \u043F\u043B\u0430\u043D\u043E\u0432\u0438\u0439 \u0431\u044E\u0434\u0436\u0435\u0442 \u043F\u0440\u043E\u0435\u043A\u0442\u0443 (\u0437\u0430\u0433\u0430\u043B\u044C\u043D\u0430 \u0441\u0443\u043C\u0430) \u0442\u0430/\u0430\u0431\u043E \u0434\u043E\u0434\u0430\u0442\u0438 \u043F\u043B\u0430\u043D\u043E\u0432\u0443 \u0441\u0442\u0430\u0442\u0442\u044E \u0432\u0438\u0442\u0440\u0430\u0442. \u041D\u0415 \u0434\u043B\u044F \u0437\u0430\u043F\u0438\u0441\u0443 \u0444\u0430\u043A\u0442\u0438\u0447\u043D\u0438\u0445 \u0432\u0438\u0442\u0440\u0430\u0442 \u2014 \u0444\u0430\u043A\u0442\u0438\u0447\u043D\u0456 \u0432\u0438\u0442\u0440\u0430\u0442\u0438 \u0440\u0430\u0445\u0443\u044E\u0442\u044C\u0441\u044F \u0437 \u0432\u043A\u043B\u0430\u0434\u043A\u0438 \u0424\u0456\u043D\u0430\u043D\u0441\u0438 \u0437\u0430 \u0442\u0435\u0433\u043E\u043C \u043F\u0440\u043E\u0435\u043A\u0442\u0443.", parameters: { type: "object", properties: { _reasoning_log: { type: "string", description: "CoT \u2014 1-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u041E\u0411\u041E\u0412\u02BC\u042F\u0417\u041A\u041E\u0412\u041E (\u0434\u0438\u0432. REASONING_LOG_RULE)." }, project_id: { type: "string" }, total: { type: "number", description: "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0438\u0439 \u043F\u043B\u0430\u043D\u043E\u0432\u0438\u0439 \u0431\u044E\u0434\u0436\u0435\u0442" }, item_name: { type: "string", description: "\u041D\u0430\u0437\u0432\u0430 \u043F\u043B\u0430\u043D\u043E\u0432\u043E\u0457 \u0441\u0442\u0430\u0442\u0442\u0456 \u0432\u0438\u0442\u0440\u0430\u0442" }, item_amount: { type: "number", description: "\u0421\u0443\u043C\u0430 \u0441\u0442\u0430\u0442\u0442\u0456" }, comment: { type: "string" } }, required: ["_reasoning_log", "project_id"], additionalProperties: false } } },
         // --- ВИКОНАННЯ ---
         { type: "function", function: { name: "complete_habit", description: "\u0412\u0456\u0434\u043C\u0456\u0442\u0438\u0442\u0438 \u0437\u0432\u0438\u0447\u043A\u0443(\u0438) \u044F\u043A \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u0456 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 \u0449\u043E \u0437\u0440\u043E\u0431\u0438\u0432 \u0449\u043E\u0441\u044C \u0437\u0456 \u0441\u043F\u0438\u0441\u043A\u0443 \u0437\u0432\u0438\u0447\u043E\u043A.", parameters: { type: "object", properties: { _reasoning_log: { type: "string", description: "CoT \u2014 1-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u041E\u0411\u041E\u0412\u02BC\u042F\u0417\u041A\u041E\u0412\u041E (\u0434\u0438\u0432. REASONING_LOG_RULE)." }, habit_ids: { type: "array", items: { type: "string" }, description: "UUID \u0437\u0432\u0438\u0447\u043E\u043A \u0437\u0456 \u0441\u043F\u0438\u0441\u043A\u0443" }, comment: { type: "string", description: "\u041A\u043E\u0440\u043E\u0442\u043A\u0435 \u043F\u0456\u0434\u0442\u0432\u0435\u0440\u0434\u0436\u0435\u043D\u043D\u044F" } }, required: ["_reasoning_log", "habit_ids", "comment"], additionalProperties: false } } },
         { type: "function", function: { name: "complete_task", description: "\u0417\u0430\u043A\u0440\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443(\u0456) \u044F\u043A \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u0456. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 \u0449\u043E \u0437\u0440\u043E\u0431\u0438\u0432 \u0449\u043E\u0441\u044C \u0437 \u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0445 \u0437\u0430\u0434\u0430\u0447. \u041E\u0411\u041E\u0412\u02BC\u042F\u0417\u041A\u041E\u0412\u041E task_ids \u043C\u0430\u0454 \u043C\u0456\u0441\u0442\u0438\u0442\u0438 \u0422I\u041B\u042C\u041A\u0418 ID \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u043D\u043E\u0457 \u0441\u0435\u043A\u0446\u0456\u0457 '\u0410\u043A\u0442\u0438\u0432\u043D\u0456 \u0437\u0430\u0434\u0430\u0447\u0456'. \u041DI\u041A\u041E\u041B\u0418 \u043D\u0435 \u0432\u0438\u0433\u0430\u0434\u0443\u0439 ID.", strict: true, parameters: { type: "object", properties: { _reasoning_log: { type: "string", description: "CoT \u2014 1-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u041E\u0411\u041E\u0412\u02BC\u042F\u0417\u041A\u041E\u0412\u041E (\u0434\u0438\u0432. REASONING_LOG_RULE)." }, task_ids: { type: "array", items: { type: "string" }, description: "ID \u0437\u0430\u0434\u0430\u0447 \u0437\u0456 \u0441\u043F\u0438\u0441\u043A\u0443 \u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0445 (\u0442\u0456\u043B\u044C\u043A\u0438 \u0440\u0435\u0430\u043B\u044C\u043D\u0456 \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443)" }, comment: { type: "string", description: "\u041A\u043E\u0440\u043E\u0442\u043A\u0435 \u043F\u0456\u0434\u0442\u0432\u0435\u0440\u0434\u0436\u0435\u043D\u043D\u044F" } }, required: ["_reasoning_log", "task_ids", "comment"], additionalProperties: false } } },
@@ -17115,15 +17169,13 @@ ${answersText}
       if (projectStep <= projectQuestions.length) {
         addInboxChatMsg("agent", projectQuestions[projectStep - 1]);
         localStorage.setItem("nm_guide_last_ts", Date.now().toString());
-        if (projectStep < projectQuestions.length) {
-          localStorage.setItem("nm_project_interview_step", (projectStep + 1).toString());
-        } else {
-          localStorage.removeItem("nm_project_interview_step");
-          localStorage.removeItem("nm_project_interview_name");
-          setTimeout(() => generateProjectFirstSteps(projectName), 1500);
-        }
+        localStorage.setItem("nm_project_interview_step", (projectStep + 1).toString());
         return;
       }
+      localStorage.removeItem("nm_project_interview_step");
+      localStorage.removeItem("nm_project_interview_name");
+      setTimeout(() => generateProjectFirstSteps(projectName), 800);
+      return;
     }
     const shownTips = JSON.parse(localStorage.getItem("nm_guide_shown_tips") || "[]");
     const shownTopics = JSON.parse(localStorage.getItem("nm_guide_shown_topics") || "[]");
@@ -17158,12 +17210,46 @@ ${answersText}
     }
     setTimeout(() => owlGuideNextTip(), 1200);
   }
+  function captureProjectInterviewAnswer(text) {
+    const step = parseInt(localStorage.getItem("nm_project_interview_step") || "0");
+    if (step <= 0) return;
+    if (!text || !text.trim()) return;
+    let buf = [];
+    try {
+      buf = JSON.parse(localStorage.getItem("nm_project_interview_answers") || "[]");
+    } catch (e) {
+      buf = [];
+    }
+    if (!Array.isArray(buf)) buf = [];
+    buf.push({ q: _PROJECT_IV_LABELS[step] || "\u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C", a: text.trim() });
+    if (buf.length > 10) buf = buf.slice(-10);
+    localStorage.setItem("nm_project_interview_answers", JSON.stringify(buf));
+  }
   async function generateProjectFirstSteps(projectName) {
     const key = localStorage.getItem("nm_gemini_key");
     if (!key) return;
     const aiContext = getAIContext();
-    const systemPrompt = `${getOWLPersonality()} \u041D\u0430 \u043E\u0441\u043D\u043E\u0432\u0456 \u0440\u043E\u0437\u043C\u043E\u0432\u0438 \u043F\u0440\u043E \u043F\u0440\u043E\u0435\u043A\u0442 "${projectName}" \u2014 \u0437\u0430\u043F\u0440\u043E\u043F\u043E\u043D\u0443\u0439 \u043F\u0435\u0440\u0448\u0456 3 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0456 \u043A\u0440\u043E\u043A\u0438 \u0434\u043B\u044F \u0441\u0442\u0430\u0440\u0442\u0443. \u041A\u043E\u0436\u0435\u043D \u043A\u0440\u043E\u043A \u2014 \u043E\u0434\u043D\u0430 \u0434\u0456\u044F, 4-8 \u0441\u043B\u0456\u0432, \u0440\u0435\u0430\u043B\u044C\u043D\u0430 \u0456 \u0434\u043E\u0441\u044F\u0436\u043D\u0430 \u043D\u0430 \u0446\u044C\u043E\u043C\u0443 \u0442\u0438\u0436\u043D\u0456.
-\u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0422\u0406\u041B\u042C\u041A\u0418 JSON: {"steps":["\u043A\u0440\u043E\u043A 1","\u043A\u0440\u043E\u043A 2","\u043A\u0440\u043E\u043A 3"],"summary":"1 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u2014 \u0449\u043E \u0446\u0435 \u0437\u0430 \u043F\u0440\u043E\u0435\u043A\u0442 \u0456 \u0437 \u0447\u043E\u0433\u043E \u043F\u043E\u0447\u0438\u043D\u0430\u0442\u0438"}`;
+    let answers = [];
+    try {
+      answers = JSON.parse(localStorage.getItem("nm_project_interview_answers") || "[]");
+    } catch (e) {
+      answers = [];
+    }
+    const interviewBlock = Array.isArray(answers) && answers.length ? answers.map((x) => `${x.q}: ${x.a}`).join("\n") : "(\u044E\u0437\u0435\u0440 \u043D\u0435 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0432 \u043D\u0430 \u043F\u0438\u0442\u0430\u043D\u043D\u044F)";
+    const systemPrompt = `${getOWLPersonality()} \u042E\u0437\u0435\u0440 \u0449\u043E\u0439\u043D\u043E \u0441\u0442\u0432\u043E\u0440\u0438\u0432 \u043F\u0440\u043E\u0435\u043A\u0442 "${projectName}" \u0456 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0432 \u043D\u0430 \u043F\u0438\u0442\u0430\u043D\u043D\u044F \u0456\u043D\u0442\u0435\u0440\u0432'\u044E. \u041D\u0430 \u043E\u0441\u043D\u043E\u0432\u0456 \u0419\u041E\u0413\u041E \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0435\u0439 \u0437\u0430\u043F\u043E\u0432\u043D\u0438 \u043A\u0430\u0440\u0442\u043A\u0443 \u043F\u0440\u043E\u0435\u043A\u0442\u0443.
+\u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0422I\u041B\u042C\u041A\u0418 JSON (\u0431\u0435\u0437 markdown):
+{
+ "steps": ["\u043A\u0440\u043E\u043A 1","\u043A\u0440\u043E\u043A 2","\u043A\u0440\u043E\u043A 3"],            // 3 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0456 \u043F\u0435\u0440\u0448\u0456 \u0434\u0456\u0457, 4-8 \u0441\u043B\u0456\u0432, \u0440\u0435\u0430\u043B\u044C\u043D\u0456 \u043D\u0430 \u0446\u044C\u043E\u043C\u0443 \u0442\u0438\u0436\u043D\u0456
+ "tempoNow": "\u043A\u043E\u043B\u0438 \u0431\u0443\u0434\u0435 \u0433\u043E\u0442\u043E\u0432\u043E \u043F\u0440\u0438 \u043F\u043E\u0442\u043E\u0447\u043D\u043E\u043C\u0443 \u0442\u0435\u043C\u043F\u0456, \u043D\u0430\u043F\u0440. ~6 \u043C\u0456\u0441",
+ "tempoMore": "\u043A\u043E\u043B\u0438 \u043F\u0440\u0438 +1 \u0433\u043E\u0434/\u0434\u0435\u043D\u044C, \u043D\u0430\u043F\u0440. ~3 \u043C\u0456\u0441",
+ "tempoIdeal": "\u0432 \u0456\u0434\u0435\u0430\u043B\u044C\u043D\u043E\u043C\u0443 \u0442\u0435\u043C\u043F\u0456, \u043D\u0430\u043F\u0440. ~6 \u0442\u0438\u0436\u043D\u0456\u0432",
+ "risks": "1-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u2014 \u0433\u043E\u043B\u043E\u0432\u043D\u0456 \u0440\u0438\u0437\u0438\u043A\u0438 \u0442\u0430 \u0449\u043E \u0437 \u043D\u0438\u043C\u0438 \u0440\u043E\u0431\u0438\u0442\u0438 (\u0437 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456 '\u0449\u043E \u043B\u044F\u043A\u0430\u0454')",
+ "successMetric": "\u043E\u0434\u0438\u043D \u043F\u043E\u043A\u0430\u0437\u043D\u0438\u043A \u0443\u0441\u043F\u0456\u0445\u0443 \u0437 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456 \u044E\u0437\u0435\u0440\u0430, \u043D\u0430\u043F\u0440. '\u041A\u043B\u0456\u0454\u043D\u0442\u0438' / '\u0414\u043E\u0445\u0456\u0434'",
+ "successValue": "\u0446\u0456\u043B\u044C\u043E\u0432\u0435 \u0437\u043D\u0430\u0447\u0435\u043D\u043D\u044F \u044F\u043A\u0449\u043E \u043D\u0430\u0437\u0432\u0430\u0432, \u0456\u043D\u0430\u043A\u0448\u0435 '\u0446\u0456\u043B\u044C'",
+ "budgetTotal": \u0447\u0438\u0441\u043B\u043E \u0430\u0431\u043E null,                     // \u043F\u043B\u0430\u043D\u043E\u0432\u0438\u0439 \u0431\u044E\u0434\u0436\u0435\u0442 \u0437\u0456 '\u0441\u0442\u0430\u0440\u0442\u043E\u0432\u043E\u0433\u043E \u043A\u0430\u043F\u0456\u0442\u0430\u043B\u0443', \u0442\u0456\u043B\u044C\u043A\u0438 \u044F\u043A\u0449\u043E \u043D\u0430\u0437\u0432\u0430\u0432 \u0441\u0443\u043C\u0443
+ "summary": "1 \u0442\u0435\u043F\u043B\u0435 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u2014 \u0449\u043E \u0446\u0435 \u0437\u0430 \u043F\u0440\u043E\u0435\u043A\u0442 \u0456 \u0437 \u0447\u043E\u0433\u043E \u043F\u043E\u0447\u0438\u043D\u0430\u0442\u0438"
+}
+\u041D\u0435 \u0432\u0438\u0433\u0430\u0434\u0443\u0439 \u0442\u0435 \u0447\u043E\u0433\u043E \u044E\u0437\u0435\u0440 \u043D\u0435 \u043A\u0430\u0437\u0430\u0432 \u2014 \u043F\u043E\u0440\u043E\u0436\u043D\u0454 \u043F\u043E\u043B\u0435 \u043A\u0440\u0430\u0449\u0435 \u043D\u0456\u0436 \u0432\u0438\u0433\u0430\u0434\u043A\u0430.`;
     try {
       const res = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
@@ -17174,9 +17260,13 @@ ${answersText}
             { role: "system", content: systemPrompt },
             { role: "user", content: `\u041F\u0440\u043E\u0435\u043A\u0442: ${projectName}
 
+\u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456 \u044E\u0437\u0435\u0440\u0430:
+${interviewBlock}
+
+\u041A\u043E\u043D\u0442\u0435\u043A\u0441\u0442:
 ${aiContext}` }
           ],
-          max_tokens: 200,
+          max_tokens: 400,
           temperature: 0.6
         })
       });
@@ -17185,22 +17275,41 @@ ${aiContext}` }
       const reply = data.choices?.[0]?.message?.content?.trim();
       if (!reply) return;
       const parsed = JSON.parse(reply.replace(/```json|```/g, "").trim());
-      if (parsed.steps && parsed.steps.length > 0) {
-        try {
-          const projects = getProjects();
-          const p = projects.find((pr) => pr.name === projectName);
-          if (p && p.steps.length === 0) {
+      try {
+        const projects = getProjects();
+        const ivId = localStorage.getItem("nm_project_interview_id");
+        const p = ivId && projects.find((pr) => String(pr.id) === ivId) || projects.find((pr) => pr.name === projectName);
+        if (p) {
+          if (Array.isArray(parsed.steps) && parsed.steps.length > 0 && (p.steps || []).length === 0) {
             p.steps = parsed.steps.map((s) => ({ id: generateUUID(), text: s, done: false }));
-            saveProjects(projects);
           }
-        } catch (e) {
+          if (parsed.tempoNow) p.tempoNow = String(parsed.tempoNow);
+          if (parsed.tempoMore) p.tempoMore = String(parsed.tempoMore);
+          if (parsed.tempoIdeal) p.tempoIdeal = String(parsed.tempoIdeal);
+          if (parsed.risks && !p.risks) p.risks = String(parsed.risks);
+          if (parsed.successMetric) {
+            if (!p.metrics) p.metrics = [];
+            if (p.metrics.length === 0) p.metrics.push({ label: String(parsed.successMetric), value: String(parsed.successValue || "\u2014"), color: "#3d2e1e" });
+          }
+          if (typeof parsed.budgetTotal === "number" && parsed.budgetTotal > 0) {
+            if (!p.budget) p.budget = { total: 0, spent: 0, items: [] };
+            if (!p.budget.total) p.budget.total = parsed.budgetTotal;
+          }
+          p.lastActivity = Date.now();
+          saveProjects(projects);
         }
+      } catch (e) {
+      }
+      localStorage.removeItem("nm_project_interview_answers");
+      localStorage.removeItem("nm_project_interview_id");
+      if (Array.isArray(parsed.steps) && parsed.steps.length > 0) {
         const stepsText = parsed.steps.map((s, i) => `${i + 1}. ${s}`).join("\n");
-        addInboxChatMsg("agent", `${parsed.summary || "\u041F\u0435\u0440\u0448\u0456 \u043A\u0440\u043E\u043A\u0438 \u0434\u043B\u044F \u0441\u0442\u0430\u0440\u0442\u0443:"}
+        const summary = parsed.summary || t("projects.iv.first_steps", "\u041F\u0435\u0440\u0448\u0456 \u043A\u0440\u043E\u043A\u0438 \u0434\u043B\u044F \u0441\u0442\u0430\u0440\u0442\u0443:");
+        addInboxChatMsg("agent", `${summary}
 
 ${stepsText}
 
-\u041A\u0440\u043E\u043A\u0438 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0456 \u0443 \u0432\u043E\u0440\u043A\u0441\u043F\u0435\u0439\u0441\u0456 \u043F\u0440\u043E\u0435\u043A\u0442\u0443.`);
+${t("projects.iv.saved_note", "\u041A\u0440\u043E\u043A\u0438, \u0442\u0435\u043C\u043F \u0456 \u0440\u0438\u0437\u0438\u043A\u0438 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0456 \u0443 \u0432\u043E\u0440\u043A\u0441\u043F\u0435\u0439\u0441\u0456 \u043F\u0440\u043E\u0435\u043A\u0442\u0443.")}`);
       }
     } catch (e) {
     }
@@ -17308,7 +17417,7 @@ ${userText}
     }, 400);
     updateKeyStatus(!!localStorage.getItem("nm_gemini_key"));
   }
-  var UPDATE_VERSION, UPDATE_SLIDES, SLIDES, currentSlide, _slidesIsUpdate, _slidesFromOnboarding, HELP_CONTENT, FIRST_VISIT_TIPS, _helpOpen, HELP_ICONS, SURVEY_QUESTIONS, surveyAnswers, surveyStep, surveyWaiting, OWL_GUIDE_TOPICS, OWL_APP_TIPS;
+  var UPDATE_VERSION, UPDATE_SLIDES, SLIDES, currentSlide, _slidesIsUpdate, _slidesFromOnboarding, HELP_CONTENT, FIRST_VISIT_TIPS, _helpOpen, HELP_ICONS, SURVEY_QUESTIONS, surveyAnswers, surveyStep, surveyWaiting, OWL_GUIDE_TOPICS, OWL_APP_TIPS, _PROJECT_IV_LABELS;
   var init_onboarding = __esm({
     "src/tabs/onboarding.js"() {
       init_nav();
@@ -17764,6 +17873,14 @@ ${userText}
         { key: "tip_owl_mode", msg: "\u0412 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445 \u043C\u043E\u0436\u043D\u0430 \u0437\u043C\u0456\u043D\u0438\u0442\u0438 \u0445\u0430\u0440\u0430\u043A\u0442\u0435\u0440 OWL \u2014 \u0422\u0440\u0435\u043D\u0435\u0440 (\u043F\u0440\u044F\u043C\u0438\u0439), \u041F\u0430\u0440\u0442\u043D\u0435\u0440 (\u0442\u0435\u043F\u043B\u0438\u0439), \u0430\u0431\u043E \u041D\u0430\u0441\u0442\u0430\u0432\u043D\u0438\u043A (\u043C\u0443\u0434\u0440\u0438\u0439). \u042F\u043A\u0438\u0439 \u0442\u043E\u0431\u0456 \u0431\u043B\u0438\u0436\u0447\u0435?" },
         { key: "tip_memory", msg: "\u0412\u0441\u0435 \u0449\u043E \u0442\u0438 \u0440\u043E\u0437\u043F\u043E\u0432\u0456\u0434\u0430\u0454\u0448 \u2014 \u044F \u0437\u0430\u043F\u0430\u043C\u02BC\u044F\u0442\u043E\u0432\u0443\u044E. \u0412 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445 \u0454 \u0440\u043E\u0437\u0434\u0456\u043B \u041F\u0430\u043C\u02BC\u044F\u0442\u044C \u0434\u0435 \u043C\u043E\u0436\u043D\u0430 \u043F\u043E\u0434\u0438\u0432\u0438\u0442\u0438\u0441\u044C \u0456 \u0432\u0456\u0434\u0440\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0449\u043E \u044F \u0437\u043D\u0430\u044E \u043F\u0440\u043E \u0442\u0435\u0431\u0435." }
       ];
+      _PROJECT_IV_LABELS = {
+        1: "\u0421\u0442\u0430\u0440\u0442\u043E\u0432\u0438\u0439 \u043A\u0430\u043F\u0456\u0442\u0430\u043B / \u0440\u0435\u0441\u0443\u0440\u0441\u0438",
+        2: "\u0413\u043E\u0434\u0438\u043D \u043D\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C",
+        3: "\u041A\u043E\u043C\u0430\u043D\u0434\u0430 / \u043F\u0430\u0440\u0442\u043D\u0435\u0440\u0438",
+        4: "\u0420\u0435\u0430\u043B\u0456\u0441\u0442\u0438\u0447\u043D\u0438\u0439 \u0434\u0435\u0434\u043B\u0430\u0439\u043D",
+        5: "\u0429\u043E \u043D\u0430\u0439\u0431\u0456\u043B\u044C\u0448\u0435 \u043B\u044F\u043A\u0430\u0454",
+        6: "\u041C\u0435\u0442\u0440\u0438\u043A\u0430 \u0443\u0441\u043F\u0456\u0445\u0443"
+      };
       Object.assign(window, {
         openHelp,
         closeHelp,
@@ -18120,6 +18237,10 @@ ${userText}
       saveGuideTopicAnswer(text);
     } catch (e) {
     }
+    try {
+      captureProjectInterviewAnswer(text);
+    } catch (e) {
+    }
     if (handleSurveyAnswer(text)) return;
     try {
       if (handleScheduleAnswer(text)) return;
@@ -18288,7 +18409,7 @@ ${aiContext}`;
             addInboxChatMsg("agent", t("inbox.proj.creating", '\u0421\u0442\u0432\u043E\u0440\u044E\u044E \u043F\u0440\u043E\u0435\u043A\u0442 "{name}"...', { name: action.name || text }));
             const newProject = createProjectProgrammatic(action.name || text, action.subtitle || "");
             addInboxChatMsg("agent", t("inbox.proj.created", '\u2705 \u041F\u0440\u043E\u0435\u043A\u0442 "{name}" \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E', { name: newProject.name }));
-            setTimeout(() => startProjectInboxInterview(newProject.name, newProject.subtitle), 600);
+            setTimeout(() => startProjectInboxInterview(newProject.name, newProject.subtitle, newProject.id), 600);
           } else if (action.action === "delete_project") {
             let targetProj = null;
             if (action.project_id) {
@@ -20527,6 +20648,12 @@ ${logLines}
       reg("toggle-project-step", (data) => {
         if (typeof window !== "undefined" && typeof window.toggleProjectStep === "function") {
           window.toggleProjectStep(data.projectId, data.stepId);
+        }
+      });
+      reg("project-chat-prompt", (data) => {
+        if (!data.prompt) return;
+        if (typeof window !== "undefined" && typeof window.sendProjectsBarPrompt === "function") {
+          window.sendProjectsBarPrompt(data.prompt);
         }
       });
       reg("open-notes-folder", (data) => {
@@ -23207,7 +23334,9 @@ ${logLines}
           "nm_me_weekly_insights",
           // nm_health_interview_pending REMOVED (EU AI Act JMQuT) — видаляється через v18 migration.
           "nm_project_interview_name",
-          "nm_project_interview_step"
+          "nm_project_interview_step",
+          "nm_project_interview_answers",
+          "nm_project_interview_id"
         ],
         // Чат-историки (→ Supabase chat_messages)
         chat: [
