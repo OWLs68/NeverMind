@@ -6,7 +6,7 @@
 import { currentTab, switchTab, showToast } from '../core/nav.js';
 import { escapeHtml, parseContentChips, getReminders, saveReminders } from '../core/utils.js';
 import { generateUUID } from '../core/uuid.js';
-import { makeTask } from '../data/entity-factories.js';
+import { makeTask, makeFinance } from '../data/entity-factories.js';
 import { updateSettings } from '../core/settings.js';
 import { activeChatBar, callOwlChat, closeChatBar, lastChatClosedTs, openChatBar, restoreChatUI, setActiveChatBar } from '../ai/core.js';
 import { _owlTabApplyState, _owlTabStates, renderTabBoard } from './board.js';
@@ -1072,7 +1072,7 @@ function executeOwlAction(action, originalText) {
     const catList = type === 'expense' ? cats.expense : cats.income;
     if (!catList.includes(category)) { catList.push(category); saveFinCats(cats); }
     const txs = getFinance();
-    txs.unshift({ id: generateUUID(), type, amount, category, comment: action.comment || originalText, ts: Date.now() });
+    txs.unshift(makeFinance({ type, amount, category, comment: action.comment || originalText }));
     saveFinance(txs);
     if (currentTab === 'finance') renderFinance();
     const sign = type === 'expense' ? '-' : '+';

@@ -11,6 +11,7 @@
 
 import { currentTab, showToast } from '../core/nav.js';
 import { generateUUID } from '../core/uuid.js';
+import { makeFinance } from '../data/entity-factories.js';
 import { escapeHtml, t } from '../core/utils.js';
 import { updateSettings } from '../core/settings.js';
 import { addToTrash, showUndoToast } from '../core/trash.js';
@@ -614,8 +615,7 @@ export function processFinanceAction(parsed, originalText, addMsgFn = addInboxCh
   const ts = resolveFinanceDate(parsed.date, originalText, Date.now());
 
   const txs = getFinance();
-  const tx = { id: generateUUID(), type, amount, category, comment, ts };
-  if (subcategory) tx.subcategory = subcategory;
+  const tx = makeFinance({ type, amount, category, comment, ts, subcategory });
   txs.unshift(tx);
   saveFinance(txs);
 

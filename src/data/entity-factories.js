@@ -59,3 +59,21 @@ export function makeMoment({ text = '', mood = 'neutral' } = {}) {
     ts: Date.now(),
   };
 }
+
+// Фінансова транзакція (nm_finance). Будувалась у 3 місцях (finance.js createTx,
+// finance-modals ручне, inbox-board AI). ⚠️ ts — це ДАТА транзакції (може бути
+// минулою через resolveFinanceDate / вибір юзера), НЕ завжди Date.now() — тому
+// приймаємо її параметром (дефолт Date.now() якщо не задано). subcategory
+// додаємо лише коли є (форма як була).
+export function makeFinance({ type, amount, category, comment = '', ts, subcategory } = {}) {
+  const tx = {
+    id: generateUUID(),
+    type,
+    amount,
+    category,
+    comment,
+    ts: ts != null ? ts : Date.now(),
+  };
+  if (subcategory) tx.subcategory = subcategory;
+  return tx;
+}

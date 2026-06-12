@@ -6,6 +6,7 @@
 
 import { showToast } from '../core/nav.js';
 import { generateUUID } from '../core/uuid.js';
+import { makeFinance } from '../data/entity-factories.js';
 import { escapeHtml, t } from '../core/utils.js';
 import { addToTrash, showUndoToast } from '../core/trash.js';
 import { invalidateFinanceBoard } from '../owl/proactive.js';
@@ -318,7 +319,7 @@ export function saveFinTransaction() {
     const idx = txs.findIndex(x => x.id === _finEditId);
     if (idx !== -1) txs[idx] = { ...txs[idx], ...baseFields };
   } else {
-    txs.unshift({ id: generateUUID(), ...baseFields });
+    txs.unshift(makeFinance(baseFields));
   }
   saveFinance(txs);
   closeFinTxModal();
