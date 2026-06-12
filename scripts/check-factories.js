@@ -82,6 +82,8 @@ const { pathToFileURL } = require('url');
   const past = 1600000000000;
   fk('переданий ts (минула дата) збережений', makeFinance({ type: 'income', amount: 1, category: 'x', ts: past }).ts === past);
   fk('subcategory доданий коли є', makeFinance({ type: 'expense', amount: 1, category: 'x', subcategory: 'кава' }).subcategory === 'кава');
+  fk('projectId ВІДСУТНІЙ коли не заданий', !('projectId' in f1));
+  fk('projectId доданий коли є (тег проекту)', makeFinance({ type: 'expense', amount: 1, category: 'x', projectId: 'proj-uuid' }).projectId === 'proj-uuid');
   fk('subcategory undefined → відсутній', !('subcategory' in makeFinance({ type: 'e', amount: 1, category: 'x', subcategory: undefined })));
 
   // --- makeProject ---

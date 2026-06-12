@@ -16,7 +16,7 @@ import { renderChips } from '../owl/chips.js';
 import { addInboxChatMsg } from './inbox.js';
 import { getTasks, saveTasks } from './tasks.js';
 import { getNotes, openNotesFolder } from './notes.js';
-import { getCurrency } from './finance.js';
+import { getCurrency, getFinance } from './finance.js';
 import { addToTrash, showUndoToast } from '../core/trash.js';
 import { attachSwipeDelete } from '../ui/swipe-delete.js';
 
@@ -228,7 +228,18 @@ function renderProjectWorkspace(id) {
   const decisions = p.decisions || [];
   const risks = p.risks || '';
   const resources = p.resources || [];
-  const spentPct = budget.total > 0 ? Math.min(100, Math.round(budget.spent / budget.total * 100)) : 0;
+  // Фаза 3 інтеграції: фактичні витрати проекту = сума витрат у Фінансах
+  // позначених тегом цього проекту (projectId). Похідне, не зберігається окремо
+  // у проекті — немає дублювання суми. Якщо нічого не тегнуто — fallback на
+  // ручний budget.spent (легасі/планові).
+  let projectSpent = 0;
+  try {
+    projectSpent = getFinance()
+      .filter(tx => tx && tx.projectId === p.id && tx.type === 'expense')
+      .reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0);
+  } catch(e) {}
+  const budgetSpent = projectSpent || budget.spent || 0;
+  const spentPct = budget.total > 0 ? Math.min(100, Math.round(budgetSpent / budget.total * 100)) : 0;
   // Темп показуємо лише коли OWL його реально порахував — інакше три «?» виглядають
   // як поломка (Council 7uxlr7: головна точка «не розумію» для нового проекту).
   const hasTempo = [p.tempoNow, p.tempoMore, p.tempoIdeal].some(v => v && v !== '?');
@@ -290,15 +301,18 @@ function renderProjectWorkspace(id) {
     </div>` : ''}
 
     <!-- Бюджет -->
-    ${budget.total > 0 || budget.items.length > 0 ? `<div class="card-glass">
+    ${budget.total > 0 || budget.items.length > 0 || budgetSpent > 0 ? `<div class="card-glass">
       <div class="section-label" style="margin-bottom:8px">${t('projects.section.budget', 'Бюджет проекту')}</div>
       ${budget.total > 0 ? `<div style="display:flex;justify-content:space-between;margin-bottom:5px">
         <span style="font-size:12px;font-weight:700;color:#1e1040">${t('projects.budget.spent', 'Витрачено')}</span>
-        <span style="font-size:12px;font-weight:900;color:#c2410c">${getCurrency()}${budget.spent} / ${getCurrency()}${budget.total}</span>
+        <span style="font-size:12px;font-weight:900;color:#c2410c">${getCurrency()}${budgetSpent} / ${getCurrency()}${budget.total}</span>
       </div>
       <div style="height:4px;background:rgba(30,16,64,0.07);border-radius:3px;overflow:hidden;margin-bottom:8px">
         <div style="height:100%;width:${spentPct}%;background:#c2410c;border-radius:3px"></div>
-      </div>` : ''}
+      </div>` : (budgetSpent > 0 ? `<div style="display:flex;justify-content:space-between;margin-bottom:8px">
+        <span style="font-size:12px;font-weight:700;color:#1e1040">${t('projects.budget.spent', 'Витрачено')}</span>
+        <span style="font-size:12px;font-weight:900;color:#c2410c">${getCurrency()}${budgetSpent}</span>
+      </div>` : '')}
       ${budget.items.map((item, i) => `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;${i < budget.items.length-1 ? 'border-bottom:1px solid rgba(30,16,64,0.05)' : ''}">
         <span style="font-size:12px;font-weight:600;color:rgba(30,16,64,0.55)">${escapeHtml(item.name)}</span>
         <span style="font-size:12px;font-weight:800;color:${item.amount > 0 ? '#c2410c' : item.amount < 0 ? '#16a34a' : 'rgba(30,16,64,0.35)'}">${item.amount > 0 ? '-' : item.amount < 0 ? '+' : ''}${getCurrency()}${Math.abs(item.amount) || item.label || ''}</span>
@@ -439,15 +453,19 @@ function toggleProjectStep(projectId, stepId) {
 }
 
 function _syncProjectStepToTasks(project, step) {
-  // Якщо крок виконано — шукаємо відповідну задачу і закриваємо
+  // Якщо крок виконано — закриваємо повʼязану задачу.
+  // qpzj7k безпека (Council 🔴): раніше match по підрядку 15 символів міг
+  // закрити ЧУЖУ активну задачу зі схожою назвою. Тепер — ТIЛЬКИ точний
+  // збіг назви і ТIЛЬКИ якщо така задача одна (немає неоднозначності).
   try {
     if (!step.done) return;
+    const stepTitle = (step.text || '').trim().toLowerCase();
+    if (!stepTitle) return;
     const tasks = getTasks();
-    const match = tasks.find(t => t.status === 'active' &&
-      t.title.toLowerCase().includes(step.text.toLowerCase().substring(0, 15)));
-    if (match) {
-      match.status = 'done';
-      match.completedAt = Date.now();
+    const matches = tasks.filter(t => t.status === 'active' && (t.title || '').trim().toLowerCase() === stepTitle);
+    if (matches.length === 1) {
+      matches[0].status = 'done';
+      matches[0].completedAt = Date.now();
       saveTasks(tasks);
     }
   } catch(e) {}

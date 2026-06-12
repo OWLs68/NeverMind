@@ -86,7 +86,7 @@ export function makeProject({ name, subtitle = '' } = {}) {
 // минулою через resolveFinanceDate / вибір юзера), НЕ завжди Date.now() — тому
 // приймаємо її параметром (дефолт Date.now() якщо не задано). subcategory
 // додаємо лише коли є (форма як була).
-export function makeFinance({ type, amount, category, comment = '', ts, subcategory } = {}) {
+export function makeFinance({ type, amount, category, comment = '', ts, subcategory, projectId } = {}) {
   const tx = {
     type,
     amount,
@@ -95,5 +95,8 @@ export function makeFinance({ type, amount, category, comment = '', ts, subcateg
     ts: ts != null ? ts : Date.now(),
   };
   if (subcategory) tx.subcategory = subcategory;
+  // Опційний тег проекту (Фаза 3 інтеграції): фактичні витрати проекту
+  // агрегуються з Фінансів за цим полем — без дублювання суми у двох місцях.
+  if (projectId) tx.projectId = projectId;
   return stampEntity(tx);
 }

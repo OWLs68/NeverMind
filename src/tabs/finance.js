@@ -615,7 +615,7 @@ export function processFinanceAction(parsed, originalText, addMsgFn = addInboxCh
   const ts = resolveFinanceDate(parsed.date, originalText, Date.now());
 
   const txs = getFinance();
-  const tx = makeFinance({ type, amount, category, comment, ts, subcategory });
+  const tx = makeFinance({ type, amount, category, comment, ts, subcategory, projectId: parsed.project_id });
   txs.unshift(tx);
   saveFinance(txs);
 
