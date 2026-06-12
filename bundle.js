@@ -225,9 +225,23 @@
     const words = n.split(/[\s,.;!?-]+/).filter(Boolean);
     return words.some((w) => QUIT_PREFIXES.some((p) => w.startsWith(p))) ? "quit" : "build";
   }
+  function makeHabit({ name, details = "", days, targetCount = 1, type, emoji } = {}) {
+    const habitType = type || inferHabitType(name);
+    return {
+      id: generateUUID(),
+      name,
+      details,
+      emoji: emoji || (habitType === "quit" ? "\u{1F6AB}" : "\u2B55"),
+      days: Array.isArray(days) ? days : [0, 1, 2, 3, 4, 5, 6],
+      targetCount,
+      type: habitType,
+      createdAt: Date.now()
+    };
+  }
   var QUIT_PREFIXES, QUIT_NEG_RE;
   var init_habit_classifier = __esm({
     "src/data/habit-classifier.js"() {
+      init_uuid();
       QUIT_PREFIXES = ["\u043A\u0438\u043D\u0443", "\u043A\u0438\u043D\u044C", "\u043F\u043E\u043A\u0438\u043D\u0443", "\u0431\u0440\u043E\u0441", "\u0432\u0456\u0434\u043C\u043E\u0432", "\u043F\u0435\u0440\u0435\u0441\u0442", "\u043F\u043E\u0437\u0431\u0443", "\u0437\u0430\u0432'\u044F\u0437"];
       QUIT_NEG_RE = /(^|\s)(не|менше)\s+(пал|кур|пи|вжива|їст|жер)/;
     }
@@ -10173,8 +10187,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
         case "save_habit": {
           withActionLog("save_habit", args, () => {
             const habits = getHabits();
-            const habitType = inferHabitType(args.name);
-            habits.unshift({ id: generateUUID(), name: args.name, details: args.details || "", emoji: habitType === "quit" ? "\u{1F6AB}" : "\u2B55", days: Array.isArray(args.days) ? args.days : [0, 1, 2, 3, 4, 5, 6], targetCount: args.target_count || 1, type: habitType, createdAt: Date.now() });
+            habits.unshift(makeHabit({ name: args.name, details: args.details || "", days: args.days, targetCount: args.target_count || 1 }));
             saveHabits(habits);
             renderHabits();
           }, "evening");
@@ -13465,7 +13478,7 @@ ${CHIP_PROMPT_RULES}`;
       const idx = habits.findIndex((x) => x.id === editingHabitId);
       if (idx !== -1) habits[idx] = { ...habits[idx], name, details, emoji, days, targetCount, type };
     } else {
-      habits.push({ id: generateUUID(), name, details, emoji, days, targetCount, type, createdAt: Date.now() });
+      habits.push(makeHabit({ name, details, emoji, days, targetCount, type }));
     }
     saveHabits(habits);
     closeHabitModal();
@@ -14347,8 +14360,7 @@ ${CHIP_PROMPT_RULES}`;
       const name = (parsed.name || "").trim();
       if (!name) return false;
       const habits = getHabits();
-      const type = inferHabitType(name);
-      habits.push({ id: generateUUID(), name, details: parsed.details || "", emoji: type === "quit" ? "\u{1F6AB}" : "\u2B55", days: parsed.days || [0, 1, 2, 3, 4, 5, 6], type, createdAt: Date.now() });
+      habits.push(makeHabit({ name, details: parsed.details || "", days: parsed.days }));
       saveHabits(habits);
       renderProdHabits();
       renderHabits();
@@ -14871,8 +14883,7 @@ ${CHIP_PROMPT_RULES}`;
           const name = (parsed.name || "").trim();
           if (name) {
             const days = parsed.days || [0, 1, 2, 3, 4, 5, 6];
-            const type = inferHabitType(name);
-            habits2.push({ id: generateUUID(), name, details: parsed.details || "", emoji: type === "quit" ? "\u{1F6AB}" : "\u2B55", days, type, createdAt: Date.now() });
+            habits2.push(makeHabit({ name, details: parsed.details || "", days }));
             saveHabits(habits2);
             renderProdHabits();
             renderHabits();
@@ -18669,11 +18680,10 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
           const countMatch = txt.match(/(\d+)\s*(рази?|раз|разів|склянок|склянки|стакан|кроків|хвилин|разу)/i);
           if (countMatch) targetCount = Math.min(20, Math.max(2, parseInt(countMatch[1])));
         }
-        const habitId = Date.now();
-        const habitType = inferHabitType(habitName);
-        habits.push({ id: habitId, name: habitName, details: habitDetails, emoji: habitType === "quit" ? "\u{1F6AB}" : "\u2B55", days, targetCount, type: habitType, createdAt: habitId });
+        const habit = makeHabit({ name: habitName, details: habitDetails, days, targetCount });
+        habits.push(habit);
         saveHabits(habits);
-        undoRef = { type: "habit", id: habitId, label: t("inbox.type.habit", "\u0437\u0432\u0438\u0447\u043A\u0443") };
+        undoRef = { type: "habit", id: habit.id, label: t("inbox.type.habit", "\u0437\u0432\u0438\u0447\u043A\u0443") };
       }
     }
     if (cat === "event") {
