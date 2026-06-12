@@ -1980,6 +1980,228 @@ ${lines.join("\n")}`;
     }
   });
 
+  // src/data/ua-time-parser.js
+  function _parseNumber(token) {
+    if (!token) return NaN;
+    const lower = token.toLowerCase().trim();
+    if (NUM_MAP[lower]) return NUM_MAP[lower];
+    const n = parseInt(lower, 10);
+    return isNaN(n) ? NaN : n;
+  }
+  function parseUaTimeOffset(text) {
+    if (!text || typeof text !== "string") return null;
+    const t2 = text.toLowerCase();
+    if (/позавчора/.test(t2)) return -2;
+    if (/вчора/.test(t2)) return -1;
+    if (/післязавтра/.test(t2) || /позавтра/.test(t2)) return 2;
+    if (/завтра/.test(t2)) return 1;
+    if (/сьогодні/.test(t2)) return 0;
+    const past = t2.match(/(\d+|один|два|дві|три|чотири|пять|п['ʼ’’]ять|шість|сім|вісім|девять|дев['ʼ’’]ять|десять|тиждень|місяць)\s*(дн[іїя]в?|тижн[іеяь]в?|місяц[ьіяв]?\w*)?\s*(тому|назад)/);
+    if (past) {
+      const numToken = past[1];
+      const unitToken = past[2] || "";
+      let n;
+      if (numToken === "\u0442\u0438\u0436\u0434\u0435\u043D\u044C") {
+        n = 7;
+      } else if (numToken === "\u043C\u0456\u0441\u044F\u0446\u044C") {
+        n = 30;
+      } else {
+        n = _parseNumber(numToken);
+      }
+      if (!isNaN(n)) {
+        if (unitToken.startsWith("\u0442\u0438\u0436\u043D")) return -n * 7;
+        if (unitToken.startsWith("\u043C\u0456\u0441\u044F\u0446")) return -n * 30;
+        if (numToken === "\u0442\u0438\u0436\u0434\u0435\u043D\u044C") return -7;
+        if (numToken === "\u043C\u0456\u0441\u044F\u0446\u044C") return -30;
+        return -n;
+      }
+    }
+    const future = t2.match(/через\s+(\d+|один|два|дві|три|чотири|пять|п['ʼ’’]ять|шість|сім|вісім|девять|дев['ʼ’’]ять|десять|тиждень|місяць)\s*(дн[іїя]в?|тижн[іеяь]в?|місяц[ьіяв]?\w*)?/);
+    if (future) {
+      const numToken = future[1];
+      const unitToken = future[2] || "";
+      let n;
+      if (numToken === "\u0442\u0438\u0436\u0434\u0435\u043D\u044C") {
+        return 7;
+      }
+      if (numToken === "\u043C\u0456\u0441\u044F\u0446\u044C") {
+        return 30;
+      }
+      n = _parseNumber(numToken);
+      if (!isNaN(n)) {
+        if (unitToken.startsWith("\u0442\u0438\u0436\u043D")) return n * 7;
+        if (unitToken.startsWith("\u043C\u0456\u0441\u044F\u0446")) return n * 30;
+        return n;
+      }
+    }
+    return null;
+  }
+  function parseAbsoluteDate(text, baseDate = /* @__PURE__ */ new Date()) {
+    if (!text || typeof text !== "string") return null;
+    const t2 = text.toLowerCase();
+    const m = t2.match(/(\d{1,2})\s+(січня|лютого|березня|квітня|травня|червня|липня|серпня|вересня|жовтня|листопада|грудня)(?:\s+(\d{4}))?/);
+    if (!m) return null;
+    const day = parseInt(m[1], 10);
+    const monthIdx = MONTHS_GENITIVE.indexOf(m[2]);
+    const year = m[3] ? parseInt(m[3], 10) : baseDate.getFullYear();
+    if (day < 1 || day > 31 || monthIdx === -1) return null;
+    const d = new Date(year, monthIdx, day, 12, 0, 0, 0);
+    if (isNaN(d.getTime())) return null;
+    return d;
+  }
+  function parseUaWeekday(text, mode = "future", baseDate = /* @__PURE__ */ new Date()) {
+    if (!text || typeof text !== "string") return null;
+    const t2 = text.toLowerCase();
+    const todayJsDay = baseDate.getDay();
+    const todayMonFirst = (todayJsDay + 6) % 7;
+    for (let i = 0; i < 7; i++) {
+      const forms = WEEKDAYS[i];
+      for (const form of forms) {
+        if (t2.includes(form)) {
+          let diff = i - todayMonFirst;
+          if (mode === "future") {
+            if (diff <= 0) diff += 7;
+          } else {
+            if (diff >= 0) diff -= 7;
+          }
+          return diff;
+        }
+      }
+    }
+    return null;
+  }
+  function resolveDateFromText(text, baseDate = /* @__PURE__ */ new Date(), mode = "past") {
+    const absolute = parseAbsoluteDate(text, baseDate);
+    if (absolute) return absolute;
+    const offset = parseUaTimeOffset(text);
+    if (offset !== null) {
+      const d = new Date(baseDate);
+      d.setHours(12, 0, 0, 0);
+      d.setDate(d.getDate() + offset);
+      return d;
+    }
+    const wdOffset = parseUaWeekday(text, mode, baseDate);
+    if (wdOffset !== null) {
+      const d = new Date(baseDate);
+      d.setHours(12, 0, 0, 0);
+      d.setDate(d.getDate() + wdOffset);
+      return d;
+    }
+    return null;
+  }
+  function hasExplicitClockTime(text) {
+    if (!text || typeof text !== "string") return false;
+    return EXPLICIT_CLOCK_RE.test(text.toLowerCase());
+  }
+  function _pad2(n) {
+    return String(n).padStart(2, "0");
+  }
+  function _formatTime(h, m) {
+    if (h < 0 || h > 23 || m < 0 || m > 59) return null;
+    return _pad2(h) + ":" + _pad2(m);
+  }
+  function _addMinutes(baseDate, minutes) {
+    const d = new Date(baseDate);
+    d.setMinutes(d.getMinutes() + minutes);
+    return _formatTime(d.getHours(), d.getMinutes());
+  }
+  function parseUaTimeOfDay(text, baseDate = /* @__PURE__ */ new Date()) {
+    if (!text || typeof text !== "string") return null;
+    const t2 = text.toLowerCase();
+    if (RELATIVE_HALF_HOUR_RE.test(t2)) {
+      return _addMinutes(baseDate, 30);
+    }
+    const relMin = t2.match(RELATIVE_MINUTES_RE);
+    if (relMin) {
+      const n = parseInt(relMin[1], 10);
+      if (!isNaN(n) && n > 0 && n < 24 * 60) return _addMinutes(baseDate, n);
+    }
+    const relHr = t2.match(RELATIVE_HOURS_RE);
+    if (relHr) {
+      const numToken = relHr[1];
+      let n;
+      if (!numToken) n = 1;
+      else if (numToken === "\u043F\u0456\u0432") n = 0.5;
+      else {
+        n = parseInt(numToken, 10);
+        if (isNaN(n)) n = null;
+      }
+      if (n !== null && n > 0 && n < 24) return _addMinutes(baseDate, Math.round(n * 60));
+    }
+    const explicit = t2.match(EXPLICIT_TIME_RE);
+    if (explicit) {
+      const h = parseInt(explicit[1], 10);
+      const m = parseInt(explicit[2], 10);
+      return _formatTime(h, m);
+    }
+    const hourOnly = t2.match(HOUR_ONLY_RE);
+    if (hourOnly) {
+      let h = parseInt(hourOnly[1], 10);
+      const period = hourOnly[2];
+      if (!isNaN(h)) {
+        if (period === "\u0432\u0435\u0447\u043E\u0440\u0430" && h < 12) h += 12;
+        else if (period === "\u0434\u043D\u044F" && h < 6) h += 12;
+        return _formatTime(h, 0);
+      }
+    }
+    for (const entry of TIME_OF_DAY_MAP) {
+      if (entry.re.test(t2)) return entry.time;
+    }
+    return null;
+  }
+  var MONTHS_GENITIVE, WEEKDAYS, NUM_MAP, TIME_OF_DAY_MAP, EXPLICIT_TIME_RE, HOUR_ONLY_RE, EXPLICIT_CLOCK_RE, RELATIVE_HOURS_RE, RELATIVE_MINUTES_RE, RELATIVE_HALF_HOUR_RE;
+  var init_ua_time_parser = __esm({
+    "src/data/ua-time-parser.js"() {
+      MONTHS_GENITIVE = ["\u0441\u0456\u0447\u043D\u044F", "\u043B\u044E\u0442\u043E\u0433\u043E", "\u0431\u0435\u0440\u0435\u0437\u043D\u044F", "\u043A\u0432\u0456\u0442\u043D\u044F", "\u0442\u0440\u0430\u0432\u043D\u044F", "\u0447\u0435\u0440\u0432\u043D\u044F", "\u043B\u0438\u043F\u043D\u044F", "\u0441\u0435\u0440\u043F\u043D\u044F", "\u0432\u0435\u0440\u0435\u0441\u043D\u044F", "\u0436\u043E\u0432\u0442\u043D\u044F", "\u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434\u0430", "\u0433\u0440\u0443\u0434\u043D\u044F"];
+      WEEKDAYS = [
+        ["\u043F\u043E\u043D\u0435\u0434\u0456\u043B\u043E\u043A", "\u043F\u043E\u043D\u0435\u0434\u0456\u043B\u043A\u0430"],
+        ["\u0432\u0456\u0432\u0442\u043E\u0440\u043E\u043A", "\u0432\u0456\u0432\u0442\u043E\u0440\u043A\u0430"],
+        ["\u0441\u0435\u0440\u0435\u0434\u0443", "\u0441\u0435\u0440\u0435\u0434\u0430", "\u0441\u0435\u0440\u0435\u0434\u0438"],
+        ["\u0447\u0435\u0442\u0432\u0435\u0440", "\u0447\u0435\u0442\u0432\u0435\u0440\u0433\u0430"],
+        ["\u043F'\u044F\u0442\u043D\u0438\u0446\u044E", "\u043F'\u044F\u0442\u043D\u0438\u0446\u044F", "\u043F'\u044F\u0442\u043D\u0438\u0446\u0456", "\u043F\u02BC\u044F\u0442\u043D\u0438\u0446\u044E", "\u043F\u02BC\u044F\u0442\u043D\u0438\u0446\u044F", "\u043F\u02BC\u044F\u0442\u043D\u0438\u0446\u0456"],
+        ["\u0441\u0443\u0431\u043E\u0442\u0443", "\u0441\u0443\u0431\u043E\u0442\u0430", "\u0441\u0443\u0431\u043E\u0442\u0438"],
+        ["\u043D\u0435\u0434\u0456\u043B\u044E", "\u043D\u0435\u0434\u0456\u043B\u044F", "\u043D\u0435\u0434\u0456\u043B\u0456"]
+      ];
+      NUM_MAP = {
+        "\u043E\u0434\u0438\u043D": 1,
+        "\u0434\u0432\u0430": 2,
+        "\u0434\u0432\u0456": 2,
+        "\u0442\u0440\u0438": 3,
+        "\u0447\u043E\u0442\u0438\u0440\u0438": 4,
+        "\u043F\u044F\u0442\u044C": 5,
+        "\u043F'\u044F\u0442\u044C": 5,
+        "\u043F\u02BC\u044F\u0442\u044C": 5,
+        "\u043F\u2019\u044F\u0442\u044C": 5,
+        "\u0448\u0456\u0441\u0442\u044C": 6,
+        "\u0441\u0456\u043C": 7,
+        "\u0432\u0456\u0441\u0456\u043C": 8,
+        "\u0434\u0435\u0432\u044F\u0442\u044C": 9,
+        "\u0434\u0435\u0432'\u044F\u0442\u044C": 9,
+        "\u0434\u0435\u0441\u044F\u0442\u044C": 10
+      };
+      TIME_OF_DAY_MAP = [
+        // Найдовші тригери — перші
+        { re: /перед\s+сном/, time: "22:00" },
+        { re: /пізно\s+(в?в?ечері|ввечері)/, time: "21:00" },
+        { re: /після\s+обіду/, time: "14:00" },
+        // Конкретні слова
+        { re: /опівночі/, time: "00:00" },
+        { re: /опівдні/, time: "12:00" },
+        { re: /(?:^|\s)(зранку|вранці|ранком)(?:\s|$)/, time: "08:00" },
+        { re: /(?:^|\s)(в?в?ечері|ввечері|увечері|надвечір)(?:\s|$)/, time: "18:00" },
+        { re: /(?:^|\s)(вночі|нічю|ніччю)(?:\s|$)/, time: "00:00" },
+        { re: /(?:^|\s)(вдень|удень)(?:\s|$)/, time: "13:00" },
+        { re: /(?:^|\s)(в?обід|обідом)(?:\s|$)/, time: "13:00" }
+      ];
+      EXPLICIT_TIME_RE = /(?:^|\s|[оО]\s+)(\d{1,2})[:.\-](\d{2})(?:\s|$)/;
+      HOUR_ONLY_RE = /(?:^|\s)[оО]\s+(\d{1,2})(?:\s+(ранку|вечора|дня|ночі))?(?:\s|$)/;
+      EXPLICIT_CLOCK_RE = /(?:^|\s)\d{1,2}:\d{2}(?:\s|$)|(?:^|\s)[оО]\s+\d{1,2}(?::\d{2})?(?:\s+(?:ранку|вечора|дня|ночі))?(?:\s|$)/;
+      RELATIVE_HOURS_RE = /через\s+(?:(\d+|пів)\s+)?годин[ауи]?/;
+      RELATIVE_MINUTES_RE = /через\s+(\d+)\s*(?:хвилин[ауи]?|хв)/;
+      RELATIVE_HALF_HOUR_RE = /через\s+пів\s+години|через\s+півгодини/;
+    }
+  });
+
   // src/data/dispatcher-guards.js
   function _findIdx(toolCalls, name) {
     for (let i = 0; i < toolCalls.length; i++) {
@@ -2029,6 +2251,41 @@ ${lines.join("\n")}`;
     const out = toolCalls.slice();
     out[evtIdx] = newTc;
     console.warn("[guard] convertPastEventToMoment: min\u0443\u043B\u0438\u0439 \u0447\u0430\u0441 \u2192 save_moment");
+    return out;
+  }
+  function convertTaskToEventOnTime(toolCalls, text) {
+    if (!Array.isArray(toolCalls) || toolCalls.length === 0) return toolCalls;
+    if (!text || !hasExplicitClockTime(text)) return toolCalls;
+    if (PAST_INDICATORS_RE.test(text)) return toolCalls;
+    if (_has(toolCalls, "create_event")) return toolCalls;
+    const taskIdx = _findIdx(toolCalls, "save_task");
+    if (taskIdx === -1) return toolCalls;
+    let taskArgs = {};
+    try {
+      taskArgs = JSON.parse(toolCalls[taskIdx].function.arguments || "{}");
+    } catch (e) {
+      console.warn("[guard] convertTaskToEventOnTime: parse failed", e);
+      return toolCalls;
+    }
+    if (Array.isArray(taskArgs.steps) && taskArgs.steps.length > 0) return toolCalls;
+    const eventArgs = {
+      _reasoning_log: "Auto-convert save_task to create_event (explicit clock time in user text -> scheduled event)",
+      title: taskArgs.title || text,
+      date: taskArgs.due_date || null,
+      // null → create_event handler спарсить дату з тексту
+      time: parseUaTimeOfDay(text) || null,
+      end_time: null,
+      priority: taskArgs.priority || "normal",
+      comment: taskArgs.comment || ""
+    };
+    const oldTc = toolCalls[taskIdx];
+    const newTc = {
+      ...oldTc,
+      function: { ...oldTc.function, name: "create_event", arguments: JSON.stringify(eventArgs) }
+    };
+    const out = toolCalls.slice();
+    out[taskIdx] = newTc;
+    console.warn("[guard] convertTaskToEventOnTime: \u044F\u0432\u043D\u0438\u0439 \u0447\u0430\u0441 \u2192 create_event");
     return out;
   }
   function convertNoteToFinance(toolCalls, text) {
@@ -2092,11 +2349,13 @@ ${lines.join("\n")}`;
     tc = dropTaskOnFinance(tc);
     tc = dropTaskOnComplete(tc);
     tc = dropEventOnMoment(tc);
+    tc = convertTaskToEventOnTime(tc, text);
     return tc;
   }
   var PAST_INDICATORS_RE, MOMENT_KEYWORD_RE, MONEY_RE;
   var init_dispatcher_guards = __esm({
     "src/data/dispatcher-guards.js"() {
+      init_ua_time_parser();
       PAST_INDICATORS_RE = /(вчора|позавчора|минулого|тому\s|назад)|\b(гуля|жари|їл|пил|зустрі|сходи|створи|купи|зроби|написа|закінчи|поми|поча|відкри|приготува|пройш|по[бг]ачи|зустрі)(в|ла|ло|ли|вся|лася|лися|лось)\b/i;
       MOMENT_KEYWORD_RE = /\bмомент/i;
       MONEY_RE = /(?:[€$₴]\s*\d+(?:[.,]\d+)?)|(?:\d+(?:[.,]\d+)?\s*(?:€|\$|₴|грн|грив(?:ень|ні|ні)?|евр[оa]|євр[оа]|долар(?:ів|и|а)?|euro|usd|eur|uah))/i;
@@ -5852,223 +6111,6 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
         "\u043F\u043E\u0434\u0430\u0440\u0443\u043D\u043A\u0438": ["\u041F\u043E\u0434\u0430\u0440\u0443\u043D\u043A\u0438"]
       };
       _normApos = (s) => String(s || "").replace(/[ʼ’`]/g, "'").toLowerCase();
-    }
-  });
-
-  // src/data/ua-time-parser.js
-  function _parseNumber(token) {
-    if (!token) return NaN;
-    const lower = token.toLowerCase().trim();
-    if (NUM_MAP[lower]) return NUM_MAP[lower];
-    const n = parseInt(lower, 10);
-    return isNaN(n) ? NaN : n;
-  }
-  function parseUaTimeOffset(text) {
-    if (!text || typeof text !== "string") return null;
-    const t2 = text.toLowerCase();
-    if (/позавчора/.test(t2)) return -2;
-    if (/вчора/.test(t2)) return -1;
-    if (/післязавтра/.test(t2) || /позавтра/.test(t2)) return 2;
-    if (/завтра/.test(t2)) return 1;
-    if (/сьогодні/.test(t2)) return 0;
-    const past = t2.match(/(\d+|один|два|дві|три|чотири|пять|п['ʼ’’]ять|шість|сім|вісім|девять|дев['ʼ’’]ять|десять|тиждень|місяць)\s*(дн[іїя]в?|тижн[іеяь]в?|місяц[ьіяв]?\w*)?\s*(тому|назад)/);
-    if (past) {
-      const numToken = past[1];
-      const unitToken = past[2] || "";
-      let n;
-      if (numToken === "\u0442\u0438\u0436\u0434\u0435\u043D\u044C") {
-        n = 7;
-      } else if (numToken === "\u043C\u0456\u0441\u044F\u0446\u044C") {
-        n = 30;
-      } else {
-        n = _parseNumber(numToken);
-      }
-      if (!isNaN(n)) {
-        if (unitToken.startsWith("\u0442\u0438\u0436\u043D")) return -n * 7;
-        if (unitToken.startsWith("\u043C\u0456\u0441\u044F\u0446")) return -n * 30;
-        if (numToken === "\u0442\u0438\u0436\u0434\u0435\u043D\u044C") return -7;
-        if (numToken === "\u043C\u0456\u0441\u044F\u0446\u044C") return -30;
-        return -n;
-      }
-    }
-    const future = t2.match(/через\s+(\d+|один|два|дві|три|чотири|пять|п['ʼ’’]ять|шість|сім|вісім|девять|дев['ʼ’’]ять|десять|тиждень|місяць)\s*(дн[іїя]в?|тижн[іеяь]в?|місяц[ьіяв]?\w*)?/);
-    if (future) {
-      const numToken = future[1];
-      const unitToken = future[2] || "";
-      let n;
-      if (numToken === "\u0442\u0438\u0436\u0434\u0435\u043D\u044C") {
-        return 7;
-      }
-      if (numToken === "\u043C\u0456\u0441\u044F\u0446\u044C") {
-        return 30;
-      }
-      n = _parseNumber(numToken);
-      if (!isNaN(n)) {
-        if (unitToken.startsWith("\u0442\u0438\u0436\u043D")) return n * 7;
-        if (unitToken.startsWith("\u043C\u0456\u0441\u044F\u0446")) return n * 30;
-        return n;
-      }
-    }
-    return null;
-  }
-  function parseAbsoluteDate(text, baseDate = /* @__PURE__ */ new Date()) {
-    if (!text || typeof text !== "string") return null;
-    const t2 = text.toLowerCase();
-    const m = t2.match(/(\d{1,2})\s+(січня|лютого|березня|квітня|травня|червня|липня|серпня|вересня|жовтня|листопада|грудня)(?:\s+(\d{4}))?/);
-    if (!m) return null;
-    const day = parseInt(m[1], 10);
-    const monthIdx = MONTHS_GENITIVE.indexOf(m[2]);
-    const year = m[3] ? parseInt(m[3], 10) : baseDate.getFullYear();
-    if (day < 1 || day > 31 || monthIdx === -1) return null;
-    const d = new Date(year, monthIdx, day, 12, 0, 0, 0);
-    if (isNaN(d.getTime())) return null;
-    return d;
-  }
-  function parseUaWeekday(text, mode = "future", baseDate = /* @__PURE__ */ new Date()) {
-    if (!text || typeof text !== "string") return null;
-    const t2 = text.toLowerCase();
-    const todayJsDay = baseDate.getDay();
-    const todayMonFirst = (todayJsDay + 6) % 7;
-    for (let i = 0; i < 7; i++) {
-      const forms = WEEKDAYS[i];
-      for (const form of forms) {
-        if (t2.includes(form)) {
-          let diff = i - todayMonFirst;
-          if (mode === "future") {
-            if (diff <= 0) diff += 7;
-          } else {
-            if (diff >= 0) diff -= 7;
-          }
-          return diff;
-        }
-      }
-    }
-    return null;
-  }
-  function resolveDateFromText(text, baseDate = /* @__PURE__ */ new Date(), mode = "past") {
-    const absolute = parseAbsoluteDate(text, baseDate);
-    if (absolute) return absolute;
-    const offset = parseUaTimeOffset(text);
-    if (offset !== null) {
-      const d = new Date(baseDate);
-      d.setHours(12, 0, 0, 0);
-      d.setDate(d.getDate() + offset);
-      return d;
-    }
-    const wdOffset = parseUaWeekday(text, mode, baseDate);
-    if (wdOffset !== null) {
-      const d = new Date(baseDate);
-      d.setHours(12, 0, 0, 0);
-      d.setDate(d.getDate() + wdOffset);
-      return d;
-    }
-    return null;
-  }
-  function _pad2(n) {
-    return String(n).padStart(2, "0");
-  }
-  function _formatTime(h, m) {
-    if (h < 0 || h > 23 || m < 0 || m > 59) return null;
-    return _pad2(h) + ":" + _pad2(m);
-  }
-  function _addMinutes(baseDate, minutes) {
-    const d = new Date(baseDate);
-    d.setMinutes(d.getMinutes() + minutes);
-    return _formatTime(d.getHours(), d.getMinutes());
-  }
-  function parseUaTimeOfDay(text, baseDate = /* @__PURE__ */ new Date()) {
-    if (!text || typeof text !== "string") return null;
-    const t2 = text.toLowerCase();
-    if (RELATIVE_HALF_HOUR_RE.test(t2)) {
-      return _addMinutes(baseDate, 30);
-    }
-    const relMin = t2.match(RELATIVE_MINUTES_RE);
-    if (relMin) {
-      const n = parseInt(relMin[1], 10);
-      if (!isNaN(n) && n > 0 && n < 24 * 60) return _addMinutes(baseDate, n);
-    }
-    const relHr = t2.match(RELATIVE_HOURS_RE);
-    if (relHr) {
-      const numToken = relHr[1];
-      let n;
-      if (!numToken) n = 1;
-      else if (numToken === "\u043F\u0456\u0432") n = 0.5;
-      else {
-        n = parseInt(numToken, 10);
-        if (isNaN(n)) n = null;
-      }
-      if (n !== null && n > 0 && n < 24) return _addMinutes(baseDate, Math.round(n * 60));
-    }
-    const explicit = t2.match(EXPLICIT_TIME_RE);
-    if (explicit) {
-      const h = parseInt(explicit[1], 10);
-      const m = parseInt(explicit[2], 10);
-      return _formatTime(h, m);
-    }
-    const hourOnly = t2.match(HOUR_ONLY_RE);
-    if (hourOnly) {
-      let h = parseInt(hourOnly[1], 10);
-      const period = hourOnly[2];
-      if (!isNaN(h)) {
-        if (period === "\u0432\u0435\u0447\u043E\u0440\u0430" && h < 12) h += 12;
-        else if (period === "\u0434\u043D\u044F" && h < 6) h += 12;
-        return _formatTime(h, 0);
-      }
-    }
-    for (const entry of TIME_OF_DAY_MAP) {
-      if (entry.re.test(t2)) return entry.time;
-    }
-    return null;
-  }
-  var MONTHS_GENITIVE, WEEKDAYS, NUM_MAP, TIME_OF_DAY_MAP, EXPLICIT_TIME_RE, HOUR_ONLY_RE, RELATIVE_HOURS_RE, RELATIVE_MINUTES_RE, RELATIVE_HALF_HOUR_RE;
-  var init_ua_time_parser = __esm({
-    "src/data/ua-time-parser.js"() {
-      MONTHS_GENITIVE = ["\u0441\u0456\u0447\u043D\u044F", "\u043B\u044E\u0442\u043E\u0433\u043E", "\u0431\u0435\u0440\u0435\u0437\u043D\u044F", "\u043A\u0432\u0456\u0442\u043D\u044F", "\u0442\u0440\u0430\u0432\u043D\u044F", "\u0447\u0435\u0440\u0432\u043D\u044F", "\u043B\u0438\u043F\u043D\u044F", "\u0441\u0435\u0440\u043F\u043D\u044F", "\u0432\u0435\u0440\u0435\u0441\u043D\u044F", "\u0436\u043E\u0432\u0442\u043D\u044F", "\u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434\u0430", "\u0433\u0440\u0443\u0434\u043D\u044F"];
-      WEEKDAYS = [
-        ["\u043F\u043E\u043D\u0435\u0434\u0456\u043B\u043E\u043A", "\u043F\u043E\u043D\u0435\u0434\u0456\u043B\u043A\u0430"],
-        ["\u0432\u0456\u0432\u0442\u043E\u0440\u043E\u043A", "\u0432\u0456\u0432\u0442\u043E\u0440\u043A\u0430"],
-        ["\u0441\u0435\u0440\u0435\u0434\u0443", "\u0441\u0435\u0440\u0435\u0434\u0430", "\u0441\u0435\u0440\u0435\u0434\u0438"],
-        ["\u0447\u0435\u0442\u0432\u0435\u0440", "\u0447\u0435\u0442\u0432\u0435\u0440\u0433\u0430"],
-        ["\u043F'\u044F\u0442\u043D\u0438\u0446\u044E", "\u043F'\u044F\u0442\u043D\u0438\u0446\u044F", "\u043F'\u044F\u0442\u043D\u0438\u0446\u0456", "\u043F\u02BC\u044F\u0442\u043D\u0438\u0446\u044E", "\u043F\u02BC\u044F\u0442\u043D\u0438\u0446\u044F", "\u043F\u02BC\u044F\u0442\u043D\u0438\u0446\u0456"],
-        ["\u0441\u0443\u0431\u043E\u0442\u0443", "\u0441\u0443\u0431\u043E\u0442\u0430", "\u0441\u0443\u0431\u043E\u0442\u0438"],
-        ["\u043D\u0435\u0434\u0456\u043B\u044E", "\u043D\u0435\u0434\u0456\u043B\u044F", "\u043D\u0435\u0434\u0456\u043B\u0456"]
-      ];
-      NUM_MAP = {
-        "\u043E\u0434\u0438\u043D": 1,
-        "\u0434\u0432\u0430": 2,
-        "\u0434\u0432\u0456": 2,
-        "\u0442\u0440\u0438": 3,
-        "\u0447\u043E\u0442\u0438\u0440\u0438": 4,
-        "\u043F\u044F\u0442\u044C": 5,
-        "\u043F'\u044F\u0442\u044C": 5,
-        "\u043F\u02BC\u044F\u0442\u044C": 5,
-        "\u043F\u2019\u044F\u0442\u044C": 5,
-        "\u0448\u0456\u0441\u0442\u044C": 6,
-        "\u0441\u0456\u043C": 7,
-        "\u0432\u0456\u0441\u0456\u043C": 8,
-        "\u0434\u0435\u0432\u044F\u0442\u044C": 9,
-        "\u0434\u0435\u0432'\u044F\u0442\u044C": 9,
-        "\u0434\u0435\u0441\u044F\u0442\u044C": 10
-      };
-      TIME_OF_DAY_MAP = [
-        // Найдовші тригери — перші
-        { re: /перед\s+сном/, time: "22:00" },
-        { re: /пізно\s+(в?в?ечері|ввечері)/, time: "21:00" },
-        { re: /після\s+обіду/, time: "14:00" },
-        // Конкретні слова
-        { re: /опівночі/, time: "00:00" },
-        { re: /опівдні/, time: "12:00" },
-        { re: /(?:^|\s)(зранку|вранці|ранком)(?:\s|$)/, time: "08:00" },
-        { re: /(?:^|\s)(в?в?ечері|ввечері|увечері|надвечір)(?:\s|$)/, time: "18:00" },
-        { re: /(?:^|\s)(вночі|нічю|ніччю)(?:\s|$)/, time: "00:00" },
-        { re: /(?:^|\s)(вдень|удень)(?:\s|$)/, time: "13:00" },
-        { re: /(?:^|\s)(в?обід|обідом)(?:\s|$)/, time: "13:00" }
-      ];
-      EXPLICIT_TIME_RE = /(?:^|\s|[оО]\s+)(\d{1,2})[:.\-](\d{2})(?:\s|$)/;
-      HOUR_ONLY_RE = /(?:^|\s)[оО]\s+(\d{1,2})(?:\s+(ранку|вечора|дня|ночі))?(?:\s|$)/;
-      RELATIVE_HOURS_RE = /через\s+(?:(\d+|пів)\s+)?годин[ауи]?/;
-      RELATIVE_MINUTES_RE = /через\s+(\d+)\s*(?:хвилин[ауи]?|хв)/;
-      RELATIVE_HALF_HOUR_RE = /через\s+пів\s+години|через\s+півгодини/;
     }
   });
 
