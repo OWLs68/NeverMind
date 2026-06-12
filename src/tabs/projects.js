@@ -518,9 +518,9 @@ export async function startProjectInboxInterview(projectName, projectSubtitle, p
 
   const aiContext = getAIContext();
   const systemPrompt = `${getOWLPersonality()} Щойно створено новий проект "${projectName}"${projectSubtitle ? ` — "${projectSubtitle}"` : ''}.
-Твоя роль — персональний наставник. Постав ОДНЕ перше питання щоб краще зрозуміти цей проект.
-Питай про стартовий капітал або ресурси. Коротко, по-людськи, без зайвих слів.
-Відповідай українською. Тільки текст, без JSON.
+Твоя роль — персональний наставник. Це ПЕРШЕ питання інтерв'ю — ти ще не знаєш що це за проект.
+Постав ОДНЕ коротке ВІДКРИТЕ питання щоб зрозуміти суть і головну ціль проекту (про що він, чого хочеш досягти, на якому етапі). НЕ питай одразу про гроші/дедлайн — спершу зрозумій контекст.
+Коротко, по-людськи, без зайвих слів. Відповідай українською. Тільки текст, без JSON.
 ${aiContext ? '\n\n' + aiContext : ''}`;
 
   try {
@@ -540,13 +540,12 @@ ${aiContext ? '\n\n' + aiContext : ''}`;
     if (reply) {
       setTimeout(() => {
         addInboxChatMsg('agent', reply);
-        // Зберігаємо що OWL чекає відповідь по темі проекту
-        localStorage.setItem('nm_guide_waiting_topic', 'project_' + Date.now());
-        // Додаємо в масив тем провідника щоб продовжити розпитувати
-        const shownTopics = JSON.parse(localStorage.getItem('nm_guide_shown_topics') || '[]');
-        // Питання про час на тиждень — наступне
+        // Адаптивне інтерв'ю (qpzj7k): зберігаємо ЦЕ питання щоб спарувати з
+        // відповіддю юзера, і активуємо лічильник. Далі continueProjectInterview
+        // генерує кожне наступне питання під контекст відповідей.
         localStorage.setItem('nm_project_interview_step', '1');
         localStorage.setItem('nm_project_interview_name', projectName);
+        localStorage.setItem('nm_project_interview_lastq', reply);
       }, 500);
     }
   } catch(e) {
