@@ -245,7 +245,11 @@ function renderProjectWorkspace(id) {
   const hasTempo = [p.tempoNow, p.tempoMore, p.tempoIdeal].some(v => v && v !== '?');
   const isNewProject = steps.length === 0;
   const noteCount = _countProjectNotes(p.name);
-  const emptyChips = isNewProject ? [
+  const hasBrief = !!(p.brief && p.brief.trim());
+  const briefPrompt = t('projects.brief.prompt', 'Хочу розповісти про цей проект — що це, яка головна ціль і контекст');
+  // Поради (план/бюджет/ризики) пропонуємо ЛИШЕ коли OWL уже розуміє проект
+  // (brief є). Без розуміння — поради наосліп (вимога Романа qpzj7k).
+  const emptyChips = (isNewProject && hasBrief) ? [
     { label: t('projects.empty.chip_plan', '📋 Склади план'), prompt: t('projects.empty.prompt_plan', 'Склади план перших кроків для цього проекту') },
     { label: t('projects.empty.chip_budget', '💰 Бюджет і темп'), prompt: t('projects.empty.prompt_budget', 'Допоможи оцінити бюджет і темп роботи для цього проекту') },
     { label: t('projects.empty.chip_risks', '⚠️ Які ризики'), prompt: t('projects.empty.prompt_risks', 'Які головні ризики і складнощі в цьому проекті?') },
@@ -291,10 +295,21 @@ function renderProjectWorkspace(id) {
       </div>` : ''}
     </div>
 
-    ${isNewProject ? `<div class="card-glass" style="text-align:center">
-      <div style="font-size:26px;margin-bottom:6px">✨</div>
-      <div style="font-size:14px;font-weight:800;color:#1e1040;margin-bottom:4px">${t('projects.empty.title', 'Проект щойно створено')}</div>
-      <div style="font-size:12px;font-weight:500;color:rgba(30,16,64,0.5);line-height:1.5;margin-bottom:12px">${t('projects.empty.hint', 'Розкажи OWL знизу про ціль і ресурси — він складе план кроків, порахує темп і підкаже ризики.')}</div>
+    <div class="card-glass">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+        <span style="font-size:13px">💬</span>
+        <div class="section-label" style="margin-bottom:0">${t('projects.brief.title', 'Про проект')}</div>
+      </div>
+      ${hasBrief
+        ? `<div style="font-size:12.5px;font-weight:500;color:#1e1040;line-height:1.55">${escapeHtml(p.brief)}</div>`
+        : `<div style="font-size:12px;font-weight:500;color:rgba(30,16,64,0.5);line-height:1.5;margin-bottom:10px">${t('projects.brief.empty', 'OWL ще не знає що це за проект. Розкажи суть, ціль і контекст (можна фото) — без цього поради неможливі.')}</div>
+           <button data-action="project-chat-prompt" data-prompt="${escapeHtml(briefPrompt)}" style="font-size:12px;font-weight:700;color:white;background:#3d2e1e;border:none;border-radius:10px;padding:8px 14px;cursor:pointer">${t('projects.brief.cta', '💬 Розкажи про проект →')}</button>`
+      }
+    </div>
+
+    ${(isNewProject && hasBrief) ? `<div class="card-glass" style="text-align:center">
+      <div style="font-size:22px;margin-bottom:6px">✨</div>
+      <div style="font-size:13px;font-weight:500;color:rgba(30,16,64,0.55);line-height:1.5;margin-bottom:10px">${t('projects.empty.hint2', 'OWL зрозумів проект. Що далі?')}</div>
       <div style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center">
         ${emptyChips.map(c => `<button data-action="project-chat-prompt" data-prompt="${escapeHtml(c.prompt)}" style="font-size:12px;font-weight:700;color:#3d2e1e;background:rgba(61,46,30,0.08);border:1px solid rgba(61,46,30,0.15);border-radius:10px;padding:7px 12px;cursor:pointer">${escapeHtml(c.label)}</button>`).join('')}
       </div>
