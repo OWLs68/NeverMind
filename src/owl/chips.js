@@ -20,7 +20,7 @@ import { sendMeChatMessage, addMeChatMsg } from '../tabs/me.js';
 import { sendHealthBarMessage, addHealthChatMsg } from '../tabs/health.js';
 import { sendProjectsBarMessage, addProjectsChatMsg } from '../tabs/projects.js';
 import { getTasks, saveTasks, renderTasks } from '../tabs/tasks.js';
-import { getHabits, getHabitLog, saveHabitLog, renderHabits, renderProdHabits, getQuitStatus } from '../tabs/habits.js';
+import { getHabits, getHabitLog, saveHabitLog, renderHabits, renderProdHabits, getQuitStatus, getQuitLog, saveQuitLog } from '../tabs/habits.js';
 import { applyClarifyChoice } from './clarify-guard.js';
 import { generateUUID } from '../core/uuid.js';
 
@@ -236,7 +236,7 @@ function filterStaleChips(chips) {
       const matches = stems.filter(s => hStems.some(hs => hs === s));
       if (matches.length >= 1 && matches.length >= stems.length * 0.5) {
         if (h.type === 'quit') {
-          const quitLog = JSON.parse(localStorage.getItem('nm_quit_log') || '{}');
+          const quitLog = getQuitLog();
           if (quitLog[h.id]?.lastHeld === todayISO) return false;
         } else {
           if (log[today]?.[h.id]) return false;
@@ -559,11 +559,11 @@ function handleCompletionChip(text, tab, payload) {
     if (matches.length >= 1 && matches.length >= chipStems.length * 0.5) {
       if (habit.type === 'quit') {
         // Quit-звичка — відмітити "тримаюсь"
-        const quitLog = JSON.parse(localStorage.getItem('nm_quit_log') || '{}');
+        const quitLog = getQuitLog();
         if (!quitLog[habit.id]) quitLog[habit.id] = { streak: 0, relapses: [] };
         quitLog[habit.id].lastHeld = todayISO;
         if (!quitLog[habit.id].streakStart) quitLog[habit.id].streakStart = todayISO;
-        localStorage.setItem('nm_quit_log', JSON.stringify(quitLog));
+        saveQuitLog(quitLog);
         renderHabits();
         renderProdHabits();
         const msg = `✓ "${habit.name}" — тримаєшся!`;

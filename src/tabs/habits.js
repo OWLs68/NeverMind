@@ -33,8 +33,8 @@ export function getHabitLog() { try { return JSON.parse(localStorage.getItem('nm
 export function saveHabitLog(obj) { localStorage.setItem('nm_habit_log2', JSON.stringify(obj)); window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'habits' })); }
 
 // === QUIT HABITS — челендж "Кинути" ===
-function getQuitLog() { try { return JSON.parse(localStorage.getItem('nm_quit_log') || '{}'); } catch { return {}; } }
-function saveQuitLog(obj) { localStorage.setItem('nm_quit_log', JSON.stringify(obj)); window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'habits' })); }
+export function getQuitLog() { try { return JSON.parse(localStorage.getItem('nm_quit_log') || '{}'); } catch { return {}; } }
+export function saveQuitLog(obj) { localStorage.setItem('nm_quit_log', JSON.stringify(obj)); window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'habits' })); }
 
 // Повертає статус quit-звички: { streak, longestStreak, relapses, lastHeld, freedomDays }
 // freedomDays — сумарна кількість днів "тримався", ніколи не скидається
