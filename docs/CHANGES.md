@@ -3250,3 +3250,10 @@ Bridge-план з 64CXo продовжено — закрито G2 (`parseUaTim
 
 **Коміти:** `870b790` B-197 · `d0955e1` B-200+DRY · `44aff12` промпт список · `+docs` (план міграції + session-state + roadmap)
 **Метрики:** ~13 комітів (security+архітектура), CACHE_NAME `nm-20260610-1115`, новий `docs/SUPABASE_MIGRATION_PLAN.md`
+
+## 12.06.2026 — сесія 7uxlr7
+
+Supabase Фаза 1: **Ворота 1** (єдиний шар запису — канонічні `updateSettings/saveMemory/saveQuitLog` + 5 фабрик сутностей `makeHabit/Event/Task/Moment/Finance`, 23 точки створення → 5, Date.now id → UUID) + **Ворота 3** (конверт `stampEntity` на 5 сутностях). 5 багфіксів: quit-звичка «кинути курити»→quit (правило 12), «подзвонити о 12:00»→подія (гард у dispatcher), NM_KEYS 5 orphan-ключів, 2 з silent-bug-scout аудиту. 5 детермінованих pre-push сторожів (~130 тестів). Council дрейфонув на заборонену `persist.js` обгортку — спіймано читанням `/supabase-prep` hard-law перед Edit'ом. Ворота 2 (структурний payload) відкладено — 7/9 слухачів ламаються, потрібен iPhone-smoke.
+
+**Коміти:** `63c9586` план-чекліст · `070a3dc` stampEntity контракт · `b5ed2db` updateSettings · `38cad50` saveMemory · `b405570` saveQuitLog · `d8713a9` quit-звичка · `fc063f3` NM_KEYS · `0ec333d` аудит-фікси · `932c375` makeHabit · `6dccfd3` makeEvent · `1fea387` makeTask+Moment · `df23870` makeFinance · `605321f` час→подія · `3a7a0fd` Ворота 3
+**Метрики:** 16 комітів коду, CACHE_NAME `nm-20260612-1058`, нові `src/core/settings.js` + `src/core/entity.js` + `src/data/entity-factories.js`, 5 юніт-сторожів
