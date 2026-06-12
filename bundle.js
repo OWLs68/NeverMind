@@ -276,6 +276,10 @@
     return stampEntity({
       name,
       subtitle,
+      brief: "",
+      // що це за проект — суть/ціль/контекст (OWL розуміє ПЕРШ ніж радити)
+      images: [],
+      // про запас під Supabase Storage (зараз не зберігаємо самі фото — памʼять iOS)
       progress: 0,
       steps: [],
       budget: { total: 0, spent: 0, items: [] },
@@ -3720,7 +3724,9 @@ ${lines.join("\n")}`;
     const hasTempo = [p.tempoNow, p.tempoMore, p.tempoIdeal].some((v) => v && v !== "?");
     const isNewProject = steps.length === 0;
     const noteCount = _countProjectNotes(p.name);
-    const emptyChips = isNewProject ? [
+    const hasBrief = !!(p.brief && p.brief.trim());
+    const briefPrompt = t("projects.brief.prompt", "\u0425\u043E\u0447\u0443 \u0440\u043E\u0437\u043F\u043E\u0432\u0456\u0441\u0442\u0438 \u043F\u0440\u043E \u0446\u0435\u0439 \u043F\u0440\u043E\u0435\u043A\u0442 \u2014 \u0449\u043E \u0446\u0435, \u044F\u043A\u0430 \u0433\u043E\u043B\u043E\u0432\u043D\u0430 \u0446\u0456\u043B\u044C \u0456 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442");
+    const emptyChips = isNewProject && hasBrief ? [
       { label: t("projects.empty.chip_plan", "\u{1F4CB} \u0421\u043A\u043B\u0430\u0434\u0438 \u043F\u043B\u0430\u043D"), prompt: t("projects.empty.prompt_plan", "\u0421\u043A\u043B\u0430\u0434\u0438 \u043F\u043B\u0430\u043D \u043F\u0435\u0440\u0448\u0438\u0445 \u043A\u0440\u043E\u043A\u0456\u0432 \u0434\u043B\u044F \u0446\u044C\u043E\u0433\u043E \u043F\u0440\u043E\u0435\u043A\u0442\u0443") },
       { label: t("projects.empty.chip_budget", "\u{1F4B0} \u0411\u044E\u0434\u0436\u0435\u0442 \u0456 \u0442\u0435\u043C\u043F"), prompt: t("projects.empty.prompt_budget", "\u0414\u043E\u043F\u043E\u043C\u043E\u0436\u0438 \u043E\u0446\u0456\u043D\u0438\u0442\u0438 \u0431\u044E\u0434\u0436\u0435\u0442 \u0456 \u0442\u0435\u043C\u043F \u0440\u043E\u0431\u043E\u0442\u0438 \u0434\u043B\u044F \u0446\u044C\u043E\u0433\u043E \u043F\u0440\u043E\u0435\u043A\u0442\u0443") },
       { label: t("projects.empty.chip_risks", "\u26A0\uFE0F \u042F\u043A\u0456 \u0440\u0438\u0437\u0438\u043A\u0438"), prompt: t("projects.empty.prompt_risks", "\u042F\u043A\u0456 \u0433\u043E\u043B\u043E\u0432\u043D\u0456 \u0440\u0438\u0437\u0438\u043A\u0438 \u0456 \u0441\u043A\u043B\u0430\u0434\u043D\u043E\u0449\u0456 \u0432 \u0446\u044C\u043E\u043C\u0443 \u043F\u0440\u043E\u0435\u043A\u0442\u0456?") }
@@ -3764,10 +3770,18 @@ ${lines.join("\n")}`;
       </div>` : ""}
     </div>
 
-    ${isNewProject ? `<div class="card-glass" style="text-align:center">
-      <div style="font-size:26px;margin-bottom:6px">\u2728</div>
-      <div style="font-size:14px;font-weight:800;color:#1e1040;margin-bottom:4px">${t("projects.empty.title", "\u041F\u0440\u043E\u0435\u043A\u0442 \u0449\u043E\u0439\u043D\u043E \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E")}</div>
-      <div style="font-size:12px;font-weight:500;color:rgba(30,16,64,0.5);line-height:1.5;margin-bottom:12px">${t("projects.empty.hint", "\u0420\u043E\u0437\u043A\u0430\u0436\u0438 OWL \u0437\u043D\u0438\u0437\u0443 \u043F\u0440\u043E \u0446\u0456\u043B\u044C \u0456 \u0440\u0435\u0441\u0443\u0440\u0441\u0438 \u2014 \u0432\u0456\u043D \u0441\u043A\u043B\u0430\u0434\u0435 \u043F\u043B\u0430\u043D \u043A\u0440\u043E\u043A\u0456\u0432, \u043F\u043E\u0440\u0430\u0445\u0443\u0454 \u0442\u0435\u043C\u043F \u0456 \u043F\u0456\u0434\u043A\u0430\u0436\u0435 \u0440\u0438\u0437\u0438\u043A\u0438.")}</div>
+    <div class="card-glass">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+        <span style="font-size:13px">\u{1F4AC}</span>
+        <div class="section-label" style="margin-bottom:0">${t("projects.brief.title", "\u041F\u0440\u043E \u043F\u0440\u043E\u0435\u043A\u0442")}</div>
+      </div>
+      ${hasBrief ? `<div style="font-size:12.5px;font-weight:500;color:#1e1040;line-height:1.55">${escapeHtml(p.brief)}</div>` : `<div style="font-size:12px;font-weight:500;color:rgba(30,16,64,0.5);line-height:1.5;margin-bottom:10px">${t("projects.brief.empty", "OWL \u0449\u0435 \u043D\u0435 \u0437\u043D\u0430\u0454 \u0449\u043E \u0446\u0435 \u0437\u0430 \u043F\u0440\u043E\u0435\u043A\u0442. \u0420\u043E\u0437\u043A\u0430\u0436\u0438 \u0441\u0443\u0442\u044C, \u0446\u0456\u043B\u044C \u0456 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442 (\u043C\u043E\u0436\u043D\u0430 \u0444\u043E\u0442\u043E) \u2014 \u0431\u0435\u0437 \u0446\u044C\u043E\u0433\u043E \u043F\u043E\u0440\u0430\u0434\u0438 \u043D\u0435\u043C\u043E\u0436\u043B\u0438\u0432\u0456.")}</div>
+           <button data-action="project-chat-prompt" data-prompt="${escapeHtml(briefPrompt)}" style="font-size:12px;font-weight:700;color:white;background:#3d2e1e;border:none;border-radius:10px;padding:8px 14px;cursor:pointer">${t("projects.brief.cta", "\u{1F4AC} \u0420\u043E\u0437\u043A\u0430\u0436\u0438 \u043F\u0440\u043E \u043F\u0440\u043E\u0435\u043A\u0442 \u2192")}</button>`}
+    </div>
+
+    ${isNewProject && hasBrief ? `<div class="card-glass" style="text-align:center">
+      <div style="font-size:22px;margin-bottom:6px">\u2728</div>
+      <div style="font-size:13px;font-weight:500;color:rgba(30,16,64,0.55);line-height:1.5;margin-bottom:10px">${t("projects.empty.hint2", "OWL \u0437\u0440\u043E\u0437\u0443\u043C\u0456\u0432 \u043F\u0440\u043E\u0435\u043A\u0442. \u0429\u043E \u0434\u0430\u043B\u0456?")}</div>
       <div style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center">
         ${emptyChips.map((c) => `<button data-action="project-chat-prompt" data-prompt="${escapeHtml(c.prompt)}" style="font-size:12px;font-weight:700;color:#3d2e1e;background:rgba(61,46,30,0.08);border:1px solid rgba(61,46,30,0.15);border-radius:10px;padding:7px 12px;cursor:pointer">${escapeHtml(c.label)}</button>`).join("")}
       </div>
@@ -4138,6 +4152,108 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
     }
     projectsBarLoading = false;
   }
+  function openProjectImagePicker() {
+    const input = document.getElementById("projects-image-input");
+    if (input) input.click();
+  }
+  function _downscaleImageToDataUrl(file, maxDim) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const img = new Image();
+        img.onload = () => {
+          try {
+            const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+            const w = Math.max(1, Math.round(img.width * scale));
+            const h = Math.max(1, Math.round(img.height * scale));
+            const canvas = document.createElement("canvas");
+            canvas.width = w;
+            canvas.height = h;
+            canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+            resolve(canvas.toDataURL("image/jpeg", 0.8));
+          } catch (e) {
+            reject(e);
+          }
+        };
+        img.onerror = reject;
+        img.src = reader.result;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+  async function handleProjectImagePick(dataset, el) {
+    const input = el || document.getElementById("projects-image-input");
+    const file = input && input.files && input.files[0];
+    if (input) input.value = "";
+    if (!file || !file.type || !file.type.startsWith("image/")) return;
+    try {
+      const dataUrl = await _downscaleImageToDataUrl(file, 1024);
+      await sendProjectImageMessage(dataUrl);
+    } catch (e) {
+      addProjectsChatMsg("agent", t("projects.img.err", "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u043F\u0440\u043E\u0447\u0438\u0442\u0430\u0442\u0438 \u0444\u043E\u0442\u043E."));
+    }
+  }
+  async function sendProjectImageMessage(dataUrl) {
+    if (projectsBarLoading) return;
+    const key = localStorage.getItem("nm_gemini_key");
+    if (!key) {
+      addProjectsChatMsg("agent", t("projects.chat.no_key", "\u0412\u0432\u0435\u0434\u0438 OpenAI \u043A\u043B\u044E\u0447 \u0432 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445."));
+      return;
+    }
+    const projects = getProjects();
+    const activeProject = activeProjectId ? projects.find((p) => p.id === activeProjectId) : null;
+    if (!activeProject) {
+      addProjectsChatMsg("agent", t("projects.img.no_project", "\u0412\u0456\u0434\u043A\u0440\u0438\u0439 \u043F\u0440\u043E\u0435\u043A\u0442, \u0449\u043E\u0431 \u0434\u043E\u0434\u0430\u0442\u0438 \u0444\u043E\u0442\u043E \u044F\u043A \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442."));
+      return;
+    }
+    addProjectsChatMsg("user", t("projects.img.sent", "\u{1F5BC} \u0424\u043E\u0442\u043E \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u043D\u043E \u0434\u043B\u044F \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443"));
+    projectsBarLoading = true;
+    addProjectsChatMsg("typing", "");
+    const sys = `${getOWLPersonality()} \u042E\u0437\u0435\u0440 \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u0432 \u0444\u043E\u0442\u043E \u044F\u043A \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442 \u0434\u043B\u044F \u043F\u0440\u043E\u0435\u043A\u0442\u0443 "${activeProject.name}".${activeProject.brief ? ` \u0423\u0436\u0435 \u0432\u0456\u0434\u043E\u043C\u043E: ${activeProject.brief}` : ""}
+\u041F\u043E\u0434\u0438\u0432\u0438\u0441\u044C \u043D\u0430 \u0444\u043E\u0442\u043E \u0443\u0432\u0430\u0436\u043D\u043E. \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0422I\u041B\u042C\u041A\u0418 JSON (\u0431\u0435\u0437 markdown):
+{"reply":"1-3 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E \u2014 \u0449\u043E \u0431\u0430\u0447\u0438\u0448 \u043D\u0430 \u0444\u043E\u0442\u043E \u0456 \u044F\u043A \u0446\u0435 \u0441\u0442\u043E\u0441\u0443\u0454\u0442\u044C\u0441\u044F \u043F\u0440\u043E\u0435\u043A\u0442\u0443","brief":"\u043E\u043D\u043E\u0432\u043B\u0435\u043D\u0435 \u0440\u043E\u0437\u0443\u043C\u0456\u043D\u043D\u044F \u043F\u0440\u043E\u0435\u043A\u0442\u0443 2-4 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u044F\u043A\u0449\u043E \u0444\u043E\u0442\u043E \u0434\u043E\u0434\u0430\u043B\u043E \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443, \u0456\u043D\u0430\u043A\u0448\u0435 \u043F\u043E\u0440\u043E\u0436\u043D\u0456\u0439 \u0440\u044F\u0434\u043E\u043A"}`;
+    try {
+      const res = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}` },
+        body: JSON.stringify({
+          model: "gpt-4o-mini",
+          messages: [
+            { role: "system", content: sys },
+            { role: "user", content: [
+              { type: "text", text: "\u0424\u043E\u0442\u043E \u0434\u043B\u044F \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443 \u043F\u0440\u043E\u0435\u043A\u0442\u0443." },
+              { type: "image_url", image_url: { url: dataUrl } }
+            ] }
+          ],
+          max_tokens: 400,
+          temperature: 0.5
+        })
+      });
+      const data = await res.json();
+      if (data?.usage) logUsage("projects-vision", data.usage, data.model);
+      const raw = (data.choices?.[0]?.message?.content || "").trim();
+      let parsed = null;
+      try {
+        parsed = JSON.parse(raw.replace(/```json|```/g, "").trim());
+      } catch (e) {
+      }
+      if (parsed && parsed.brief && String(parsed.brief).trim()) {
+        const arr = getProjects();
+        const pp = arr.find((x) => x.id === activeProject.id);
+        if (pp) {
+          pp.brief = String(parsed.brief).trim();
+          pp.lastActivity = Date.now();
+          saveProjects(arr);
+          if (currentTab === "projects") renderProjects();
+        }
+      }
+      addProjectsChatMsg("agent", parsed && parsed.reply ? parsed.reply : raw || t("projects.img.seen", "\u041F\u043E\u0434\u0438\u0432\u0438\u0432\u0441\u044F \u0444\u043E\u0442\u043E."));
+    } catch (e) {
+      addProjectsChatMsg("agent", t("projects.chat.network_error", "\u041C\u0435\u0440\u0435\u0436\u0435\u0432\u0430 \u043F\u043E\u043C\u0438\u043B\u043A\u0430."));
+    }
+    projectsBarLoading = false;
+  }
   var activeProjectId, projectsBarLoading, projectsBarHistory, _projectsTypingEl;
   var init_projects = __esm({
     "src/tabs/projects.js"() {
@@ -4170,7 +4286,9 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
         closeProjectWorkspace,
         toggleProjectTimeline,
         toggleProjectStep,
-        switchTab
+        switchTab,
+        openProjectImagePicker,
+        handleProjectImagePick
       });
     }
   });
@@ -8245,7 +8363,8 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
       "add_project_resource",
       "update_project_tempo",
       "update_project_risks",
-      "set_project_budget"
+      "set_project_budget",
+      "set_project_brief"
     ].includes(name)) return false;
     const projs = getProjects();
     const p = projs.find((x) => x.id === args.project_id);
@@ -8316,6 +8435,11 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
         p.lastActivity = Date.now();
         break;
       }
+      case "set_project_brief": {
+        if (args.brief) p.brief = String(args.brief);
+        p.lastActivity = Date.now();
+        break;
+      }
     }
     saveProjects(projs);
     if (currentTab === "projects") renderProjects();
@@ -8328,7 +8452,8 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
       add_project_resource: `\u2713 \u0420\u0435\u0441\u0443\u0440\u0441 "${args.title}" \u0434\u043E\u0434\u0430\u043D\u043E`,
       update_project_tempo: "\u2713 \u0422\u0435\u043C\u043F \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043E",
       update_project_risks: "\u2713 \u0420\u0438\u0437\u0438\u043A\u0438 \u0437\u0430\u043F\u0438\u0441\u0430\u043D\u043E",
-      set_project_budget: `\u2713 \u0411\u044E\u0434\u0436\u0435\u0442 \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043E${typeof args.total === "number" ? `: ${args.total}` : ""}`
+      set_project_budget: `\u2713 \u0411\u044E\u0434\u0436\u0435\u0442 \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043E${typeof args.total === "number" ? `: ${args.total}` : ""}`,
+      set_project_brief: "\u2713 \u0417\u0440\u043E\u0437\u0443\u043C\u0456\u0432 \u043F\u0440\u043E\u0435\u043A\u0442 \u2014 \u0437\u0430\u043F\u0438\u0441\u0430\u0432 \u0441\u0443\u0442\u044C"
     };
     addMsg("agent", labels[name] + (args.comment ? ` \xB7 ${args.comment}` : ""));
     return true;
@@ -12874,6 +12999,7 @@ ID \u0437\u0430\u0434\u0430\u0447, \u0437\u0432\u0438\u0447\u043E\u043A, \u043F\
   }
   function getProjectsChatSystem({ activeProject, projectsContext, activeSteps }) {
     const contextBlock = activeProject ? `\u0410\u043A\u0442\u0438\u0432\u043D\u0438\u0439 \u043F\u0440\u043E\u0435\u043A\u0442: "${activeProject.name}" (${activeProject.progress || 0}%). ID=${activeProject.id}. \u041F\u0456\u0434\u0437\u0430\u0433\u043E\u043B\u043E\u0432\u043E\u043A: ${activeProject.subtitle || ""}.
+\u0421\u0443\u0442\u044C \u043F\u0440\u043E\u0435\u043A\u0442\u0443 (\u0449\u043E \u0446\u0435): ${activeProject.brief ? activeProject.brief : "\u041D\u0415 \u0412\u0406\u0414\u041E\u041C\u0410 \u2014 \u0441\u043F\u0435\u0440\u0448\u0443 \u0437\u0440\u043E\u0437\u0443\u043C\u0456\u0439 \u043F\u0440\u043E\u0435\u043A\u0442 \u043F\u0435\u0440\u0448 \u043D\u0456\u0436 \u0440\u0430\u0434\u0438\u0442\u0438 (set_project_brief)."}
 \u041A\u0440\u043E\u043A\u0438:
 ${activeSteps || "\u043D\u0435\u043C\u0430\u0454 \u043A\u0440\u043E\u043A\u0456\u0432"}` : projectsContext;
     return `${getOWLPersonality()} \u0422\u0438 \u043E\u0441\u043E\u0431\u0438\u0441\u0442\u0438\u0439 \u043D\u0430\u0441\u0442\u0430\u0432\u043D\u0438\u043A \u043F\u043E \u043F\u0440\u043E\u0435\u043A\u0442\u0430\u0445 \u0443 NeverMind.
@@ -12890,11 +13016,14 @@ ${BASE_CHAT_RULES}
 - \u0422\u0435\u043C\u043F \u2192 update_project_tempo (tempoNow/tempoMore/tempoIdeal)
 - \u0420\u0438\u0437\u0438\u043A\u0438 \u2192 update_project_risks
 - \u0411\u044E\u0434\u0436\u0435\u0442 \u2192 set_project_budget (total = \u043F\u043B\u0430\u043D\u043E\u0432\u0438\u0439 \u0431\u044E\u0434\u0436\u0435\u0442; item_name+item_amount = \u043F\u043B\u0430\u043D\u043E\u0432\u0430 \u0441\u0442\u0430\u0442\u0442\u044F)
+- \u0420\u043E\u0437\u0443\u043C\u0456\u043D\u043D\u044F \u043F\u0440\u043E\u0435\u043A\u0442\u0443 (\u0449\u043E \u0446\u0435, \u0446\u0456\u043B\u044C, \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442) \u2192 set_project_brief
 - \u041D\u043E\u0432\u0456 \u043F\u0440\u043E\u0435\u043A\u0442\u0438 \u2192 create_project
 - \u0423\u043D\u0456\u0432\u0435\u0440\u0441\u0430\u043B\u044C\u043D\u0456 \u2192 save_task / create_event / save_note / save_finance / save_moment / save_memory_fact / set_reminder \u0442\u043E\u0449\u043E
 - \u041D\u0430\u0432\u0456\u0433\u0430\u0446\u0456\u044F \u2192 UI tools (switch_tab, open_memory \u0442\u043E\u0449\u043E)
 
 \u041F\u0420\u0410\u0412\u0418\u041B\u0410 (project-\u0441\u043F\u0435\u0446\u0438\u0444\u0456\u043A\u0430):
+- \u{1F6A8} \u0421\u041F\u041E\u0427\u0410\u0422\u041A\u0423 \u0417\u0420\u041E\u0417\u0423\u041C\u0406\u0419, \u041F\u041E\u0422\u0406\u041C \u0420\u0410\u0414\u042C. \u042F\u043A\u0449\u043E \xAB\u0421\u0443\u0442\u044C \u043F\u0440\u043E\u0435\u043A\u0442\u0443\xBB \u043D\u0438\u0436\u0447\u0435 \u043F\u043E\u0440\u043E\u0436\u043D\u044F \u2014 \u041D\u0415 \u0434\u0430\u0432\u0430\u0439 \u043F\u043E\u0440\u0430\u0434/\u043A\u0440\u043E\u043A\u0456\u0432/\u0431\u044E\u0434\u0436\u0435\u0442\u0443 \u043D\u0430\u043E\u0441\u043B\u0456\u043F. \u0421\u043F\u0435\u0440\u0448\u0443 \u0440\u043E\u0437\u043F\u0438\u0442\u0430\u0439 \u0449\u043E \u0446\u0435 \u0437\u0430 \u043F\u0440\u043E\u0435\u043A\u0442, \u044F\u043A\u0430 \u0433\u043E\u043B\u043E\u0432\u043D\u0430 \u0446\u0456\u043B\u044C, \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442. \u041A\u043E\u043B\u0438 \u0437\u0440\u043E\u0437\u0443\u043C\u0456\u0432 \u2014 \u0432\u0438\u043A\u043B\u0438\u0447 set_project_brief \u0449\u043E\u0431 \u0437\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u0440\u043E\u0437\u0443\u043C\u0456\u043D\u043D\u044F. \u0410\u0436 \u0442\u043E\u0434\u0456 \u043F\u0440\u043E\u043F\u043E\u043D\u0443\u0439 \u043F\u043B\u0430\u043D/\u0440\u0438\u0437\u0438\u043A\u0438/\u0431\u044E\u0434\u0436\u0435\u0442.
+- \u042F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u0441\u043A\u0438\u043D\u0443\u0432 \u0444\u043E\u0442\u043E \u2014 \u043E\u043F\u0438\u0448\u0438 \u0449\u043E \u0431\u0430\u0447\u0438\u0448 \u0456 \u0432\u043F\u043B\u0435\u0442\u0438 \u0443 \u0440\u043E\u0437\u0443\u043C\u0456\u043D\u043D\u044F \u043F\u0440\u043E\u0435\u043A\u0442\u0443 (set_project_brief).
 - \u041D\u0435 \u0432\u0438\u0433\u0430\u0434\u0443\u0439 \u0434\u0430\u043D\u0438\u0445 \u044F\u043A\u0438\u0445 \u043D\u0435\u043C\u0430 \u0443 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0456. \u042F\u043A\u0449\u043E \u043D\u0435\u0437\u0440\u043E\u0437\u0443\u043C\u0456\u043B\u043E \u2014 \u043F\u0435\u0440\u0435\u043F\u0438\u0442\u0443\u0439.
 - \u0412\u0438\u0442\u0440\u0430\u0442\u0430/\u0434\u043E\u0445\u0456\u0434 \u0441\u0442\u043E\u0441\u0443\u0454\u0442\u044C\u0441\u044F \u0430\u043A\u0442\u0438\u0432\u043D\u043E\u0433\u043E \u043F\u0440\u043E\u0435\u043A\u0442\u0443 \u2192 save_finance \u0437 project_id=ID \u0430\u043A\u0442\u0438\u0432\u043D\u043E\u0433\u043E \u043F\u0440\u043E\u0435\u043A\u0442\u0443 (\u0444\u0430\u043A\u0442\u0438\u0447\u043D\u0456 \u0432\u0438\u0442\u0440\u0430\u0442\u0438 \u0439\u0434\u0443\u0442\u044C \u0443 \u0431\u044E\u0434\u0436\u0435\u0442 \u043F\u0440\u043E\u0435\u043A\u0442\u0443).
 
@@ -13319,6 +13448,7 @@ ${CHIP_PROMPT_RULES}`;
         { type: "function", function: { name: "update_project_tempo", description: "\u041E\u043D\u043E\u0432\u0438\u0442\u0438 \u0442\u0435\u043C\u043F \u043F\u0440\u043E\u0435\u043A\u0442\u0443 (\u043F\u043E\u0442\u043E\u0447\u043D\u0438\u0439 / \u043F\u0440\u0438\u0441\u043A\u043E\u0440\u0435\u043D\u0438\u0439 / \u0456\u0434\u0435\u0430\u043B\u044C\u043D\u0438\u0439).", parameters: { type: "object", properties: { _reasoning_log: { type: "string", description: "CoT \u2014 1-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u041E\u0411\u041E\u0412\u02BC\u042F\u0417\u041A\u041E\u0412\u041E (\u0434\u0438\u0432. REASONING_LOG_RULE)." }, project_id: { type: "string" }, tempoNow: { type: "string" }, tempoMore: { type: "string" }, tempoIdeal: { type: "string" }, comment: { type: "string" } }, required: ["_reasoning_log", "project_id"], additionalProperties: false } } },
         { type: "function", function: { name: "update_project_risks", description: "\u0417\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u0440\u0438\u0437\u0438\u043A\u0438 \u0430\u0431\u043E \u0437\u0430\u043D\u0435\u043F\u043E\u043A\u043E\u0454\u043D\u043D\u044F \u043F\u0440\u043E\u0435\u043A\u0442\u0443.", parameters: { type: "object", properties: { _reasoning_log: { type: "string", description: "CoT \u2014 1-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u041E\u0411\u041E\u0412\u02BC\u042F\u0417\u041A\u041E\u0412\u041E (\u0434\u0438\u0432. REASONING_LOG_RULE)." }, project_id: { type: "string" }, risks: { type: "string" }, comment: { type: "string" } }, required: ["_reasoning_log", "project_id", "risks"], additionalProperties: false } } },
         { type: "function", function: { name: "set_project_budget", description: "\u0412\u0441\u0442\u0430\u043D\u043E\u0432\u0438\u0442\u0438 \u043F\u043B\u0430\u043D\u043E\u0432\u0438\u0439 \u0431\u044E\u0434\u0436\u0435\u0442 \u043F\u0440\u043E\u0435\u043A\u0442\u0443 (\u0437\u0430\u0433\u0430\u043B\u044C\u043D\u0430 \u0441\u0443\u043C\u0430) \u0442\u0430/\u0430\u0431\u043E \u0434\u043E\u0434\u0430\u0442\u0438 \u043F\u043B\u0430\u043D\u043E\u0432\u0443 \u0441\u0442\u0430\u0442\u0442\u044E \u0432\u0438\u0442\u0440\u0430\u0442. \u041D\u0415 \u0434\u043B\u044F \u0437\u0430\u043F\u0438\u0441\u0443 \u0444\u0430\u043A\u0442\u0438\u0447\u043D\u0438\u0445 \u0432\u0438\u0442\u0440\u0430\u0442 \u2014 \u0444\u0430\u043A\u0442\u0438\u0447\u043D\u0456 \u0432\u0438\u0442\u0440\u0430\u0442\u0438 \u0440\u0430\u0445\u0443\u044E\u0442\u044C\u0441\u044F \u0437 \u0432\u043A\u043B\u0430\u0434\u043A\u0438 \u0424\u0456\u043D\u0430\u043D\u0441\u0438 \u0437\u0430 \u0442\u0435\u0433\u043E\u043C \u043F\u0440\u043E\u0435\u043A\u0442\u0443.", parameters: { type: "object", properties: { _reasoning_log: { type: "string", description: "CoT \u2014 1-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u041E\u0411\u041E\u0412\u02BC\u042F\u0417\u041A\u041E\u0412\u041E (\u0434\u0438\u0432. REASONING_LOG_RULE)." }, project_id: { type: "string" }, total: { type: "number", description: "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0438\u0439 \u043F\u043B\u0430\u043D\u043E\u0432\u0438\u0439 \u0431\u044E\u0434\u0436\u0435\u0442" }, item_name: { type: "string", description: "\u041D\u0430\u0437\u0432\u0430 \u043F\u043B\u0430\u043D\u043E\u0432\u043E\u0457 \u0441\u0442\u0430\u0442\u0442\u0456 \u0432\u0438\u0442\u0440\u0430\u0442" }, item_amount: { type: "number", description: "\u0421\u0443\u043C\u0430 \u0441\u0442\u0430\u0442\u0442\u0456" }, comment: { type: "string" } }, required: ["_reasoning_log", "project_id"], additionalProperties: false } } },
+        { type: "function", function: { name: "set_project_brief", description: "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u0420\u041E\u0417\u0423\u041C\u0406\u041D\u041D\u042F \u043F\u0440\u043E\u0435\u043A\u0442\u0443 \u2014 \u0449\u043E \u0446\u0435 \u0437\u0430 \u043F\u0440\u043E\u0435\u043A\u0442, \u0433\u043E\u043B\u043E\u0432\u043D\u0430 \u0446\u0456\u043B\u044C, \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442. \u0412\u0438\u043A\u043B\u0438\u043A\u0430\u0439 \u043A\u043E\u043B\u0438 \u044E\u0437\u0435\u0440 \u0440\u043E\u0437\u043F\u043E\u0432\u0456\u0432 \u043F\u0440\u043E \u0441\u0443\u0442\u044C \u043F\u0440\u043E\u0435\u043A\u0442\u0443 (\u0442\u0435\u043A\u0441\u0442\u043E\u043C \u0430\u0431\u043E \u043F\u043E \u0444\u043E\u0442\u043E). \u0426\u0435 \u043E\u0441\u043D\u043E\u0432\u0430 \u0434\u043B\u044F \u0432\u0441\u0456\u0445 \u043F\u043E\u0434\u0430\u043B\u044C\u0448\u0438\u0445 \u043F\u043E\u0440\u0430\u0434. \u041F\u0435\u0440\u0435\u0437\u0430\u043F\u0438\u0441\u0443\u0454 \u043F\u043E\u043F\u0435\u0440\u0435\u0434\u043D\u0456\u0439 brief \u043F\u043E\u0432\u043D\u0438\u043C \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u043C \u043E\u043F\u0438\u0441\u043E\u043C.", parameters: { type: "object", properties: { _reasoning_log: { type: "string", description: "CoT \u2014 1-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u041E\u0411\u041E\u0412\u02BC\u042F\u0417\u041A\u041E\u0412\u041E (\u0434\u0438\u0432. REASONING_LOG_RULE)." }, project_id: { type: "string" }, brief: { type: "string", description: "2-5 \u0440\u0435\u0447\u0435\u043D\u044C: \u0449\u043E \u0446\u0435 \u0437\u0430 \u043F\u0440\u043E\u0435\u043A\u0442, \u0433\u043E\u043B\u043E\u0432\u043D\u0430 \u0446\u0456\u043B\u044C, \u043A\u043B\u044E\u0447\u043E\u0432\u0438\u0439 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442. \u0421\u0432\u043E\u0457\u043C\u0438 \u0441\u043B\u043E\u0432\u0430\u043C\u0438, \u043F\u043E \u0441\u0443\u0442\u0456." }, comment: { type: "string" } }, required: ["_reasoning_log", "project_id", "brief"], additionalProperties: false } } },
         // --- ВИКОНАННЯ ---
         { type: "function", function: { name: "complete_habit", description: "\u0412\u0456\u0434\u043C\u0456\u0442\u0438\u0442\u0438 \u0437\u0432\u0438\u0447\u043A\u0443(\u0438) \u044F\u043A \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u0456 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 \u0449\u043E \u0437\u0440\u043E\u0431\u0438\u0432 \u0449\u043E\u0441\u044C \u0437\u0456 \u0441\u043F\u0438\u0441\u043A\u0443 \u0437\u0432\u0438\u0447\u043E\u043A.", parameters: { type: "object", properties: { _reasoning_log: { type: "string", description: "CoT \u2014 1-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u041E\u0411\u041E\u0412\u02BC\u042F\u0417\u041A\u041E\u0412\u041E (\u0434\u0438\u0432. REASONING_LOG_RULE)." }, habit_ids: { type: "array", items: { type: "string" }, description: "UUID \u0437\u0432\u0438\u0447\u043E\u043A \u0437\u0456 \u0441\u043F\u0438\u0441\u043A\u0443" }, comment: { type: "string", description: "\u041A\u043E\u0440\u043E\u0442\u043A\u0435 \u043F\u0456\u0434\u0442\u0432\u0435\u0440\u0434\u0436\u0435\u043D\u043D\u044F" } }, required: ["_reasoning_log", "habit_ids", "comment"], additionalProperties: false } } },
         { type: "function", function: { name: "complete_task", description: "\u0417\u0430\u043A\u0440\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443(\u0456) \u044F\u043A \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u0456. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 \u0449\u043E \u0437\u0440\u043E\u0431\u0438\u0432 \u0449\u043E\u0441\u044C \u0437 \u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0445 \u0437\u0430\u0434\u0430\u0447. \u041E\u0411\u041E\u0412\u02BC\u042F\u0417\u041A\u041E\u0412\u041E task_ids \u043C\u0430\u0454 \u043C\u0456\u0441\u0442\u0438\u0442\u0438 \u0422I\u041B\u042C\u041A\u0418 ID \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u043D\u043E\u0457 \u0441\u0435\u043A\u0446\u0456\u0457 '\u0410\u043A\u0442\u0438\u0432\u043D\u0456 \u0437\u0430\u0434\u0430\u0447\u0456'. \u041DI\u041A\u041E\u041B\u0418 \u043D\u0435 \u0432\u0438\u0433\u0430\u0434\u0443\u0439 ID.", strict: true, parameters: { type: "object", properties: { _reasoning_log: { type: "string", description: "CoT \u2014 1-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u041E\u0411\u041E\u0412\u02BC\u042F\u0417\u041A\u041E\u0412\u041E (\u0434\u0438\u0432. REASONING_LOG_RULE)." }, task_ids: { type: "array", items: { type: "string" }, description: "ID \u0437\u0430\u0434\u0430\u0447 \u0437\u0456 \u0441\u043F\u0438\u0441\u043A\u0443 \u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0445 (\u0442\u0456\u043B\u044C\u043A\u0438 \u0440\u0435\u0430\u043B\u044C\u043D\u0456 \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443)" }, comment: { type: "string", description: "\u041A\u043E\u0440\u043E\u0442\u043A\u0435 \u043F\u0456\u0434\u0442\u0432\u0435\u0440\u0434\u0436\u0435\u043D\u043D\u044F" } }, required: ["_reasoning_log", "task_ids", "comment"], additionalProperties: false } } },
@@ -17279,6 +17409,7 @@ ${priorQA}
     const systemPrompt = `${getOWLPersonality()} \u042E\u0437\u0435\u0440 \u0449\u043E\u0439\u043D\u043E \u0441\u0442\u0432\u043E\u0440\u0438\u0432 \u043F\u0440\u043E\u0435\u043A\u0442 "${projectName}" \u0456 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0432 \u043D\u0430 \u043F\u0438\u0442\u0430\u043D\u043D\u044F \u0456\u043D\u0442\u0435\u0440\u0432'\u044E. \u041D\u0430 \u043E\u0441\u043D\u043E\u0432\u0456 \u0419\u041E\u0413\u041E \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0435\u0439 \u0437\u0430\u043F\u043E\u0432\u043D\u0438 \u043A\u0430\u0440\u0442\u043A\u0443 \u043F\u0440\u043E\u0435\u043A\u0442\u0443.
 \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0422I\u041B\u042C\u041A\u0418 JSON (\u0431\u0435\u0437 markdown):
 {
+ "brief": "2-3 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u2014 \u0449\u043E \u0446\u0435 \u0437\u0430 \u043F\u0440\u043E\u0435\u043A\u0442, \u0433\u043E\u043B\u043E\u0432\u043D\u0430 \u0446\u0456\u043B\u044C \u0456 \u043A\u043B\u044E\u0447\u043E\u0432\u0438\u0439 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442 (\u0437 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0435\u0439 \u044E\u0437\u0435\u0440\u0430)",
  "steps": ["\u043A\u0440\u043E\u043A 1","\u043A\u0440\u043E\u043A 2","\u043A\u0440\u043E\u043A 3"],            // 3 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0456 \u043F\u0435\u0440\u0448\u0456 \u0434\u0456\u0457, 4-8 \u0441\u043B\u0456\u0432, \u0440\u0435\u0430\u043B\u044C\u043D\u0456 \u043D\u0430 \u0446\u044C\u043E\u043C\u0443 \u0442\u0438\u0436\u043D\u0456
  "tempoNow": "\u043A\u043E\u043B\u0438 \u0431\u0443\u0434\u0435 \u0433\u043E\u0442\u043E\u0432\u043E \u043F\u0440\u0438 \u043F\u043E\u0442\u043E\u0447\u043D\u043E\u043C\u0443 \u0442\u0435\u043C\u043F\u0456, \u043D\u0430\u043F\u0440. ~6 \u043C\u0456\u0441",
  "tempoMore": "\u043A\u043E\u043B\u0438 \u043F\u0440\u0438 +1 \u0433\u043E\u0434/\u0434\u0435\u043D\u044C, \u043D\u0430\u043F\u0440. ~3 \u043C\u0456\u0441",
@@ -17320,6 +17451,7 @@ ${aiContext}` }
         const ivId = localStorage.getItem("nm_project_interview_id");
         const p = ivId && projects.find((pr) => String(pr.id) === ivId) || projects.find((pr) => pr.name === projectName);
         if (p) {
+          if ((parsed.brief || parsed.summary) && !p.brief) p.brief = String(parsed.brief || parsed.summary);
           if (Array.isArray(parsed.steps) && parsed.steps.length > 0 && (p.steps || []).length === 0) {
             p.steps = parsed.steps.map((s) => ({ id: generateUUID(), text: s, done: false }));
           }
@@ -20688,6 +20820,11 @@ ${logLines}
         if (!data.prompt) return;
         if (typeof window !== "undefined" && typeof window.sendProjectsBarPrompt === "function") {
           window.sendProjectsBarPrompt(data.prompt);
+        }
+      });
+      reg("project-image-pick", (data, el) => {
+        if (typeof window !== "undefined" && typeof window.handleProjectImagePick === "function") {
+          window.handleProjectImagePick(data, el);
         }
       });
       reg("open-notes-folder", (data) => {
