@@ -338,7 +338,8 @@ export const NM_KEYS = {
               'nm_me_weekly_insights',
               // nm_health_interview_pending REMOVED (EU AI Act JMQuT) — видаляється через v18 migration.
               'nm_project_interview_name','nm_project_interview_step',
-              'nm_project_interview_answers','nm_project_interview_id'],
+              'nm_project_interview_answers','nm_project_interview_id',
+              'nm_project_interview_lastq'],
   // Чат-историки (→ Supabase chat_messages)
   chat: ['nm_chat_inbox','nm_chat_tasks','nm_chat_notes','nm_chat_me',
          'nm_chat_evening','nm_chat_finance','nm_chat_projects',
