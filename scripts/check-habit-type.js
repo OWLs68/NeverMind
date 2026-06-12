@@ -14,7 +14,7 @@ const { pathToFileURL } = require('url');
 
 (async () => {
   const mod = await import(pathToFileURL(path.join(__dirname, '..', 'src', 'data', 'habit-classifier.js')).href);
-  const { inferHabitType } = mod;
+  const { inferHabitType, makeHabit } = mod;
 
   let passed = 0;
   const failures = [];
@@ -52,6 +52,32 @@ const { pathToFileURL } = require('url');
   isBuild('Робити зарядку');
   isBuild('Вивчати англійську');
   isBuild('');                    // порожнє → build (без падіння)
+
+  // --- makeHabit фабрика (єдине джерело форми звички) ---
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const ck = (label, cond) => { if (cond) passed++; else failures.push('✗ makeHabit: ' + label); };
+
+  const h1 = makeHabit({ name: 'Кинути курити' });
+  ck('id — валідний UUID (не Date.now)', UUID_RE.test(h1.id));
+  ck('quit-назва → type quit', h1.type === 'quit');
+  ck('quit → emoji 🚫', h1.emoji === '🚫');
+  ck('default days = всі 7', Array.isArray(h1.days) && h1.days.length === 7);
+  ck('default targetCount = 1', h1.targetCount === 1);
+  ck('createdAt — число', typeof h1.createdAt === 'number');
+
+  const h2 = makeHabit({ name: 'Бігати', days: [0, 2, 4], targetCount: 3 });
+  ck('build-назва → type build', h2.type === 'build');
+  ck('build → emoji ⭕', h2.emoji === '⭕');
+  ck('передані days збережені', h2.days.join() === '0,2,4');
+  ck('переданий targetCount збережений', h2.targetCount === 3);
+
+  // явний type/emoji (ручна модалка) перекривають інференс
+  const h3 = makeHabit({ name: 'Кинути палити', type: 'build', emoji: '🔥' });
+  ck('явний type перекриває інференс', h3.type === 'build');
+  ck('явний emoji перекриває дефолт', h3.emoji === '🔥');
+
+  // два виклики → різні id (не колізія, на відміну від Date.now)
+  ck('два makeHabit → різні id', makeHabit({ name: 'a' }).id !== makeHabit({ name: 'b' }).id);
 
   if (failures.length > 0) {
     console.error(`\n=== ❌ HABIT-TYPE СТОРОЖ: ${failures.length} провалів (${passed} ок) ===\n`);

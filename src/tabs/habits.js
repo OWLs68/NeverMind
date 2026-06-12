@@ -7,7 +7,7 @@ import { currentTab, showToast } from '../core/nav.js';
 import { escapeHtml, logRecentAction, extractJsonBlocks, parseContentChips, levenshtein, t, getReminders, saveReminders } from '../core/utils.js';
 import { logUsage } from '../core/usage-meter.js';
 import { generateUUID } from '../core/uuid.js';
-import { inferHabitType } from '../data/habit-classifier.js';
+import { makeHabit } from '../data/habit-classifier.js';
 import { addToTrash, showUndoToast } from '../core/trash.js';
 import { callAIWithTools, getAIContext, getOWLPersonality, safeAgentReply, INBOX_TOOLS, handleChatError } from '../ai/core.js';
 import { UI_TOOLS_RULES, BASE_CHAT_RULES } from '../ai/prompts.js';
@@ -257,7 +257,7 @@ function saveHabit() {
     const idx = habits.findIndex(x => x.id === editingHabitId);
     if (idx !== -1) habits[idx] = { ...habits[idx], name, details, emoji, days, targetCount, type };
   } else {
-    habits.push({ id: generateUUID(), name, details, emoji, days, targetCount, type, createdAt: Date.now() });
+    habits.push(makeHabit({ name, details, emoji, days, targetCount, type }));
   }
   saveHabits(habits);
   closeHabitModal();
@@ -1338,8 +1338,7 @@ export function processUniversalAction(parsed, originalText, addMsg) {
     const name = (parsed.name || '').trim();
     if (!name) return false;
     const habits = getHabits();
-    const type = inferHabitType(name);
-    habits.push({ id: generateUUID(), name, details: parsed.details || '', emoji: type === 'quit' ? '🚫' : '⭕', days: parsed.days || [0,1,2,3,4,5,6], type, createdAt: Date.now() });
+    habits.push(makeHabit({ name, details: parsed.details || '', days: parsed.days }));
     saveHabits(habits);
     renderProdHabits(); renderHabits();
     addMsg('agent', t('habits.habit.created', '🌱 Звичку "{name}" створено', { name }));
@@ -1893,8 +1892,7 @@ export async function sendTasksBarMessage() {
         const name = (parsed.name || '').trim();
         if (name) {
           const days = parsed.days || [0,1,2,3,4,5,6];
-          const type = inferHabitType(name);
-          habits.push({ id: generateUUID(), name, details: parsed.details || '', emoji: type === 'quit' ? '🚫' : '⭕', days, type, createdAt: Date.now() });
+          habits.push(makeHabit({ name, details: parsed.details || '', days }));
           saveHabits(habits);
           renderProdHabits(); renderHabits();
           addTaskBarMsg('agent', '🌱 Звичку "' + name + '" створено!');
