@@ -479,12 +479,16 @@ function saveNewProject() {
   closeProjectModal();
   openProjectWorkspace(newProject.id);
   // OWL починає інтервʼю по проекту в Inbox
-  setTimeout(() => startProjectInboxInterview(name, subtitle), 600);
+  setTimeout(() => startProjectInboxInterview(name, subtitle, newProject.id), 600);
 }
 
-export async function startProjectInboxInterview(projectName, projectSubtitle) {
+export async function startProjectInboxInterview(projectName, projectSubtitle, projectId) {
   // Переходимо на Inbox де відбувається вся комунікація
   if (currentTab !== 'inbox') switchTab('inbox');
+  // Старт нового інтерв'ю — чистимо буфер відповідей попереднього проекту.
+  localStorage.removeItem('nm_project_interview_answers');
+  if (projectId) localStorage.setItem('nm_project_interview_id', String(projectId));
+  else localStorage.removeItem('nm_project_interview_id');
 
   const key = localStorage.getItem('nm_gemini_key');
   if (!key) {

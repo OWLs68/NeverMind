@@ -412,7 +412,7 @@ export function dispatchChatToolCalls(toolCalls, addMsg, originalText) {
       if (currentTab !== 'inbox') {
         setTimeout(() => { try { switchTab('inbox'); } catch(e) {} }, 400);
       }
-      setTimeout(() => { try { startProjectInboxInterview(newProject.name, newProject.subtitle); } catch(e) {} }, 700);
+      setTimeout(() => { try { startProjectInboxInterview(newProject.name, newProject.subtitle, newProject.id); } catch(e) {} }, 700);
       any = true;
       continue;
     }
