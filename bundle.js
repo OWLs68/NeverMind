@@ -23138,11 +23138,15 @@ ${logLines}
           "nm_owl_silence_until",
           "nm_owl_last_board_ts",
           "nm_owl_last_chip_click_ts",
-          // Finance insights cache (3 horizons × 1 user)
+          "nm_owl_board_said",
+          // 7uxlr7 12.06: orphan-ключі знайдені assertion'ом у логах Романа —
+          // notes folder-ordering timestamp (legacy, більше не пишеться, але
+          // лишається у старих сховищах) → cache щоб clearAllData його прибрав.
+          "nm_notes_folders_ts",
+          // Finance insights cache: динамічний ключ nm_fin_insight_${period}_${offset}
+          // (offset 0, -1, -2... — кожен горизонт/місяць окремо) → ПАТЕРН нижче,
+          // не точкові ключі. nm_fin_benchmark — окремий, лишається точковим.
           "nm_fin_benchmark",
-          "nm_fin_insight_week_0",
-          "nm_fin_insight_month_0",
-          "nm_fin_insight_3months_0",
           // Debug logs (TTL обмежений, не для Supabase)
           "nm_intent_router_log",
           "nm_tool_filter_log",
@@ -23190,7 +23194,15 @@ ${logLines}
           "nm_owl_tab_",
           // DGH6F 16.05: backup snapshots (backup.js createSelectiveBackup
           // створює ключі типу nm_backup_v{N}_{label}_{timestamp}).
-          "nm_backup_"
+          "nm_backup_",
+          // 7uxlr7 12.06: динамічні ключі що раніше випадали з реєстру
+          // (assertion-warning у логах Романа).
+          // Finance insight кеш: nm_fin_insight_${period}_${offset} — offset
+          // 0/-1/-2... безмежний, точкові ключі не покрити.
+          "nm_fin_insight_",
+          // Tasks UUID-migration backup: nm_tasks_backup_v7 (boot.js:522) +
+          // майбутні версії v8.. — транзитний бекап перед міграцією.
+          "nm_tasks_backup_"
         ]
       };
       if (document.readyState === "loading") {
