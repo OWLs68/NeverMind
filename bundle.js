@@ -218,6 +218,47 @@
     }
   });
 
+  // src/data/entity-factories.js
+  function makeEvent({ title, date, time = null, endTime = null, priority = "normal", recurringId } = {}) {
+    const ev = {
+      id: generateUUID(),
+      title,
+      date,
+      time,
+      endTime,
+      priority,
+      createdAt: Date.now()
+    };
+    if (recurringId != null) ev.recurringId = recurringId;
+    return ev;
+  }
+  function makeTask({ title, desc = "", steps = [], dueDate, priority } = {}) {
+    const task = {
+      id: generateUUID(),
+      title,
+      desc,
+      steps: Array.isArray(steps) ? steps : [],
+      status: "active",
+      createdAt: Date.now()
+    };
+    if (dueDate) task.dueDate = dueDate;
+    if (priority && ["normal", "important", "critical"].includes(priority)) task.priority = priority;
+    return task;
+  }
+  function makeMoment({ text = "", mood = "neutral" } = {}) {
+    return {
+      id: generateUUID(),
+      text,
+      mood,
+      ts: Date.now()
+    };
+  }
+  var init_entity_factories = __esm({
+    "src/data/entity-factories.js"() {
+      init_uuid();
+    }
+  });
+
   // src/data/habit-classifier.js
   function inferHabitType(name) {
     const n = (name || "").toLowerCase().replace(/['’ʼ]/g, "'");
@@ -244,26 +285,6 @@
       init_uuid();
       QUIT_PREFIXES = ["\u043A\u0438\u043D\u0443", "\u043A\u0438\u043D\u044C", "\u043F\u043E\u043A\u0438\u043D\u0443", "\u0431\u0440\u043E\u0441", "\u0432\u0456\u0434\u043C\u043E\u0432", "\u043F\u0435\u0440\u0435\u0441\u0442", "\u043F\u043E\u0437\u0431\u0443", "\u0437\u0430\u0432'\u044F\u0437"];
       QUIT_NEG_RE = /(^|\s)(не|менше)\s+(пал|кур|пи|вжива|їст|жер)/;
-    }
-  });
-
-  // src/data/entity-factories.js
-  function makeEvent({ title, date, time = null, endTime = null, priority = "normal", recurringId } = {}) {
-    const ev = {
-      id: generateUUID(),
-      title,
-      date,
-      time,
-      endTime,
-      priority,
-      createdAt: Date.now()
-    };
-    if (recurringId != null) ev.recurringId = recurringId;
-    return ev;
-  }
-  var init_entity_factories = __esm({
-    "src/data/entity-factories.js"() {
-      init_uuid();
     }
   });
 
@@ -2920,7 +2941,7 @@ ${lines.join("\n")}`;
       if (!title) return;
       const steps = Array.isArray(action.steps) ? action.steps.map((s) => ({ id: generateUUID(), text: s, done: false })) : [];
       const tasks = getTasks();
-      tasks.unshift({ id: generateUUID(), title, desc: action.desc || "", steps, status: "active", createdAt: Date.now() });
+      tasks.unshift(makeTask({ title, desc: action.desc || "", steps }));
       saveTasks(tasks);
       if (currentTab === "tasks") renderTasks();
       showOwlConfirm("\u0417\u0430\u0434\u0430\u0447\u0443 \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E \u2713");
@@ -3076,6 +3097,7 @@ ${lines.join("\n")}`;
       init_nav();
       init_utils();
       init_uuid();
+      init_entity_factories();
       init_settings();
       init_core();
       init_board();
@@ -4145,7 +4167,7 @@ ${lines.join("\n\n")}`;
       return;
     }
     const moments = getMoments();
-    const newMoment = { id: generateUUID(), text, mood: currentMomentMood, ts: Date.now() };
+    const newMoment = makeMoment({ text, mood: currentMomentMood });
     moments.push(newMoment);
     saveMoments(moments);
     logRecentAction("add_moment", text.substring(0, 40), "evening");
@@ -4278,6 +4300,7 @@ ${lines.join("\n\n")}`;
     "src/tabs/evening.js"() {
       init_nav();
       init_uuid();
+      init_entity_factories();
       init_utils();
       init_usage_meter();
       init_tasks();
@@ -10199,7 +10222,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
         }
         case "save_moment": {
           const moments = getMoments();
-          moments.push({ id: generateUUID(), text: args.text || "", mood: args.mood || "neutral", ts: Date.now() });
+          moments.push(makeMoment({ text: args.text || "", mood: args.mood || "neutral" }));
           saveMoments(moments);
           logRecentAction("save_moment", (args.text || "").slice(0, 40), "evening");
           return { ok: true };
@@ -14062,9 +14085,7 @@ ${CHIP_PROMPT_RULES}`;
         return true;
       }
       const steps = Array.isArray(parsed.steps) ? parsed.steps.map((s) => ({ id: generateUUID(), text: s, done: false })) : [];
-      const newTask = { id: generateUUID(), title, desc: parsed.desc || "", steps, status: "active", createdAt: Date.now() };
-      if (parsed.dueDate) newTask.dueDate = parsed.dueDate;
-      if (parsed.priority && ["important", "critical"].includes(parsed.priority)) newTask.priority = parsed.priority;
+      const newTask = makeTask({ title, desc: parsed.desc || "", steps, dueDate: parsed.dueDate, priority: parsed.priority });
       const tasks = getTasks();
       tasks.unshift(newTask);
       saveTasks(tasks);
@@ -14917,7 +14938,7 @@ ${CHIP_PROMPT_RULES}`;
           const title = (parsed.title || "").trim();
           if (title) {
             const steps = Array.isArray(parsed.steps) ? parsed.steps.map((s) => ({ id: generateUUID(), text: s, done: false })) : [];
-            tasks2.unshift({ id: generateUUID(), title, desc: parsed.desc || "", steps, status: "active", createdAt: Date.now() });
+            tasks2.unshift(makeTask({ title, desc: parsed.desc || "", steps }));
             saveTasks(tasks2);
             renderTasks();
             addTaskBarMsg("agent", '\u2705 \u0417\u0430\u0434\u0430\u0447\u0443 "' + title + '" \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E!');
@@ -16159,7 +16180,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
         tasks[idx] = { ...tasks[idx], title, desc, steps: tempSteps, updatedAt: Date.now() };
       }
     } else {
-      tasks.unshift({ id: generateUUID(), title, desc, steps: tempSteps, status: "active", createdAt: Date.now() });
+      tasks.unshift(makeTask({ title, desc, steps: tempSteps }));
     }
     saveTasks(tasks);
     closeTaskModal();
@@ -16545,6 +16566,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
       init_utils();
       init_usage_meter();
       init_uuid();
+      init_entity_factories();
       init_trash();
       init_core();
       init_chips();
@@ -18646,12 +18668,10 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
         addInboxChatMsg("agent", t("inbox.event.added_simple", '\u{1F4C5} \u041F\u043E\u0434\u0456\u044E "{title}" \u0434\u043E\u0434\u0430\u043D\u043E \u0432 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440 \u043D\u0430 {day}', { title: ev.title, day: dayStr }));
         return;
       }
-      const taskId = generateUUID();
       const tasks = getTasks();
       const taskSteps = Array.isArray(parsed.task_steps) && parsed.task_steps.length > 0 ? parsed.task_steps.map((s) => ({ id: generateUUID(), text: s, done: false })) : [];
-      const newTask = { id: taskId, title: taskTitle, desc: savedText !== taskTitle ? savedText : "", steps: taskSteps, status: "active", createdAt: Date.now() };
-      if (parsed.dueDate) newTask.dueDate = parsed.dueDate;
-      if (parsed.priority && ["normal", "important", "critical"].includes(parsed.priority)) newTask.priority = parsed.priority;
+      const newTask = makeTask({ title: taskTitle, desc: savedText !== taskTitle ? savedText : "", steps: taskSteps, dueDate: parsed.dueDate, priority: parsed.priority });
+      const taskId = newTask.id;
       tasks.unshift(newTask);
       saveTasks(tasks);
       if (taskSteps.length === 0) autoGenerateTaskSteps(taskId, taskTitle);
@@ -18723,7 +18743,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       } else {
         const mood = parsed.mood || (/добре|чудово|супер|відмінно|весело|щасли/i.test(savedText) ? "positive" : /погано|жахливо|сумно|нудно|важко|втомив/i.test(savedText) ? "negative" : "neutral");
         const moments = getMoments();
-        const newMoment = { id: generateUUID(), text: savedText, mood, ts: Date.now() };
+        const newMoment = makeMoment({ text: savedText, mood });
         moments.push(newMoment);
         saveMoments(moments);
         generateMomentSummary(newMoment.id, savedText);
