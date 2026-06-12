@@ -821,10 +821,14 @@ function updateOwlModeUI(mode) {
 }
 
 export function closeSettings() {
-  // Save memory edits before closing (null-safe — input може ще не бути в DOM)
+  // Save memory edits before closing (null-safe — input може ще не бути в DOM).
+  // 7uxlr7 12.06: пишемо ТІЛЬКИ якщо значення реально змінилось. Раніше
+  // saveMemory викликався при кожному закритті → після того як saveMemory почав
+  // диспатчити 'memory' (38cad50) це регенерувало OWL-табло (proactive.js) навіть
+  // коли юзер просто відкрив-закрив Налаштування без правок = зайвий OpenAI-запит.
   try {
     const memEl = document.getElementById('input-memory');
-    if (memEl) saveMemory(memEl.value);
+    if (memEl && memEl.value !== (localStorage.getItem('nm_memory') || '')) saveMemory(memEl.value);
   } catch(e) {}
   // calendar-pattern: scale(0)+opacity:0 → setTimeout 300ms → display:none
   const overlay = document.getElementById('settings-overlay');

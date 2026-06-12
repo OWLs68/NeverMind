@@ -40,6 +40,8 @@ const { pathToFileURL } = require('url');
   isQuit('не курити');
   isQuit('не пити каву');
   isQuit('не вживати цукор');
+  isQuit('менше курити');         // зменшувальна форма (аудит 7uxlr7)
+  isQuit('менше пити');
 
   // --- BUILD (звичайна звичка з %) ---
   isBuild('Бігати');
