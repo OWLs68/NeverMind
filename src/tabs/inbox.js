@@ -21,6 +21,7 @@ import { attachSwipeDelete } from '../ui/swipe-delete.js';
 import { getTasks, saveTasks, renderTasks, autoGenerateTaskSteps } from './tasks.js';
 import { getEvents, saveEvents, addEventDedup } from './calendar.js';
 import { getHabits, saveHabits, getHabitLog, saveHabitLog, renderHabits, renderProdHabits, processUniversalAction } from './habits.js';
+import { inferHabitType } from '../data/habit-classifier.js';
 import { addNoteFromInbox, getNotes, saveNotes } from './notes.js';
 import { getFinance, saveFinance, renderFinance, formatMoney, processFinanceAction,
   createFinCategory, updateFinCategory, deleteFinCategory, mergeFinCategories, addFinSubcategory, findFinCatByName } from './finance.js';
@@ -1235,7 +1236,8 @@ async function processSaveAction(parsed, originalText) {
       }
 
       const habitId = Date.now();
-      habits.push({ id: habitId, name: habitName, details: habitDetails, emoji: '⭕', days, targetCount, createdAt: habitId });
+      const habitType = inferHabitType(habitName);
+      habits.push({ id: habitId, name: habitName, details: habitDetails, emoji: habitType === 'quit' ? '🚫' : '⭕', days, targetCount, type: habitType, createdAt: habitId });
       saveHabits(habits);
       undoRef = { type: 'habit', id: habitId, label: t('inbox.type.habit', 'звичку') };
     }

@@ -259,9 +259,11 @@ function checkNestedBackticks(repoRoot) {
 //                     notes.js e9t3N → B-157 → SEC-1 → B-197).
 //   check-entity.js — конверт сутності stampEntity (Supabase «двері в один бік»:
 //                     форма id/user_id/created_at/updated_at/deleted_at/hlc).
+//   check-habit-type.js — детермінована класифікація quit vs build (правило 12:
+//                     «кинути курити» → quit-челендж, не build; баг 7uxlr7).
 // Це НЕ евристики на тексті — або тест проходить, або ні. False positive
 // неможливий → жорсткий блок, bypass-фраза не діє.
-const UNIT_GUARD_SCRIPTS = ['check-escape.js', 'check-entity.js'];
+const UNIT_GUARD_SCRIPTS = ['check-escape.js', 'check-entity.js', 'check-habit-type.js'];
 
 function runUnitGuards(repoRoot) {
   for (const name of UNIT_GUARD_SCRIPTS) {
