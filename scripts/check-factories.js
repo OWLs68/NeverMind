@@ -11,7 +11,7 @@ const { pathToFileURL } = require('url');
 
 (async () => {
   const mod = await import(pathToFileURL(path.join(__dirname, '..', 'src', 'data', 'entity-factories.js')).href);
-  const { makeEvent, makeTask, makeMoment } = mod;
+  const { makeEvent, makeTask, makeMoment, makeFinance } = mod;
 
   let passed = 0;
   const failures = [];
@@ -70,6 +70,19 @@ const { pathToFileURL } = require('url');
   mk('mood збережений', m1.mood === 'happy');
   mk('ts число (не createdAt)', typeof m1.ts === 'number' && !('createdAt' in m1));
   mk('mood дефолт neutral', makeMoment({ text: 'x' }).mood === 'neutral');
+
+  // --- makeFinance ---
+  const fk = (label, cond) => { if (cond) passed++; else failures.push('✗ makeFinance: ' + label); };
+  const f1 = makeFinance({ type: 'expense', amount: 37, category: 'Продукти', comment: 'хліб' });
+  fk('id — UUID', UUID_RE.test(f1.id));
+  fk('type/amount/category/comment збережені', f1.type === 'expense' && f1.amount === 37 && f1.category === 'Продукти' && f1.comment === 'хліб');
+  fk('ts дефолт Date.now (число)', typeof f1.ts === 'number');
+  fk('subcategory ВІДСУТНІЙ коли не заданий', !('subcategory' in f1));
+  // ⚠️ ts приймається (backdated транзакція) — НЕ перезаписується на Date.now
+  const past = 1600000000000;
+  fk('переданий ts (минула дата) збережений', makeFinance({ type: 'income', amount: 1, category: 'x', ts: past }).ts === past);
+  fk('subcategory доданий коли є', makeFinance({ type: 'expense', amount: 1, category: 'x', subcategory: 'кава' }).subcategory === 'кава');
+  fk('subcategory undefined → відсутній', !('subcategory' in makeFinance({ type: 'e', amount: 1, category: 'x', subcategory: undefined })));
 
   if (failures.length > 0) {
     console.error(`\n=== ❌ FACTORIES СТОРОЖ: ${failures.length} провалів (${passed} ок) ===\n`);
