@@ -26203,6 +26203,10 @@ ${legacy}`;
     _syncVoiceButtons();
   }
   if (typeof window !== "undefined") {
+    try {
+      localStorage.setItem(VOICE_MODE_KEY, "0");
+    } catch (e) {
+    }
     if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", _injectVoiceButtons);
     else setTimeout(_injectVoiceButtons, 0);
     window.addEventListener("nm-voice-mode-changed", _syncVoiceButtons);
