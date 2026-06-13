@@ -52,6 +52,7 @@ function _elevenVoice() { return _settings().elevenVoiceId || DEFAULT_ELEVEN_VOI
 const SILENT_WAV = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAIlYAAESsAAACABAAZGF0YQAAAAA=';
 
 let _audio = null;
+let _curResolve = null;   // resolver поточного аудіо-шматка (щоб stopSpeaking не лишав петлю висіти)
 let _audioUnlocked = false;
 let _capWarned = false;
 let _lastSpoken = '';
@@ -92,6 +93,8 @@ export function unlockAudio() {
 export function stopSpeaking() {
   _speaking = false; // відпускаємо замок (це перерив, не природне завершення)
   try { if (_audio) { _audio.onended = null; _audio.pause(); _audio = null; } } catch (e) {}
+  // розблоковуємо проміс поточного шматка — інакше _runSequential зависне на await
+  if (_curResolve) { const r = _curResolve; _curResolve = null; try { r(); } catch (e) {} }
   try { if (window.speechSynthesis) window.speechSynthesis.cancel(); } catch (e) {}
 }
 
@@ -136,33 +139,83 @@ async function _speakBrowser(text) {
   } catch (e) { _done(); }
 }
 
-async function _speakOpenAI(text, key) {
-  // tts-1 — надійна + низьколатентна, приймає вибраний голос. (gpt-4o-mini-tts
-  // не на всіх ключах → падало на браузерний голос. Точність укр-вимови без
-  // акценту — через ElevenLabs.)
+// Генерує аудіо-шматок (Blob) через OpenAI tts-1 — НЕ грає (цим керує
+// _runSequential). tts-1 надійна + низьколатентна, приймає вибраний голос.
+async function _genOpenAI(text, key) {
   const res = await fetch('https://api.openai.com/v1/audio/speech', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-    body: JSON.stringify({
-      model: 'tts-1',
-      voice: _openaiVoice(),
-      input: text,
-      response_format: 'mp3',
-    }),
+    body: JSON.stringify({ model: 'tts-1', voice: _openaiVoice(), input: text, response_format: 'mp3' }),
   });
   if (!res.ok) throw new Error('tts ' + res.status);
-  const blob = await res.blob();
-  await _playBlob(blob);
+  return res.blob();
 }
 
-async function _playBlob(blob) {
-  if (!_speaking) return; // зупинили поки вантажилось (вимк режим / мік) → не граємо
-  const url = URL.createObjectURL(blob);
-  try { if (_audio) { _audio.onended = null; _audio.pause(); } } catch (e) {}
-  _audio = new Audio(url);
-  _audio.onended = () => { try { URL.revokeObjectURL(url); } catch (e) {} _audio = null; _done(); };
-  _audio.onerror = () => { _audio = null; _done(); };
-  await _audio.play();
+// Грає один аудіо-шматок. Promise завершується коли шматок догрався АБО його
+// перервали (stopSpeaking). НЕ викликає _done — цим керує _runSequential.
+function _playOnce(blob) {
+  return new Promise((resolve) => {
+    if (!_speaking) { resolve(); return; }
+    const url = URL.createObjectURL(blob);
+    const fin = () => { try { URL.revokeObjectURL(url); } catch (e) {} if (_curResolve === resolve) _curResolve = null; resolve(); };
+    try { if (_audio) { _audio.onended = null; _audio.pause(); } } catch (e) {}
+    _audio = new Audio(url);
+    _curResolve = resolve;
+    _audio.onended = () => { _audio = null; fin(); };
+    _audio.onerror = () => { _audio = null; fin(); };
+    _audio.play().catch(() => fin());
+  });
+}
+
+// Ріже текст на речення → перше (коротке) озвучується і грає одразу, решта
+// довантажується поки слухаєш (Фікс затримки). Перше слово зʼявляється майже
+// миттєво замість очікування всього файлу.
+function _chunkText(text) {
+  const parts = String(text).split(/(?<=[.!?…])\s+|\n+/).map(s => s.trim()).filter(Boolean);
+  if (parts.length <= 1) return [text];
+  // Перший шматок — САМЕ перше речення (найкоротше → перше слово майже миттєво,
+  // навіть для короткого зразка «Прослухати»). Решту зливаємо у більші шматки
+  // (менше запитів, плавніше). Наступний генерується поки грає поточний.
+  const chunks = [parts[0]];
+  let buf = '';
+  for (let i = 1; i < parts.length; i++) {
+    if (!buf) buf = parts[i];
+    else if (buf.length < 80) buf += ' ' + parts[i];
+    else { chunks.push(buf); buf = parts[i]; }
+  }
+  if (buf) chunks.push(buf);
+  return chunks;
+}
+
+// Послідовно грає шматки, генеруючи наступний поки грає поточний (prefetch).
+// _done() — РIВНО ОДИН РАЗ у кінці природного завершення (інакше жива петля
+// мікрофона запуститься кілька разів / не запуститься — див. Pre-mortem).
+async function _runSequential(chunks, gen, firstBlob) {
+  let blob = firstBlob;
+  for (let i = 0; i < chunks.length; i++) {
+    if (!_speaking) return;
+    const nextP = (i + 1 < chunks.length) ? gen(chunks[i + 1]) : null;
+    if (nextP) nextP.catch(() => {}); // без unhandled rejection
+    await _playOnce(blob);
+    if (!_speaking) return; // перервали під час програвання
+    if (nextP) {
+      try { blob = await nextP; }
+      catch (e) { break; } // наступний шматок не згенерувався → завершуємо
+    }
+  }
+  _done();
+}
+
+// Пробує озвучити рушієм gen. Чекає лише ПЕРШИЙ шматок (щоб знати чи рушій
+// живий). Успіх → запускає решту у фоні, повертає true. Невдача першого
+// шматка → false (speak падає на наступний рушій).
+async function _trySpeakChunks(chunks, gen) {
+  let firstBlob;
+  try { firstBlob = await gen(chunks[0]); }
+  catch (e) { return false; }
+  if (!_speaking) return true; // зупинили поки генерувалось — рушій робочий, далі не падаємо
+  _runSequential(chunks, gen, firstBlob);
+  return true;
 }
 
 // Жива петля (Jarvis): коли OWL договорив і голосовий режим увімкнено —
@@ -174,20 +227,18 @@ function _afterSpeak() {
   setTimeout(() => { try { if (window.nmStartListening) window.nmStartListening(); } catch (e) {} }, 400);
 }
 
-// ElevenLabs — найкраща якість/характер, українська майже без акценту (преміум,
-// окремий ключ у Налаштуваннях). multilingual_v2 стабільно тягне українську.
-async function _speakElevenLabs(text, key) {
+// Генерує аудіо-шматок через ElevenLabs — НЕ грає. Найкраща якість/характер,
+// українська майже без акценту (преміум, окремий ключ). turbo_v2_5 — низька
+// затримка + багатомовна, добра українська.
+async function _genEleven(text, key) {
   const voiceId = _elevenVoice();
   const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
     method: 'POST',
     headers: { 'xi-api-key': key, 'Content-Type': 'application/json', 'Accept': 'audio/mpeg' },
-    // turbo_v2_5 — низька затримка (Роман: голос з'являвся з лагом) +
-    // багатомовна, добра українська. Якість трохи нижча за multilingual_v2,
-    // але відчутно швидше.
     body: JSON.stringify({ text, model_id: 'eleven_turbo_v2_5' }),
   });
   if (!res.ok) throw new Error('11labs ' + res.status);
-  await _playBlob(await res.blob());
+  return res.blob();
 }
 
 // Озвучити текст (з тапу або авто). Чистить markdown/emoji, ріже, рахує ліміт.
@@ -205,24 +256,36 @@ export async function speak(text) {
   _lastSpoken = clean; _lastSpokenTs = Date.now();
   _speaking = true;
 
-  // 1) ElevenLabs (преміум, окремий ключ) — якщо заданий. Найкраща вимова.
+  // ЄДИНЕ ДЖЕРЕЛО ПРАВДИ (Фікс «голос не той»): говорить рівно той двигун, що
+  // вибраний у списку Налаштувань. ElevenLabs — ЛИШЕ за явним вибором + ключем
+  // (раніше ключ мовчки перекривав вибір зі списку → чув не те що вибрав).
+  const choice = _settings().ttsVoice || DEFAULT_OPENAI_VOICE;
+  const chunks = _chunkText(clean);
   const elevenKey = _elevenKey();
-  if (elevenKey) {
-    try { await _speakElevenLabs(clean, elevenKey); return; }
-    catch (e) { /* нижче падаємо на OpenAI/браузер */ }
+
+  // 1) ElevenLabs — тільки коли явно обрано «elevenlabs».
+  if (choice === 'elevenlabs') {
+    if (elevenKey) {
+      if (await _trySpeakChunks(chunks, txt => _genEleven(txt, elevenKey))) return;
+      // ElevenLabs впав → падаємо на OpenAI/браузер нижче
+    } else {
+      try { showToast(t('tts.no_eleven_key', 'Встав ключ ElevenLabs у Налаштуваннях або обери інший голос')); } catch (e) {}
+    }
   }
-  // 2) OpenAI gpt-4o-mini-tts (твій ключ) у межах денного ліміту.
+
+  // 2) OpenAI tts-1 (вибраний голос) у межах денного ліміту.
   const key = localStorage.getItem('nm_gemini_key');
   const overCap = _ttsCharsToday() + clean.length > DAILY_CHAR_CAP;
   if (key && !overCap) {
     _addTtsChars(clean.length); // резервуємо ДО fetch (без гонки)
     try { logTtsUsage(clean.length); } catch (e) {}
-    try { await _speakOpenAI(clean, key); return; }
-    catch (e) { /* нижче браузер */ }
+    if (await _trySpeakChunks(chunks, txt => _genOpenAI(txt, key))) return;
+    // OpenAI впав → браузер нижче
   } else if (overCap && !_capWarned) {
     _capWarned = true;
     try { showToast(t('tts.cap', 'Денний ліміт природного голосу вичерпано — перехід на безкоштовний')); } catch (e) {}
   }
+
   // 3) Браузерний голос (безкоштовно) — крайній fallback.
   _speakBrowser(clean);
 }
@@ -292,6 +355,17 @@ if (typeof window !== 'undefined') {
   // на вході застосунок сам лізе до мікрофона і може зависнути/зациклитись
   // (Роман: завис, таббар не реагував). Голос — свідомий opt-in щосесії.
   try { localStorage.setItem(VOICE_MODE_KEY, '0'); } catch (e) {}
+  // Міграція (Фікс «голос не той»): у кого вписаний ключ ElevenLabs і хто не
+  // міняв голос — лишаємо ElevenLabs ЯВНИМ вибором у списку (раніше він мовчки
+  // перекривав список → тепер вибір чесний). Одноразово, прапор у settings.
+  try {
+    const s = getSettings();
+    if ((s.elevenKey || '').trim() && !s.ttsEngineMigrated) {
+      const patch = { ttsEngineMigrated: true };
+      if (!s.ttsVoice || s.ttsVoice === 'nova') patch.ttsVoice = 'elevenlabs';
+      updateSettings(patch);
+    }
+  } catch (e) {}
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', _injectVoiceButtons);
   else setTimeout(_injectVoiceButtons, 0);
   window.addEventListener('nm-voice-mode-changed', _syncVoiceButtons);
