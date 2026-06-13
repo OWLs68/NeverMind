@@ -40,6 +40,9 @@ function attachVoiceToTextarea(textarea, button, sendBtn) {
 
   function startRecording() {
     if (rec) return;
+    // qpzj7k (Council): заткнути голос OWL перш ніж слухати — інакше мік ловить
+    // власну озвучку у транскрипцію.
+    try { window.nmVoiceStop && window.nmVoiceStop(); } catch (e) {}
     try {
       rec = new SR();
       rec.lang = 'uk-UA';

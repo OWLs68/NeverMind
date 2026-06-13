@@ -327,7 +327,7 @@ export const NM_KEYS = {
          'nm_events','nm_reminders','nm_routine','nm_allergies','nm_action_log'],
   // Налаштування (→ Supabase user_settings)
   settings: ['nm_settings','nm_gemini_key','nm_memory','nm_memory_ts',
-              'nm_facts','nm_facts_migrated',
+              'nm_facts','nm_facts_migrated','nm_voice_mode',
               'nm_active_tabs','nm_onboarding_done','nm_evening_mood',
               'nm_evening_summary',
               // DGH6F 16.05: стан UI / Me-інсайти / interview state / patterns
@@ -350,7 +350,7 @@ export const NM_KEYS = {
          'nm_owl_chat'],
   // Кеш/тимчасове (не потребує Supabase) + migration flags
   cache: ['nm_owl_board','nm_owl_board_ts','nm_owl_cooldowns','nm_owl_schedule_asked',
-          'nm_owl_schedule_pending','nm_error_log',
+          'nm_owl_schedule_pending','nm_error_log','nm_tts_usage',
           // PJi7l 08.05: unified board storage + chip payloads + seen-IDs
           // Без них після clearAllData табло Inbox/Notes показувало стару інформацію.
           'nm_owl_board_unified','nm_owl_board_unified_ts',

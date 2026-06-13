@@ -103,6 +103,27 @@ export function logUsage(module, usageObj, model = 'gpt-4o-mini') {
   } catch {}
 }
 
+// logTtsUsage — окрема точка для OpenAI TTS (озвучування OWL). Вартість за
+// СИМВОЛИ (tts-1 = $15/1M ≈ $0.015/1000), не за токени. Класифікуємо як «голос».
+const TTS_USD_PER_1K_CHARS = 0.015;
+export function logTtsUsage(chars) {
+  if (!chars || chars <= 0) return;
+  const entry = {
+    ts: Date.now(),
+    module: 'tts',
+    model: 'tts-1',
+    mode: 'voice',
+    prompt_tokens: 0,
+    completion_tokens: 0,
+    chars,
+    cost_usd: Number(((chars / 1000) * TTS_USD_PER_1K_CHARS).toFixed(6)),
+  };
+  const log = _rotate(_readLog());
+  log.push(entry);
+  _writeLog(log);
+  try { window.dispatchEvent(new CustomEvent('nm-usage-updated', { detail: entry })); } catch {}
+}
+
 // getUsageStats — агрегати для UI Налаштувань.
 // Повертає: {today: {cost, calls, byModule}, thisMonth: {...}, projection, totalCalls}.
 export function getUsageStats() {

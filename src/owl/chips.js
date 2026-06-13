@@ -11,6 +11,7 @@ import { sendTasksBarMessage } from '../tabs/habits.js';
 import { addTaskBarMsg } from '../tabs/tasks.js';
 import { downgradeBriefingPriority } from './unified-storage.js';
 import { renderTabBoard } from './board.js';
+import { isVoiceMode, toggleVoiceMode, speak, stopSpeaking } from '../ui/voice-output.js';
 import { sendNotesBarMessage, addNotesChatMsg } from '../tabs/notes.js';
 import { sendFinanceBarMessage } from '../tabs/finance.js';
 import { addFinanceChatMsg } from '../tabs/finance-chat.js';
@@ -316,7 +317,7 @@ export function renderChips(containerEl, chips, tab, options = {}) {
     return c.target !== currentTab;
   });
   const normChips = filterStaleChips(filteredByTab);
-  if (normChips.length === 0 && !options.showSpeak) {
+  if (normChips.length === 0 && !options.showSpeak && !options.showVoice) {
     containerEl.innerHTML = '';
     return;
   }
@@ -348,6 +349,10 @@ export function renderChips(containerEl, chips, tab, options = {}) {
   if (options.showSpeak) {
     chipsHTML.push(`<div class="owl-chip owl-chip-speak">Поговорити</div>`);
   }
+  // 🔊 Голос OWL: тап = вмк/вимк озвучку + читає поточне табло (тап = дозвіл iOS).
+  if (options.showSpeak || options.showVoice) {
+    chipsHTML.push(`<div class="owl-chip owl-chip-voice">${isVoiceMode() ? '🔊' : '🔇'}</div>`);
+  }
 
   containerEl.innerHTML = chipsHTML.join('');
   containerEl.scrollLeft = 0;
@@ -368,6 +373,23 @@ export function renderChips(containerEl, chips, tab, options = {}) {
     // Кнопка "Поговорити"
     if (chipEl.classList.contains('owl-chip-speak')) {
       openChatBar(tab === 'me' ? 'me' : tab);
+      return;
+    }
+
+    // Кнопка 🔊 голосу OWL: toggle voice mode + читає поточне табло вголос
+    // (тап = user-gesture → розблоковує iOS-аудіо). Не видаляємо чіп.
+    if (chipEl.classList.contains('owl-chip-voice')) {
+      const on = toggleVoiceMode();
+      if (on) {
+        const tEl = document.getElementById('owl-tab-text-' + tab);
+        const txt = tEl ? (tEl.textContent || '') : '';
+        if (txt) speak(txt);
+      } else {
+        stopSpeaking();
+      }
+      chipEl.textContent = on ? '🔊' : '🔇';
+      chipEl._fired = false;
+      chipEl.style.pointerEvents = '';
       return;
     }
 

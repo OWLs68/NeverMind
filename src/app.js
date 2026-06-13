@@ -17,6 +17,7 @@ import './ui/voice-input.js';
 import './ui/unread-badge.js';
 import './ui/modal-overlay-sync.js';
 import './ui/chat-image.js';
+import './ui/voice-output.js';
 
 // AI (штучний інтелект)
 import './ai/ui-tools.js';
