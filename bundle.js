@@ -25427,6 +25427,17 @@ ${legacy}`;
     let rec = null;
     let baseText = "";
     let pendingSendClick = false;
+    let silenceTimer = null;
+    const SILENCE_MS = 1200;
+    function _armSilence() {
+      clearTimeout(silenceTimer);
+      silenceTimer = setTimeout(() => {
+        try {
+          if (rec) rec.stop();
+        } catch (e) {
+        }
+      }, SILENCE_MS);
+    }
     function startRecording() {
       if (rec) return;
       try {
@@ -25467,6 +25478,13 @@ ${legacy}`;
           window.autoResizeTextarea && window.autoResizeTextarea(textarea);
         } catch {
         }
+        _armSilence();
+      };
+      rec.onspeechend = () => {
+        try {
+          if (rec) rec.stop();
+        } catch (e) {
+        }
       };
       rec.onerror = (ev) => {
         const err = ev.error || "";
@@ -25480,6 +25498,7 @@ ${legacy}`;
         }
       };
       rec.onend = () => {
+        clearTimeout(silenceTimer);
         button.classList.remove("recording");
         rec = null;
         try {
