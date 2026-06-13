@@ -78,6 +78,8 @@ export function setupModalSwipeClose(contentEl, closeFn, options = {}) {
   swipeRoot.addEventListener('touchstart', e => {
     if (handleOnly) {
       _swipeBlocked = !e.target.closest('.modal-handle');
+    } else if (e.target.closest('.modal-handle')) {
+      _swipeBlocked = false; // смужка зверху закриває ЗАВЖДИ (вимога Романа)
     } else {
       _swipeBlocked = !!e.target.closest('.drum-col, .drum-item, .settings-scroll, #memory-cards-list, input, textarea, select');
       if (!_swipeBlocked && scrollGuardSel) {
