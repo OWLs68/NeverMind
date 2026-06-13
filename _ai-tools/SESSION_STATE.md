@@ -4,11 +4,42 @@
 >
 > Старіші сесії (до 6GoDe 19.04) — в [`_archive/SESSION_STATE_archive.md`](../_archive/SESSION_STATE_archive.md).
 
-**Оновлено:** 2026-06-13 (сесія **qpzj7k** — велика вкладка Проекти (makeProject+конверт, адаптивне інтерв'ю, блок «Про проект» з детермінованим рахунком повноти, наповнення воркспейсу) + фото-vision у будь-якому чаті (один мозок) + голосовий режим OWL (TTS+живий діалог, Web Speech) + розбивка витрат за способом + esbuild-фікс деплою + план Realtime API. ~37 комітів).
+**Оновлено:** 2026-06-13 (сесія **v1d9eo** — голос: дослідження (3 агенти, ~50 джерел) → відхилено OpenAI Realtime, обрано КОНВЕЄР (Deepgram STT → теперішній мозок → ElevenLabs стрім); 2 інтерим-фікси (єдиний двигун = вибраний голос; чанк-озвучка для миттєвого першого слова); переписано VOICE-план; календар-баг визнано побічкою голосу (фікс 02038bd)).
 
 ---
 
-## 🔧 Поточна сесія qpzj7k — Проекти + Голос OWL + Фото-vision (13.06.2026)
+## 🔧 Поточна сесія v1d9eo — Голос: дослідження + 2 фікси + новий план (13.06.2026)
+
+### Зроблено (коміт `632a10c`, запушено)
+
+**Дослідження (Council 3 Sonnet-агенти + web):** Realtime vs альтернативи vs Supabase-кут. Два незалежні агенти зійшлись: OpenAI Realtime — **погано для iOS-PWA** (Apple вбиває веб-голос у фоні — обходу нема; cost-bomb re-білінг історії ~×100 за 20хв; VAD ламає function-calling + обриває мовця; echo на iOS Safari). **Рішення Романа: КОНВЕЄР** «почув(Deepgram)→теперішній GPT-4o-mini мозок БЕЗ переробки→сказав(ElevenLabs стрім)» — 4-12× дешевше, без WebRTC-засідок, найкраща українська, реюз «одного мозку».
+
+**Brain/Fable Романа незалежно зійшовся з агентами** (конвеєр, не Realtime) → впевненість висока. Інтерим доведено до його специфікації.
+
+**4 інтерим-зміни `voice-output.js` + `index.html`:**
+- **«голос не той»** — список у Налаштуваннях = єдине джерело правди (раніше ключ ElevenLabs мовчки перекривав вибір OpenAI зі списку). Додано пункт «ElevenLabs» + одноразова міграція `ttsEngineMigrated`.
+- **затримка** — `_chunkText` ріже на речення, перше (коротке) грає одразу, решта prefetch'иться. `_genOpenAI`/`_genEleven` (Blob) + `_playOnce` + `_runSequential` (`_done` рівно раз → петля не ламається). `_curResolve` щоб stopSpeaking не лишав await висіти.
+- **Web Speech synthesis fallback ПРИБРАНО** (`_speakBrowser`/`_browserVoices`/locale/instruction видалено) — мовчазний робот-голос при ліміті/збої = причина невідповідності. Тепер чесний стоп + тост `tts.no_key`.
+- **STT → push-to-talk** — прибрано авто-петлю слухання (`_afterSpeak` + nmStartListening-калери у toggle/nm-chat-opened/nm-agent-message). Тап 🎤 → говориш → мозок → OWL озвучує. Крихкість «мік вмикається/текст не пише» усунено.
+
+**Відкрите рішення велика сесія:** TTS OpenAI-tts-only (brain) vs +ElevenLabs опція без акценту (агенти). Занотовано у плані.
+
+**Документ:** `docs/VOICE_REALTIME_PLAN.md` переписано Realtime→Конвеєр (розділ «чому НЕ Realtime» з джерелами, фази, Supabase-кут, інтерим).
+
+### Відкрите / смоук за Романом (на iPhone, з хмари не чути)
+
+- Засмоукати голос: вибір у Налаштуваннях = що чуєш (і «Прослухати», і чат); перше слово швидше.
+- **Велика збірка конвеєра** (Deepgram STT + ElevenLabs стрім + ключі/ліміти на Edge) — окрема сесія **після Supabase**.
+- **Календар-баг (A):** трасування коду — механізм закриття справний; найімовірніше була побічка завислого голосу (фікс `02038bd`). Перевірити на чистому старті: тап календар у шапці Inbox → закрити (фон/свайп). Якщо ок — закрити; якщо ні — відео-репро.
+
+### Метрики
+
+- Коміт: `632a10c`, гілка `claude/new-session-v1d9eo`, запушено. CACHE_NAME: `nm-20260613-1955`.
+- Council: 3 Sonnet (Realtime-факти / red-team+альтернативи / Supabase). Build: node --check + check-imports + check-i18n чисте (esbuild у хмарі нема — bundle збирає CI).
+
+---
+
+## 🔧 Сесія qpzj7k — Проекти + Голос OWL + Фото-vision (13.06.2026)
 
 ### Зроблено — ~37 commits (`125ccd6` → `02038bd`), усе запушено
 
@@ -45,49 +76,7 @@
 
 ---
 
-## 🔧 Сесія 7uxlr7 — Supabase Фаза 1: Ворота 1+3 + 5 фабрик + класифікація (12.06.2026)
-
-### Зроблено — 16 commits (`63c9586` → `3a7a0fd`), усе запушено
-
-**Фундамент Supabase (план → `docs/SUPABASE_MIGRATION_PLAN.md`):**
-- **Ворота 1 — єдиний шар запису.** Канонічні сеттери: `updateSettings/getSettings` (`src/core/settings.js`, 10 прямих `nm_settings` у 6 файлах `b5ed2db`), `saveMemory` (`src/ai/memory.js`, 4 прямі `nm_memory` + подія для «одного мозку» `38cad50`), `getQuitLog/saveQuitLog` експортовано (chips.js обхід `b405570`). Аудит: решта прямих setItem легітимні (boot-міграції, lazy-фікси).
-- **5 фабрик сутностей** (DRY + чокпойнти): `makeHabit` (5 точок + **Date.now id → UUID** фікс inbox.js `932c375`), `makeEvent` (7 точок `6dccfd3`), `makeTask`+`makeMoment` (8 точок `1fea387`), `makeFinance` (3 точки `df23870`). `src/data/entity-factories.js` + `habit-classifier.js`. 23 точки створення → 5.
-- **Ворота 3 — конверт `stampEntity`** (`src/core/entity.js`, контракт `070a3dc`) застосовано у 5 фабриках (`3a7a0fd`): кожна нова сутність отримує `{id-uuid, user_id, created_at, updated_at, deleted_at, hlc}`. Легасі `createdAt`/`ts` лишаються поряд (дублювання тимчасове до Supabase-міграції).
-
-**Багфікси:**
-- **quit-звичка** (`d8713a9`): «кинути курити» через чат → був build замість quit-челенджу. Корінь: tool save_habit без `type`. `inferHabitType()` (правило 12, `src/data/habit-classifier.js`) у 4 точках.
-- **час → подія** (`605321f`): «подзвонити о 12:00» → був задачею (не в Розпорядку дня). Гард `convertTaskToEventOnTime` у `dispatcher-guards.js` (всі 8 чатів) + `hasExplicitClockTime()` строгий детектор (не ловить дати «15.05»).
-- **NM_KEYS** (`fc063f3`): 5 orphan-ключів поза реєстром → clearAllData/backup пропускали. Патерни `nm_fin_insight_`, `nm_tasks_backup_` + 2 точкові.
-- **2 з аудиту** (`0ec333d`, silent-bug-scout): closeSettings слав 'memory' при кожному закритті → зайвий OWL regen (фікс: писати лише якщо змінилось); «менше курити» → quit.
-
-**Інфраструктура:** 5 детермінованих юніт-сторожів у `pre-push-check.js` (escape/entity/habit-type/factories/guards) ~130 тестів — клас XSS, форма конверта, класифікація під автоматичним замком.
-
-### Обговорено (без виконання)
-
-- **Дублювання часу** (createdAt + created_at): прийнято тимчасово, зллється при Supabase-міграції. Конверт — additive, старий read-код не чіпається.
-- **Ворота 2** (структурний payload `{type,action,id}`): Council показав 7/9 слухачів ламаються → strangler-shim. Відкладено (не можу iPhone-smoke флоп з хмари).
-- **Проекти**: 2 точки створення без фабрики — лишилось (низький ROI, з конвертом окремо).
-- **Онбординг**: Роман — «кривий, слайди негарні». → ROADMAP/Ideas як UX-редизайн (потребує бачення Романа + макет).
-
-### Ключові рішення
-
-- **Council дрейфонув → відхилено.** Council рекомендував `persist.js` обгортку — але `/supabase-prep` має hard-law «db.js абстракція ЗАБОРОНЕНА». Спіймав читанням скіла ПЕРЕД Edit'ом. План був правий: через ІСНУЮЧІ `saveX()`, не нова обгортка.
-- **Фабрики як Ворота-3 prep** — чокпойнт для stampEntity + менше bug-surface (quit-баг жив у 4 копіях через копіпаст).
-- **`makeX`/`inferHabitType` у `src/data/`** — там парсери/класифікатори (i18n-whitelist, поряд з ua-time-parser).
-- **stampEntity на створенні (Фаза 1), maintenance updated_at/hlc на edit'ах — Фаза 2** (sync).
-- **«час → подія» — code-guard** (детермінований сигнал, правило 12), не промпт.
-
-### Інциденти
-
-- **pre-push smoke хибнопозитиви** (повторювані): `id:generateUUID`/`setItem nm_` у diff тригерили smoke-правило на рефакторах. Bypass `pre-push: ok` + чек-лист smoke Роману (з хмари смоук неможливий). Транскрипт-флаш timing — bypass потребував retry (повідомлення не флашилось у тому ж ході).
-- **Підпис коміту** `6e6f002` Unverified → `git commit --amend --reset-author` → `38cad50`.
-
-### Метрики
-
-- Коміти: `63c9586` → `3a7a0fd` (16 commits коду), усе на `claude/new-session-7uxlr7`, запушено
-- CACHE_NAME: `nm-20260612-1058`
-- Council: 5 Sonnet-агентів (Ворота 2/3 аналіз) + silent-bug-scout аудит
-- Build: node --check + 5 юніт-сторожів + check-imports + i18n — усе чисте
+## 🔧 Сесія 7uxlr7 (12.06.2026) — архівовано v1d9eo 13.06 → [archive](../_archive/SESSION_STATE_archive.md#-сесія-7uxlr7--supabase-фаза-1-ворота-13--5-фабрик--класифікація-12062026)
 
 ---
 
