@@ -18,6 +18,7 @@
   "src/tabs/me.js": 18,
   "src/tabs/notes.js": 6,
   "src/tabs/onboarding.js": 144,
-  "src/tabs/projects.js": 20,
-  "src/tabs/tasks.js": 5
+  "src/tabs/projects.js": 16,
+  "src/tabs/tasks.js": 5,
+  "src/ui/voice-output.js": 1
 }

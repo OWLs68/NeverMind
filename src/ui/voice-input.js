@@ -13,8 +13,11 @@
 // ============================================================
 
 import { t } from '../core/utils.js';
+import { currentTab } from '../core/nav.js';
 
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+// Реєстр барів для живого діалогу (Jarvis-петля): tab → запустити слухання.
+const _bars = {};
 const SUPPORTED = !!SR;
 
 const MIC_SVG = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.75)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>`;
@@ -57,6 +60,8 @@ function attachVoiceToTextarea(textarea, button, sendBtn) {
 
     baseText = textarea.value ? (textarea.value + (textarea.value.endsWith(' ') ? '' : ' ')) : '';
     button.classList.add('recording');
+    // Живий діалог: у голосовому режимі після паузи авто-надсилаємо (без тапу).
+    try { if (window.nmVoiceIsOn && window.nmVoiceIsOn()) pendingSendClick = true; } catch (e) {}
 
     rec.onresult = (ev) => {
       let interim = '';
@@ -84,12 +89,15 @@ function attachVoiceToTextarea(textarea, button, sendBtn) {
       button.classList.remove('recording');
       rec = null;
       try { textarea.focus(); } catch {}
-      if (pendingSendClick && sendBtn) {
+      const hasContent = (textarea.value || '').trim().length > 0;
+      if (pendingSendClick && sendBtn && hasContent) {
         pendingSendClick = false;
         // qpzj7k: позначаємо що цей запит ініційований голосом (для розбивки
         // витрат за способом). logUsage прочитає й скине прапорець.
         try { window.__nm_inputMode = 'voice'; } catch {}
         setTimeout(() => { try { sendBtn.click(); } catch {} }, 60);
+      } else {
+        pendingSendClick = false;
       }
     };
 
@@ -124,6 +132,22 @@ function attachVoiceToTextarea(textarea, button, sendBtn) {
       }
     }, true);
   }
+
+  // Реєструємо бар для живого діалогу — щоб voice-output міг запустити слухання
+  // після того як OWL договорив (Jarvis-петля).
+  const tab = textarea.dataset.tab;
+  if (tab) _bars[tab] = { start: startRecording, isRec: () => !!rec };
+}
+
+// Жива петля: запустити слухання на активній вкладці (викликає voice-output
+// після завершення озвучки, якщо голосовий режим увімкнено).
+if (typeof window !== 'undefined') {
+  window.nmStartListening = () => {
+    try {
+      const b = _bars[currentTab];
+      if (b && !b.isRec()) b.start();
+    } catch (e) {}
+  };
 }
 
 function initVoiceInput() {
