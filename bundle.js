@@ -16449,12 +16449,19 @@ ${JSON.stringify(contextData, null, 2)}` : "";
     contentEl._swipeClose = true;
     const swipeRoot = contentEl.parentElement || contentEl;
     const handleOnly = !!options.handleOnly;
+    const scrollGuardSel = options.scrollGuardSelector || null;
     let startY = 0, startX = 0, dy = 0, _swipeBlocked = false;
     swipeRoot.addEventListener("touchstart", (e) => {
       if (handleOnly) {
         _swipeBlocked = !e.target.closest(".modal-handle");
+      } else if (e.target.closest(".modal-handle")) {
+        _swipeBlocked = false;
       } else {
         _swipeBlocked = !!e.target.closest(".drum-col, .drum-item, .settings-scroll, #memory-cards-list, input, textarea, select");
+        if (!_swipeBlocked && scrollGuardSel) {
+          const sc = swipeRoot.querySelector(scrollGuardSel) || document.querySelector(scrollGuardSel);
+          if (sc && sc.scrollTop > 4) _swipeBlocked = true;
+        }
       }
       startY = e.touches[0].clientY;
       startX = e.touches[0].clientX;
@@ -26241,7 +26248,7 @@ ${patterns.map((p) => `- ${p}`).join("\n")}`;
     </div>`;
     document.body.appendChild(modal);
     const card = modal.querySelector(":scope > div");
-    if (card) setupModalSwipeClose(card, closeFinAnalytics, { handleOnly: true });
+    if (card) setupModalSwipeClose(card, closeFinAnalytics, { scrollGuardSelector: "#fin-analytics-scroll" });
   }
   function closeFinAnalytics() {
     document.getElementById("fin-analytics-modal")?.remove();
