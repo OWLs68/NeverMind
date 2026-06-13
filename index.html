@@ -713,6 +713,9 @@
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.55)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
     </button>
     <!-- Відправка -->
+    <button class="ai-bar-send-btn" data-action="pick-chat-image" data-tab="inbox" title="Фото" style="margin-right:4px">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1e1040" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+    </button>
     <button class="ai-bar-send-btn" id="ai-send-btn" data-action="call" data-fn="sendToAI">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1e1040" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
     </button>
@@ -728,6 +731,9 @@
       maxlength="500" data-on-input="autoResizeTextarea"
       data-on-focus="open-chat-bar" data-tab="finance"
       data-on-enter="sendFinanceBarMessage" data-on-enter-mod="cmd"></textarea>
+    <button class="ai-bar-send-btn" data-action="pick-chat-image" data-tab="finance" title="Фото" style="margin-right:4px">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1e1040" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+    </button>
     <button class="ai-bar-send-btn" id="finance-send-btn" data-action="call" data-fn="sendFinanceBarMessage">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1e1040" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
     </button>
@@ -743,6 +749,9 @@
       maxlength="500" data-on-input="autoResizeTextarea"
       data-on-focus="open-chat-bar" data-tab="notes"
       data-on-enter="sendNotesBarMessage" data-on-enter-mod="cmd"></textarea>
+    <button class="ai-bar-send-btn" data-action="pick-chat-image" data-tab="notes" title="Фото" style="margin-right:4px">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1e1040" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+    </button>
     <button class="ai-bar-send-btn" id="notes-send-btn" data-action="call" data-fn="sendNotesBarMessage">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1e1040" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
     </button>
@@ -760,6 +769,9 @@
       maxlength="500" data-on-input="autoResizeTextarea"
       data-on-focus="open-chat-bar" data-tab="tasks"
       data-on-enter="sendTasksBarMessage" data-on-enter-mod="cmd"></textarea>
+    <button class="ai-bar-send-btn" data-action="pick-chat-image" data-tab="tasks" title="Фото" style="margin-right:4px">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1e1040" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+    </button>
     <button class="ai-bar-send-btn" id="tasks-send-btn" data-action="call" data-fn="sendTasksBarMessage">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1e1040" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
     </button>
@@ -775,6 +787,9 @@
           maxlength="500" data-on-input="autoResizeTextarea"
           data-on-focus="open-chat-bar" data-tab="me"
           data-on-enter="sendMeChatMessage" data-on-enter-mod="cmd"></textarea>
+        <button class="ai-bar-send-btn" data-action="pick-chat-image" data-tab="me" title="Фото" style="margin-right:4px">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1e1040" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+        </button>
         <button class="ai-bar-send-btn" id="me-send-btn" data-action="call" data-fn="sendMeChatMessage">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1e1040" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
         </button>
@@ -790,6 +805,9 @@
           maxlength="500" data-on-input="autoResizeTextarea"
           data-on-focus="open-chat-bar" data-tab="evening"
           data-on-enter="sendEveningBarMessage" data-on-enter-mod="cmd"></textarea>
+        <button class="ai-bar-send-btn" data-action="pick-chat-image" data-tab="evening" title="Фото" style="margin-right:4px">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1e1040" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+        </button>
         <button class="ai-bar-send-btn" id="evening-send-btn" data-action="call" data-fn="sendEveningBarMessage">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1e1040" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
         </button>
@@ -874,6 +892,9 @@
 
 <!-- HEALTH AI BAR REMOVED (EU AI Act compliance JMQuT 17.05.2026) — AI ізольовано від health-даних. -->
 
+<!-- Спільний прихований file-input для фото у будь-якому чаті (один мозок) -->
+<input type="file" id="chat-image-input" accept="image/*" style="display:none" data-on-change="chat-image-picked">
+
 <!-- PROJECTS AI BAR -->
 <div id="projects-ai-bar" class="ai-bar-new" style="display:none;bottom:calc(var(--tabbar-h, 83px) + 4px)">
   <div class="ai-bar-chat-window" id="projects-chat-window">
@@ -885,8 +906,7 @@
       maxlength="500" data-on-input="autoResizeTextarea"
       data-on-focus="open-chat-bar" data-tab="projects"
       data-on-enter="sendProjectsBarMessage" data-on-enter-mod="cmd"></textarea>
-    <input type="file" id="projects-image-input" accept="image/*" style="display:none" data-on-change="project-image-pick">
-    <button class="ai-bar-send-btn" id="projects-image-btn" data-action="call" data-fn="openProjectImagePicker" title="Фото для контексту" style="margin-right:4px">
+    <button class="ai-bar-send-btn" id="projects-image-btn" data-action="pick-chat-image" data-tab="projects" title="Фото" style="margin-right:4px">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1e1040" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
     </button>
     <button class="ai-bar-send-btn" id="projects-send-btn" data-action="call" data-fn="sendProjectsBarMessage">

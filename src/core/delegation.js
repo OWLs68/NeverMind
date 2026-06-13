@@ -394,11 +394,17 @@ reg('project-chat-prompt', (data) => {
     window.sendProjectsBarPrompt(data.prompt);
   }
 });
-// project-image-pick — data-on-change на прихованому file-input у барі проектів.
-// Юзер вибрав фото → OWL «бачить» його (vision) і вплітає у розуміння проекту.
-reg('project-image-pick', (data, el) => {
-  if (typeof window !== 'undefined' && typeof window.handleProjectImagePick === 'function') {
-    window.handleProjectImagePick(data, el);
+// pick-chat-image — кнопка 🖼 у будь-якому барі (data-tab). Один мозок: фото
+// → vision-опис → звичайний потік того чату.
+reg('pick-chat-image', (data) => {
+  if (typeof window !== 'undefined' && typeof window.pickChatImage === 'function') {
+    window.pickChatImage(data.tab);
+  }
+});
+// chat-image-picked — data-on-change на спільному прихованому file-input.
+reg('chat-image-picked', (data, el) => {
+  if (typeof window !== 'undefined' && typeof window.onChatImagePicked === 'function') {
+    window.onChatImagePicked(data, el);
   }
 });
 // open-notes-folder — cross-tab navigation з projects → notes з папкою.

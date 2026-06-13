@@ -786,6 +786,12 @@ ID задач, звичок, подій є в КОНТЕКСТ ДАНИХ вищ
 // text-JSON на INBOX_TOOLS + dispatchChatToolCalls. Додано 8 project-specific tools:
 // complete_project_step, add_project_step, update_project_progress, add_project_decision,
 // add_project_metric, add_project_resource, update_project_tempo, update_project_risks.
+// Vision-промпт для фото у будь-якому чаті (src/ui/chat-image.js). Фото →
+// короткий опис від першої особи, щоб мозок чату обробив як звичайне повідомлення.
+export function getChatVisionPrompt() {
+  return `Користувач надіслав фото у застосунок продуктивності. Подивись і напиши КОРОТКО (1-2 речення українською) від ПЕРШОЇ особи — ніби сам користувач описує що на фото і що з цим робити. Якщо чек/рахунок — назви суму і за що. Якщо нотатка/дошка/текст — суть. Якщо список справ — перелічи пунктами. Якщо ескіз/макет — опиши коротко. Тільки текст опису, без преамбули.`;
+}
+
 export function getProjectsChatSystem({ activeProject, projectsContext, activeSteps, completeness }) {
   // Детермінований стан повноти (порахований кодом, не моделлю) — щоб OWL
   // НАДІЙНО знав що відомо, чого бракує і чи можна вже радити.
