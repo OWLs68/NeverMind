@@ -926,6 +926,9 @@ async function generateProjectFirstSteps(projectName) {
 Відповідай ТIЛЬКИ JSON (без markdown):
 {
  "brief": "2-3 речення — що це за проект, головна ціль і ключовий контекст (з відповідей юзера)",
+ "targetAudience": "для кого проект / хто клієнт (якщо юзер казав, інакше порожньо)",
+ "currentStage": "на якому етапі, що вже є (якщо казав, інакше порожньо)",
+ "deadline": "дедлайн або горизонт типу '3 місяці' (якщо казав, інакше порожньо)",
  "steps": ["крок 1","крок 2","крок 3"],            // 3 конкретні перші дії, 4-8 слів, реальні на цьому тижні
  "tempoNow": "коли буде готово при поточному темпі, напр. ~6 міс",
  "tempoMore": "коли при +1 год/день, напр. ~3 міс",
@@ -963,6 +966,9 @@ async function generateProjectFirstSteps(projectName) {
       const p = (ivId && projects.find(pr => String(pr.id) === ivId)) || projects.find(pr => pr.name === projectName);
       if (p) {
         if ((parsed.brief || parsed.summary) && !p.brief) p.brief = String(parsed.brief || parsed.summary);
+        if (parsed.targetAudience && !p.targetAudience) p.targetAudience = String(parsed.targetAudience);
+        if (parsed.currentStage && !p.currentStage) p.currentStage = String(parsed.currentStage);
+        if (parsed.deadline && !p.deadline) p.deadline = String(parsed.deadline);
         if (Array.isArray(parsed.steps) && parsed.steps.length > 0 && (p.steps || []).length === 0) {
           p.steps = parsed.steps.map(s => ({ id: generateUUID(), text: s, done: false }));
         }

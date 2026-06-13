@@ -6,6 +6,7 @@
 
 import { currentTab, showToast, switchTab } from '../core/nav.js';
 import { makeProject } from '../data/entity-factories.js';
+import { assessProjectCompleteness, PROJECT_DIM_LABELS, PROJECT_GAP_PROMPTS } from '../data/project-completeness.js';
 import { escapeHtml, safeHref, parseContentChips, t } from '../core/utils.js';
 import { logUsage } from '../core/usage-meter.js';
 import { callAIWithTools, getAIContext, getOWLPersonality, openChatBar, safeAgentReply, saveChatMsg, INBOX_TOOLS, handleChatError } from '../ai/core.js';
@@ -251,9 +252,17 @@ function renderProjectWorkspace(id) {
   const noteCount = _countProjectNotes(p.name);
   const hasBrief = !!(p.brief && p.brief.trim());
   const briefPrompt = t('projects.brief.prompt', 'Хочу розповісти про цей проект — що це, яка головна ціль і контекст');
-  // Поради (план/бюджет/ризики) пропонуємо ЛИШЕ коли OWL уже розуміє проект
-  // (brief є). Без розуміння — поради наосліп (вимога Романа qpzj7k).
-  const emptyChips = (isNewProject && hasBrief) ? [
+  // Детермінований рахунок повноти (src/data/project-completeness.js) — єдине
+  // джерело правди «чи досить контексту щоб радити». Не здогад моделі.
+  const completeness = assessProjectCompleteness(p);
+  const hasContext = hasBrief || steps.length > 0; // старі проекти з кроками теж «живі»
+  // Мʼякі прогалини: до 3 «уточнити: …» (живий абзац, не форма/лічильник).
+  const gapChips = hasBrief
+    ? completeness.missing.filter(k => k !== 'essence' && PROJECT_GAP_PROMPTS[k]).slice(0, 3)
+        .map(k => ({ label: PROJECT_DIM_LABELS[k], prompt: PROJECT_GAP_PROMPTS[k] }))
+    : [];
+  // Поради (план/бюджет/ризики) — ЛИШЕ коли код каже canAdvise (суть+для кого).
+  const emptyChips = (isNewProject && completeness.canAdvise) ? [
     { label: t('projects.empty.chip_plan', '📋 Склади план'), prompt: t('projects.empty.prompt_plan', 'Склади план перших кроків для цього проекту') },
     { label: t('projects.empty.chip_budget', '💰 Бюджет і темп'), prompt: t('projects.empty.prompt_budget', 'Допоможи оцінити бюджет і темп роботи для цього проекту') },
     { label: t('projects.empty.chip_risks', '⚠️ Які ризики'), prompt: t('projects.empty.prompt_risks', 'Які головні ризики і складнощі в цьому проекті?') },
@@ -263,15 +272,16 @@ function renderProjectWorkspace(id) {
   const silenceDays = p.lastActivity ? Math.floor((Date.now() - p.lastActivity) / (1000 * 60 * 60 * 24)) : null;
   // 🦉 Жива репліка OWL про стан проекту.
   let owlInsight = '';
-  if (hasBrief) {
+  if (hasContext) {
     if (steps.length > 0 && !nextStep) owlInsight = t('projects.insight.all_done', 'Усі кроки закрито 🎉 Додай нові або признач проект завершеним.');
     else if (silenceDays !== null && silenceDays >= 3 && nextStep) owlInsight = t('projects.insight.silence', 'Не чіпав {n} дн. Продовжимо? Наступне — {step}', { n: silenceDays, step: escapeHtml(nextStep.text) });
     else if (nextStep) owlInsight = t('projects.insight.next', 'Рухаємось 👌 Наступне — {step}', { step: escapeHtml(nextStep.text) });
+    else if (!hasBrief) owlInsight = '';
     else owlInsight = t('projects.insight.start', 'Готово до старту. Додай перший крок або спитай мене з чого почати.');
   }
   // Чіпи лінкованих сутностей (тап → перехід).
   const linkStats = [];
-  if (hasBrief) {
+  if (hasContext) {
     linkStats.push({ icon: '📋', label: t('projects.stat.steps', 'Кроки {d}/{t}', { d: doneSteps, t: steps.length }), action: '' });
     linkStats.push({ icon: '📝', label: t('projects.stat.notes', 'Нотатки {n}', { n: noteCount }), action: 'notes' });
     if (projectSpent > 0) linkStats.push({ icon: '💰', label: `${getCurrency()}${projectSpent}`, action: '' });
@@ -334,7 +344,10 @@ function renderProjectWorkspace(id) {
         <div class="section-label" style="margin-bottom:0">${t('projects.brief.title', 'Про проект')}</div>
       </div>
       ${hasBrief
-        ? `<div style="font-size:12.5px;font-weight:500;color:#1e1040;line-height:1.55">${escapeHtml(p.brief)}</div>`
+        ? `<div style="font-size:12.5px;font-weight:500;color:#1e1040;line-height:1.55">${escapeHtml(p.brief)}</div>
+           ${gapChips.length ? `<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:9px">
+             ${gapChips.map(c => `<button data-action="project-chat-prompt" data-prompt="${escapeHtml(c.prompt)}" style="font-size:10.5px;font-weight:600;color:rgba(30,16,64,0.55);background:rgba(255,255,255,0.4);border:1px dashed rgba(30,16,64,0.18);border-radius:8px;padding:4px 9px;cursor:pointer">${t('projects.brief.clarify', 'уточнити')}: ${escapeHtml(c.label)}</button>`).join('')}
+           </div>` : ''}`
         : `<div style="font-size:12px;font-weight:500;color:rgba(30,16,64,0.5);line-height:1.5;margin-bottom:10px">${t('projects.brief.empty', 'OWL ще не знає що це за проект. Розкажи суть, ціль і контекст (можна фото) — без цього поради неможливі.')}</div>
            <button data-action="project-chat-prompt" data-prompt="${escapeHtml(briefPrompt)}" style="font-size:12px;font-weight:700;color:white;background:#3d2e1e;border:none;border-radius:10px;padding:8px 14px;cursor:pointer">${t('projects.brief.cta', '💬 Розкажи про проект →')}</button>`
       }
@@ -345,7 +358,7 @@ function renderProjectWorkspace(id) {
       <div style="font-size:12.5px;font-weight:600;color:white;line-height:1.5">${owlInsight}</div>
     </div>` : ''}
 
-    ${hasBrief ? `<div style="display:flex;gap:6px;margin-bottom:10px">
+    ${hasContext ? `<div style="display:flex;gap:6px;margin-bottom:10px">
       <button data-action="project-chat-prompt" data-prompt="${escapeHtml(qaStepPrompt)}" style="flex:1;font-size:11px;font-weight:700;color:#3d2e1e;background:rgba(255,255,255,0.5);border:1px solid rgba(30,16,64,0.1);border-radius:10px;padding:8px 4px;cursor:pointer">＋ ${t('projects.qa.step', 'крок')}</button>
       <button data-action="open-notes-folder" data-folder="${escapeHtml(p.name)}" style="flex:1;font-size:11px;font-weight:700;color:#3d2e1e;background:rgba(255,255,255,0.5);border:1px solid rgba(30,16,64,0.1);border-radius:10px;padding:8px 4px;cursor:pointer">＋ ${t('projects.qa.note', 'нотатка')}</button>
       <button data-action="call" data-fn="openProjectImagePicker" style="flex:1;font-size:11px;font-weight:700;color:#3d2e1e;background:rgba(255,255,255,0.5);border:1px solid rgba(30,16,64,0.1);border-radius:10px;padding:8px 4px;cursor:pointer">🖼 ${t('projects.qa.photo', 'фото')}</button>
@@ -359,7 +372,7 @@ function renderProjectWorkspace(id) {
       ).join('')}
     </div>` : ''}
 
-    ${(isNewProject && hasBrief) ? `<div class="card-glass" style="text-align:center">
+    ${(isNewProject && completeness.canAdvise) ? `<div class="card-glass" style="text-align:center">
       <div style="font-size:22px;margin-bottom:6px">✨</div>
       <div style="font-size:13px;font-weight:500;color:rgba(30,16,64,0.55);line-height:1.5;margin-bottom:10px">${t('projects.empty.hint2', 'OWL зрозумів проект. Що далі?')}</div>
       <div style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center">
@@ -636,7 +649,9 @@ export function getProjectsContext() {
     const next = steps.find(s => !s.done);
     const silenceDays = p.lastActivity ? Math.floor((now - p.lastActivity) / 86400000) : null;
     const silence = silenceDays !== null && silenceDays >= 3 ? ` ⚠️ ${silenceDays} дн. тиші` : '';
-    parts.push(`- [ID:${p.id}] "${p.name}" ${pct}%${next ? ' → наступний крок: ' + next.text : ''}${silence}`);
+    // brief (суть) — щоб OWL у будь-якому чаті знав ПРО ЩО проект, не лише назву.
+    const briefShort = p.brief ? ` — ${String(p.brief).slice(0, 120)}` : '';
+    parts.push(`- [ID:${p.id}] "${p.name}" ${pct}%${briefShort}${next ? ' → наступний крок: ' + next.text : ''}${silence}`);
   });
   return parts.join('\n');
 }
@@ -716,7 +731,8 @@ export async function sendProjectsBarMessage() {
   const activeSteps = activeProject ? (activeProject.steps || []).map(s =>
     `[ID:${s.id}] ${s.done ? '✓' : '○'} ${s.text}`).join('\n') : '';
 
-  const systemPrompt = getProjectsChatSystem({ activeProject, projectsContext, activeSteps })
+  const completeness = activeProject ? assessProjectCompleteness(activeProject) : null;
+  const systemPrompt = getProjectsChatSystem({ activeProject, projectsContext, activeSteps, completeness })
     + (getAIContext() ? '\n\n' + getAIContext() : '');
 
   try {

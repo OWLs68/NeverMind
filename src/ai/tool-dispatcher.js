@@ -274,6 +274,12 @@ function _handleProjectTool(name, args, addMsg) {
     }
     case 'set_project_brief': {
       if (args.brief) p.brief = String(args.brief);
+      // Структуровані поля — merge-safe: пишемо лише коли модель їх передала
+      // (живлять детермінований assessProjectCompleteness, не губляться при
+      // наступному перезаписі brief).
+      if (args.target_audience) p.targetAudience = String(args.target_audience);
+      if (args.current_stage) p.currentStage = String(args.current_stage);
+      if (args.deadline) p.deadline = String(args.deadline);
       p.lastActivity = Date.now();
       break;
     }

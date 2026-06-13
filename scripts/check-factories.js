@@ -92,6 +92,9 @@ const { pathToFileURL } = require('url');
   pk('id — UUID', UUID_RE.test(p1.id));
   pk('name/subtitle збережені', p1.name === 'Сайт' && p1.subtitle === 'лендінг');
   pk('brief порожній за замовч.', p1.brief === '');
+  pk('targetAudience порожній за замовч.', p1.targetAudience === '');
+  pk('currentStage порожній за замовч.', p1.currentStage === '');
+  pk('deadline null за замовч.', p1.deadline === null);
   pk('images — порожній масив (forward-compat Supabase)', Array.isArray(p1.images) && p1.images.length === 0);
   pk('subtitle дефолт пустий', makeProject({ name: 'x' }).subtitle === '');
   pk('progress 0 + steps []', p1.progress === 0 && Array.isArray(p1.steps) && p1.steps.length === 0);
@@ -113,6 +116,22 @@ const { pathToFileURL } = require('url');
   ek('конверт: created_at — ISO рядок', /^\d{4}-\d{2}-\d{2}T/.test(e1.created_at));
   ek('конверт: user_id заглушка null', e1.user_id === null);
   ek('легасі ts/createdAt поряд з конвертом (не злам)', typeof m1.ts === 'number' && typeof t1.createdAt === 'number');
+
+  // --- assessProjectCompleteness (детермінований мозок розуміння проекту) ---
+  const { assessProjectCompleteness } = await import(pathToFileURL(path.join(__dirname, '..', 'src', 'data', 'project-completeness.js')).href);
+  const ac = (label, cond) => { if (cond) passed++; else failures.push('✗ completeness: ' + label); };
+  const a0 = assessProjectCompleteness(makeProject({ name: 'x' }));
+  ac('порожній проект → score 0', a0.pct === 0 && a0.filled.length === 0 && a0.missing.length === 7);
+  ac('порожній → canAdvise false', a0.canAdvise === false);
+  ac('порожній → nextAsk = essence', a0.nextAsk === 'essence');
+  const a1 = assessProjectCompleteness({ ...makeProject({ name: 'x' }), brief: 'Веб-портал для громади міста Олика' });
+  ac('лише суть → canAdvise ще false (нема для кого)', a1.canAdvise === false && a1.filled.includes('essence'));
+  const a2 = assessProjectCompleteness({ ...makeProject({ name: 'x' }), brief: 'Веб-портал для громади міста', targetAudience: 'мешканці 13 селищ' });
+  ac('суть + для кого → canAdvise true', a2.canAdvise === true);
+  ac('canAdvise не вимагає всіх 7', a2.pct < 100 && a2.canAdvise === true);
+  const aFull = assessProjectCompleteness({ brief: 'x'.repeat(30), targetAudience: 'люди', currentStage: 'старт', deadline: '3 міс', risks: 'конкуренти', metrics: [{ label: 'a', value: '1' }], budget: { total: 100, spent: 0, items: [] } });
+  ac('усі 7 → pct 100', aFull.pct === 100 && aFull.missing.length === 0);
+  ac('tempo як проксі строків (без deadline-поля)', assessProjectCompleteness({ ...makeProject({ name: 'x' }), tempoNow: '~3 міс' }).filled.includes('deadline'));
 
   if (failures.length > 0) {
     console.error(`\n=== ❌ FACTORIES СТОРОЖ: ${failures.length} провалів (${passed} ок) ===\n`);
