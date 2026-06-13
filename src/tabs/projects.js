@@ -259,6 +259,28 @@ function renderProjectWorkspace(id) {
     { label: t('projects.empty.chip_risks', '⚠️ Які ризики'), prompt: t('projects.empty.prompt_risks', 'Які головні ризики і складнощі в цьому проекті?') },
   ] : [];
 
+  // Наповнення воркспейсу (qpzj7k) — усе детерміноване, без AI-витрат:
+  const silenceDays = p.lastActivity ? Math.floor((Date.now() - p.lastActivity) / (1000 * 60 * 60 * 24)) : null;
+  // 🦉 Жива репліка OWL про стан проекту.
+  let owlInsight = '';
+  if (hasBrief) {
+    if (steps.length > 0 && !nextStep) owlInsight = t('projects.insight.all_done', 'Усі кроки закрито 🎉 Додай нові або признач проект завершеним.');
+    else if (silenceDays !== null && silenceDays >= 3 && nextStep) owlInsight = t('projects.insight.silence', 'Не чіпав {n} дн. Продовжимо? Наступне — {step}', { n: silenceDays, step: escapeHtml(nextStep.text) });
+    else if (nextStep) owlInsight = t('projects.insight.next', 'Рухаємось 👌 Наступне — {step}', { step: escapeHtml(nextStep.text) });
+    else owlInsight = t('projects.insight.start', 'Готово до старту. Додай перший крок або спитай мене з чого почати.');
+  }
+  // Чіпи лінкованих сутностей (тап → перехід).
+  const linkStats = [];
+  if (hasBrief) {
+    linkStats.push({ icon: '📋', label: t('projects.stat.steps', 'Кроки {d}/{t}', { d: doneSteps, t: steps.length }), action: '' });
+    linkStats.push({ icon: '📝', label: t('projects.stat.notes', 'Нотатки {n}', { n: noteCount }), action: 'notes' });
+    if (projectSpent > 0) linkStats.push({ icon: '💰', label: `${getCurrency()}${projectSpent}`, action: '' });
+  }
+
+  const qaStepPrompt = t('projects.qa.add_step_prompt', 'Додай крок до цього проекту');
+  const qaAskPrompt = t('projects.qa.ask_prompt', 'Маю питання по цьому проекту');
+  const stuckPrompt = nextStep ? t('projects.next.stuck_prompt', 'Я застряг на кроці "{step}" — допоможи зрушити', { step: nextStep.text }) : '';
+
   const scrollEl = document.getElementById('projects-workspace');
   if (!scrollEl) return;
   // Показуємо воркспейс, ховаємо список (не затираємо #projects-list — інакше
@@ -318,6 +340,25 @@ function renderProjectWorkspace(id) {
       }
     </div>
 
+    ${owlInsight ? `<div style="display:flex;gap:9px;align-items:flex-start;background:rgba(12,6,28,0.78);border-radius:14px;padding:11px 13px;margin-bottom:10px">
+      <span style="font-size:16px;flex-shrink:0">🦉</span>
+      <div style="font-size:12.5px;font-weight:600;color:white;line-height:1.5">${owlInsight}</div>
+    </div>` : ''}
+
+    ${hasBrief ? `<div style="display:flex;gap:6px;margin-bottom:10px">
+      <button data-action="project-chat-prompt" data-prompt="${escapeHtml(qaStepPrompt)}" style="flex:1;font-size:11px;font-weight:700;color:#3d2e1e;background:rgba(255,255,255,0.5);border:1px solid rgba(30,16,64,0.1);border-radius:10px;padding:8px 4px;cursor:pointer">＋ ${t('projects.qa.step', 'крок')}</button>
+      <button data-action="open-notes-folder" data-folder="${escapeHtml(p.name)}" style="flex:1;font-size:11px;font-weight:700;color:#3d2e1e;background:rgba(255,255,255,0.5);border:1px solid rgba(30,16,64,0.1);border-radius:10px;padding:8px 4px;cursor:pointer">＋ ${t('projects.qa.note', 'нотатка')}</button>
+      <button data-action="call" data-fn="openProjectImagePicker" style="flex:1;font-size:11px;font-weight:700;color:#3d2e1e;background:rgba(255,255,255,0.5);border:1px solid rgba(30,16,64,0.1);border-radius:10px;padding:8px 4px;cursor:pointer">🖼 ${t('projects.qa.photo', 'фото')}</button>
+      <button data-action="project-chat-prompt" data-prompt="${escapeHtml(qaAskPrompt)}" style="flex:1;font-size:11px;font-weight:700;color:#3d2e1e;background:rgba(255,255,255,0.5);border:1px solid rgba(30,16,64,0.1);border-radius:10px;padding:8px 4px;cursor:pointer">💬 OWL</button>
+    </div>` : ''}
+
+    ${linkStats.length ? `<div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">
+      ${linkStats.map(s => s.action === 'notes'
+        ? `<div data-action="open-notes-folder" data-folder="${escapeHtml(p.name)}" style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.6);background:rgba(255,255,255,0.45);border-radius:8px;padding:5px 9px;cursor:pointer">${s.icon} ${escapeHtml(s.label)}</div>`
+        : `<div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.6);background:rgba(255,255,255,0.45);border-radius:8px;padding:5px 9px">${s.icon} ${escapeHtml(s.label)}</div>`
+      ).join('')}
+    </div>` : ''}
+
     ${(isNewProject && hasBrief) ? `<div class="card-glass" style="text-align:center">
       <div style="font-size:22px;margin-bottom:6px">✨</div>
       <div style="font-size:13px;font-weight:500;color:rgba(30,16,64,0.55);line-height:1.5;margin-bottom:10px">${t('projects.empty.hint2', 'OWL зрозумів проект. Що далі?')}</div>
@@ -345,12 +386,13 @@ function renderProjectWorkspace(id) {
       </div>`).join('')}
     </div>` : ''}
 
-    <!-- Наступна дія -->
-    ${nextStep ? `<div style="display:flex;align-items:center;gap:9px;border-radius:12px;padding:10px 12px;margin-bottom:10px;background:rgba(61,46,30,0.08);border:1.5px solid rgba(61,46,30,0.15)">
-      <div style="width:24px;height:24px;border-radius:8px;background:#3d2e1e;display:flex;align-items:center;justify-content:center;flex-shrink:0">
-        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+    ${nextStep ? `<div style="border-radius:12px;padding:11px 13px;margin-bottom:10px;background:rgba(61,46,30,0.1);border:1.5px solid rgba(61,46,30,0.2)">
+      <div style="font-size:9px;font-weight:800;color:rgba(61,46,30,0.5);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px">${t('projects.next.label', 'Наступний крок')}</div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <div data-action="toggle-project-step" data-project-id="${p.id}" data-step-id="${nextStep.id}" style="width:24px;height:24px;border-radius:8px;border:2px solid #3d2e1e;background:rgba(255,255,255,0.6);flex-shrink:0;cursor:pointer"></div>
+        <div style="flex:1;font-size:14px;font-weight:800;color:#1e1040;line-height:1.3">${escapeHtml(nextStep.text)}</div>
       </div>
-      <div style="font-size:13px;font-weight:700;color:#3d2e1e">${escapeHtml(nextStep.text)}</div>
+      <div data-action="project-chat-prompt" data-prompt="${escapeHtml(stuckPrompt)}" style="font-size:11px;font-weight:700;color:#3d2e1e;margin-top:8px;cursor:pointer;opacity:0.7">${t('projects.next.stuck', 'застряг? → спитати OWL')}</div>
     </div>` : ''}
 
     <!-- Ключові метрики -->
