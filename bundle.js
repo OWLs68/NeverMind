@@ -25470,9 +25470,9 @@ ${legacy}`;
       };
       rec.onerror = (ev) => {
         const err = ev.error || "";
+        if (err === "no-speech" || err === "aborted") return;
         let msg = t("voice.error_mic", "\u041F\u043E\u043C\u0438\u043B\u043A\u0430 \u043C\u0456\u043A\u0440\u043E\u0444\u043E\u043D\u0430");
         if (err === "not-allowed" || err === "service-not-allowed") msg = t("voice.error_permission", "\u0414\u043E\u0437\u0432\u043E\u043B\u044C \u043C\u0456\u043A\u0440\u043E\u0444\u043E\u043D \u0443 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445");
-        else if (err === "no-speech") msg = t("voice.error_no_speech", "\u041D\u0435 \u0447\u0443\u044E \u0433\u043E\u043B\u043E\u0441\u0443");
         else if (err === "network") msg = t("voice.error_network", "\u041D\u0435\u043C\u0430\u0454 \u0456\u043D\u0442\u0435\u0440\u043D\u0435\u0442\u0443 \u0434\u043B\u044F \u0440\u043E\u0437\u043F\u0456\u0437\u043D\u0430\u0432\u0430\u043D\u043D\u044F");
         try {
           window.showToast && window.showToast(msg);
@@ -25854,14 +25854,7 @@ ${legacy}`;
       return false;
     }
   }
-  var TTS_INSTRUCTIONS = {
-    uk: "Speak in natural, fluent Ukrainian with correct Ukrainian pronunciation and a warm, calm, friendly tone. Do not use an English or Russian accent.",
-    en: "Speak in natural, fluent English with a warm, calm, friendly tone."
-  };
   var BROWSER_LOCALE = { uk: "uk-UA", en: "en-US" };
-  function _ttsInstruction() {
-    return TTS_INSTRUCTIONS[getLang()] || TTS_INSTRUCTIONS.uk;
-  }
   function _browserLocale() {
     return BROWSER_LOCALE[getLang()] || "uk-UA";
   }
@@ -26007,10 +26000,9 @@ ${legacy}`;
       method: "POST",
       headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}` },
       body: JSON.stringify({
-        model: "gpt-4o-mini-tts",
+        model: "tts-1",
         voice: _openaiVoice(),
         input: text,
-        instructions: _ttsInstruction(),
         response_format: "mp3"
       })
     });
@@ -26194,6 +26186,10 @@ ${legacy}`;
     });
     document.addEventListener("touchend", unlockAudio, { once: true, passive: true });
     document.addEventListener("visibilitychange", () => {
+      if (document.hidden) stopSpeaking();
+    });
+    window.addEventListener("pagehide", stopSpeaking);
+    window.addEventListener("blur", () => {
       if (document.hidden) stopSpeaking();
     });
     window.nmVoiceSpeak = speak;
