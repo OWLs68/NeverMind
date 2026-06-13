@@ -270,6 +270,11 @@ if (typeof window !== 'undefined') {
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', _injectVoiceButtons);
   else setTimeout(_injectVoiceButtons, 0);
   window.addEventListener('nm-voice-mode-changed', _syncVoiceButtons);
+  // Чат відкрито (у т.ч. повторно) + голосовий режим увімк → слухати юзера.
+  window.addEventListener('nm-chat-opened', () => {
+    if (!isVoiceMode()) return;
+    setTimeout(() => { try { if (window.nmStartListening) window.nmStartListening(); } catch (e) {} }, 350);
+  });
   window.addEventListener('nm-agent-message', (e) => {
     if (!isVoiceMode()) return;
     const d = (e && e.detail) || {};
