@@ -16224,6 +16224,10 @@ ${JSON.stringify(contextData, null, 2)}` : "";
       chatWin.style.maxHeight = h + "px";
       chatWin.classList.add("open");
       _tabChatState[tab] = "a";
+      try {
+        window.dispatchEvent(new CustomEvent("nm-chat-opened", { detail: tab }));
+      } catch (e) {
+      }
       const msgs = chatWin.querySelector(".ai-bar-messages");
       if (msgs) setTimeout(() => {
         msgs.scrollTop = msgs.scrollHeight;
@@ -25477,7 +25481,12 @@ ${legacy}`;
         } catch {
         }
         const hasContent = (textarea.value || "").trim().length > 0;
-        if (pendingSendClick && sendBtn && hasContent) {
+        let voiceOn = false;
+        try {
+          voiceOn = !!(window.nmVoiceIsOn && window.nmVoiceIsOn());
+        } catch (e) {
+        }
+        if (sendBtn && hasContent && (pendingSendClick || voiceOn)) {
           pendingSendClick = false;
           try {
             window.__nm_inputMode = "voice";
@@ -26148,6 +26157,15 @@ ${legacy}`;
     if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", _injectVoiceButtons);
     else setTimeout(_injectVoiceButtons, 0);
     window.addEventListener("nm-voice-mode-changed", _syncVoiceButtons);
+    window.addEventListener("nm-chat-opened", () => {
+      if (!isVoiceMode()) return;
+      setTimeout(() => {
+        try {
+          if (window.nmStartListening) window.nmStartListening();
+        } catch (e) {
+        }
+      }, 350);
+    });
     window.addEventListener("nm-agent-message", (e) => {
       if (!isVoiceMode()) return;
       const d = e && e.detail || {};
