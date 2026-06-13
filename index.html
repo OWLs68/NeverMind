@@ -707,7 +707,7 @@
     <textarea id="inbox-input" rows="1" placeholder="Напиши що завгодно — Агент розбереться…"
       data-on-focus="open-chat-bar" data-tab="inbox"
       maxlength="500" data-on-input="autoResizeTextarea"
-      data-on-enter="sendToAI"></textarea>
+      data-on-enter="sendToAI" data-on-enter-mod="cmd"></textarea>
     <!-- Мікрофон (неактивний) -->
     <button style="width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,0.12);border:none;display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;-webkit-tap-highlight-color:transparent;opacity:0.5" disabled>
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.55)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
@@ -727,7 +727,7 @@
     <textarea id="finance-bar-input" rows="1" placeholder="Витратив, отримав, запитай агента…"
       maxlength="500" data-on-input="autoResizeTextarea"
       data-on-focus="open-chat-bar" data-tab="finance"
-      data-on-enter="sendFinanceBarMessage"></textarea>
+      data-on-enter="sendFinanceBarMessage" data-on-enter-mod="cmd"></textarea>
     <button class="ai-bar-send-btn" id="finance-send-btn" data-action="call" data-fn="sendFinanceBarMessage">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1e1040" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
     </button>
@@ -742,7 +742,7 @@
     <textarea id="notes-bar-input" rows="1" placeholder="Створи нотатку, запитай агента…"
       maxlength="500" data-on-input="autoResizeTextarea"
       data-on-focus="open-chat-bar" data-tab="notes"
-      data-on-enter="sendNotesBarMessage"></textarea>
+      data-on-enter="sendNotesBarMessage" data-on-enter-mod="cmd"></textarea>
     <button class="ai-bar-send-btn" id="notes-send-btn" data-action="call" data-fn="sendNotesBarMessage">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1e1040" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
     </button>
@@ -759,7 +759,7 @@
     <textarea id="tasks-chat-input" rows="1" placeholder="Запитай або скажи Агенту про задачі…"
       maxlength="500" data-on-input="autoResizeTextarea"
       data-on-focus="open-chat-bar" data-tab="tasks"
-      data-on-enter="sendTasksBarMessage"></textarea>
+      data-on-enter="sendTasksBarMessage" data-on-enter-mod="cmd"></textarea>
     <button class="ai-bar-send-btn" id="tasks-send-btn" data-action="call" data-fn="sendTasksBarMessage">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1e1040" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
     </button>
@@ -774,7 +774,7 @@
         <textarea id="me-chat-input" rows="1" placeholder="Запитай агента про себе…"
           maxlength="500" data-on-input="autoResizeTextarea"
           data-on-focus="open-chat-bar" data-tab="me"
-          data-on-enter="sendMeChatMessage"></textarea>
+          data-on-enter="sendMeChatMessage" data-on-enter-mod="cmd"></textarea>
         <button class="ai-bar-send-btn" id="me-send-btn" data-action="call" data-fn="sendMeChatMessage">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1e1040" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
         </button>
@@ -789,7 +789,7 @@
         <textarea id="evening-bar-input" rows="1" placeholder="Поговори з агентом про день…"
           maxlength="500" data-on-input="autoResizeTextarea"
           data-on-focus="open-chat-bar" data-tab="evening"
-          data-on-enter="sendEveningBarMessage"></textarea>
+          data-on-enter="sendEveningBarMessage" data-on-enter-mod="cmd"></textarea>
         <button class="ai-bar-send-btn" id="evening-send-btn" data-action="call" data-fn="sendEveningBarMessage">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1e1040" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
         </button>
@@ -1648,7 +1648,7 @@
   <div style="padding:12px 16px;border-top:1px solid rgba(30,16,64,0.08);flex-shrink:0;display:flex;gap:8px;align-items:flex-end;">
     <textarea id="task-chat-input" rows="1" placeholder="Запитай або розкажи деталі…"
       maxlength="500" data-on-input="autoResizeTextarea"
-      data-on-enter="sendTaskChatMessage"
+      data-on-enter="sendTaskChatMessage" data-on-enter-mod="cmd"
       style="flex:1;border:1.5px solid rgba(30,16,64,0.12);border-radius:12px;padding:10px 12px;font-size:16px;font-family:inherit;color:#1e1040;outline:none;resize:none;max-height:100px;"></textarea>
     <button data-action="call" data-fn="sendTaskChatMessage" id="task-chat-send" style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#f97316,#ea580c);border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1e1040" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>

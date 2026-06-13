@@ -425,7 +425,9 @@ export function openFinAnalytics() {
   // MPVly-day2 06.05 (B-146): swipe-close ТIЛЬКИ від полоски (.modal-handle).
   // По кнопках/контенту тач не ловиться → click event працює.
   const card = modal.querySelector(':scope > div');
-  if (card) setupModalSwipeClose(card, closeFinAnalytics, { handleOnly: true });
+  // qpzj7k: свайп вниз закриває коли список угорі (не лише за смужку) — Роман
+  // свайпав по контенту і модалка не закривалась.
+  if (card) setupModalSwipeClose(card, closeFinAnalytics, { scrollGuardSelector: '#fin-analytics-scroll' });
 }
 
 export function closeFinAnalytics() {
