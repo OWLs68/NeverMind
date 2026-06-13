@@ -900,6 +900,7 @@ function renderOwlChips(boardMsg) {
   }
   const VALID = ['tasks','notes','habits','finance','projects','evening','me','inbox','health'];
   renderChips(el, boardMsg.chips, 'inbox', {
+    showVoice: true,
     onChipClick: (text, action, target) => {
       // Навігаційні чіпи — переключити вкладку
       if (action === 'nav' && VALID.includes(target)) {

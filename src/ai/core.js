@@ -723,6 +723,8 @@ export function saveChatMsg(tab, role, text, chips) {
     if (msgs.length > CHAT_STORE_MAX) msgs.splice(0, msgs.length - CHAT_STORE_MAX);
     localStorage.setItem(key, JSON.stringify(msgs));
     if (role === 'user') window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'chat' }));
+    // qpzj7k: нова відповідь OWL → подія для авто-озвучки (voice-output.js).
+    if (role === 'agent' && text) { try { window.dispatchEvent(new CustomEvent('nm-agent-message', { detail: { tab, text } })); } catch (e) {} }
   } catch(e) {
     // Phase 5 Шар 6 (04.05): не глитаємо QuotaExceededError мовчки.
     // Council Critic Р7: silent catch → юзер бачить "повідомлення зникають
