@@ -89,6 +89,10 @@ function renderProjectsList() {
   const listEl = document.getElementById('projects-list');
   const emptyEl = document.getElementById('projects-empty');
   if (!listEl) return;
+  // Ховаємо воркспейс, показуємо список (повернення з проекту).
+  const wsEl = document.getElementById('projects-workspace');
+  if (wsEl) { wsEl.style.display = 'none'; wsEl.innerHTML = ''; }
+  listEl.style.display = '';
 
   if (projects.length === 0) {
     listEl.innerHTML = '';
@@ -255,8 +259,15 @@ function renderProjectWorkspace(id) {
     { label: t('projects.empty.chip_risks', '⚠️ Які ризики'), prompt: t('projects.empty.prompt_risks', 'Які головні ризики і складнощі в цьому проекті?') },
   ] : [];
 
-  const scrollEl = document.getElementById('projects-scroll');
+  const scrollEl = document.getElementById('projects-workspace');
   if (!scrollEl) return;
+  // Показуємо воркспейс, ховаємо список (не затираємо #projects-list — інакше
+  // «назад» не мав куди рендерити список, qpzj7k фікс).
+  const listEl0 = document.getElementById('projects-list');
+  const emptyEl0 = document.getElementById('projects-empty');
+  if (listEl0) listEl0.style.display = 'none';
+  if (emptyEl0) emptyEl0.style.display = 'none';
+  scrollEl.style.display = 'block';
 
   scrollEl.innerHTML = `
     <!-- Назад. B-118 (mUpS8 02.05): position+z-index щоб OWL board overlay
