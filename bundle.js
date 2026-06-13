@@ -25901,6 +25901,11 @@ ${legacy}`;
   var _capWarned = false;
   var _lastSpoken = "";
   var _lastSpokenTs = 0;
+  var _speaking = false;
+  function _done() {
+    _speaking = false;
+    _afterSpeak();
+  }
   function isVoiceMode() {
     return localStorage.getItem(VOICE_MODE_KEY) === "1";
   }
@@ -25937,8 +25942,10 @@ ${legacy}`;
     }
   }
   function stopSpeaking() {
+    _speaking = false;
     try {
       if (_audio) {
+        _audio.onended = null;
         _audio.pause();
         _audio = null;
       }
@@ -25995,23 +26002,30 @@ ${legacy}`;
   }
   async function _speakBrowser(text) {
     try {
-      if (!window.speechSynthesis) return;
+      if (!window.speechSynthesis) {
+        _done();
+        return;
+      }
       const voices = await _browserVoices();
+      if (!_speaking) return;
       const u = new SpeechSynthesisUtterance(text);
       const loc = _browserLocale();
       u.lang = loc;
       const pref = loc.slice(0, 2);
       const v = voices.find((x) => x.lang && x.lang.toLowerCase().startsWith(pref));
       if (v) u.voice = v;
-      u.onend = () => _afterSpeak();
+      u.onend = () => _done();
+      u.onerror = () => _done();
       window.speechSynthesis.cancel();
       setTimeout(() => {
         try {
           window.speechSynthesis.speak(u);
         } catch (e) {
+          _done();
         }
       }, 50);
     } catch (e) {
+      _done();
     }
   }
   async function _speakOpenAI(text, key) {
@@ -26030,8 +26044,15 @@ ${legacy}`;
     await _playBlob(blob);
   }
   async function _playBlob(blob) {
+    if (!_speaking) return;
     const url = URL.createObjectURL(blob);
-    stopSpeaking();
+    try {
+      if (_audio) {
+        _audio.onended = null;
+        _audio.pause();
+      }
+    } catch (e) {
+    }
     _audio = new Audio(url);
     _audio.onended = () => {
       try {
@@ -26039,7 +26060,11 @@ ${legacy}`;
       } catch (e) {
       }
       _audio = null;
-      _afterSpeak();
+      _done();
+    };
+    _audio.onerror = () => {
+      _audio = null;
+      _done();
     };
     await _audio.play();
   }
@@ -26073,9 +26098,11 @@ ${legacy}`;
     let clean = String(text).replace(/[*_`#>•·✔️✓🦉📋💰⚠️📷🖼✨🔊🔇→↑↓]/g, "").replace(/\s+/g, " ").trim();
     if (!clean) return;
     if (clean === _lastSpoken && Date.now() - _lastSpokenTs < 5e3) return;
+    if (_speaking) return;
     if (clean.length > MAX_CHARS_PER_UTTERANCE) clean = clean.slice(0, MAX_CHARS_PER_UTTERANCE) + "\u2026";
     _lastSpoken = clean;
     _lastSpokenTs = Date.now();
+    _speaking = true;
     const elevenKey = _elevenKey();
     if (elevenKey) {
       try {
