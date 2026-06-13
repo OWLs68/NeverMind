@@ -173,6 +173,12 @@ export function renderTabBoard(tab) {
   const cEl = document.getElementById('owl-tab-ctext-' + tab);
   const tmEl = document.getElementById('owl-tab-time-' + tab);
 
+  // qpzj7k: подія коли текст табло РЕАЛЬНО змінився — voice-output озвучить
+  // у голосовому режимі коли чат закритий (не на кожен рендер — лише на зміну).
+  if (tEl && (tEl.textContent || '') !== msg.text && msg.text) {
+    try { window.dispatchEvent(new CustomEvent('nm-board-message', { detail: { tab, text: msg.text } })); } catch (e) {}
+  }
+
   // Плавна fade-транзиція при зміні тексту (CSS transition opacity 0.2s)
   _applyTabText(tEl, msg.text);
   _applyTabText(cEl, msg.text);
