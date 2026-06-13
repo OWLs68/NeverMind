@@ -10544,7 +10544,13 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
     const res = await fetch("https://api.openai.com/v1/audio/speech", {
       method: "POST",
       headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}` },
-      body: JSON.stringify({ model: "tts-1", voice: OPENAI_VOICE, input: text, response_format: "mp3" })
+      body: JSON.stringify({
+        model: "gpt-4o-mini-tts",
+        voice: OPENAI_VOICE,
+        input: text,
+        instructions: "Speak in natural, fluent Ukrainian with correct Ukrainian pronunciation and a warm, calm, friendly tone. Do not use an English or Russian accent.",
+        response_format: "mp3"
+      })
     });
     if (!res.ok) throw new Error("tts " + res.status);
     const blob = await res.blob();
