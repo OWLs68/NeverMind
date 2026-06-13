@@ -69,12 +69,21 @@ export function setupModalSwipeClose(contentEl, closeFn, options = {}) {
   // Для модалок зі скролом всередині (analytics, memory) — свайп по контенту
   // не повинен закривати модалку.
   const handleOnly = !!options.handleOnly;
+  // qpzj7k: scroll-aware свайп-закриття для модалок зі скролом (analytics).
+  // Свайп вниз по контенту закриває ЛИШЕ коли внутрішній скрол угорі (як
+  // нативні bottom-sheets) — інакше це звичайний скрол. Дає закриття свайпом
+  // будь-де згори, не лише за смужку.
+  const scrollGuardSel = options.scrollGuardSelector || null;
   let startY = 0, startX = 0, dy = 0, _swipeBlocked = false;
   swipeRoot.addEventListener('touchstart', e => {
     if (handleOnly) {
       _swipeBlocked = !e.target.closest('.modal-handle');
     } else {
       _swipeBlocked = !!e.target.closest('.drum-col, .drum-item, .settings-scroll, #memory-cards-list, input, textarea, select');
+      if (!_swipeBlocked && scrollGuardSel) {
+        const sc = swipeRoot.querySelector(scrollGuardSel) || document.querySelector(scrollGuardSel);
+        if (sc && sc.scrollTop > 4) _swipeBlocked = true; // не вгорі → це скрол
+      }
     }
     startY = e.touches[0].clientY;
     startX = e.touches[0].clientX;
