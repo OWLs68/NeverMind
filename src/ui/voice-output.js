@@ -307,6 +307,7 @@ if (typeof window !== 'undefined') {
   });
   window.addEventListener('nm-agent-message', (e) => {
     if (!isVoiceMode()) return;
+    if (!_chatOpen()) return; // чат закритий → відповіді не озвучуємо (це робить табло)
     const d = (e && e.detail) || {};
     if (!d.text) return;
     if (d.tab && d.tab !== currentTab) return;
