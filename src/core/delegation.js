@@ -407,6 +407,10 @@ reg('chat-image-picked', (data, el) => {
     window.onChatImagePicked(data, el);
   }
 });
+// Голос Агента (Налаштування): вибір голосу / тест / ключ ElevenLabs.
+reg('set-tts-voice', (data, el) => { if (el && typeof window.setTtsVoice === 'function') window.setTtsVoice(el.value); });
+reg('save-eleven-key', (data, el) => { if (el && typeof window.saveElevenKey === 'function') window.saveElevenKey(el.value); });
+reg('test-tts-voice', () => { if (typeof window.testTtsVoice === 'function') window.testTtsVoice(); });
 // open-notes-folder — cross-tab navigation з projects → notes з папкою.
 // Інкапсулює switchTab + setTimeout(150) для openNotesFolder. 150ms потрібен
 // щоб Notes-вкладка зрендерилась перед спробою відкрити папку (notes.js:233
