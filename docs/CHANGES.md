@@ -3257,3 +3257,9 @@ Supabase Фаза 1: **Ворота 1** (єдиний шар запису — к
 
 **Коміти:** `63c9586` план-чекліст · `070a3dc` stampEntity контракт · `b5ed2db` updateSettings · `38cad50` saveMemory · `b405570` saveQuitLog · `d8713a9` quit-звичка · `fc063f3` NM_KEYS · `0ec333d` аудит-фікси · `932c375` makeHabit · `6dccfd3` makeEvent · `1fea387` makeTask+Moment · `df23870` makeFinance · `605321f` час→подія · `3a7a0fd` Ворота 3
 **Метрики:** 16 комітів коду, CACHE_NAME `nm-20260612-1058`, нові `src/core/settings.js` + `src/core/entity.js` + `src/data/entity-factories.js`, 5 юніт-сторожів
+
+## 2026-06-13 — сесія qpzj7k
+
+Велика робота над вкладкою Проекти: makeProject+конверт (Ворота 3 на 6/6 сутностях), адаптивне інтерв'ю що не губить відповіді, блок «Про проект» з детермінованим рахунком повноти (`src/data/project-completeness.js` — 7 вимірів читаються з існуючих полів, `canAdvise` гейтить поради кодом), наповнення воркспейсу. Фото-vision у будь-якому чаті (`src/ui/chat-image.js` — один мозок). Голосовий режим OWL (`src/ui/voice-output.js` — TTS+живий діалог на Web Speech, кнопка в шапці, вибір голосу/ElevenLabs у Налаштуваннях, єдиний замок мовлення). Розбивка витрат за способом (голос/фото/текст). esbuild 0.28.0→0.28.1 (advisory блокував деплой). План системного голосу → `docs/VOICE_REALTIME_PLAN.md`.
+
+**Метрики:** ~37 комітів (`125ccd6`→`02038bd`), CACHE_NAME `nm-20260613-1840`, нові `src/data/project-completeness.js` + `src/ui/chat-image.js` + `src/ui/voice-output.js` + `docs/VOICE_REALTIME_PLAN.md`. Council ×2 + веб-дослід (TTS/Realtime).

@@ -4,11 +4,48 @@
 >
 > Старіші сесії (до 6GoDe 19.04) — в [`_archive/SESSION_STATE_archive.md`](../_archive/SESSION_STATE_archive.md).
 
-**Оновлено:** 2026-06-12 (сесія **7uxlr7** — Supabase Фаза 1: Ворота 1 (єдиний шар запису) + Ворота 3 (конверт stampEntity на 5 сутностях) + 5 фабрик сутностей (23 точки створення → 5, Date.now→UUID) + 5 багфіксів (quit-звичка, час→подія, NM_KEYS, 2 з аудиту) + 5 детермінованих pre-push сторожів (~130 тестів). 16 комітів коду).
+**Оновлено:** 2026-06-13 (сесія **qpzj7k** — велика вкладка Проекти (makeProject+конверт, адаптивне інтерв'ю, блок «Про проект» з детермінованим рахунком повноти, наповнення воркспейсу) + фото-vision у будь-якому чаті (один мозок) + голосовий режим OWL (TTS+живий діалог, Web Speech) + розбивка витрат за способом + esbuild-фікс деплою + план Realtime API. ~37 комітів).
 
 ---
 
-## 🔧 Поточна сесія 7uxlr7 — Supabase Фаза 1: Ворота 1+3 + 5 фабрик + класифікація (12.06.2026)
+## 🔧 Поточна сесія qpzj7k — Проекти + Голос OWL + Фото-vision (13.06.2026)
+
+### Зроблено — ~37 commits (`125ccd6` → `02038bd`), усе запушено
+
+**Вкладка Проекти (велика робота, Council × 2):**
+- `makeProject` фабрика + stampEntity (Ворота 3 закриті на 6/6 сутностях). +поля `brief/targetAudience/currentStage/deadline/images`.
+- **Адаптивне інтерв'ю**: раніше OWL ставив 5 фіксованих питань і ВИКИДАВ відповіді (корінь — `saveGuideTopicAnswer` не знав тему `project_*`). Тепер питання генеруються під контекст, відповіді ловляться (`captureProjectInterviewAnswer`), наповнюють проект (steps/tempo/risks/budget/brief).
+- **«Про проект» + детермінований мозок повноти** (`src/data/project-completeness.js`, Council-затверджено): 7 вимірів читаються з ІСНУЮЧИХ полів (не дубль-структура); `canAdvise` (суть+для кого) гейтить поради КОДОМ, не здогадом моделі. UX — живий абзац + мʼякі «уточнити: …», без форми/лічильника.
+- Наповнення воркспейсу: OWL-інсайт, наступний крок з ✓, швидкі дії, лінк-стати. `set_project_budget`/`set_project_brief` tools. Бюджет=агрегат з Фінансів за `projectId`. Крок↔Задача безпечний (точний збіг). Кнопка «назад» (окремий контейнер). OWL=проектний стратег у промпті.
+
+**Фото-vision (один мозок):** `src/ui/chat-image.js` — кнопка камери зліва у КОЖНОМУ барі → фото → gpt-4o-mini vision → опис → звичайний потік чату обробляє. Фото не зберігаємо (памʼять), лише текст. `images` поле про запас під Supabase Storage.
+
+**Голос OWL (TTS, Web Speech):** `src/ui/voice-output.js` — кнопка 🎙 у шапці (живий діалог: озвучка + авто-мік), блок «Голос Агента» в Налаштуваннях (вибір голосу tts-1 + ключ ElevenLabs опц.), єдиний замок мовлення (табло/чат не перебивають), таймер тиші для швидкого надсилання, стоп у фоні, голос за `getLang()`. Озвучка табло коли чат закритий.
+
+**Інфраструктура:** розбивка витрат usage-meter за способом (голос/фото/текст + TTS логування); esbuild 0.28.0→0.28.1 (новий advisory блокував auto-merge — деплой стояв); Return=новий рядок у всіх барах; Аналітика свайп-закриття (scrollGuard).
+
+### Обговорено / вирішено
+
+- **Голос — фундамент слабкий.** Web Speech (STT) + окремий TTS + ручна петля = крихко на iOS, звідси весь клас багів. Системне рішення — **OpenAI Realtime API (WebRTC)**: план у `docs/VOICE_REALTIME_PLAN.md`, робити окремою сесією.
+- **Голос НЕ персистить між запусками** (фікс зависання на вході — сам ліз до мікрофона). Opt-in щосесії.
+- **ElevenLabs** для голосу без акценту — потребує ключа Романа (стоп-ґеп до Supabase Edge).
+
+### Інциденти
+
+- **Деплой стояв** — новий esbuild security-advisory валив `npm audit` у auto-merge → жодна гілка не зливалась. Фікс `e738022` (0.28.0→0.28.1).
+- **Завис застосунок на вході** (таббар/барабан мертві) — персистентний voice mode авто-активував мікрофон/петлю. Фікс `02038bd` (voice off on load).
+- Кілька smoke-bypass `pre-push: ok` — з хмари iPhone-smoke неможливий, чек-ліст Роману.
+
+### Метрики
+
+- Коміти: `125ccd6` → `02038bd` (~37), гілка `claude/new-session-qpzj7k`, запушено
+- CACHE_NAME: `nm-20260613-1840`
+- Council: 2× (Проекти 5 агентів, голос 3 агенти) + веб-дослід (TTS, Realtime API)
+- Build: node --check + check-factories(72) + guards + escape + imports + i18n — чисте
+
+---
+
+## 🔧 Сесія 7uxlr7 — Supabase Фаза 1: Ворота 1+3 + 5 фабрик + класифікація (12.06.2026)
 
 ### Зроблено — 16 commits (`63c9586` → `3a7a0fd`), усе запушено
 
@@ -54,41 +91,7 @@
 
 ---
 
-## 🔧 Сесія vdlyeg — аудит безпеки + 4 кореневі фікси (10.06.2026)
-
-### Зроблено — 4 commits (8c2f7fa → 185354e), усе запушено
-
-Аудит за 9 навичками з `Anthropic-Cybersecurity-Skills` (клоновано, читано SKILL.md як чеклист захисту) × реальний код NeverMind. Кожен фікс кореневий, не латка.
-
-**SEC-1 escapeHtml + лапки (`8c2f7fa`):** `src/core/utils.js` escapeHtml екранував лише `& < >`, НЕ лапки → значення з лапкою у `attr="${escapeHtml(x)}"` розривало атрибут і дозволяло підставити обробник події (XSS у ~25 місцях). Фікс: екранує `&quot;`/`&#39;` (regex через String.fromCharCode у module-константах — гаряча функція + не плутати i18n-детектор). Один корінь → всі місця. Прибрано дубль-костур chips.js:340. **Council 3 агенти Sonnet** (round-trip dataset цілий, нема не-HTML sinks, render-regression — хибнопозитив перевірено по коду). 8/8 unit.
-
-**SEC-2 safeHref (`1370a9c`):** `projects.js:393` рендерив `<a href>` з URL ресурсу через escapeHtml — javascript:alert() виконувався при кліку. Новий `safeHref(url)` (http/https/mailto/tel + відносні, інакше null; стрипає контрольні символи проти `java⇥script:` обходу) + rel=noopener. 16/16 unit. Static import.
-
-**SEC-3 CI command injection (`be7bd1d`):** `github.ref_name` + workflow_dispatch inputs йшли прямо у `run:` shell. Винесено у `env:`, беруться як `"$VAR"`. auto-merge.yml ×2, auto-merge-tester.yml ×3, claude-security.yml. YAML 4/4.
-
-**SEC-4 gitleaks (`185354e`):** новий `.github/workflows/gitleaks.yml` (push/PR + щотижневий повний скан). Профілактика перед Supabase.
-
-### Відкладено / далі
-
-- **B-197 ЗАКРИТО** (`870b790`) — `notes.js:458,530` `data-folder` через escapeJsArg → папка з апострофом не видалялась свайпом. Фікс: escapeJsArg→escapeHtml у обох точках + прибрано escapeJsArg з import. Правило: data-* → завжди escapeHtml.
-- **CSP** — оцінено: strict не готовий (~20 inline iOS-хаків ontouchend/onmousedown/onmouseover + diagnostics/logger/finance). Report-Only неможливий на GitHub Pages (потребує HTTP-заголовка). Готова чернетка enforcing meta-CSP (головний виграш connect-src 'self' api.openai.com — при XSS ключ не зллється) → деплой+smoke на РЕАЛЬНОМУ iPhone окремою сесією.
-- **Ключ OpenAI у localStorage** — справжній фікс = Supabase Edge Functions (у плані).
-
-### Архітектурна підготовка (11.06) — deep research + узгоджений план міграції
-
-Після security-фіксів — велика стратегічна робота:
-- **Закрито з хмари ще:** B-197 (notes.js escapeJsArg→escapeHtml), B-200 (task-chat крос-задача race), DRY `invalidateFinanceBoard()`, промпт-фікс «склади список», #3 escape-аудит (чисто). Council: silent-bug-scout (знайшов B-198/199/200), dry-finder, doc-checker.
-- **Deep research:** 5 паралельних web-агентів (PowerSync/Electric, RxDB/Triplit/Evolu/Dexie/TinyBase, Replicache/Zero/Automerge/Yjs, Supabase-native, local-first теорія) + клон Mastra + код-аудит. З джерелами.
-- **Рішення (повний план → `docs/SUPABASE_MIGRATION_PLAN.md`):** фундамент-first; PWA→Capacitor пізніше; DIY-sync на власному action-log (НЕ важкий движок — усі ламають 345 синхронних читань); HLC+field-LWW+IndexedDB+persist+tombstones+pull-on-reconnect; health структурно ізольований (Art.9); ключ→Edge+per-user ліміти; 47 інструментів off OpenAI + один callLLM під Mastra (Фаза 4).
-- **Mastra оцінено:** Apache 2.0, Node-сервіс (НЕ Supabase Edge), тіла інструментів переписати на Postgres → тільки після Supabase. Фаза 4.
-- **3 виправлення brain прийнято:** HLC>серверний час, field>row LWW, IndexedDB+persist>localStorage (iOS-евікція).
-
-### Метрики
-
-- Коміти: `8c2f7fa` → `b436290` (10 з security + B-197/B-200/DRY/промпт), усе на `claude/new-session-vdlyeg`, запушено
-- CACHE_NAME: `nm-20260610-0945`
-- Council: 3 агенти Sonnet (SEC-1 регресія, усі read-only)
-- Build: node --check + check-imports + i18n + YAML — усе чисте
+## 🔧 Сесія vdlyeg (10.06.2026) — архівовано qpzj7k 13.06 → [archive](../_archive/SESSION_STATE_archive.md#-сесія-vdlyeg--аудит-безпеки--4-кореневі-фікси-10062026)
 
 ---
 
