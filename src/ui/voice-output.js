@@ -1,8 +1,10 @@
 // src/ui/voice-output.js
 //
-// Голос OWL (qpzj7k, Council-hardened): TTS — OWL озвучує табло (тап на 🔊) і
-// відповіді в чаті (voice mode). Двигун: OpenAI tts-1 (природний голос), fallback
-// браузерний speechSynthesis (безкоштовно) при перевищенні ліміту/без ключа.
+// Голос OWL: TTS — OWL озвучує табло (тап на 🔊) і відповіді в чаті (voice mode).
+// ЄДИНИЙ шлях (v1d9eo): говорить рівно вибраний у Налаштуваннях двигун
+// (ElevenLabs АБО OpenAI tts-1). Браузерний speechSynthesis-fallback ПРИБРАНО —
+// саме він давав «голос не той». Нема чим озвучити (нема ключа/ліміт) → чесний
+// стоп з тостом, не робот. Вхід — push-to-talk (тап 🎤), без авто-петлі (крихка на iOS).
 //
 // ЛІМІТИ (Роман: «не влетіти фінансово»):
 //   - стеля довжини на озвучку (довге ріжемо);
@@ -16,7 +18,7 @@
 // Фільтр спаму (Council 🕵️): озвучуємо лише змістовні репліки активної вкладки,
 // не «✓ Зроблено» / tool-підтвердження; dedup однакового тексту.
 
-import { t, getLang } from '../core/utils.js';
+import { t } from '../core/utils.js';
 import { showToast, currentTab } from '../core/nav.js';
 import { logTtsUsage } from '../core/usage-meter.js';
 import { getSettings, updateSettings } from '../core/settings.js';
@@ -24,16 +26,6 @@ import { openChatBar } from '../ai/core.js';
 
 // Живий діалог працює ЛИШЕ коли відкритий чат (Роман) — бо є куди говорити.
 function _chatOpen() { try { return !!document.querySelector('.ai-bar-chat-window.open'); } catch (e) { return false; } }
-
-// Інструкція вимови та locale браузерного голосу — за мовою застосунку
-// (getLang). Додаємо мови сюди коли зʼявляються (forward-looking під i18n).
-const TTS_INSTRUCTIONS = {
-  uk: 'Speak in natural, fluent Ukrainian with correct Ukrainian pronunciation and a warm, calm, friendly tone. Do not use an English or Russian accent.',
-  en: 'Speak in natural, fluent English with a warm, calm, friendly tone.',
-};
-const BROWSER_LOCALE = { uk: 'uk-UA', en: 'en-US' };
-function _ttsInstruction() { return TTS_INSTRUCTIONS[getLang()] || TTS_INSTRUCTIONS.uk; }
-function _browserLocale() { return BROWSER_LOCALE[getLang()] || 'uk-UA'; }
 
 const VOICE_MODE_KEY = 'nm_voice_mode';
 const TTS_USAGE_KEY = 'nm_tts_usage';        // {date:'YYYY-MM-DD', chars:N}
@@ -58,9 +50,10 @@ let _capWarned = false;
 let _lastSpoken = '';
 let _lastSpokenTs = 0;
 // Єдиний замок мовлення (Роман): поки хтось говорить (табло АБО чат) — інші
-// мовчать. Природне завершення відпускає замок (_done) і запускає петлю слухання.
+// мовчать. Природне завершення відпускає замок. Без авто-петлі слухання
+// (push-to-talk: юзер сам тисне 🎤).
 let _speaking = false;
-function _done() { _speaking = false; _afterSpeak(); }
+function _done() { _speaking = false; }
 
 export function isVoiceMode() { return localStorage.getItem(VOICE_MODE_KEY) === '1'; }
 export function setVoiceMode(on) {
@@ -81,13 +74,6 @@ export function unlockAudio() {
   if (_audioUnlocked) return;
   _audioUnlocked = true;
   try { const s = new Audio(SILENT_WAV); s.play().catch(() => {}); } catch (e) {}
-  try {
-    if (window.speechSynthesis) {
-      const u = new SpeechSynthesisUtterance(' ');
-      window.speechSynthesis.speak(u);
-      window.speechSynthesis.cancel();
-    }
-  } catch (e) {}
 }
 
 export function stopSpeaking() {
@@ -95,7 +81,6 @@ export function stopSpeaking() {
   try { if (_audio) { _audio.onended = null; _audio.pause(); _audio = null; } } catch (e) {}
   // розблоковуємо проміс поточного шматка — інакше _runSequential зависне на await
   if (_curResolve) { const r = _curResolve; _curResolve = null; try { r(); } catch (e) {} }
-  try { if (window.speechSynthesis) window.speechSynthesis.cancel(); } catch (e) {}
 }
 
 function _todayStr() { return new Date().toISOString().slice(0, 10); }
@@ -108,35 +93,6 @@ function _ttsCharsToday() {
 function _addTtsChars(n) {
   const chars = _ttsCharsToday() + n;
   try { localStorage.setItem(TTS_USAGE_KEY, JSON.stringify({ date: _todayStr(), chars })); } catch (e) {}
-}
-
-function _browserVoices() {
-  return new Promise((resolve) => {
-    if (!window.speechSynthesis) { resolve([]); return; }
-    let v = window.speechSynthesis.getVoices();
-    if (v && v.length) { resolve(v); return; }
-    let done = false;
-    window.speechSynthesis.onvoiceschanged = () => { if (!done) { done = true; resolve(window.speechSynthesis.getVoices() || []); } };
-    setTimeout(() => { if (!done) { done = true; resolve(window.speechSynthesis.getVoices() || []); } }, 600);
-  });
-}
-
-async function _speakBrowser(text) {
-  try {
-    if (!window.speechSynthesis) { _done(); return; }
-    const voices = await _browserVoices();
-    if (!_speaking) return; // зупинили поки чекали голоси
-    const u = new SpeechSynthesisUtterance(text);
-    const loc = _browserLocale();
-    u.lang = loc;
-    const pref = loc.slice(0, 2);
-    const v = voices.find(x => x.lang && x.lang.toLowerCase().startsWith(pref));
-    if (v) u.voice = v;
-    u.onend = () => _done();
-    u.onerror = () => _done();
-    window.speechSynthesis.cancel();
-    setTimeout(() => { try { window.speechSynthesis.speak(u); } catch (e) { _done(); } }, 50); // iOS 17 quirk
-  } catch (e) { _done(); }
 }
 
 // Генерує аудіо-шматок (Blob) через OpenAI tts-1 — НЕ грає (цим керує
@@ -218,15 +174,6 @@ async function _trySpeakChunks(chunks, gen) {
   return true;
 }
 
-// Жива петля (Jarvis): коли OWL договорив і голосовий режим увімкнено —
-// автоматично починаємо слухати юзера. Так розмова йде без тапів.
-function _afterSpeak() {
-  if (!isVoiceMode()) return;
-  if (typeof document !== 'undefined' && document.hidden) return;
-  if (!_chatOpen()) return; // лише поки чат відкритий
-  setTimeout(() => { try { if (window.nmStartListening) window.nmStartListening(); } catch (e) {} }, 400);
-}
-
 // Генерує аудіо-шматок через ElevenLabs — НЕ грає. Найкраща якість/характер,
 // українська майже без акценту (преміум, окремий ключ). turbo_v2_5 — низька
 // затримка + багатомовна, добра українська.
@@ -286,8 +233,10 @@ export async function speak(text) {
     try { showToast(t('tts.cap', 'Денний ліміт природного голосу вичерпано — перехід на безкоштовний')); } catch (e) {}
   }
 
-  // 3) Браузерний голос (безкоштовно) — крайній fallback.
-  _speakBrowser(clean);
+  // Нема чим озвучити (нема ключа / ліміт / рушій впав) — ЧЕСНИЙ стоп. НЕ падаємо
+  // на роботний браузерний голос (саме він давав «голос не той»). Замок звільнено.
+  _speaking = false;
+  if (!key) { try { showToast(t('tts.no_key', 'Додай OpenAI-ключ у Налаштуваннях щоб OWL озвучував')); } catch (e) {} }
 }
 
 // === Налаштування голосу (блок «Голос Агента») ===
@@ -305,7 +254,7 @@ export function testTtsVoice() {
 }
 
 // === Кнопка голосового режиму у шапці (біля ⚙️) ===
-// Тап → вмк/вимк живий діалог: OWL озвучує відповіді + мікрофон слухає юзера.
+// Тап → вмк/вимк озвучку: OWL озвучує відповіді. Говорити — push-to-talk (🎤 у барі).
 function _voiceIcon(on) {
   // Увімк → білий мік на зеленому колі; вимк → приглушений сірий.
   const stroke = on ? '#ffffff' : 'rgba(30,16,64,0.35)';
@@ -327,7 +276,7 @@ function _injectVoiceButtons() {
     const btn = document.createElement('button');
     btn.className = 'icon-btn voice-mode-btn';
     btn.type = 'button';
-    btn.title = t('voice.btn_title', 'Голосовий режим (OWL говорить і слухає)');
+    btn.title = t('voice.btn_title', 'Озвучка відповідей OWL (говорити — тисни 🎤)');
     btn.innerHTML = _voiceIcon(isVoiceMode());
     btn.addEventListener('click', () => {
       const on = toggleVoiceMode();           // тап = gesture → розблок аудіо/мік
@@ -335,8 +284,7 @@ function _injectVoiceButtons() {
       if (on) {
         // Відкриваємо чат поточної вкладки — діалог працює лише у відкритому чаті.
         try { openChatBar(currentTab); } catch (e) {}
-        try { showToast(t('voice.on', '🎙 Голосовий режим увімкнено — говоріть')); } catch (e) {}
-        try { if (window.nmStartListening) setTimeout(() => window.nmStartListening(), 300); } catch (e) {}
+        try { showToast(t('voice.on', '🎙 OWL озвучуватиме відповіді — тисни 🎤 щоб говорити')); } catch (e) {}
       } else {
         stopSpeaking();
         try { showToast(t('voice.off', 'Голосовий режим вимкнено')); } catch (e) {}
@@ -369,11 +317,6 @@ if (typeof window !== 'undefined') {
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', _injectVoiceButtons);
   else setTimeout(_injectVoiceButtons, 0);
   window.addEventListener('nm-voice-mode-changed', _syncVoiceButtons);
-  // Чат відкрито (у т.ч. повторно) + голосовий режим увімк → слухати юзера.
-  window.addEventListener('nm-chat-opened', () => {
-    if (!isVoiceMode()) return;
-    setTimeout(() => { try { if (window.nmStartListening) window.nmStartListening(); } catch (e) {} }, 350);
-  });
   // Табло оновилось → озвучуємо ТIЛЬКИ коли голос увімк І чат ЗАКРИТИЙ (Роман).
   // Коли чат відкритий — озвучуються відповіді, табло не дублюємо.
   window.addEventListener('nm-board-message', (e) => {
@@ -391,16 +334,9 @@ if (typeof window !== 'undefined') {
     if (d.tab && d.tab !== currentTab) return;
     const txt = String(d.text).trim();
     // Озвучуємо лише змістовні репліки (не «✓ Зроблено»/підтвердження).
+    // push-to-talk: мік юзер вмикає сам — без авто-петлі слухання.
     const speakable = txt.length >= 20 && !/^[✓✅\[(]/.test(txt);
-    if (speakable) {
-      speak(txt); // мік сам перезапуститься після озвучки (_done → _afterSpeak)
-    } else {
-      // Репліку не озвучуємо, але хід знову юзера → вмикаємо мік (інакше петля
-      // рвалась на коротких відповідях — мік не вмикався, Роман).
-      if (_chatOpen() && !(typeof document !== 'undefined' && document.hidden)) {
-        setTimeout(() => { try { if (window.nmStartListening) window.nmStartListening(); } catch (er) {} }, 400);
-      }
-    }
+    if (speakable) speak(txt);
   });
   // Перший тап будь-де — розблокувати аудіо на iOS.
   document.addEventListener('touchend', unlockAudio, { once: true, passive: true });
