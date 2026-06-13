@@ -83,6 +83,9 @@ function attachVoiceToTextarea(textarea, button, sendBtn) {
       try { textarea.focus(); } catch {}
       if (pendingSendClick && sendBtn) {
         pendingSendClick = false;
+        // qpzj7k: позначаємо що цей запит ініційований голосом (для розбивки
+        // витрат за способом). logUsage прочитає й скине прапорець.
+        try { window.__nm_inputMode = 'voice'; } catch {}
         setTimeout(() => { try { sendBtn.click(); } catch {} }, 60);
       }
     };
@@ -136,7 +139,9 @@ function initVoiceInput() {
   const boxes = document.querySelectorAll('.ai-bar-new .ai-bar-input-box');
   boxes.forEach(box => {
     const textarea = box.querySelector('textarea');
-    const sendBtn = box.querySelector('.ai-bar-send-btn');
+    // qpzj7k: виключаємо кнопку 🖼 (pick-chat-image) — вона теж .ai-bar-send-btn,
+    // але справжня send-кнопка та що НЕ відкриває фото.
+    const sendBtn = box.querySelector('.ai-bar-send-btn:not([data-action="pick-chat-image"])');
     if (!textarea || !sendBtn) return;
     if (box.querySelector('.voice-btn')) return;
 
