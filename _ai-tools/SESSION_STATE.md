@@ -21,6 +21,7 @@
 - **затримка** — `_chunkText` ріже на речення, перше (коротке) грає одразу, решта prefetch'иться. `_genOpenAI`/`_genEleven` (Blob) + `_playOnce` + `_runSequential` (`_done` рівно раз → петля не ламається). `_curResolve` щоб stopSpeaking не лишав await висіти.
 - **Web Speech synthesis fallback ПРИБРАНО** (`_speakBrowser`/`_browserVoices`/locale/instruction видалено) — мовчазний робот-голос при ліміті/збої = причина невідповідності. Тепер чесний стоп + тост `tts.no_key`.
 - **STT → push-to-talk** — прибрано авто-петлю слухання (`_afterSpeak` + nmStartListening-калери у toggle/nm-chat-opened/nm-agent-message). Тап 🎤 → говориш → мозок → OWL озвучує. Крихкість «мік вмикається/текст не пише» усунено.
+- **Дозвіл мікрофона і на зеленій кнопці** (`ensureMicPermission` getUserMedia, скрін Романа) — раніше питав лише червоний мік у барі; тепер зелений режим-toggle теж питає при ввімкненні (що перше натиснув). `_micPrimed` не нагнітає повторно; частота — за iOS (не керуємо).
 
 **Відкрите рішення велика сесія:** TTS OpenAI-tts-only (brain) vs +ElevenLabs опція без акценту (агенти). Занотовано у плані.
 
