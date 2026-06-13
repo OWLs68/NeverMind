@@ -291,7 +291,7 @@ function _handleProjectTool(name, args, addMsg) {
     update_project_tempo: '✓ Темп оновлено',
     update_project_risks: '✓ Ризики записано',
     set_project_budget: `✓ Бюджет оновлено${typeof args.total === 'number' ? `: ${args.total}` : ''}`,
-    set_project_brief: '✓ Зрозумів проект — записав суть',
+    set_project_brief: '✓ Записав що вже знаю про проект',
   };
   addMsg('agent', labels[name] + (args.comment ? ` · ${args.comment}` : ''));
   return true;
