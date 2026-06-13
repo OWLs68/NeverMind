@@ -31,6 +31,17 @@ function _calcCost(model, prompt_tokens, completion_tokens) {
   return Number((inputCost + outputCost).toFixed(6));
 }
 
+// Спосіб використання (qpzj7k): голос / фото / текст. Визначаємо з module/model,
+// АБО з ambient-прапорця window.__nm_inputMode (його ставлять voice-input і
+// chat-image перед запуском чату). Голосове розпізнавання у браузері безкоштовне —
+// тут рахується лише обробка тексту що з нього вийшов.
+function _deriveMode(module, model) {
+  const m = (module || '').toLowerCase();
+  if (m.includes('vision') || m.includes('photo') || m.includes('image')) return 'photo';
+  if (m.includes('voice') || m.includes('whisper') || m.includes('transcrib') || model === 'whisper-1') return 'voice';
+  return 'text';
+}
+
 function _readLog() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -69,10 +80,17 @@ function _rotate(arr) {
 // `model` — опційно (default 'gpt-4o-mini', бо 99% викликів зараз ця модель).
 export function logUsage(module, usageObj, model = 'gpt-4o-mini') {
   if (!usageObj || typeof usageObj.prompt_tokens !== 'number') return;
+  // Спосіб: ambient-прапорець (consume-once) має пріоритет, інакше — з module.
+  let mode;
+  try {
+    if (typeof window !== 'undefined' && window.__nm_inputMode) { mode = window.__nm_inputMode; window.__nm_inputMode = null; }
+  } catch (e) {}
+  if (!mode) mode = _deriveMode(module, model);
   const entry = {
     ts: Date.now(),
     module: module || 'unknown',
     model,
+    mode,
     prompt_tokens: usageObj.prompt_tokens,
     completion_tokens: usageObj.completion_tokens || 0,
     cost_usd: _calcCost(model, usageObj.prompt_tokens, usageObj.completion_tokens || 0),
@@ -95,13 +113,19 @@ export function getUsageStats() {
 
   const aggregate = (entries) => {
     const byModule = {};
+    const byMode = { text: 0, photo: 0, voice: 0 };
+    const callsByMode = { text: 0, photo: 0, voice: 0 };
     let cost = 0, calls = 0;
     for (const e of entries) {
       cost += e.cost_usd || 0;
       calls += 1;
       byModule[e.module] = (byModule[e.module] || 0) + (e.cost_usd || 0);
+      // mode: з запису, інакше деривуємо (старі записи без поля mode).
+      const md = e.mode || _deriveMode(e.module, e.model);
+      byMode[md] = (byMode[md] || 0) + (e.cost_usd || 0);
+      callsByMode[md] = (callsByMode[md] || 0) + 1;
     }
-    return { cost: Number(cost.toFixed(4)), calls, byModule };
+    return { cost: Number(cost.toFixed(4)), calls, byModule, byMode, callsByMode };
   };
 
   const today = aggregate(log.filter(e => e.ts >= startOfToday));
@@ -178,6 +202,27 @@ function _renderModuleBreakdown(byModule, total) {
   }).join('');
 }
 
+// Розбивка за способом використання (qpzj7k): голос / фото / текст.
+// Показуємо всі три завжди — щоб видно було що голос (браузерне розпізнавання)
+// нічого не коштує, а фото-vision дорожче за текст.
+function _renderModeBreakdown(byMode, callsByMode, total) {
+  const ROWS = [
+    ['text', '⌨️', t('usage.mode_text', 'Текст')],
+    ['photo', '📷', t('usage.mode_photo', 'Фото')],
+    ['voice', '🎤', t('usage.mode_voice', 'Голос')],
+  ];
+  return ROWS.map(([key, icon, label]) => {
+    const cost = byMode[key] || 0;
+    const calls = (callsByMode && callsByMode[key]) || 0;
+    const pct = total > 0 ? Math.round((cost / total) * 100) : 0;
+    const free = key === 'voice' && cost === 0;
+    return `<div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;color:rgba(30,16,64,0.7);padding:2px 0">
+      <span>${icon} ${escapeHtmlSafe(label)} <span style="color:rgba(30,16,64,0.35);font-size:11px">(${calls})</span></span>
+      <span style="font-variant-numeric:tabular-nums">${free ? t('usage.free', 'безкоштовно') : `${_formatUSD(cost)} <span style="color:rgba(30,16,64,0.4);font-size:11px">(${pct}%)</span>`}</span>
+    </div>`;
+  }).join('');
+}
+
 function escapeHtmlSafe(s) {
   return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
 }
@@ -190,6 +235,7 @@ export function renderUsageMeter() {
     ? `<div style="display:flex;justify-content:space-between;font-size:13px;color:rgba(30,16,64,0.55);margin-top:2px"><span>${t('usage.projection_label', 'Прогноз кінця місяця')}</span><span style="font-variant-numeric:tabular-nums">~${_formatUSD(stats.projection)}</span></div>`
     : `<div style="font-size:11px;color:rgba(30,16,64,0.35);margin-top:2px;font-style:italic">${t('usage.projection_pending', "Прогноз з'явиться після 3 днів даних")}</div>`;
   const breakdown = _renderModuleBreakdown(stats.thisMonth.byModule, stats.thisMonth.cost);
+  const modeBreakdown = _renderModeBreakdown(stats.thisMonth.byMode, stats.thisMonth.callsByMode, stats.thisMonth.cost);
   const callsLabel = t('usage.calls_short', 'викл');
   el.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:baseline;font-size:14px;color:#1e1040;font-weight:600">
@@ -201,7 +247,10 @@ export function renderUsageMeter() {
       <span style="font-variant-numeric:tabular-nums">${_formatUSD(stats.thisMonth.cost)} <span style="color:rgba(30,16,64,0.4);font-size:12px;font-weight:400">(${stats.thisMonth.calls} ${callsLabel})</span></span>
     </div>
     ${projLine}
-    ${breakdown ? `<div style="height:1px;background:rgba(30,16,64,0.06);margin:10px 0 6px"></div><div>${breakdown}</div>` : ''}
+    <div style="height:1px;background:rgba(30,16,64,0.06);margin:10px 0 6px"></div>
+    <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.45);margin-bottom:3px">${t('usage.by_mode', 'За способом (місяць)')}</div>
+    <div>${modeBreakdown}</div>
+    ${breakdown ? `<div style="height:1px;background:rgba(30,16,64,0.06);margin:10px 0 6px"></div><div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.45);margin-bottom:3px">${t('usage.by_module', 'За модулем')}</div><div>${breakdown}</div>` : ''}
     <div style="font-size:10px;color:rgba(30,16,64,0.3);margin-top:8px">${t('usage.retention_note', 'Зберігається {days} днів. Дані локальні.', { days: RETENTION_DAYS })}</div>
   `;
 }

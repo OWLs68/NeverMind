@@ -103,6 +103,8 @@ export async function onChatImagePicked(dataset, el) {
     const inp = document.getElementById(inputId);
     if (inp) {
       inp.value = desc;
+      // Downstream-обробка опису теж належить до способу «фото» (для розбивки витрат).
+      try { window.__nm_inputMode = 'photo'; } catch (e) {}
       if (typeof window[sendFn] === 'function') window[sendFn]();
     }
   } catch (e) {
