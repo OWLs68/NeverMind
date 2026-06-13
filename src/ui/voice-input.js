@@ -78,9 +78,11 @@ function attachVoiceToTextarea(textarea, button, sendBtn) {
 
     rec.onerror = (ev) => {
       const err = ev.error || '';
+      // no-speech/aborted — нормально під час діалогу, БЕЗ toast (Роман: «помилка
+      // мікрофона» вискакувала постійно).
+      if (err === 'no-speech' || err === 'aborted') return;
       let msg = t('voice.error_mic', 'Помилка мікрофона');
       if (err === 'not-allowed' || err === 'service-not-allowed') msg = t('voice.error_permission', 'Дозволь мікрофон у налаштуваннях');
-      else if (err === 'no-speech') msg = t('voice.error_no_speech', 'Не чую голосу');
       else if (err === 'network') msg = t('voice.error_network', 'Немає інтернету для розпізнавання');
       try { window.showToast && window.showToast(msg); } catch {}
     };
