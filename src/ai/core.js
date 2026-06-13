@@ -964,6 +964,9 @@ export function openChatBar(tab) {
     chatWin.style.maxHeight = h + 'px';
     chatWin.classList.add('open');
     _tabChatState[tab] = 'a';
+    // qpzj7k: подія відкриття чату — voice-output підхоплює щоб у голосовому
+    // режимі мікрофон почав слухати (живий діалог) навіть при повторному відкритті.
+    try { window.dispatchEvent(new CustomEvent('nm-chat-opened', { detail: tab })); } catch (e) {}
     // Скролимо до останнього повідомлення після відкриття
     const msgs = chatWin.querySelector('.ai-bar-messages');
     if (msgs) setTimeout(() => { msgs.scrollTop = msgs.scrollHeight; }, 50);

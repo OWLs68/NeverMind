@@ -90,10 +90,12 @@ function attachVoiceToTextarea(textarea, button, sendBtn) {
       rec = null;
       try { textarea.focus(); } catch {}
       const hasContent = (textarea.value || '').trim().length > 0;
-      if (pendingSendClick && sendBtn && hasContent) {
+      // Авто-надсилання: у голосовому режимі ЗАВЖДИ (не лише за pendingSendClick) —
+      // інакше після диктування доводилось тиснути «відправити» вручну (Роман).
+      let voiceOn = false;
+      try { voiceOn = !!(window.nmVoiceIsOn && window.nmVoiceIsOn()); } catch (e) {}
+      if (sendBtn && hasContent && (pendingSendClick || voiceOn)) {
         pendingSendClick = false;
-        // qpzj7k: позначаємо що цей запит ініційований голосом (для розбивки
-        // витрат за способом). logUsage прочитає й скине прапорець.
         try { window.__nm_inputMode = 'voice'; } catch {}
         setTimeout(() => { try { sendBtn.click(); } catch {} }, 60);
       } else {
