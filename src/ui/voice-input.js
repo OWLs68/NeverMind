@@ -40,6 +40,12 @@ function attachVoiceToTextarea(textarea, button, sendBtn) {
   let rec = null;
   let baseText = '';
   let pendingSendClick = false;
+  let silenceTimer = null;  // примусове завершення після паузи (швидше за таймаут iOS)
+  const SILENCE_MS = 1200;
+  function _armSilence() {
+    clearTimeout(silenceTimer);
+    silenceTimer = setTimeout(() => { try { if (rec) rec.stop(); } catch (e) {} }, SILENCE_MS);
+  }
 
   function startRecording() {
     if (rec) return;
@@ -74,7 +80,10 @@ function attachVoiceToTextarea(textarea, button, sendBtn) {
       textarea.value = baseText + fin + interim;
       if (fin) baseText = textarea.value;
       try { window.autoResizeTextarea && window.autoResizeTextarea(textarea); } catch {}
+      _armSilence(); // нове мовлення → перезапускаємо таймер тиші
     };
+    // Деякі браузери шлють speechend коли юзер замовк → завершуємо одразу.
+    rec.onspeechend = () => { try { if (rec) rec.stop(); } catch (e) {} };
 
     rec.onerror = (ev) => {
       const err = ev.error || '';
@@ -88,6 +97,7 @@ function attachVoiceToTextarea(textarea, button, sendBtn) {
     };
 
     rec.onend = () => {
+      clearTimeout(silenceTimer);
       button.classList.remove('recording');
       rec = null;
       try { textarea.focus(); } catch {}
