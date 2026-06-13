@@ -38,6 +38,12 @@
     const outputCost = completion_tokens / 1e6 * p.output;
     return Number((inputCost + outputCost).toFixed(6));
   }
+  function _deriveMode(module, model) {
+    const m = (module || "").toLowerCase();
+    if (m.includes("vision") || m.includes("photo") || m.includes("image")) return "photo";
+    if (m.includes("voice") || m.includes("whisper") || m.includes("transcrib") || model === "whisper-1") return "voice";
+    return "text";
+  }
   function _readLog() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
@@ -66,10 +72,20 @@
   }
   function logUsage(module, usageObj, model = "gpt-4o-mini") {
     if (!usageObj || typeof usageObj.prompt_tokens !== "number") return;
+    let mode;
+    try {
+      if (typeof window !== "undefined" && window.__nm_inputMode) {
+        mode = window.__nm_inputMode;
+        window.__nm_inputMode = null;
+      }
+    } catch (e) {
+    }
+    if (!mode) mode = _deriveMode(module, model);
     const entry = {
       ts: Date.now(),
       module: module || "unknown",
       model,
+      mode,
       prompt_tokens: usageObj.prompt_tokens,
       completion_tokens: usageObj.completion_tokens || 0,
       cost_usd: _calcCost(model, usageObj.prompt_tokens, usageObj.completion_tokens || 0)
@@ -89,13 +105,18 @@
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
     const aggregate = (entries) => {
       const byModule = {};
+      const byMode = { text: 0, photo: 0, voice: 0 };
+      const callsByMode = { text: 0, photo: 0, voice: 0 };
       let cost = 0, calls = 0;
       for (const e of entries) {
         cost += e.cost_usd || 0;
         calls += 1;
         byModule[e.module] = (byModule[e.module] || 0) + (e.cost_usd || 0);
+        const md = e.mode || _deriveMode(e.module, e.model);
+        byMode[md] = (byMode[md] || 0) + (e.cost_usd || 0);
+        callsByMode[md] = (callsByMode[md] || 0) + 1;
       }
-      return { cost: Number(cost.toFixed(4)), calls, byModule };
+      return { cost: Number(cost.toFixed(4)), calls, byModule, byMode, callsByMode };
     };
     const today = aggregate(log.filter((e) => e.ts >= startOfToday));
     const thisMonth = aggregate(log.filter((e) => e.ts >= startOfMonth));
@@ -154,6 +175,23 @@
     </div>`;
     }).join("");
   }
+  function _renderModeBreakdown(byMode, callsByMode, total) {
+    const ROWS = [
+      ["text", "\u2328\uFE0F", t("usage.mode_text", "\u0422\u0435\u043A\u0441\u0442")],
+      ["photo", "\u{1F4F7}", t("usage.mode_photo", "\u0424\u043E\u0442\u043E")],
+      ["voice", "\u{1F3A4}", t("usage.mode_voice", "\u0413\u043E\u043B\u043E\u0441")]
+    ];
+    return ROWS.map(([key, icon, label]) => {
+      const cost = byMode[key] || 0;
+      const calls = callsByMode && callsByMode[key] || 0;
+      const pct = total > 0 ? Math.round(cost / total * 100) : 0;
+      const free = key === "voice" && cost === 0;
+      return `<div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;color:rgba(30,16,64,0.7);padding:2px 0">
+      <span>${icon} ${escapeHtmlSafe(label)} <span style="color:rgba(30,16,64,0.35);font-size:11px">(${calls})</span></span>
+      <span style="font-variant-numeric:tabular-nums">${free ? t("usage.free", "\u0431\u0435\u0437\u043A\u043E\u0448\u0442\u043E\u0432\u043D\u043E") : `${_formatUSD(cost)} <span style="color:rgba(30,16,64,0.4);font-size:11px">(${pct}%)</span>`}</span>
+    </div>`;
+    }).join("");
+  }
   function escapeHtmlSafe(s) {
     return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
   }
@@ -163,6 +201,7 @@
     const stats = getUsageStats();
     const projLine = stats.projection !== null ? `<div style="display:flex;justify-content:space-between;font-size:13px;color:rgba(30,16,64,0.55);margin-top:2px"><span>${t("usage.projection_label", "\u041F\u0440\u043E\u0433\u043D\u043E\u0437 \u043A\u0456\u043D\u0446\u044F \u043C\u0456\u0441\u044F\u0446\u044F")}</span><span style="font-variant-numeric:tabular-nums">~${_formatUSD(stats.projection)}</span></div>` : `<div style="font-size:11px;color:rgba(30,16,64,0.35);margin-top:2px;font-style:italic">${t("usage.projection_pending", "\u041F\u0440\u043E\u0433\u043D\u043E\u0437 \u0437'\u044F\u0432\u0438\u0442\u044C\u0441\u044F \u043F\u0456\u0441\u043B\u044F 3 \u0434\u043D\u0456\u0432 \u0434\u0430\u043D\u0438\u0445")}</div>`;
     const breakdown = _renderModuleBreakdown(stats.thisMonth.byModule, stats.thisMonth.cost);
+    const modeBreakdown = _renderModeBreakdown(stats.thisMonth.byMode, stats.thisMonth.callsByMode, stats.thisMonth.cost);
     const callsLabel = t("usage.calls_short", "\u0432\u0438\u043A\u043B");
     el.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:baseline;font-size:14px;color:#1e1040;font-weight:600">
@@ -174,7 +213,10 @@
       <span style="font-variant-numeric:tabular-nums">${_formatUSD(stats.thisMonth.cost)} <span style="color:rgba(30,16,64,0.4);font-size:12px;font-weight:400">(${stats.thisMonth.calls} ${callsLabel})</span></span>
     </div>
     ${projLine}
-    ${breakdown ? `<div style="height:1px;background:rgba(30,16,64,0.06);margin:10px 0 6px"></div><div>${breakdown}</div>` : ""}
+    <div style="height:1px;background:rgba(30,16,64,0.06);margin:10px 0 6px"></div>
+    <div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.45);margin-bottom:3px">${t("usage.by_mode", "\u0417\u0430 \u0441\u043F\u043E\u0441\u043E\u0431\u043E\u043C (\u043C\u0456\u0441\u044F\u0446\u044C)")}</div>
+    <div>${modeBreakdown}</div>
+    ${breakdown ? `<div style="height:1px;background:rgba(30,16,64,0.06);margin:10px 0 6px"></div><div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.45);margin-bottom:3px">${t("usage.by_module", "\u0417\u0430 \u043C\u043E\u0434\u0443\u043B\u0435\u043C")}</div><div>${breakdown}</div>` : ""}
     <div style="font-size:10px;color:rgba(30,16,64,0.3);margin-top:8px">${t("usage.retention_note", "\u0417\u0431\u0435\u0440\u0456\u0433\u0430\u0454\u0442\u044C\u0441\u044F {days} \u0434\u043D\u0456\u0432. \u0414\u0430\u043D\u0456 \u043B\u043E\u043A\u0430\u043B\u044C\u043D\u0456.", { days: RETENTION_DAYS })}</div>
   `;
   }
@@ -25378,6 +25420,10 @@ ${legacy}`;
         }
         if (pendingSendClick && sendBtn) {
           pendingSendClick = false;
+          try {
+            window.__nm_inputMode = "voice";
+          } catch {
+          }
           setTimeout(() => {
             try {
               sendBtn.click();
@@ -25432,7 +25478,7 @@ ${legacy}`;
     const boxes = document.querySelectorAll(".ai-bar-new .ai-bar-input-box");
     boxes.forEach((box) => {
       const textarea = box.querySelector("textarea");
-      const sendBtn = box.querySelector(".ai-bar-send-btn");
+      const sendBtn = box.querySelector('.ai-bar-send-btn:not([data-action="pick-chat-image"])');
       if (!textarea || !sendBtn) return;
       if (box.querySelector(".voice-btn")) return;
       const micBtn = createMicButton();
@@ -25690,6 +25736,10 @@ ${legacy}`;
       const inp = document.getElementById(inputId);
       if (inp) {
         inp.value = desc;
+        try {
+          window.__nm_inputMode = "photo";
+        } catch (e) {
+        }
         if (typeof window[sendFn] === "function") window[sendFn]();
       }
     } catch (e) {
