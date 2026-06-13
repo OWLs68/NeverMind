@@ -10330,6 +10330,12 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
     const tEl = document.getElementById("owl-tab-text-" + tab);
     const cEl = document.getElementById("owl-tab-ctext-" + tab);
     const tmEl = document.getElementById("owl-tab-time-" + tab);
+    if (tEl && (tEl.textContent || "") !== msg.text && msg.text) {
+      try {
+        window.dispatchEvent(new CustomEvent("nm-board-message", { detail: { tab, text: msg.text } }));
+      } catch (e) {
+      }
+    }
     _applyTabText(tEl, msg.text);
     _applyTabText(cEl, msg.text);
     if (tmEl) {
@@ -26105,13 +26111,16 @@ ${legacy}`;
     speak(t("tts.sample", "\u041F\u0440\u0438\u0432\u0456\u0442! \u042F \u0442\u0432\u0456\u0439 \u0430\u0433\u0435\u043D\u0442 NeverMind. \u041E\u0441\u044C \u0442\u0430\u043A \u0437\u0432\u0443\u0447\u0438\u0442\u044C \u043C\u0456\u0439 \u0433\u043E\u043B\u043E\u0441."));
   }
   function _voiceIcon(on) {
-    const stroke = on ? "#16a34a" : "currentColor";
-    return `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>`;
+    const stroke = on ? "#ffffff" : "rgba(30,16,64,0.35)";
+    return `<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>`;
   }
   function _syncVoiceButtons() {
     const on = isVoiceMode();
     document.querySelectorAll(".voice-mode-btn").forEach((b) => {
       b.innerHTML = _voiceIcon(on);
+      b.style.background = on ? "#16a34a" : "transparent";
+      b.style.borderRadius = "50%";
+      b.style.boxShadow = on ? "0 0 0 2px rgba(22,163,74,0.25)" : "none";
       b.classList.toggle("voice-on", on);
     });
   }
@@ -26165,6 +26174,13 @@ ${legacy}`;
         } catch (e) {
         }
       }, 350);
+    });
+    window.addEventListener("nm-board-message", (e) => {
+      if (!isVoiceMode()) return;
+      if (_chatOpen()) return;
+      if (typeof document !== "undefined" && document.hidden) return;
+      const txt = e && e.detail && e.detail.text ? String(e.detail.text).trim() : "";
+      if (txt.length >= 8) speak(txt);
     });
     window.addEventListener("nm-agent-message", (e) => {
       if (!isVoiceMode()) return;
