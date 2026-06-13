@@ -16,9 +16,19 @@
 // Фільтр спаму (Council 🕵️): озвучуємо лише змістовні репліки активної вкладки,
 // не «✓ Зроблено» / tool-підтвердження; dedup однакового тексту.
 
-import { t } from '../core/utils.js';
+import { t, getLang } from '../core/utils.js';
 import { showToast, currentTab } from '../core/nav.js';
 import { logTtsUsage } from '../core/usage-meter.js';
+
+// Інструкція вимови та locale браузерного голосу — за мовою застосунку
+// (getLang). Додаємо мови сюди коли зʼявляються (forward-looking під i18n).
+const TTS_INSTRUCTIONS = {
+  uk: 'Speak in natural, fluent Ukrainian with correct Ukrainian pronunciation and a warm, calm, friendly tone. Do not use an English or Russian accent.',
+  en: 'Speak in natural, fluent English with a warm, calm, friendly tone.',
+};
+const BROWSER_LOCALE = { uk: 'uk-UA', en: 'en-US' };
+function _ttsInstruction() { return TTS_INSTRUCTIONS[getLang()] || TTS_INSTRUCTIONS.uk; }
+function _browserLocale() { return BROWSER_LOCALE[getLang()] || 'uk-UA'; }
 
 const VOICE_MODE_KEY = 'nm_voice_mode';
 const TTS_USAGE_KEY = 'nm_tts_usage';        // {date:'YYYY-MM-DD', chars:N}
@@ -95,8 +105,10 @@ async function _speakBrowser(text) {
     if (!window.speechSynthesis) return;
     const voices = await _browserVoices();
     const u = new SpeechSynthesisUtterance(text);
-    u.lang = 'uk-UA';
-    const v = voices.find(x => /uk|ukrain/i.test(x.lang));
+    const loc = _browserLocale();
+    u.lang = loc;
+    const pref = loc.slice(0, 2);
+    const v = voices.find(x => x.lang && x.lang.toLowerCase().startsWith(pref));
     if (v) u.voice = v;
     window.speechSynthesis.cancel();
     setTimeout(() => { try { window.speechSynthesis.speak(u); } catch (e) {} }, 50); // iOS 17 quirk
@@ -113,7 +125,7 @@ async function _speakOpenAI(text, key) {
       model: 'gpt-4o-mini-tts',
       voice: OPENAI_VOICE,
       input: text,
-      instructions: 'Speak in natural, fluent Ukrainian with correct Ukrainian pronunciation and a warm, calm, friendly tone. Do not use an English or Russian accent.',
+      instructions: _ttsInstruction(),
       response_format: 'mp3',
     }),
   });

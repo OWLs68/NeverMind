@@ -245,6 +245,14 @@ export function getRecentActions() {
 // Використовуємо replaceAll (не RegExp у циклі) — швидше і безпечніше від спецсимволів
 // у значеннях. CI-скрипт scripts/check-i18n.js ламає білд якщо новий рядок з кирилицею
 // не обгорнутий у t(). AI-промпти у src/ai/* лишаємо українськими (whitelist).
+// Активна мова UI (qpzj7k forward-looking): єдине джерело для голосу OWL і
+// майбутнього словника i18n. Зараз дефолт 'uk'; коли додамо англійську —
+// nm_settings.lang='en' і все (TTS + переклади) перемкнеться автоматично.
+export function getLang() {
+  try { return (JSON.parse(localStorage.getItem('nm_settings') || '{}').lang) || 'uk'; }
+  catch (e) { return 'uk'; }
+}
+
 export function t(key, fallback, params) {
   let result = fallback;
   if (params && typeof params === 'object') {
