@@ -351,7 +351,7 @@ export function renderChips(containerEl, chips, tab, options = {}) {
   }
   // 🔊 Голос OWL: тап = вмк/вимк озвучку + читає поточне табло (тап = дозвіл iOS).
   if (options.showSpeak || options.showVoice) {
-    chipsHTML.push(`<div class="owl-chip owl-chip-voice">${isVoiceMode() ? '🔊' : '🔇'}</div>`);
+    chipsHTML.push(`<div class="owl-chip owl-chip-voice">${isVoiceMode() ? '🔊 Голос увімк' : '🔇 Озвучити'}</div>`);
   }
 
   containerEl.innerHTML = chipsHTML.join('');
@@ -387,7 +387,7 @@ export function renderChips(containerEl, chips, tab, options = {}) {
       } else {
         stopSpeaking();
       }
-      chipEl.textContent = on ? '🔊' : '🔇';
+      chipEl.textContent = on ? '🔊 Голос увімк' : '🔇 Озвучити';
       chipEl._fired = false;
       chipEl.style.pointerEvents = '';
       return;
