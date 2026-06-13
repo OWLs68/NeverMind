@@ -230,12 +230,19 @@ export function testTtsVoice() {
 // === Кнопка голосового режиму у шапці (біля ⚙️) ===
 // Тап → вмк/вимк живий діалог: OWL озвучує відповіді + мікрофон слухає юзера.
 function _voiceIcon(on) {
-  const stroke = on ? '#16a34a' : 'currentColor';
-  return `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>`;
+  // Увімк → білий мік на зеленому колі; вимк → приглушений сірий.
+  const stroke = on ? '#ffffff' : 'rgba(30,16,64,0.35)';
+  return `<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>`;
 }
 function _syncVoiceButtons() {
   const on = isVoiceMode();
-  document.querySelectorAll('.voice-mode-btn').forEach(b => { b.innerHTML = _voiceIcon(on); b.classList.toggle('voice-on', on); });
+  document.querySelectorAll('.voice-mode-btn').forEach(b => {
+    b.innerHTML = _voiceIcon(on);
+    b.style.background = on ? '#16a34a' : 'transparent';
+    b.style.borderRadius = '50%';
+    b.style.boxShadow = on ? '0 0 0 2px rgba(22,163,74,0.25)' : 'none';
+    b.classList.toggle('voice-on', on);
+  });
 }
 function _injectVoiceButtons() {
   document.querySelectorAll('.header-actions').forEach(ha => {
@@ -274,6 +281,15 @@ if (typeof window !== 'undefined') {
   window.addEventListener('nm-chat-opened', () => {
     if (!isVoiceMode()) return;
     setTimeout(() => { try { if (window.nmStartListening) window.nmStartListening(); } catch (e) {} }, 350);
+  });
+  // Табло оновилось → озвучуємо ТIЛЬКИ коли голос увімк І чат ЗАКРИТИЙ (Роман).
+  // Коли чат відкритий — озвучуються відповіді, табло не дублюємо.
+  window.addEventListener('nm-board-message', (e) => {
+    if (!isVoiceMode()) return;
+    if (_chatOpen()) return;
+    if (typeof document !== 'undefined' && document.hidden) return;
+    const txt = (e && e.detail && e.detail.text) ? String(e.detail.text).trim() : '';
+    if (txt.length >= 8) speak(txt);
   });
   window.addEventListener('nm-agent-message', (e) => {
     if (!isVoiceMode()) return;
