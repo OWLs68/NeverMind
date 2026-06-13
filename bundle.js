@@ -10430,6 +10430,12 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
   });
 
   // src/ui/voice-output.js
+  function _ttsInstruction() {
+    return TTS_INSTRUCTIONS[getLang()] || TTS_INSTRUCTIONS.uk;
+  }
+  function _browserLocale() {
+    return BROWSER_LOCALE[getLang()] || "uk-UA";
+  }
   function isVoiceMode() {
     return localStorage.getItem(VOICE_MODE_KEY) === "1";
   }
@@ -10527,8 +10533,10 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
       if (!window.speechSynthesis) return;
       const voices = await _browserVoices();
       const u = new SpeechSynthesisUtterance(text);
-      u.lang = "uk-UA";
-      const v = voices.find((x) => /uk|ukrain/i.test(x.lang));
+      const loc = _browserLocale();
+      u.lang = loc;
+      const pref = loc.slice(0, 2);
+      const v = voices.find((x) => x.lang && x.lang.toLowerCase().startsWith(pref));
       if (v) u.voice = v;
       window.speechSynthesis.cancel();
       setTimeout(() => {
@@ -10548,7 +10556,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
         model: "gpt-4o-mini-tts",
         voice: OPENAI_VOICE,
         input: text,
-        instructions: "Speak in natural, fluent Ukrainian with correct Ukrainian pronunciation and a warm, calm, friendly tone. Do not use an English or Russian accent.",
+        instructions: _ttsInstruction(),
         response_format: "mp3"
       })
     });
@@ -10599,12 +10607,17 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
       _speakBrowser(clean);
     }
   }
-  var VOICE_MODE_KEY, TTS_USAGE_KEY, MAX_CHARS_PER_UTTERANCE, DAILY_CHAR_CAP, OPENAI_VOICE, SILENT_WAV, _audio, _audioUnlocked, _capWarned, _lastSpoken, _lastSpokenTs;
+  var TTS_INSTRUCTIONS, BROWSER_LOCALE, VOICE_MODE_KEY, TTS_USAGE_KEY, MAX_CHARS_PER_UTTERANCE, DAILY_CHAR_CAP, OPENAI_VOICE, SILENT_WAV, _audio, _audioUnlocked, _capWarned, _lastSpoken, _lastSpokenTs;
   var init_voice_output = __esm({
     "src/ui/voice-output.js"() {
       init_utils();
       init_nav();
       init_usage_meter();
+      TTS_INSTRUCTIONS = {
+        uk: "Speak in natural, fluent Ukrainian with correct Ukrainian pronunciation and a warm, calm, friendly tone. Do not use an English or Russian accent.",
+        en: "Speak in natural, fluent English with a warm, calm, friendly tone."
+      };
+      BROWSER_LOCALE = { uk: "uk-UA", en: "en-US" };
       VOICE_MODE_KEY = "nm_voice_mode";
       TTS_USAGE_KEY = "nm_tts_usage";
       MAX_CHARS_PER_UTTERANCE = 500;
@@ -19786,6 +19799,13 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       return JSON.parse(localStorage.getItem(NM_RECENT_ACTIONS_KEY) || "[]");
     } catch {
       return [];
+    }
+  }
+  function getLang() {
+    try {
+      return JSON.parse(localStorage.getItem("nm_settings") || "{}").lang || "uk";
+    } catch (e) {
+      return "uk";
     }
   }
   function t(key, fallback, params) {
