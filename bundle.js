@@ -25899,6 +25899,7 @@ ${legacy}`;
   }
   var SILENT_WAV = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAIlYAAESsAAACABAAZGF0YQAAAAA=";
   var _audio = null;
+  var _curResolve = null;
   var _audioUnlocked = false;
   var _capWarned = false;
   var _lastSpoken = "";
@@ -25952,6 +25953,14 @@ ${legacy}`;
         _audio = null;
       }
     } catch (e) {
+    }
+    if (_curResolve) {
+      const r = _curResolve;
+      _curResolve = null;
+      try {
+        r();
+      } catch (e) {
+      }
     }
     try {
       if (window.speechSynthesis) window.speechSynthesis.cancel();
@@ -26030,45 +26039,95 @@ ${legacy}`;
       _done();
     }
   }
-  async function _speakOpenAI(text, key) {
+  async function _genOpenAI(text, key) {
     const res = await fetch("https://api.openai.com/v1/audio/speech", {
       method: "POST",
       headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}` },
-      body: JSON.stringify({
-        model: "tts-1",
-        voice: _openaiVoice(),
-        input: text,
-        response_format: "mp3"
-      })
+      body: JSON.stringify({ model: "tts-1", voice: _openaiVoice(), input: text, response_format: "mp3" })
     });
     if (!res.ok) throw new Error("tts " + res.status);
-    const blob = await res.blob();
-    await _playBlob(blob);
+    return res.blob();
   }
-  async function _playBlob(blob) {
-    if (!_speaking) return;
-    const url = URL.createObjectURL(blob);
-    try {
-      if (_audio) {
-        _audio.onended = null;
-        _audio.pause();
+  function _playOnce(blob) {
+    return new Promise((resolve) => {
+      if (!_speaking) {
+        resolve();
+        return;
       }
-    } catch (e) {
-    }
-    _audio = new Audio(url);
-    _audio.onended = () => {
+      const url = URL.createObjectURL(blob);
+      const fin = () => {
+        try {
+          URL.revokeObjectURL(url);
+        } catch (e) {
+        }
+        if (_curResolve === resolve) _curResolve = null;
+        resolve();
+      };
       try {
-        URL.revokeObjectURL(url);
+        if (_audio) {
+          _audio.onended = null;
+          _audio.pause();
+        }
       } catch (e) {
       }
-      _audio = null;
-      _done();
-    };
-    _audio.onerror = () => {
-      _audio = null;
-      _done();
-    };
-    await _audio.play();
+      _audio = new Audio(url);
+      _curResolve = resolve;
+      _audio.onended = () => {
+        _audio = null;
+        fin();
+      };
+      _audio.onerror = () => {
+        _audio = null;
+        fin();
+      };
+      _audio.play().catch(() => fin());
+    });
+  }
+  function _chunkText(text) {
+    const parts = String(text).split(/(?<=[.!?…])\s+|\n+/).map((s) => s.trim()).filter(Boolean);
+    if (parts.length <= 1) return [text];
+    const chunks = [parts[0]];
+    let buf = "";
+    for (let i = 1; i < parts.length; i++) {
+      if (!buf) buf = parts[i];
+      else if (buf.length < 80) buf += " " + parts[i];
+      else {
+        chunks.push(buf);
+        buf = parts[i];
+      }
+    }
+    if (buf) chunks.push(buf);
+    return chunks;
+  }
+  async function _runSequential(chunks, gen, firstBlob) {
+    let blob = firstBlob;
+    for (let i = 0; i < chunks.length; i++) {
+      if (!_speaking) return;
+      const nextP = i + 1 < chunks.length ? gen(chunks[i + 1]) : null;
+      if (nextP) nextP.catch(() => {
+      });
+      await _playOnce(blob);
+      if (!_speaking) return;
+      if (nextP) {
+        try {
+          blob = await nextP;
+        } catch (e) {
+          break;
+        }
+      }
+    }
+    _done();
+  }
+  async function _trySpeakChunks(chunks, gen) {
+    let firstBlob;
+    try {
+      firstBlob = await gen(chunks[0]);
+    } catch (e) {
+      return false;
+    }
+    if (!_speaking) return true;
+    _runSequential(chunks, gen, firstBlob);
+    return true;
   }
   function _afterSpeak() {
     if (!isVoiceMode()) return;
@@ -26081,18 +26140,15 @@ ${legacy}`;
       }
     }, 400);
   }
-  async function _speakElevenLabs(text, key) {
+  async function _genEleven(text, key) {
     const voiceId = _elevenVoice();
     const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
       method: "POST",
       headers: { "xi-api-key": key, "Content-Type": "application/json", "Accept": "audio/mpeg" },
-      // turbo_v2_5 — низька затримка (Роман: голос з'являвся з лагом) +
-      // багатомовна, добра українська. Якість трохи нижча за multilingual_v2,
-      // але відчутно швидше.
       body: JSON.stringify({ text, model_id: "eleven_turbo_v2_5" })
     });
     if (!res.ok) throw new Error("11labs " + res.status);
-    await _playBlob(await res.blob());
+    return res.blob();
   }
   async function speak(text) {
     if (!text) return;
@@ -26105,12 +26161,17 @@ ${legacy}`;
     _lastSpoken = clean;
     _lastSpokenTs = Date.now();
     _speaking = true;
+    const choice = _settings().ttsVoice || DEFAULT_OPENAI_VOICE;
+    const chunks = _chunkText(clean);
     const elevenKey = _elevenKey();
-    if (elevenKey) {
-      try {
-        await _speakElevenLabs(clean, elevenKey);
-        return;
-      } catch (e) {
+    if (choice === "elevenlabs") {
+      if (elevenKey) {
+        if (await _trySpeakChunks(chunks, (txt) => _genEleven(txt, elevenKey))) return;
+      } else {
+        try {
+          showToast(t("tts.no_eleven_key", "\u0412\u0441\u0442\u0430\u0432 \u043A\u043B\u044E\u0447 ElevenLabs \u0443 \u041D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445 \u0430\u0431\u043E \u043E\u0431\u0435\u0440\u0438 \u0456\u043D\u0448\u0438\u0439 \u0433\u043E\u043B\u043E\u0441"));
+        } catch (e) {
+        }
       }
     }
     const key = localStorage.getItem("nm_gemini_key");
@@ -26121,11 +26182,7 @@ ${legacy}`;
         logTtsUsage(clean.length);
       } catch (e) {
       }
-      try {
-        await _speakOpenAI(clean, key);
-        return;
-      } catch (e) {
-      }
+      if (await _trySpeakChunks(chunks, (txt) => _genOpenAI(txt, key))) return;
     } else if (overCap && !_capWarned) {
       _capWarned = true;
       try {
@@ -26205,6 +26262,15 @@ ${legacy}`;
   if (typeof window !== "undefined") {
     try {
       localStorage.setItem(VOICE_MODE_KEY, "0");
+    } catch (e) {
+    }
+    try {
+      const s = getSettings();
+      if ((s.elevenKey || "").trim() && !s.ttsEngineMigrated) {
+        const patch = { ttsEngineMigrated: true };
+        if (!s.ttsVoice || s.ttsVoice === "nova") patch.ttsVoice = "elevenlabs";
+        updateSettings(patch);
+      }
     } catch (e) {
     }
     if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", _injectVoiceButtons);
