@@ -10429,284 +10429,6 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
     }
   });
 
-  // src/ui/voice-output.js
-  function _ttsInstruction() {
-    return TTS_INSTRUCTIONS[getLang()] || TTS_INSTRUCTIONS.uk;
-  }
-  function _browserLocale() {
-    return BROWSER_LOCALE[getLang()] || "uk-UA";
-  }
-  function _settings() {
-    return getSettings();
-  }
-  function _openaiVoice() {
-    return _settings().ttsVoice || DEFAULT_OPENAI_VOICE;
-  }
-  function _elevenKey() {
-    return (_settings().elevenKey || "").trim();
-  }
-  function _elevenVoice() {
-    return _settings().elevenVoiceId || DEFAULT_ELEVEN_VOICE;
-  }
-  function isVoiceMode() {
-    return localStorage.getItem(VOICE_MODE_KEY) === "1";
-  }
-  function setVoiceMode(on) {
-    localStorage.setItem(VOICE_MODE_KEY, on ? "1" : "0");
-    try {
-      window.dispatchEvent(new CustomEvent("nm-voice-mode-changed", { detail: { on: !!on } }));
-    } catch (e) {
-    }
-  }
-  function toggleVoiceMode() {
-    unlockAudio();
-    const next = !isVoiceMode();
-    setVoiceMode(next);
-    if (!next) stopSpeaking();
-    return next;
-  }
-  function unlockAudio() {
-    if (_audioUnlocked) return;
-    _audioUnlocked = true;
-    try {
-      const s = new Audio(SILENT_WAV);
-      s.play().catch(() => {
-      });
-    } catch (e) {
-    }
-    try {
-      if (window.speechSynthesis) {
-        const u = new SpeechSynthesisUtterance(" ");
-        window.speechSynthesis.speak(u);
-        window.speechSynthesis.cancel();
-      }
-    } catch (e) {
-    }
-  }
-  function stopSpeaking() {
-    try {
-      if (_audio) {
-        _audio.pause();
-        _audio = null;
-      }
-    } catch (e) {
-    }
-    try {
-      if (window.speechSynthesis) window.speechSynthesis.cancel();
-    } catch (e) {
-    }
-  }
-  function _todayStr() {
-    return (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
-  }
-  function _ttsCharsToday() {
-    try {
-      const u = JSON.parse(localStorage.getItem(TTS_USAGE_KEY) || "{}");
-      return u.date === _todayStr() ? u.chars || 0 : 0;
-    } catch (e) {
-      return 0;
-    }
-  }
-  function _addTtsChars(n) {
-    const chars = _ttsCharsToday() + n;
-    try {
-      localStorage.setItem(TTS_USAGE_KEY, JSON.stringify({ date: _todayStr(), chars }));
-    } catch (e) {
-    }
-  }
-  function _browserVoices() {
-    return new Promise((resolve) => {
-      if (!window.speechSynthesis) {
-        resolve([]);
-        return;
-      }
-      let v = window.speechSynthesis.getVoices();
-      if (v && v.length) {
-        resolve(v);
-        return;
-      }
-      let done = false;
-      window.speechSynthesis.onvoiceschanged = () => {
-        if (!done) {
-          done = true;
-          resolve(window.speechSynthesis.getVoices() || []);
-        }
-      };
-      setTimeout(() => {
-        if (!done) {
-          done = true;
-          resolve(window.speechSynthesis.getVoices() || []);
-        }
-      }, 600);
-    });
-  }
-  async function _speakBrowser(text) {
-    try {
-      if (!window.speechSynthesis) return;
-      const voices = await _browserVoices();
-      const u = new SpeechSynthesisUtterance(text);
-      const loc = _browserLocale();
-      u.lang = loc;
-      const pref = loc.slice(0, 2);
-      const v = voices.find((x) => x.lang && x.lang.toLowerCase().startsWith(pref));
-      if (v) u.voice = v;
-      window.speechSynthesis.cancel();
-      setTimeout(() => {
-        try {
-          window.speechSynthesis.speak(u);
-        } catch (e) {
-        }
-      }, 50);
-    } catch (e) {
-    }
-  }
-  async function _speakOpenAI(text, key) {
-    const res = await fetch("https://api.openai.com/v1/audio/speech", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}` },
-      body: JSON.stringify({
-        model: "gpt-4o-mini-tts",
-        voice: _openaiVoice(),
-        input: text,
-        instructions: _ttsInstruction(),
-        response_format: "mp3"
-      })
-    });
-    if (!res.ok) throw new Error("tts " + res.status);
-    const blob = await res.blob();
-    await _playBlob(blob);
-  }
-  async function _playBlob(blob) {
-    const url = URL.createObjectURL(blob);
-    stopSpeaking();
-    _audio = new Audio(url);
-    _audio.onended = () => {
-      try {
-        URL.revokeObjectURL(url);
-      } catch (e) {
-      }
-      _audio = null;
-    };
-    await _audio.play();
-  }
-  async function _speakElevenLabs(text, key) {
-    const voiceId = _elevenVoice();
-    const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
-      method: "POST",
-      headers: { "xi-api-key": key, "Content-Type": "application/json", "Accept": "audio/mpeg" },
-      // turbo_v2_5 — низька затримка (Роман: голос з'являвся з лагом) +
-      // багатомовна, добра українська. Якість трохи нижча за multilingual_v2,
-      // але відчутно швидше.
-      body: JSON.stringify({ text, model_id: "eleven_turbo_v2_5" })
-    });
-    if (!res.ok) throw new Error("11labs " + res.status);
-    await _playBlob(await res.blob());
-  }
-  async function speak(text) {
-    if (!text) return;
-    if (typeof document !== "undefined" && document.hidden) return;
-    let clean = String(text).replace(/[*_`#>•·✔️✓🦉📋💰⚠️📷🖼✨🔊🔇→↑↓]/g, "").replace(/\s+/g, " ").trim();
-    if (!clean) return;
-    if (clean === _lastSpoken && Date.now() - _lastSpokenTs < 5e3) return;
-    if (clean.length > MAX_CHARS_PER_UTTERANCE) clean = clean.slice(0, MAX_CHARS_PER_UTTERANCE) + "\u2026";
-    _lastSpoken = clean;
-    _lastSpokenTs = Date.now();
-    const elevenKey = _elevenKey();
-    if (elevenKey) {
-      try {
-        await _speakElevenLabs(clean, elevenKey);
-        return;
-      } catch (e) {
-      }
-    }
-    const key = localStorage.getItem("nm_gemini_key");
-    const overCap = _ttsCharsToday() + clean.length > DAILY_CHAR_CAP;
-    if (key && !overCap) {
-      _addTtsChars(clean.length);
-      try {
-        logTtsUsage(clean.length);
-      } catch (e) {
-      }
-      try {
-        await _speakOpenAI(clean, key);
-        return;
-      } catch (e) {
-      }
-    } else if (overCap && !_capWarned) {
-      _capWarned = true;
-      try {
-        showToast(t("tts.cap", "\u0414\u0435\u043D\u043D\u0438\u0439 \u043B\u0456\u043C\u0456\u0442 \u043F\u0440\u0438\u0440\u043E\u0434\u043D\u043E\u0433\u043E \u0433\u043E\u043B\u043E\u0441\u0443 \u0432\u0438\u0447\u0435\u0440\u043F\u0430\u043D\u043E \u2014 \u043F\u0435\u0440\u0435\u0445\u0456\u0434 \u043D\u0430 \u0431\u0435\u0437\u043A\u043E\u0448\u0442\u043E\u0432\u043D\u0438\u0439"));
-      } catch (e) {
-      }
-    }
-    _speakBrowser(clean);
-  }
-  function setTtsVoice(voice) {
-    if (voice) updateSettings({ ttsVoice: voice });
-  }
-  function saveElevenKey(val) {
-    updateSettings({ elevenKey: (val || "").trim() });
-  }
-  function getVoicePrefs() {
-    const s = _settings();
-    return { ttsVoice: s.ttsVoice || DEFAULT_OPENAI_VOICE, elevenKey: s.elevenKey || "" };
-  }
-  function testTtsVoice() {
-    unlockAudio();
-    _lastSpoken = "";
-    speak(t("tts.sample", "\u041F\u0440\u0438\u0432\u0456\u0442! \u042F \u0442\u0432\u0456\u0439 \u0430\u0433\u0435\u043D\u0442 NeverMind. \u041E\u0441\u044C \u0442\u0430\u043A \u0437\u0432\u0443\u0447\u0438\u0442\u044C \u043C\u0456\u0439 \u0433\u043E\u043B\u043E\u0441."));
-  }
-  var TTS_INSTRUCTIONS, BROWSER_LOCALE, VOICE_MODE_KEY, TTS_USAGE_KEY, MAX_CHARS_PER_UTTERANCE, DAILY_CHAR_CAP, DEFAULT_OPENAI_VOICE, DEFAULT_ELEVEN_VOICE, SILENT_WAV, _audio, _audioUnlocked, _capWarned, _lastSpoken, _lastSpokenTs;
-  var init_voice_output = __esm({
-    "src/ui/voice-output.js"() {
-      init_utils();
-      init_nav();
-      init_usage_meter();
-      init_settings();
-      TTS_INSTRUCTIONS = {
-        uk: "Speak in natural, fluent Ukrainian with correct Ukrainian pronunciation and a warm, calm, friendly tone. Do not use an English or Russian accent.",
-        en: "Speak in natural, fluent English with a warm, calm, friendly tone."
-      };
-      BROWSER_LOCALE = { uk: "uk-UA", en: "en-US" };
-      VOICE_MODE_KEY = "nm_voice_mode";
-      TTS_USAGE_KEY = "nm_tts_usage";
-      MAX_CHARS_PER_UTTERANCE = 500;
-      DAILY_CHAR_CAP = 12e3;
-      DEFAULT_OPENAI_VOICE = "nova";
-      DEFAULT_ELEVEN_VOICE = "21m00Tcm4TlvDq8ikWAM";
-      SILENT_WAV = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAIlYAAESsAAACABAAZGF0YQAAAAA=";
-      _audio = null;
-      _audioUnlocked = false;
-      _capWarned = false;
-      _lastSpoken = "";
-      _lastSpokenTs = 0;
-      if (typeof window !== "undefined") {
-        window.addEventListener("nm-agent-message", (e) => {
-          if (!isVoiceMode()) return;
-          const d = e && e.detail || {};
-          if (!d.text) return;
-          if (d.tab && d.tab !== currentTab) return;
-          const txt = String(d.text).trim();
-          if (txt.length < 20) return;
-          if (/^[✓✅\[(]/.test(txt)) return;
-          speak(txt);
-        });
-        document.addEventListener("touchend", unlockAudio, { once: true, passive: true });
-        document.addEventListener("visibilitychange", () => {
-          if (document.hidden) stopSpeaking();
-        });
-        window.nmVoiceSpeak = speak;
-        window.nmVoiceToggle = toggleVoiceMode;
-        window.nmVoiceIsOn = isVoiceMode;
-        window.nmVoiceStop = stopSpeaking;
-        window.setTtsVoice = setTtsVoice;
-        window.saveElevenKey = saveElevenKey;
-        window.testTtsVoice = testTtsVoice;
-        window.getVoicePrefs = getVoicePrefs;
-      }
-    }
-  });
-
   // src/ui/unread-badge.js
   function showUnreadBadge(tab, sendBtnId) {
     const current = _unreadCounts.get(tab) || 0;
@@ -12752,9 +12474,6 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
     if (options.showSpeak) {
       chipsHTML.push(`<div class="owl-chip owl-chip-speak">\u041F\u043E\u0433\u043E\u0432\u043E\u0440\u0438\u0442\u0438</div>`);
     }
-    if (options.showSpeak || options.showVoice) {
-      chipsHTML.push(`<div class="owl-chip owl-chip-voice">${isVoiceMode() ? "\u{1F50A} \u0413\u043E\u043B\u043E\u0441 \u0443\u0432\u0456\u043C\u043A" : "\u{1F507} \u041E\u0437\u0432\u0443\u0447\u0438\u0442\u0438"}</div>`);
-    }
     containerEl.innerHTML = chipsHTML.join("");
     containerEl.scrollLeft = 0;
     if (containerEl._chipClickHandler) {
@@ -12768,20 +12487,6 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
       chipEl.style.pointerEvents = "none";
       if (chipEl.classList.contains("owl-chip-speak")) {
         openChatBar(tab === "me" ? "me" : tab);
-        return;
-      }
-      if (chipEl.classList.contains("owl-chip-voice")) {
-        const on = toggleVoiceMode();
-        if (on) {
-          const tEl = document.getElementById("owl-tab-text-" + tab);
-          const txt = tEl ? tEl.textContent || "" : "";
-          if (txt) speak(txt);
-        } else {
-          stopSpeaking();
-        }
-        chipEl.textContent = on ? "\u{1F50A} \u0413\u043E\u043B\u043E\u0441 \u0443\u0432\u0456\u043C\u043A" : "\u{1F507} \u041E\u0437\u0432\u0443\u0447\u0438\u0442\u0438";
-        chipEl._fired = false;
-        chipEl.style.pointerEvents = "";
         return;
       }
       const text = chipEl.dataset.chipText || "";
@@ -12985,7 +12690,6 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
       init_tasks();
       init_unified_storage();
       init_board();
-      init_voice_output();
       init_notes();
       init_finance();
       init_finance_chat();
@@ -25692,7 +25396,9 @@ ${legacy}`;
 
   // src/ui/voice-input.js
   init_utils();
+  init_nav();
   var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  var _bars = {};
   var SUPPORTED = !!SR;
   var MIC_SVG = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.75)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>`;
   function createMicButton() {
@@ -25733,6 +25439,10 @@ ${legacy}`;
       }
       baseText = textarea.value ? textarea.value + (textarea.value.endsWith(" ") ? "" : " ") : "";
       button.classList.add("recording");
+      try {
+        if (window.nmVoiceIsOn && window.nmVoiceIsOn()) pendingSendClick = true;
+      } catch (e) {
+      }
       rec.onresult = (ev) => {
         let interim = "";
         let fin = "";
@@ -25766,7 +25476,8 @@ ${legacy}`;
           textarea.focus();
         } catch {
         }
-        if (pendingSendClick && sendBtn) {
+        const hasContent = (textarea.value || "").trim().length > 0;
+        if (pendingSendClick && sendBtn && hasContent) {
           pendingSendClick = false;
           try {
             window.__nm_inputMode = "voice";
@@ -25778,6 +25489,8 @@ ${legacy}`;
             } catch {
             }
           }, 60);
+        } else {
+          pendingSendClick = false;
         }
       };
       try {
@@ -25811,6 +25524,17 @@ ${legacy}`;
         }
       }, true);
     }
+    const tab = textarea.dataset.tab;
+    if (tab) _bars[tab] = { start: startRecording, isRec: () => !!rec };
+  }
+  if (typeof window !== "undefined") {
+    window.nmStartListening = () => {
+      try {
+        const b = _bars[currentTab];
+        if (b && !b.isRec()) b.start();
+      } catch (e) {
+      }
+    };
   }
   function initVoiceInput() {
     if (!SUPPORTED) return;
@@ -26102,8 +25826,353 @@ ${legacy}`;
     window.onChatImagePicked = onChatImagePicked;
   }
 
+  // src/ui/voice-output.js
+  init_utils();
+  init_nav();
+  init_usage_meter();
+  init_settings();
+  init_core();
+  function _chatOpen() {
+    try {
+      return !!document.querySelector(".ai-bar-chat-window.open");
+    } catch (e) {
+      return false;
+    }
+  }
+  var TTS_INSTRUCTIONS = {
+    uk: "Speak in natural, fluent Ukrainian with correct Ukrainian pronunciation and a warm, calm, friendly tone. Do not use an English or Russian accent.",
+    en: "Speak in natural, fluent English with a warm, calm, friendly tone."
+  };
+  var BROWSER_LOCALE = { uk: "uk-UA", en: "en-US" };
+  function _ttsInstruction() {
+    return TTS_INSTRUCTIONS[getLang()] || TTS_INSTRUCTIONS.uk;
+  }
+  function _browserLocale() {
+    return BROWSER_LOCALE[getLang()] || "uk-UA";
+  }
+  var VOICE_MODE_KEY = "nm_voice_mode";
+  var TTS_USAGE_KEY = "nm_tts_usage";
+  var MAX_CHARS_PER_UTTERANCE = 500;
+  var DAILY_CHAR_CAP = 12e3;
+  var DEFAULT_OPENAI_VOICE = "nova";
+  var DEFAULT_ELEVEN_VOICE = "21m00Tcm4TlvDq8ikWAM";
+  function _settings() {
+    return getSettings();
+  }
+  function _openaiVoice() {
+    return _settings().ttsVoice || DEFAULT_OPENAI_VOICE;
+  }
+  function _elevenKey() {
+    return (_settings().elevenKey || "").trim();
+  }
+  function _elevenVoice() {
+    return _settings().elevenVoiceId || DEFAULT_ELEVEN_VOICE;
+  }
+  var SILENT_WAV = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAIlYAAESsAAACABAAZGF0YQAAAAA=";
+  var _audio = null;
+  var _audioUnlocked = false;
+  var _capWarned = false;
+  var _lastSpoken = "";
+  var _lastSpokenTs = 0;
+  function isVoiceMode() {
+    return localStorage.getItem(VOICE_MODE_KEY) === "1";
+  }
+  function setVoiceMode(on) {
+    localStorage.setItem(VOICE_MODE_KEY, on ? "1" : "0");
+    try {
+      window.dispatchEvent(new CustomEvent("nm-voice-mode-changed", { detail: { on: !!on } }));
+    } catch (e) {
+    }
+  }
+  function toggleVoiceMode() {
+    unlockAudio();
+    const next = !isVoiceMode();
+    setVoiceMode(next);
+    if (!next) stopSpeaking();
+    return next;
+  }
+  function unlockAudio() {
+    if (_audioUnlocked) return;
+    _audioUnlocked = true;
+    try {
+      const s = new Audio(SILENT_WAV);
+      s.play().catch(() => {
+      });
+    } catch (e) {
+    }
+    try {
+      if (window.speechSynthesis) {
+        const u = new SpeechSynthesisUtterance(" ");
+        window.speechSynthesis.speak(u);
+        window.speechSynthesis.cancel();
+      }
+    } catch (e) {
+    }
+  }
+  function stopSpeaking() {
+    try {
+      if (_audio) {
+        _audio.pause();
+        _audio = null;
+      }
+    } catch (e) {
+    }
+    try {
+      if (window.speechSynthesis) window.speechSynthesis.cancel();
+    } catch (e) {
+    }
+  }
+  function _todayStr() {
+    return (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+  }
+  function _ttsCharsToday() {
+    try {
+      const u = JSON.parse(localStorage.getItem(TTS_USAGE_KEY) || "{}");
+      return u.date === _todayStr() ? u.chars || 0 : 0;
+    } catch (e) {
+      return 0;
+    }
+  }
+  function _addTtsChars(n) {
+    const chars = _ttsCharsToday() + n;
+    try {
+      localStorage.setItem(TTS_USAGE_KEY, JSON.stringify({ date: _todayStr(), chars }));
+    } catch (e) {
+    }
+  }
+  function _browserVoices() {
+    return new Promise((resolve) => {
+      if (!window.speechSynthesis) {
+        resolve([]);
+        return;
+      }
+      let v = window.speechSynthesis.getVoices();
+      if (v && v.length) {
+        resolve(v);
+        return;
+      }
+      let done = false;
+      window.speechSynthesis.onvoiceschanged = () => {
+        if (!done) {
+          done = true;
+          resolve(window.speechSynthesis.getVoices() || []);
+        }
+      };
+      setTimeout(() => {
+        if (!done) {
+          done = true;
+          resolve(window.speechSynthesis.getVoices() || []);
+        }
+      }, 600);
+    });
+  }
+  async function _speakBrowser(text) {
+    try {
+      if (!window.speechSynthesis) return;
+      const voices = await _browserVoices();
+      const u = new SpeechSynthesisUtterance(text);
+      const loc = _browserLocale();
+      u.lang = loc;
+      const pref = loc.slice(0, 2);
+      const v = voices.find((x) => x.lang && x.lang.toLowerCase().startsWith(pref));
+      if (v) u.voice = v;
+      u.onend = () => _afterSpeak();
+      window.speechSynthesis.cancel();
+      setTimeout(() => {
+        try {
+          window.speechSynthesis.speak(u);
+        } catch (e) {
+        }
+      }, 50);
+    } catch (e) {
+    }
+  }
+  async function _speakOpenAI(text, key) {
+    const res = await fetch("https://api.openai.com/v1/audio/speech", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}` },
+      body: JSON.stringify({
+        model: "gpt-4o-mini-tts",
+        voice: _openaiVoice(),
+        input: text,
+        instructions: _ttsInstruction(),
+        response_format: "mp3"
+      })
+    });
+    if (!res.ok) throw new Error("tts " + res.status);
+    const blob = await res.blob();
+    await _playBlob(blob);
+  }
+  async function _playBlob(blob) {
+    const url = URL.createObjectURL(blob);
+    stopSpeaking();
+    _audio = new Audio(url);
+    _audio.onended = () => {
+      try {
+        URL.revokeObjectURL(url);
+      } catch (e) {
+      }
+      _audio = null;
+      _afterSpeak();
+    };
+    await _audio.play();
+  }
+  function _afterSpeak() {
+    if (!isVoiceMode()) return;
+    if (typeof document !== "undefined" && document.hidden) return;
+    if (!_chatOpen()) return;
+    setTimeout(() => {
+      try {
+        if (window.nmStartListening) window.nmStartListening();
+      } catch (e) {
+      }
+    }, 400);
+  }
+  async function _speakElevenLabs(text, key) {
+    const voiceId = _elevenVoice();
+    const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
+      method: "POST",
+      headers: { "xi-api-key": key, "Content-Type": "application/json", "Accept": "audio/mpeg" },
+      // turbo_v2_5 — низька затримка (Роман: голос з'являвся з лагом) +
+      // багатомовна, добра українська. Якість трохи нижча за multilingual_v2,
+      // але відчутно швидше.
+      body: JSON.stringify({ text, model_id: "eleven_turbo_v2_5" })
+    });
+    if (!res.ok) throw new Error("11labs " + res.status);
+    await _playBlob(await res.blob());
+  }
+  async function speak(text) {
+    if (!text) return;
+    if (typeof document !== "undefined" && document.hidden) return;
+    let clean = String(text).replace(/[*_`#>•·✔️✓🦉📋💰⚠️📷🖼✨🔊🔇→↑↓]/g, "").replace(/\s+/g, " ").trim();
+    if (!clean) return;
+    if (clean === _lastSpoken && Date.now() - _lastSpokenTs < 5e3) return;
+    if (clean.length > MAX_CHARS_PER_UTTERANCE) clean = clean.slice(0, MAX_CHARS_PER_UTTERANCE) + "\u2026";
+    _lastSpoken = clean;
+    _lastSpokenTs = Date.now();
+    const elevenKey = _elevenKey();
+    if (elevenKey) {
+      try {
+        await _speakElevenLabs(clean, elevenKey);
+        return;
+      } catch (e) {
+      }
+    }
+    const key = localStorage.getItem("nm_gemini_key");
+    const overCap = _ttsCharsToday() + clean.length > DAILY_CHAR_CAP;
+    if (key && !overCap) {
+      _addTtsChars(clean.length);
+      try {
+        logTtsUsage(clean.length);
+      } catch (e) {
+      }
+      try {
+        await _speakOpenAI(clean, key);
+        return;
+      } catch (e) {
+      }
+    } else if (overCap && !_capWarned) {
+      _capWarned = true;
+      try {
+        showToast(t("tts.cap", "\u0414\u0435\u043D\u043D\u0438\u0439 \u043B\u0456\u043C\u0456\u0442 \u043F\u0440\u0438\u0440\u043E\u0434\u043D\u043E\u0433\u043E \u0433\u043E\u043B\u043E\u0441\u0443 \u0432\u0438\u0447\u0435\u0440\u043F\u0430\u043D\u043E \u2014 \u043F\u0435\u0440\u0435\u0445\u0456\u0434 \u043D\u0430 \u0431\u0435\u0437\u043A\u043E\u0448\u0442\u043E\u0432\u043D\u0438\u0439"));
+      } catch (e) {
+      }
+    }
+    _speakBrowser(clean);
+  }
+  function setTtsVoice(voice) {
+    if (voice) updateSettings({ ttsVoice: voice });
+  }
+  function saveElevenKey(val) {
+    updateSettings({ elevenKey: (val || "").trim() });
+  }
+  function getVoicePrefs() {
+    const s = _settings();
+    return { ttsVoice: s.ttsVoice || DEFAULT_OPENAI_VOICE, elevenKey: s.elevenKey || "" };
+  }
+  function testTtsVoice() {
+    unlockAudio();
+    _lastSpoken = "";
+    speak(t("tts.sample", "\u041F\u0440\u0438\u0432\u0456\u0442! \u042F \u0442\u0432\u0456\u0439 \u0430\u0433\u0435\u043D\u0442 NeverMind. \u041E\u0441\u044C \u0442\u0430\u043A \u0437\u0432\u0443\u0447\u0438\u0442\u044C \u043C\u0456\u0439 \u0433\u043E\u043B\u043E\u0441."));
+  }
+  function _voiceIcon(on) {
+    const stroke = on ? "#16a34a" : "currentColor";
+    return `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>`;
+  }
+  function _syncVoiceButtons() {
+    const on = isVoiceMode();
+    document.querySelectorAll(".voice-mode-btn").forEach((b) => {
+      b.innerHTML = _voiceIcon(on);
+      b.classList.toggle("voice-on", on);
+    });
+  }
+  function _injectVoiceButtons() {
+    document.querySelectorAll(".header-actions").forEach((ha) => {
+      if (ha.querySelector(".voice-mode-btn")) return;
+      const btn = document.createElement("button");
+      btn.className = "icon-btn voice-mode-btn";
+      btn.type = "button";
+      btn.title = t("voice.btn_title", "\u0413\u043E\u043B\u043E\u0441\u043E\u0432\u0438\u0439 \u0440\u0435\u0436\u0438\u043C (OWL \u0433\u043E\u0432\u043E\u0440\u0438\u0442\u044C \u0456 \u0441\u043B\u0443\u0445\u0430\u0454)");
+      btn.innerHTML = _voiceIcon(isVoiceMode());
+      btn.addEventListener("click", () => {
+        const on = toggleVoiceMode();
+        _syncVoiceButtons();
+        if (on) {
+          try {
+            openChatBar(currentTab);
+          } catch (e) {
+          }
+          try {
+            showToast(t("voice.on", "\u{1F399} \u0413\u043E\u043B\u043E\u0441\u043E\u0432\u0438\u0439 \u0440\u0435\u0436\u0438\u043C \u0443\u0432\u0456\u043C\u043A\u043D\u0435\u043D\u043E \u2014 \u0433\u043E\u0432\u043E\u0440\u0456\u0442\u044C"));
+          } catch (e) {
+          }
+          try {
+            if (window.nmStartListening) setTimeout(() => window.nmStartListening(), 300);
+          } catch (e) {
+          }
+        } else {
+          stopSpeaking();
+          try {
+            showToast(t("voice.off", "\u0413\u043E\u043B\u043E\u0441\u043E\u0432\u0438\u0439 \u0440\u0435\u0436\u0438\u043C \u0432\u0438\u043C\u043A\u043D\u0435\u043D\u043E"));
+          } catch (e) {
+          }
+        }
+      });
+      const settingsBtn = ha.querySelector('[data-action="open-settings"]');
+      if (settingsBtn) ha.insertBefore(btn, settingsBtn);
+      else ha.appendChild(btn);
+    });
+    _syncVoiceButtons();
+  }
+  if (typeof window !== "undefined") {
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", _injectVoiceButtons);
+    else setTimeout(_injectVoiceButtons, 0);
+    window.addEventListener("nm-voice-mode-changed", _syncVoiceButtons);
+    window.addEventListener("nm-agent-message", (e) => {
+      if (!isVoiceMode()) return;
+      const d = e && e.detail || {};
+      if (!d.text) return;
+      if (d.tab && d.tab !== currentTab) return;
+      const txt = String(d.text).trim();
+      if (txt.length < 20) return;
+      if (/^[✓✅\[(]/.test(txt)) return;
+      speak(txt);
+    });
+    document.addEventListener("touchend", unlockAudio, { once: true, passive: true });
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) stopSpeaking();
+    });
+    window.nmVoiceSpeak = speak;
+    window.nmVoiceToggle = toggleVoiceMode;
+    window.nmVoiceIsOn = isVoiceMode;
+    window.nmVoiceStop = stopSpeaking;
+    window.setTtsVoice = setTtsVoice;
+    window.saveElevenKey = saveElevenKey;
+    window.testTtsVoice = testTtsVoice;
+    window.getVoicePrefs = getVoicePrefs;
+  }
+
   // src/app.js
-  init_voice_output();
   init_ui_tools();
   init_core();
 
