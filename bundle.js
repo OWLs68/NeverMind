@@ -98,6 +98,26 @@
     } catch {
     }
   }
+  function logTtsUsage(chars) {
+    if (!chars || chars <= 0) return;
+    const entry = {
+      ts: Date.now(),
+      module: "tts",
+      model: "tts-1",
+      mode: "voice",
+      prompt_tokens: 0,
+      completion_tokens: 0,
+      chars,
+      cost_usd: Number((chars / 1e3 * TTS_USD_PER_1K_CHARS).toFixed(6))
+    };
+    const log = _rotate(_readLog());
+    log.push(entry);
+    _writeLog(log);
+    try {
+      window.dispatchEvent(new CustomEvent("nm-usage-updated", { detail: entry }));
+    } catch {
+    }
+  }
   function getUsageStats() {
     const log = _readLog();
     const now = /* @__PURE__ */ new Date();
@@ -236,7 +256,7 @@
       window.showToast(t("usage.toast_cleared", "\u{1F5D1}\uFE0F \u041B\u043E\u0433 \u0432\u0438\u0442\u0440\u0430\u0442 \u043E\u0447\u0438\u0449\u0435\u043D\u043E"), 2e3);
     }
   }
-  var STORAGE_KEY, RETENTION_DAYS, PRICING;
+  var STORAGE_KEY, RETENTION_DAYS, PRICING, TTS_USD_PER_1K_CHARS;
   var init_usage_meter = __esm({
     "src/core/usage-meter.js"() {
       init_utils();
@@ -246,6 +266,7 @@
         "gpt-4o-mini": { input: 0.15, output: 0.6 },
         "gpt-4o": { input: 2.5, output: 10 }
       };
+      TTS_USD_PER_1K_CHARS = 0.015;
       if (typeof window !== "undefined") {
         window.addEventListener("nm-usage-updated", () => {
           try {
@@ -2939,8 +2960,8 @@ ${lines.join("\n")}`;
       score += 5;
       reasons.push("event-passed");
     }
-    const speak = score >= SPEAK_THRESHOLD;
-    return { speak, score, reason: reasons.join(", "), followupType };
+    const speak2 = score >= SPEAK_THRESHOLD;
+    return { speak: speak2, score, reason: reasons.join(", "), followupType };
   }
   function _judgeBoard(trigger, targetTab) {
     let score = 0;
@@ -3111,8 +3132,8 @@ ${lines.join("\n")}`;
       score += 1;
       reasons.push("stale>10m");
     }
-    const speak = score >= SPEAK_THRESHOLD;
-    return { speak, score, reason: reasons.join(", ") };
+    const speak2 = score >= SPEAK_THRESHOLD;
+    return { speak: speak2, score, reason: reasons.join(", ") };
   }
   function getOwlChatHistory() {
     try {
@@ -3181,6 +3202,7 @@ ${lines.join("\n")}`;
     }
     const VALID = ["tasks", "notes", "habits", "finance", "projects", "evening", "me", "inbox", "health"];
     renderChips(el, boardMsg.chips, "inbox", {
+      showVoice: true,
       onChipClick: (text, action, target) => {
         if (action === "nav" && VALID.includes(target)) {
           switchTab(target);
@@ -10407,6 +10429,210 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
     }
   });
 
+  // src/ui/voice-output.js
+  function isVoiceMode() {
+    return localStorage.getItem(VOICE_MODE_KEY) === "1";
+  }
+  function setVoiceMode(on) {
+    localStorage.setItem(VOICE_MODE_KEY, on ? "1" : "0");
+    try {
+      window.dispatchEvent(new CustomEvent("nm-voice-mode-changed", { detail: { on: !!on } }));
+    } catch (e) {
+    }
+  }
+  function toggleVoiceMode() {
+    unlockAudio();
+    const next = !isVoiceMode();
+    setVoiceMode(next);
+    if (!next) stopSpeaking();
+    return next;
+  }
+  function unlockAudio() {
+    if (_audioUnlocked) return;
+    _audioUnlocked = true;
+    try {
+      const s = new Audio(SILENT_WAV);
+      s.play().catch(() => {
+      });
+    } catch (e) {
+    }
+    try {
+      if (window.speechSynthesis) {
+        const u = new SpeechSynthesisUtterance(" ");
+        window.speechSynthesis.speak(u);
+        window.speechSynthesis.cancel();
+      }
+    } catch (e) {
+    }
+  }
+  function stopSpeaking() {
+    try {
+      if (_audio) {
+        _audio.pause();
+        _audio = null;
+      }
+    } catch (e) {
+    }
+    try {
+      if (window.speechSynthesis) window.speechSynthesis.cancel();
+    } catch (e) {
+    }
+  }
+  function _todayStr() {
+    return (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+  }
+  function _ttsCharsToday() {
+    try {
+      const u = JSON.parse(localStorage.getItem(TTS_USAGE_KEY) || "{}");
+      return u.date === _todayStr() ? u.chars || 0 : 0;
+    } catch (e) {
+      return 0;
+    }
+  }
+  function _addTtsChars(n) {
+    const chars = _ttsCharsToday() + n;
+    try {
+      localStorage.setItem(TTS_USAGE_KEY, JSON.stringify({ date: _todayStr(), chars }));
+    } catch (e) {
+    }
+  }
+  function _browserVoices() {
+    return new Promise((resolve) => {
+      if (!window.speechSynthesis) {
+        resolve([]);
+        return;
+      }
+      let v = window.speechSynthesis.getVoices();
+      if (v && v.length) {
+        resolve(v);
+        return;
+      }
+      let done = false;
+      window.speechSynthesis.onvoiceschanged = () => {
+        if (!done) {
+          done = true;
+          resolve(window.speechSynthesis.getVoices() || []);
+        }
+      };
+      setTimeout(() => {
+        if (!done) {
+          done = true;
+          resolve(window.speechSynthesis.getVoices() || []);
+        }
+      }, 600);
+    });
+  }
+  async function _speakBrowser(text) {
+    try {
+      if (!window.speechSynthesis) return;
+      const voices = await _browserVoices();
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = "uk-UA";
+      const v = voices.find((x) => /uk|ukrain/i.test(x.lang));
+      if (v) u.voice = v;
+      window.speechSynthesis.cancel();
+      setTimeout(() => {
+        try {
+          window.speechSynthesis.speak(u);
+        } catch (e) {
+        }
+      }, 50);
+    } catch (e) {
+    }
+  }
+  async function _speakOpenAI(text, key) {
+    const res = await fetch("https://api.openai.com/v1/audio/speech", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}` },
+      body: JSON.stringify({ model: "tts-1", voice: OPENAI_VOICE, input: text, response_format: "mp3" })
+    });
+    if (!res.ok) throw new Error("tts " + res.status);
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    stopSpeaking();
+    _audio = new Audio(url);
+    _audio.onended = () => {
+      try {
+        URL.revokeObjectURL(url);
+      } catch (e) {
+      }
+      _audio = null;
+    };
+    await _audio.play();
+  }
+  async function speak(text) {
+    if (!text) return;
+    if (typeof document !== "undefined" && document.hidden) return;
+    let clean = String(text).replace(/[*_`#>•·✔️✓🦉📋💰⚠️📷🖼✨🔊🔇→↑↓]/g, "").replace(/\s+/g, " ").trim();
+    if (!clean) return;
+    if (clean === _lastSpoken && Date.now() - _lastSpokenTs < 5e3) return;
+    if (clean.length > MAX_CHARS_PER_UTTERANCE) clean = clean.slice(0, MAX_CHARS_PER_UTTERANCE) + "\u2026";
+    _lastSpoken = clean;
+    _lastSpokenTs = Date.now();
+    const key = localStorage.getItem("nm_gemini_key");
+    const overCap = _ttsCharsToday() + clean.length > DAILY_CHAR_CAP;
+    if (!key || overCap) {
+      if (overCap && !_capWarned) {
+        _capWarned = true;
+        try {
+          showToast(t("tts.cap", "\u0414\u0435\u043D\u043D\u0438\u0439 \u043B\u0456\u043C\u0456\u0442 \u043F\u0440\u0438\u0440\u043E\u0434\u043D\u043E\u0433\u043E \u0433\u043E\u043B\u043E\u0441\u0443 \u0432\u0438\u0447\u0435\u0440\u043F\u0430\u043D\u043E \u2014 \u043F\u0435\u0440\u0435\u0445\u0456\u0434 \u043D\u0430 \u0431\u0435\u0437\u043A\u043E\u0448\u0442\u043E\u0432\u043D\u0438\u0439"));
+        } catch (e) {
+        }
+      }
+      _speakBrowser(clean);
+      return;
+    }
+    _addTtsChars(clean.length);
+    try {
+      logTtsUsage(clean.length);
+    } catch (e) {
+    }
+    try {
+      await _speakOpenAI(clean, key);
+    } catch (e) {
+      _speakBrowser(clean);
+    }
+  }
+  var VOICE_MODE_KEY, TTS_USAGE_KEY, MAX_CHARS_PER_UTTERANCE, DAILY_CHAR_CAP, OPENAI_VOICE, SILENT_WAV, _audio, _audioUnlocked, _capWarned, _lastSpoken, _lastSpokenTs;
+  var init_voice_output = __esm({
+    "src/ui/voice-output.js"() {
+      init_utils();
+      init_nav();
+      init_usage_meter();
+      VOICE_MODE_KEY = "nm_voice_mode";
+      TTS_USAGE_KEY = "nm_tts_usage";
+      MAX_CHARS_PER_UTTERANCE = 500;
+      DAILY_CHAR_CAP = 12e3;
+      OPENAI_VOICE = "nova";
+      SILENT_WAV = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAIlYAAESsAAACABAAZGF0YQAAAAA=";
+      _audio = null;
+      _audioUnlocked = false;
+      _capWarned = false;
+      _lastSpoken = "";
+      _lastSpokenTs = 0;
+      if (typeof window !== "undefined") {
+        window.addEventListener("nm-agent-message", (e) => {
+          if (!isVoiceMode()) return;
+          const d = e && e.detail || {};
+          if (!d.text) return;
+          if (d.tab && d.tab !== currentTab) return;
+          const txt = String(d.text).trim();
+          if (txt.length < 20) return;
+          if (/^[✓✅\[(]/.test(txt)) return;
+          speak(txt);
+        });
+        document.addEventListener("touchend", unlockAudio, { once: true, passive: true });
+        document.addEventListener("visibilitychange", () => {
+          if (document.hidden) stopSpeaking();
+        });
+        window.nmVoiceSpeak = speak;
+        window.nmVoiceToggle = toggleVoiceMode;
+        window.nmVoiceIsOn = isVoiceMode;
+        window.nmVoiceStop = stopSpeaking;
+      }
+    }
+  });
+
   // src/ui/unread-badge.js
   function showUnreadBadge(tab, sendBtnId) {
     const current = _unreadCounts.get(tab) || 0;
@@ -12433,7 +12659,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
       return c.target !== currentTab;
     });
     const normChips = filterStaleChips(filteredByTab);
-    if (normChips.length === 0 && !options.showSpeak) {
+    if (normChips.length === 0 && !options.showSpeak && !options.showVoice) {
       containerEl.innerHTML = "";
       return;
     }
@@ -12452,6 +12678,9 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
     if (options.showSpeak) {
       chipsHTML.push(`<div class="owl-chip owl-chip-speak">\u041F\u043E\u0433\u043E\u0432\u043E\u0440\u0438\u0442\u0438</div>`);
     }
+    if (options.showSpeak || options.showVoice) {
+      chipsHTML.push(`<div class="owl-chip owl-chip-voice">${isVoiceMode() ? "\u{1F50A}" : "\u{1F507}"}</div>`);
+    }
     containerEl.innerHTML = chipsHTML.join("");
     containerEl.scrollLeft = 0;
     if (containerEl._chipClickHandler) {
@@ -12465,6 +12694,20 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
       chipEl.style.pointerEvents = "none";
       if (chipEl.classList.contains("owl-chip-speak")) {
         openChatBar(tab === "me" ? "me" : tab);
+        return;
+      }
+      if (chipEl.classList.contains("owl-chip-voice")) {
+        const on = toggleVoiceMode();
+        if (on) {
+          const tEl = document.getElementById("owl-tab-text-" + tab);
+          const txt = tEl ? tEl.textContent || "" : "";
+          if (txt) speak(txt);
+        } else {
+          stopSpeaking();
+        }
+        chipEl.textContent = on ? "\u{1F50A}" : "\u{1F507}";
+        chipEl._fired = false;
+        chipEl.style.pointerEvents = "";
         return;
       }
       const text = chipEl.dataset.chipText || "";
@@ -12668,6 +12911,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
       init_tasks();
       init_unified_storage();
       init_board();
+      init_voice_output();
       init_notes();
       init_finance();
       init_finance_chat();
@@ -16009,6 +16253,12 @@ ${JSON.stringify(contextData, null, 2)}` : "";
       if (msgs.length > CHAT_STORE_MAX) msgs.splice(0, msgs.length - CHAT_STORE_MAX);
       localStorage.setItem(key, JSON.stringify(msgs));
       if (role === "user") window.dispatchEvent(new CustomEvent("nm-data-changed", { detail: "chat" }));
+      if (role === "agent" && text) {
+        try {
+          window.dispatchEvent(new CustomEvent("nm-agent-message", { detail: { tab, text } }));
+        } catch (e) {
+        }
+      }
     } catch (e) {
       if (e && (e.name === "QuotaExceededError" || e.code === 22 || e.code === 1014)) {
         console.error("[saveChatMsg] QuotaExceededError \u0443", key, "\u2014 iPhone localStorage \u043F\u0435\u0440\u0435\u043F\u043E\u0432\u043D\u0435\u043D\u0438\u0439");
@@ -23579,6 +23829,7 @@ ${logLines}
           "nm_memory_ts",
           "nm_facts",
           "nm_facts_migrated",
+          "nm_voice_mode",
           "nm_active_tabs",
           "nm_onboarding_done",
           "nm_evening_mood",
@@ -23628,6 +23879,7 @@ ${logLines}
           "nm_owl_schedule_asked",
           "nm_owl_schedule_pending",
           "nm_error_log",
+          "nm_tts_usage",
           // PJi7l 08.05: unified board storage + chip payloads + seen-IDs
           // Без них після clearAllData табло Inbox/Notes показувало стару інформацію.
           "nm_owl_board_unified",
@@ -25370,6 +25622,10 @@ ${legacy}`;
     function startRecording() {
       if (rec) return;
       try {
+        window.nmVoiceStop && window.nmVoiceStop();
+      } catch (e) {
+      }
+      try {
         rec = new SR();
         rec.lang = "uk-UA";
         rec.continuous = false;
@@ -25755,6 +26011,7 @@ ${legacy}`;
   }
 
   // src/app.js
+  init_voice_output();
   init_ui_tools();
   init_core();
 
