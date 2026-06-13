@@ -11,7 +11,6 @@ import { sendTasksBarMessage } from '../tabs/habits.js';
 import { addTaskBarMsg } from '../tabs/tasks.js';
 import { downgradeBriefingPriority } from './unified-storage.js';
 import { renderTabBoard } from './board.js';
-import { isVoiceMode, toggleVoiceMode, speak, stopSpeaking } from '../ui/voice-output.js';
 import { sendNotesBarMessage, addNotesChatMsg } from '../tabs/notes.js';
 import { sendFinanceBarMessage } from '../tabs/finance.js';
 import { addFinanceChatMsg } from '../tabs/finance-chat.js';
@@ -349,10 +348,7 @@ export function renderChips(containerEl, chips, tab, options = {}) {
   if (options.showSpeak) {
     chipsHTML.push(`<div class="owl-chip owl-chip-speak">Поговорити</div>`);
   }
-  // 🔊 Голос OWL: тап = вмк/вимк озвучку + читає поточне табло (тап = дозвіл iOS).
-  if (options.showSpeak || options.showVoice) {
-    chipsHTML.push(`<div class="owl-chip owl-chip-voice">${isVoiceMode() ? '🔊 Голос увімк' : '🔇 Озвучити'}</div>`);
-  }
+  // Кнопка голосу переїхала у шапку (біля ⚙️) — owl-chip-voice прибрано (qpzj7k).
 
   containerEl.innerHTML = chipsHTML.join('');
   containerEl.scrollLeft = 0;
@@ -376,22 +372,6 @@ export function renderChips(containerEl, chips, tab, options = {}) {
       return;
     }
 
-    // Кнопка 🔊 голосу OWL: toggle voice mode + читає поточне табло вголос
-    // (тап = user-gesture → розблоковує iOS-аудіо). Не видаляємо чіп.
-    if (chipEl.classList.contains('owl-chip-voice')) {
-      const on = toggleVoiceMode();
-      if (on) {
-        const tEl = document.getElementById('owl-tab-text-' + tab);
-        const txt = tEl ? (tEl.textContent || '') : '';
-        if (txt) speak(txt);
-      } else {
-        stopSpeaking();
-      }
-      chipEl.textContent = on ? '🔊 Голос увімк' : '🔇 Озвучити';
-      chipEl._fired = false;
-      chipEl.style.pointerEvents = '';
-      return;
-    }
 
     const text = chipEl.dataset.chipText || '';
     const action = chipEl.dataset.chipAction;
