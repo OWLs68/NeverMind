@@ -283,6 +283,12 @@
       subtitle,
       brief: "",
       // що це за проект — суть/ціль/контекст (OWL розуміє ПЕРШ ніж радити)
+      targetAudience: "",
+      // для кого / хто користувач-клієнт (вимір 2 повноти)
+      currentStage: "",
+      // на якому етапі, що вже є (вимір 3 повноти)
+      deadline: null,
+      // дедлайн або горизонт (вимір 5 повноти)
       images: [],
       // про запас під Supabase Storage (зараз не зберігаємо самі фото — памʼять iOS)
       progress: 0,
@@ -3459,6 +3465,60 @@ ${lines.join("\n")}`;
     }
   });
 
+  // src/data/project-completeness.js
+  function _dimFilled(p) {
+    const brief = (p && p.brief ? String(p.brief) : "").trim();
+    const risks = (p && p.risks ? String(p.risks) : "").trim();
+    const tempoSet = !!(p && p.tempoNow && p.tempoNow !== "?");
+    return {
+      essence: brief.length >= 20,
+      // суть/результат → brief
+      audience: !!(p && p.targetAudience && String(p.targetAudience).trim()),
+      // для кого → нове поле
+      stage: !!(p && (p.currentStage && String(p.currentStage).trim())),
+      // етап → нове поле
+      resources: !!(p && p.budget && p.budget.total > 0),
+      // ресурси → плановий бюджет
+      deadline: !!(p && p.deadline) || tempoSet,
+      // строки → дедлайн або темп
+      risks: risks.length >= 5,
+      // ризики → існуюче поле
+      success: !!(p && Array.isArray(p.metrics) && p.metrics.length > 0)
+      // успіх → метрики
+    };
+  }
+  function assessProjectCompleteness(project) {
+    const has = _dimFilled(project || {});
+    const filled = _DIM_ORDER.filter((k) => has[k]);
+    const missing = _DIM_ORDER.filter((k) => !has[k]);
+    const pct = Math.round(filled.length / _DIM_ORDER.length * 100);
+    const canAdvise = has.essence && has.audience;
+    return { filled, missing, pct, canAdvise, nextAsk: missing[0] || null };
+  }
+  var PROJECT_DIM_LABELS, _DIM_ORDER, PROJECT_GAP_PROMPTS;
+  var init_project_completeness = __esm({
+    "src/data/project-completeness.js"() {
+      PROJECT_DIM_LABELS = {
+        essence: "\u0441\u0443\u0442\u044C",
+        audience: "\u0434\u043B\u044F \u043A\u043E\u0433\u043E",
+        stage: "\u0435\u0442\u0430\u043F",
+        resources: "\u0440\u0435\u0441\u0443\u0440\u0441\u0438",
+        deadline: "\u0441\u0442\u0440\u043E\u043A\u0438",
+        risks: "\u0440\u0438\u0437\u0438\u043A\u0438",
+        success: "\u0443\u0441\u043F\u0456\u0445"
+      };
+      _DIM_ORDER = ["essence", "audience", "stage", "resources", "deadline", "risks", "success"];
+      PROJECT_GAP_PROMPTS = {
+        audience: "\u0414\u043E\u043F\u043E\u043C\u043E\u0436\u0438 \u0432\u0438\u0437\u043D\u0430\u0447\u0438\u0442\u0438 \u0434\u043B\u044F \u043A\u043E\u0433\u043E \u0446\u0435\u0439 \u043F\u0440\u043E\u0435\u043A\u0442 \u2014 \u0445\u0442\u043E \u0433\u043E\u043B\u043E\u0432\u043D\u0438\u0439 \u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447 \u0447\u0438 \u043A\u043B\u0456\u0454\u043D\u0442",
+        stage: "\u0417\u0430\u0444\u0456\u043A\u0441\u0443\u0439\u043C\u043E \u043D\u0430 \u044F\u043A\u043E\u043C\u0443 \u0435\u0442\u0430\u043F\u0456 \u043F\u0440\u043E\u0435\u043A\u0442 \u0437\u0430\u0440\u0430\u0437 \u0456 \u0449\u043E \u0432\u0436\u0435 \u0437\u0440\u043E\u0431\u043B\u0435\u043D\u043E",
+        resources: "\u0414\u043E\u043F\u043E\u043C\u043E\u0436\u0438 \u043E\u0446\u0456\u043D\u0438\u0442\u0438 \u043F\u043E\u0442\u0440\u0456\u0431\u043D\u0456 \u0440\u0435\u0441\u0443\u0440\u0441\u0438 \u2014 \u0431\u044E\u0434\u0436\u0435\u0442, \u0447\u0430\u0441 \u043D\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C, \u043A\u043E\u043C\u0430\u043D\u0434\u0430",
+        deadline: "\u0414\u043E\u043F\u043E\u043C\u043E\u0436\u0438 \u043F\u043E\u0441\u0442\u0430\u0432\u0438\u0442\u0438 \u0440\u0435\u0430\u043B\u0456\u0441\u0442\u0438\u0447\u043D\u0438\u0439 \u0434\u0435\u0434\u043B\u0430\u0439\u043D \u0430\u0431\u043E \u0433\u043E\u0440\u0438\u0437\u043E\u043D\u0442",
+        risks: "\u042F\u043A\u0456 \u0433\u043E\u043B\u043E\u0432\u043D\u0456 \u0440\u0438\u0437\u0438\u043A\u0438 \u0456 \u0441\u043A\u043B\u0430\u0434\u043D\u043E\u0449\u0456 \u0446\u044C\u043E\u0433\u043E \u043F\u0440\u043E\u0435\u043A\u0442\u0443?",
+        success: "\u042F\u043A \u0432\u0438\u043C\u0456\u0440\u044F\u0442\u0438 \u0443\u0441\u043F\u0456\u0445 \u0446\u044C\u043E\u0433\u043E \u043F\u0440\u043E\u0435\u043A\u0442\u0443 \u2014 \u0437\u0430 \u044F\u043A\u0438\u043C \u043F\u043E\u043A\u0430\u0437\u043D\u0438\u043A\u043E\u043C?"
+      };
+    }
+  });
+
   // src/owl/clarify-guard.js
   function shouldClarify(text, toolCalls, tab) {
     if (!Array.isArray(toolCalls) || toolCalls.length === 0) return null;
@@ -3737,21 +3797,25 @@ ${lines.join("\n")}`;
     const noteCount = _countProjectNotes(p.name);
     const hasBrief = !!(p.brief && p.brief.trim());
     const briefPrompt = t("projects.brief.prompt", "\u0425\u043E\u0447\u0443 \u0440\u043E\u0437\u043F\u043E\u0432\u0456\u0441\u0442\u0438 \u043F\u0440\u043E \u0446\u0435\u0439 \u043F\u0440\u043E\u0435\u043A\u0442 \u2014 \u0449\u043E \u0446\u0435, \u044F\u043A\u0430 \u0433\u043E\u043B\u043E\u0432\u043D\u0430 \u0446\u0456\u043B\u044C \u0456 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442");
-    const emptyChips = isNewProject && hasBrief ? [
+    const completeness = assessProjectCompleteness(p);
+    const hasContext = hasBrief || steps.length > 0;
+    const gapChips = hasBrief ? completeness.missing.filter((k) => k !== "essence" && PROJECT_GAP_PROMPTS[k]).slice(0, 3).map((k) => ({ label: PROJECT_DIM_LABELS[k], prompt: PROJECT_GAP_PROMPTS[k] })) : [];
+    const emptyChips = isNewProject && completeness.canAdvise ? [
       { label: t("projects.empty.chip_plan", "\u{1F4CB} \u0421\u043A\u043B\u0430\u0434\u0438 \u043F\u043B\u0430\u043D"), prompt: t("projects.empty.prompt_plan", "\u0421\u043A\u043B\u0430\u0434\u0438 \u043F\u043B\u0430\u043D \u043F\u0435\u0440\u0448\u0438\u0445 \u043A\u0440\u043E\u043A\u0456\u0432 \u0434\u043B\u044F \u0446\u044C\u043E\u0433\u043E \u043F\u0440\u043E\u0435\u043A\u0442\u0443") },
       { label: t("projects.empty.chip_budget", "\u{1F4B0} \u0411\u044E\u0434\u0436\u0435\u0442 \u0456 \u0442\u0435\u043C\u043F"), prompt: t("projects.empty.prompt_budget", "\u0414\u043E\u043F\u043E\u043C\u043E\u0436\u0438 \u043E\u0446\u0456\u043D\u0438\u0442\u0438 \u0431\u044E\u0434\u0436\u0435\u0442 \u0456 \u0442\u0435\u043C\u043F \u0440\u043E\u0431\u043E\u0442\u0438 \u0434\u043B\u044F \u0446\u044C\u043E\u0433\u043E \u043F\u0440\u043E\u0435\u043A\u0442\u0443") },
       { label: t("projects.empty.chip_risks", "\u26A0\uFE0F \u042F\u043A\u0456 \u0440\u0438\u0437\u0438\u043A\u0438"), prompt: t("projects.empty.prompt_risks", "\u042F\u043A\u0456 \u0433\u043E\u043B\u043E\u0432\u043D\u0456 \u0440\u0438\u0437\u0438\u043A\u0438 \u0456 \u0441\u043A\u043B\u0430\u0434\u043D\u043E\u0449\u0456 \u0432 \u0446\u044C\u043E\u043C\u0443 \u043F\u0440\u043E\u0435\u043A\u0442\u0456?") }
     ] : [];
     const silenceDays = p.lastActivity ? Math.floor((Date.now() - p.lastActivity) / (1e3 * 60 * 60 * 24)) : null;
     let owlInsight = "";
-    if (hasBrief) {
+    if (hasContext) {
       if (steps.length > 0 && !nextStep) owlInsight = t("projects.insight.all_done", "\u0423\u0441\u0456 \u043A\u0440\u043E\u043A\u0438 \u0437\u0430\u043A\u0440\u0438\u0442\u043E \u{1F389} \u0414\u043E\u0434\u0430\u0439 \u043D\u043E\u0432\u0456 \u0430\u0431\u043E \u043F\u0440\u0438\u0437\u043D\u0430\u0447 \u043F\u0440\u043E\u0435\u043A\u0442 \u0437\u0430\u0432\u0435\u0440\u0448\u0435\u043D\u0438\u043C.");
       else if (silenceDays !== null && silenceDays >= 3 && nextStep) owlInsight = t("projects.insight.silence", "\u041D\u0435 \u0447\u0456\u043F\u0430\u0432 {n} \u0434\u043D. \u041F\u0440\u043E\u0434\u043E\u0432\u0436\u0438\u043C\u043E? \u041D\u0430\u0441\u0442\u0443\u043F\u043D\u0435 \u2014 {step}", { n: silenceDays, step: escapeHtml(nextStep.text) });
       else if (nextStep) owlInsight = t("projects.insight.next", "\u0420\u0443\u0445\u0430\u0454\u043C\u043E\u0441\u044C \u{1F44C} \u041D\u0430\u0441\u0442\u0443\u043F\u043D\u0435 \u2014 {step}", { step: escapeHtml(nextStep.text) });
+      else if (!hasBrief) owlInsight = "";
       else owlInsight = t("projects.insight.start", "\u0413\u043E\u0442\u043E\u0432\u043E \u0434\u043E \u0441\u0442\u0430\u0440\u0442\u0443. \u0414\u043E\u0434\u0430\u0439 \u043F\u0435\u0440\u0448\u0438\u0439 \u043A\u0440\u043E\u043A \u0430\u0431\u043E \u0441\u043F\u0438\u0442\u0430\u0439 \u043C\u0435\u043D\u0435 \u0437 \u0447\u043E\u0433\u043E \u043F\u043E\u0447\u0430\u0442\u0438.");
     }
     const linkStats = [];
-    if (hasBrief) {
+    if (hasContext) {
       linkStats.push({ icon: "\u{1F4CB}", label: t("projects.stat.steps", "\u041A\u0440\u043E\u043A\u0438 {d}/{t}", { d: doneSteps, t: steps.length }), action: "" });
       linkStats.push({ icon: "\u{1F4DD}", label: t("projects.stat.notes", "\u041D\u043E\u0442\u0430\u0442\u043A\u0438 {n}", { n: noteCount }), action: "notes" });
       if (projectSpent > 0) linkStats.push({ icon: "\u{1F4B0}", label: `${getCurrency()}${projectSpent}`, action: "" });
@@ -3808,7 +3872,10 @@ ${lines.join("\n")}`;
         <span style="font-size:13px">\u{1F4AC}</span>
         <div class="section-label" style="margin-bottom:0">${t("projects.brief.title", "\u041F\u0440\u043E \u043F\u0440\u043E\u0435\u043A\u0442")}</div>
       </div>
-      ${hasBrief ? `<div style="font-size:12.5px;font-weight:500;color:#1e1040;line-height:1.55">${escapeHtml(p.brief)}</div>` : `<div style="font-size:12px;font-weight:500;color:rgba(30,16,64,0.5);line-height:1.5;margin-bottom:10px">${t("projects.brief.empty", "OWL \u0449\u0435 \u043D\u0435 \u0437\u043D\u0430\u0454 \u0449\u043E \u0446\u0435 \u0437\u0430 \u043F\u0440\u043E\u0435\u043A\u0442. \u0420\u043E\u0437\u043A\u0430\u0436\u0438 \u0441\u0443\u0442\u044C, \u0446\u0456\u043B\u044C \u0456 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442 (\u043C\u043E\u0436\u043D\u0430 \u0444\u043E\u0442\u043E) \u2014 \u0431\u0435\u0437 \u0446\u044C\u043E\u0433\u043E \u043F\u043E\u0440\u0430\u0434\u0438 \u043D\u0435\u043C\u043E\u0436\u043B\u0438\u0432\u0456.")}</div>
+      ${hasBrief ? `<div style="font-size:12.5px;font-weight:500;color:#1e1040;line-height:1.55">${escapeHtml(p.brief)}</div>
+           ${gapChips.length ? `<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:9px">
+             ${gapChips.map((c) => `<button data-action="project-chat-prompt" data-prompt="${escapeHtml(c.prompt)}" style="font-size:10.5px;font-weight:600;color:rgba(30,16,64,0.55);background:rgba(255,255,255,0.4);border:1px dashed rgba(30,16,64,0.18);border-radius:8px;padding:4px 9px;cursor:pointer">${t("projects.brief.clarify", "\u0443\u0442\u043E\u0447\u043D\u0438\u0442\u0438")}: ${escapeHtml(c.label)}</button>`).join("")}
+           </div>` : ""}` : `<div style="font-size:12px;font-weight:500;color:rgba(30,16,64,0.5);line-height:1.5;margin-bottom:10px">${t("projects.brief.empty", "OWL \u0449\u0435 \u043D\u0435 \u0437\u043D\u0430\u0454 \u0449\u043E \u0446\u0435 \u0437\u0430 \u043F\u0440\u043E\u0435\u043A\u0442. \u0420\u043E\u0437\u043A\u0430\u0436\u0438 \u0441\u0443\u0442\u044C, \u0446\u0456\u043B\u044C \u0456 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442 (\u043C\u043E\u0436\u043D\u0430 \u0444\u043E\u0442\u043E) \u2014 \u0431\u0435\u0437 \u0446\u044C\u043E\u0433\u043E \u043F\u043E\u0440\u0430\u0434\u0438 \u043D\u0435\u043C\u043E\u0436\u043B\u0438\u0432\u0456.")}</div>
            <button data-action="project-chat-prompt" data-prompt="${escapeHtml(briefPrompt)}" style="font-size:12px;font-weight:700;color:white;background:#3d2e1e;border:none;border-radius:10px;padding:8px 14px;cursor:pointer">${t("projects.brief.cta", "\u{1F4AC} \u0420\u043E\u0437\u043A\u0430\u0436\u0438 \u043F\u0440\u043E \u043F\u0440\u043E\u0435\u043A\u0442 \u2192")}</button>`}
     </div>
 
@@ -3817,7 +3884,7 @@ ${lines.join("\n")}`;
       <div style="font-size:12.5px;font-weight:600;color:white;line-height:1.5">${owlInsight}</div>
     </div>` : ""}
 
-    ${hasBrief ? `<div style="display:flex;gap:6px;margin-bottom:10px">
+    ${hasContext ? `<div style="display:flex;gap:6px;margin-bottom:10px">
       <button data-action="project-chat-prompt" data-prompt="${escapeHtml(qaStepPrompt)}" style="flex:1;font-size:11px;font-weight:700;color:#3d2e1e;background:rgba(255,255,255,0.5);border:1px solid rgba(30,16,64,0.1);border-radius:10px;padding:8px 4px;cursor:pointer">\uFF0B ${t("projects.qa.step", "\u043A\u0440\u043E\u043A")}</button>
       <button data-action="open-notes-folder" data-folder="${escapeHtml(p.name)}" style="flex:1;font-size:11px;font-weight:700;color:#3d2e1e;background:rgba(255,255,255,0.5);border:1px solid rgba(30,16,64,0.1);border-radius:10px;padding:8px 4px;cursor:pointer">\uFF0B ${t("projects.qa.note", "\u043D\u043E\u0442\u0430\u0442\u043A\u0430")}</button>
       <button data-action="call" data-fn="openProjectImagePicker" style="flex:1;font-size:11px;font-weight:700;color:#3d2e1e;background:rgba(255,255,255,0.5);border:1px solid rgba(30,16,64,0.1);border-radius:10px;padding:8px 4px;cursor:pointer">\u{1F5BC} ${t("projects.qa.photo", "\u0444\u043E\u0442\u043E")}</button>
@@ -3830,7 +3897,7 @@ ${lines.join("\n")}`;
     ).join("")}
     </div>` : ""}
 
-    ${isNewProject && hasBrief ? `<div class="card-glass" style="text-align:center">
+    ${isNewProject && completeness.canAdvise ? `<div class="card-glass" style="text-align:center">
       <div style="font-size:22px;margin-bottom:6px">\u2728</div>
       <div style="font-size:13px;font-weight:500;color:rgba(30,16,64,0.55);line-height:1.5;margin-bottom:10px">${t("projects.empty.hint2", "OWL \u0437\u0440\u043E\u0437\u0443\u043C\u0456\u0432 \u043F\u0440\u043E\u0435\u043A\u0442. \u0429\u043E \u0434\u0430\u043B\u0456?")}</div>
       <div style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center">
@@ -4084,7 +4151,8 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
       const next = steps.find((s) => !s.done);
       const silenceDays = p.lastActivity ? Math.floor((now - p.lastActivity) / 864e5) : null;
       const silence = silenceDays !== null && silenceDays >= 3 ? ` \u26A0\uFE0F ${silenceDays} \u0434\u043D. \u0442\u0438\u0448\u0456` : "";
-      parts.push(`- [ID:${p.id}] "${p.name}" ${pct}%${next ? " \u2192 \u043D\u0430\u0441\u0442\u0443\u043F\u043D\u0438\u0439 \u043A\u0440\u043E\u043A: " + next.text : ""}${silence}`);
+      const briefShort = p.brief ? ` \u2014 ${String(p.brief).slice(0, 120)}` : "";
+      parts.push(`- [ID:${p.id}] "${p.name}" ${pct}%${briefShort}${next ? " \u2192 \u043D\u0430\u0441\u0442\u0443\u043F\u043D\u0438\u0439 \u043A\u0440\u043E\u043A: " + next.text : ""}${silence}`);
     });
     return parts.join("\n");
   }
@@ -4163,7 +4231,8 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
     const activeProject = activeProjectId ? projects.find((p) => p.id === activeProjectId) : null;
     const projectsContext = getProjectsContext();
     const activeSteps = activeProject ? (activeProject.steps || []).map((s) => `[ID:${s.id}] ${s.done ? "\u2713" : "\u25CB"} ${s.text}`).join("\n") : "";
-    const systemPrompt = getProjectsChatSystem({ activeProject, projectsContext, activeSteps }) + (getAIContext() ? "\n\n" + getAIContext() : "");
+    const completeness = activeProject ? assessProjectCompleteness(activeProject) : null;
+    const systemPrompt = getProjectsChatSystem({ activeProject, projectsContext, activeSteps, completeness }) + (getAIContext() ? "\n\n" + getAIContext() : "");
     try {
       const msg = await callAIWithTools(systemPrompt, projectsBarHistory.slice(-10), INBOX_TOOLS, "projects-bar");
       if (msg && Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
@@ -4311,6 +4380,7 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
     "src/tabs/projects.js"() {
       init_nav();
       init_entity_factories();
+      init_project_completeness();
       init_utils();
       init_usage_meter();
       init_core();
@@ -8489,6 +8559,9 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
       }
       case "set_project_brief": {
         if (args.brief) p.brief = String(args.brief);
+        if (args.target_audience) p.targetAudience = String(args.target_audience);
+        if (args.current_stage) p.currentStage = String(args.current_stage);
+        if (args.deadline) p.deadline = String(args.deadline);
         p.lastActivity = Date.now();
         break;
       }
@@ -13049,9 +13122,11 @@ ID \u0437\u0430\u0434\u0430\u0447, \u0437\u0432\u0438\u0447\u043E\u043A, \u043F\
 
 \u0413\u041E\u041B\u041E\u0412\u041D\u0415 \u041F\u0420\u0410\u0412\u0418\u041B\u041E \u0420\u0415\u0414\u0410\u0413\u0423\u0412\u0410\u041D\u041D\u042F: \u042F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 "\u043F\u0435\u0440\u0435\u043D\u0435\u0441\u0438", "\u0437\u043C\u0456\u043D\u0438", "\u043F\u043E\u043C\u0456\u043D\u044F\u0439", "\u043E\u043D\u043E\u0432\u0438\u0442\u0438" \u2014 \u0446\u0435 \u0417\u0410\u0412\u0416\u0414\u0418 edit \u0456\u0441\u043D\u0443\u044E\u0447\u043E\u0433\u043E \u0437\u0430\u043F\u0438\u0441\u0443 (edit_event, edit_task, edit_note). \u041D\u0406\u041A\u041E\u041B\u0418 \u043D\u0435 \u0441\u0442\u0432\u043E\u0440\u044E\u0439 \u043D\u043E\u0432\u0438\u0439 \u0437\u0430\u043F\u0438\u0441 \u0437\u0430\u043C\u0456\u0441\u0442\u044C \u0440\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u043D\u043D\u044F. "\u041C\u0430\u043C\u0430 \u043F\u0440\u0438\u0457\u0434\u0435 24\u0433\u043E \u0430 \u043D\u0435 20\u0433\u043E" \u2192 edit_event (\u0437\u043C\u0456\u043D\u0438\u0442\u0438 \u0434\u0430\u0442\u0443), \u041D\u0415 create_event. \u0428\u0443\u043A\u0430\u0439 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u043D\u0438\u0439 \u0437\u0430\u043F\u0438\u0441 \u043F\u043E \u043D\u0430\u0437\u0432\u0456 \u0432 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0456.`;
   }
-  function getProjectsChatSystem({ activeProject, projectsContext, activeSteps }) {
+  function getProjectsChatSystem({ activeProject, projectsContext, activeSteps, completeness }) {
+    const compBlock = completeness ? `
+\u041F\u041E\u0412\u041D\u041E\u0422\u0410 \u041A\u041E\u041D\u0422\u0415\u041A\u0421\u0422\u0423 (\u043F\u043E\u0440\u0430\u0445\u043E\u0432\u0430\u043D\u0430 \u043A\u043E\u0434\u043E\u043C \u2014 \u0434\u043E\u0432\u0456\u0440\u044F\u0439 \u0457\u0439): \u0437\u0430\u043F\u043E\u0432\u043D\u0435\u043D\u043E [${completeness.filled.join(", ") || "\u043D\u0456\u0447\u043E\u0433\u043E"}]; \u0431\u0440\u0430\u043A\u0443\u0454 [${completeness.missing.join(", ") || "\u043D\u0456\u0447\u043E\u0433\u043E"}]. ${completeness.canAdvise ? "\u042F\u0434\u0440\u0430 (\u0441\u0443\u0442\u044C+\u0434\u043B\u044F \u043A\u043E\u0433\u043E) \u0434\u043E\u0441\u0442\u0430\u0442\u043D\u044C\u043E \u2014 \u043C\u043E\u0436\u0435\u0448 \u0440\u0430\u0434\u0438\u0442\u0438, \u0430\u043B\u0435 \u0434\u0430\u043B\u0456 \u0443\u0442\u043E\u0447\u043D\u044E\u0439 \u0449\u043E \u0431\u0440\u0430\u043A\u0443\u0454." : "\u{1F6AB} \u042F\u0414\u0420\u0410 \u0429\u0415 \u041D\u0415\u041C\u0410\u0404 \u2014 \u0441\u043F\u0435\u0440\u0448\u0443 \u0437\u0430\u043F\u0438\u0442\u0430\u0439 \u043F\u0440\u043E: " + (completeness.nextAsk || "\u0441\u0443\u0442\u044C") + ". \u041D\u0415 \u0434\u0430\u0432\u0430\u0439 \u043F\u043B\u0430\u043D\u0456\u0432/\u043F\u043E\u0440\u0430\u0434 \u0434\u043E\u043A\u0438 \u043D\u0435 \u0437\u043D\u0430\u0454\u0448 \u0441\u0443\u0442\u044C \u0456 \u0434\u043B\u044F \u043A\u043E\u0433\u043E."}` : "";
     const contextBlock = activeProject ? `\u0410\u043A\u0442\u0438\u0432\u043D\u0438\u0439 \u043F\u0440\u043E\u0435\u043A\u0442: "${activeProject.name}" (${activeProject.progress || 0}%). ID=${activeProject.id}. \u041F\u0456\u0434\u0437\u0430\u0433\u043E\u043B\u043E\u0432\u043E\u043A: ${activeProject.subtitle || ""}.
-\u0429\u043E \u0432\u0456\u0434\u043E\u043C\u043E \u043F\u0440\u043E \u043F\u0440\u043E\u0435\u043A\u0442 (\u043E\u0446\u0456\u043D\u0438 \u0447\u0438 \u0446\u044C\u043E\u0433\u043E \u0434\u043E\u0441\u0438\u0442\u044C \u0437\u0430 7 \u0432\u0438\u043C\u0456\u0440\u0430\u043C\u0438 \u043D\u0438\u0436\u0447\u0435): ${activeProject.brief ? activeProject.brief : "\u041D\u0406\u0427\u041E\u0413\u041E \u2014 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442 \u043F\u043E\u0440\u043E\u0436\u043D\u0456\u0439."}
+\u0429\u043E \u0432\u0456\u0434\u043E\u043C\u043E \u043F\u0440\u043E \u043F\u0440\u043E\u0435\u043A\u0442: ${activeProject.brief ? activeProject.brief : "\u041D\u0406\u0427\u041E\u0413\u041E \u2014 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442 \u043F\u043E\u0440\u043E\u0436\u043D\u0456\u0439."}${activeProject.targetAudience ? ` \xB7 \u0414\u043B\u044F \u043A\u043E\u0433\u043E: ${activeProject.targetAudience}` : ""}${activeProject.currentStage ? ` \xB7 \u0415\u0442\u0430\u043F: ${activeProject.currentStage}` : ""}${activeProject.deadline ? ` \xB7 \u0421\u0442\u0440\u043E\u043A\u0438: ${activeProject.deadline}` : ""}${compBlock}
 \u041A\u0440\u043E\u043A\u0438:
 ${activeSteps || "\u043D\u0435\u043C\u0430\u0454 \u043A\u0440\u043E\u043A\u0456\u0432"}` : projectsContext;
     return `${getOWLPersonality()} \u0422\u0438 \u2014 \u0434\u043E\u0441\u0432\u0456\u0434\u0447\u0435\u043D\u0438\u0439 \u043F\u0440\u043E\u0435\u043A\u0442\u043D\u0438\u0439 \u0441\u0442\u0440\u0430\u0442\u0435\u0433 \u0456 \u043C\u0435\u043D\u0442\u043E\u0440. \u0422\u0432\u043E\u044F \u0446\u0456\u043D\u043D\u0456\u0441\u0442\u044C \u043D\u0435 \u0443 \u0448\u0432\u0438\u0434\u043A\u0438\u0445 \u043F\u043E\u0440\u0430\u0434\u0430\u0445, \u0430 \u0432 \u041F\u0420\u0410\u0412\u0418\u041B\u042C\u041D\u0418\u0425 \u043F\u0438\u0442\u0430\u043D\u043D\u044F\u0445 \u0456 \u0447\u0435\u0441\u043D\u0456\u0439 \u043E\u0446\u0456\u043D\u0446\u0456 \u0447\u0438 \u0434\u043E\u0441\u0442\u0430\u0442\u043D\u044C\u043E \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443. \u041A\u0440\u0430\u0449\u0435 \u043F\u043E\u0441\u0442\u0430\u0432\u0438\u0442\u0438 \u0442\u043E\u0447\u043D\u0435 \u043F\u0438\u0442\u0430\u043D\u043D\u044F, \u043D\u0456\u0436 \u0434\u0430\u0442\u0438 \u043F\u043E\u0440\u0430\u0434\u0443 \u043D\u0430\u043E\u0441\u043B\u0456\u043F.
@@ -13507,7 +13582,7 @@ ${CHIP_PROMPT_RULES}`;
         { type: "function", function: { name: "update_project_tempo", description: "\u041E\u043D\u043E\u0432\u0438\u0442\u0438 \u0442\u0435\u043C\u043F \u043F\u0440\u043E\u0435\u043A\u0442\u0443 (\u043F\u043E\u0442\u043E\u0447\u043D\u0438\u0439 / \u043F\u0440\u0438\u0441\u043A\u043E\u0440\u0435\u043D\u0438\u0439 / \u0456\u0434\u0435\u0430\u043B\u044C\u043D\u0438\u0439).", parameters: { type: "object", properties: { _reasoning_log: { type: "string", description: "CoT \u2014 1-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u041E\u0411\u041E\u0412\u02BC\u042F\u0417\u041A\u041E\u0412\u041E (\u0434\u0438\u0432. REASONING_LOG_RULE)." }, project_id: { type: "string" }, tempoNow: { type: "string" }, tempoMore: { type: "string" }, tempoIdeal: { type: "string" }, comment: { type: "string" } }, required: ["_reasoning_log", "project_id"], additionalProperties: false } } },
         { type: "function", function: { name: "update_project_risks", description: "\u0417\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u0440\u0438\u0437\u0438\u043A\u0438 \u0430\u0431\u043E \u0437\u0430\u043D\u0435\u043F\u043E\u043A\u043E\u0454\u043D\u043D\u044F \u043F\u0440\u043E\u0435\u043A\u0442\u0443.", parameters: { type: "object", properties: { _reasoning_log: { type: "string", description: "CoT \u2014 1-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u041E\u0411\u041E\u0412\u02BC\u042F\u0417\u041A\u041E\u0412\u041E (\u0434\u0438\u0432. REASONING_LOG_RULE)." }, project_id: { type: "string" }, risks: { type: "string" }, comment: { type: "string" } }, required: ["_reasoning_log", "project_id", "risks"], additionalProperties: false } } },
         { type: "function", function: { name: "set_project_budget", description: "\u0412\u0441\u0442\u0430\u043D\u043E\u0432\u0438\u0442\u0438 \u043F\u043B\u0430\u043D\u043E\u0432\u0438\u0439 \u0431\u044E\u0434\u0436\u0435\u0442 \u043F\u0440\u043E\u0435\u043A\u0442\u0443 (\u0437\u0430\u0433\u0430\u043B\u044C\u043D\u0430 \u0441\u0443\u043C\u0430) \u0442\u0430/\u0430\u0431\u043E \u0434\u043E\u0434\u0430\u0442\u0438 \u043F\u043B\u0430\u043D\u043E\u0432\u0443 \u0441\u0442\u0430\u0442\u0442\u044E \u0432\u0438\u0442\u0440\u0430\u0442. \u041D\u0415 \u0434\u043B\u044F \u0437\u0430\u043F\u0438\u0441\u0443 \u0444\u0430\u043A\u0442\u0438\u0447\u043D\u0438\u0445 \u0432\u0438\u0442\u0440\u0430\u0442 \u2014 \u0444\u0430\u043A\u0442\u0438\u0447\u043D\u0456 \u0432\u0438\u0442\u0440\u0430\u0442\u0438 \u0440\u0430\u0445\u0443\u044E\u0442\u044C\u0441\u044F \u0437 \u0432\u043A\u043B\u0430\u0434\u043A\u0438 \u0424\u0456\u043D\u0430\u043D\u0441\u0438 \u0437\u0430 \u0442\u0435\u0433\u043E\u043C \u043F\u0440\u043E\u0435\u043A\u0442\u0443.", parameters: { type: "object", properties: { _reasoning_log: { type: "string", description: "CoT \u2014 1-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u041E\u0411\u041E\u0412\u02BC\u042F\u0417\u041A\u041E\u0412\u041E (\u0434\u0438\u0432. REASONING_LOG_RULE)." }, project_id: { type: "string" }, total: { type: "number", description: "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0438\u0439 \u043F\u043B\u0430\u043D\u043E\u0432\u0438\u0439 \u0431\u044E\u0434\u0436\u0435\u0442" }, item_name: { type: "string", description: "\u041D\u0430\u0437\u0432\u0430 \u043F\u043B\u0430\u043D\u043E\u0432\u043E\u0457 \u0441\u0442\u0430\u0442\u0442\u0456 \u0432\u0438\u0442\u0440\u0430\u0442" }, item_amount: { type: "number", description: "\u0421\u0443\u043C\u0430 \u0441\u0442\u0430\u0442\u0442\u0456" }, comment: { type: "string" } }, required: ["_reasoning_log", "project_id"], additionalProperties: false } } },
-        { type: "function", function: { name: "set_project_brief", description: "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438/\u043E\u043D\u043E\u0432\u0438\u0442\u0438 \u0420\u041E\u0417\u0423\u041C\u0406\u041D\u041D\u042F \u043F\u0440\u043E\u0435\u043A\u0442\u0443. \u0412\u0438\u043A\u043B\u0438\u043A\u0430\u0439 \u043A\u043E\u043B\u0438 \u0434\u0456\u0437\u043D\u0430\u0432\u0441\u044F \u0449\u043E\u0441\u044C \u0441\u0443\u0442\u0442\u0454\u0432\u0435 \u043F\u0440\u043E \u043F\u0440\u043E\u0435\u043A\u0442 (\u0442\u0435\u043A\u0441\u0442\u043E\u043C \u0430\u0431\u043E \u043F\u043E \u0444\u043E\u0442\u043E). \u041F\u0435\u0440\u0435\u0437\u0430\u043F\u0438\u0441\u0443\u0454 brief \u043F\u043E\u0432\u043D\u0438\u043C \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u043C \u043E\u043F\u0438\u0441\u043E\u043C. \u0423 brief \u0444\u0456\u043A\u0441\u0443\u0439 \u0412\u0406\u0414\u041E\u041C\u0415 \u0456 \u044F\u0432\u043D\u043E \u0437\u0430\u0437\u043D\u0430\u0447 \u0449\u043E \u0449\u0435 \u041D\u0415\u0412\u0406\u0414\u041E\u041C\u041E \u2014 \u0446\u0435 \u0447\u0435\u0441\u043D\u0430 \u043A\u0430\u0440\u0442\u0438\u043D\u0430 \u043F\u043E\u0432\u043D\u043E\u0442\u0438 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443, \u043D\u0435 \u043E\u0441\u0442\u0430\u0442\u043E\u0447\u043D\u0438\u0439 \u0432\u0435\u0440\u0434\u0438\u043A\u0442.", parameters: { type: "object", properties: { _reasoning_log: { type: "string", description: "CoT \u2014 1-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u041E\u0411\u041E\u0412\u02BC\u042F\u0417\u041A\u041E\u0412\u041E (\u0434\u0438\u0432. REASONING_LOG_RULE)." }, project_id: { type: "string" }, brief: { type: "string", description: "2-6 \u0440\u0435\u0447\u0435\u043D\u044C: \u0441\u0443\u0442\u044C, \u0446\u0456\u043B\u044C \u0456 \u0434\u043B\u044F \u043A\u043E\u0433\u043E, \u0435\u0442\u0430\u043F, \u0440\u0435\u0441\u0443\u0440\u0441\u0438/\u0441\u0442\u0440\u043E\u043A\u0438 \u044F\u043A\u0449\u043E \u0432\u0456\u0434\u043E\u043C\u0456. \u0429\u043E \u0449\u0435 \u043D\u0435 \u0432\u0438\u0437\u043D\u0430\u0447\u0435\u043D\u043E \u2014 \u043F\u043E\u0437\u043D\u0430\u0447 \u043F\u0440\u044F\u043C\u043E (\xAB\u0431\u044E\u0434\u0436\u0435\u0442 \u0456 \u0434\u0435\u0434\u043B\u0430\u0439\u043D \u043F\u043E\u043A\u0438 \u043D\u0435\u0432\u0456\u0434\u043E\u043C\u0456\xBB)." }, comment: { type: "string" } }, required: ["_reasoning_log", "project_id", "brief"], additionalProperties: false } } },
+        { type: "function", function: { name: "set_project_brief", description: "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438/\u043E\u043D\u043E\u0432\u0438\u0442\u0438 \u0420\u041E\u0417\u0423\u041C\u0406\u041D\u041D\u042F \u043F\u0440\u043E\u0435\u043A\u0442\u0443. \u0412\u0438\u043A\u043B\u0438\u043A\u0430\u0439 \u043A\u043E\u043B\u0438 \u0434\u0456\u0437\u043D\u0430\u0432\u0441\u044F \u0449\u043E\u0441\u044C \u0441\u0443\u0442\u0442\u0454\u0432\u0435 (\u0442\u0435\u043A\u0441\u0442\u043E\u043C \u0430\u0431\u043E \u043F\u043E \u0444\u043E\u0442\u043E). brief \u2014 \u0436\u0438\u0432\u0438\u0439 \u0430\u0431\u0437\u0430\u0446 \u0442\u043E\u0433\u043E \u0449\u043E \u0437\u0440\u043E\u0437\u0443\u043C\u0456\u0432. \u041E\u043A\u0440\u0435\u043C\u0456 \u043F\u043E\u043B\u044F (target_audience/current_stage/deadline) \u0437\u0430\u043F\u043E\u0432\u043D\u044E\u0439 \u043A\u043E\u043B\u0438 \u044E\u0437\u0435\u0440 \u0457\u0445 \u043D\u0430\u0437\u0432\u0430\u0432 \u2014 \u0432\u043E\u043D\u0438 \u0436\u0438\u0432\u043B\u044F\u0442\u044C \u0434\u0435\u0442\u0435\u0440\u043C\u0456\u043D\u043E\u0432\u0430\u043D\u0438\u0439 \u043F\u0456\u0434\u0440\u0430\u0445\u0443\u043D\u043E\u043A \u043F\u043E\u0432\u043D\u043E\u0442\u0438. brief \u043F\u0435\u0440\u0435\u0437\u0430\u043F\u0438\u0441\u0443\u0439 \u041F\u041E\u0412\u041D\u0406\u0421\u0422\u042E (\u0432\u043A\u043B\u044E\u0447\u0430\u0439 \u0443\u0441\u0435 \u0432\u0456\u0434\u043E\u043C\u0435, \u0449\u043E\u0431 \u043D\u0435 \u0437\u0430\u0433\u0443\u0431\u0438\u0442\u0438 \u043F\u043E\u043F\u0435\u0440\u0435\u0434\u043D\u0454).", parameters: { type: "object", properties: { _reasoning_log: { type: "string", description: "CoT \u2014 1-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u041E\u0411\u041E\u0412\u02BC\u042F\u0417\u041A\u041E\u0412\u041E (\u0434\u0438\u0432. REASONING_LOG_RULE)." }, project_id: { type: "string" }, brief: { type: "string", description: "\u0416\u0438\u0432\u0438\u0439 \u0430\u0431\u0437\u0430\u0446 2-6 \u0440\u0435\u0447\u0435\u043D\u044C: \u0441\u0443\u0442\u044C \u043F\u0440\u043E\u0435\u043A\u0442\u0443 \u0456 \u0433\u043E\u043B\u043E\u0432\u043D\u0430 \u0446\u0456\u043B\u044C \u0441\u0432\u043E\u0457\u043C\u0438 \u0441\u043B\u043E\u0432\u0430\u043C\u0438. \u0412\u043A\u043B\u044E\u0447\u0430\u0439 \u0443\u0441\u0435 \u0432\u0456\u0434\u043E\u043C\u0435." }, target_audience: { type: "string", description: "\u0414\u043B\u044F \u043A\u043E\u0433\u043E \u043F\u0440\u043E\u0435\u043A\u0442 / \u0445\u0442\u043E \u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447-\u043A\u043B\u0456\u0454\u043D\u0442. \u041B\u0438\u0448\u0435 \u044F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u043D\u0430\u0437\u0432\u0430\u0432." }, current_stage: { type: "string", description: "\u041D\u0430 \u044F\u043A\u043E\u043C\u0443 \u0435\u0442\u0430\u043F\u0456, \u0449\u043E \u0432\u0436\u0435 \u0454. \u041B\u0438\u0448\u0435 \u044F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u043D\u0430\u0437\u0432\u0430\u0432." }, deadline: { type: "string", description: "\u0414\u0435\u0434\u043B\u0430\u0439\u043D \u0430\u0431\u043E \u0433\u043E\u0440\u0438\u0437\u043E\u043D\u0442 ('3 \u043C\u0456\u0441\u044F\u0446\u0456', '\u0434\u043E \u0441\u0435\u0440\u043F\u043D\u044F'). \u041B\u0438\u0448\u0435 \u044F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u043D\u0430\u0437\u0432\u0430\u0432." }, comment: { type: "string" } }, required: ["_reasoning_log", "project_id", "brief"], additionalProperties: false } } },
         // --- ВИКОНАННЯ ---
         { type: "function", function: { name: "complete_habit", description: "\u0412\u0456\u0434\u043C\u0456\u0442\u0438\u0442\u0438 \u0437\u0432\u0438\u0447\u043A\u0443(\u0438) \u044F\u043A \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u0456 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 \u0449\u043E \u0437\u0440\u043E\u0431\u0438\u0432 \u0449\u043E\u0441\u044C \u0437\u0456 \u0441\u043F\u0438\u0441\u043A\u0443 \u0437\u0432\u0438\u0447\u043E\u043A.", parameters: { type: "object", properties: { _reasoning_log: { type: "string", description: "CoT \u2014 1-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u041E\u0411\u041E\u0412\u02BC\u042F\u0417\u041A\u041E\u0412\u041E (\u0434\u0438\u0432. REASONING_LOG_RULE)." }, habit_ids: { type: "array", items: { type: "string" }, description: "UUID \u0437\u0432\u0438\u0447\u043E\u043A \u0437\u0456 \u0441\u043F\u0438\u0441\u043A\u0443" }, comment: { type: "string", description: "\u041A\u043E\u0440\u043E\u0442\u043A\u0435 \u043F\u0456\u0434\u0442\u0432\u0435\u0440\u0434\u0436\u0435\u043D\u043D\u044F" } }, required: ["_reasoning_log", "habit_ids", "comment"], additionalProperties: false } } },
         { type: "function", function: { name: "complete_task", description: "\u0417\u0430\u043A\u0440\u0438\u0442\u0438 \u0437\u0430\u0434\u0430\u0447\u0443(\u0456) \u044F\u043A \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u0456. \u042E\u0437\u0435\u0440 \u043A\u0430\u0436\u0435 \u0449\u043E \u0437\u0440\u043E\u0431\u0438\u0432 \u0449\u043E\u0441\u044C \u0437 \u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0445 \u0437\u0430\u0434\u0430\u0447. \u041E\u0411\u041E\u0412\u02BC\u042F\u0417\u041A\u041E\u0412\u041E task_ids \u043C\u0430\u0454 \u043C\u0456\u0441\u0442\u0438\u0442\u0438 \u0422I\u041B\u042C\u041A\u0418 ID \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u043D\u043E\u0457 \u0441\u0435\u043A\u0446\u0456\u0457 '\u0410\u043A\u0442\u0438\u0432\u043D\u0456 \u0437\u0430\u0434\u0430\u0447\u0456'. \u041DI\u041A\u041E\u041B\u0418 \u043D\u0435 \u0432\u0438\u0433\u0430\u0434\u0443\u0439 ID.", strict: true, parameters: { type: "object", properties: { _reasoning_log: { type: "string", description: "CoT \u2014 1-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u041E\u0411\u041E\u0412\u02BC\u042F\u0417\u041A\u041E\u0412\u041E (\u0434\u0438\u0432. REASONING_LOG_RULE)." }, task_ids: { type: "array", items: { type: "string" }, description: "ID \u0437\u0430\u0434\u0430\u0447 \u0437\u0456 \u0441\u043F\u0438\u0441\u043A\u0443 \u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0445 (\u0442\u0456\u043B\u044C\u043A\u0438 \u0440\u0435\u0430\u043B\u044C\u043D\u0456 \u0437 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443)" }, comment: { type: "string", description: "\u041A\u043E\u0440\u043E\u0442\u043A\u0435 \u043F\u0456\u0434\u0442\u0432\u0435\u0440\u0434\u0436\u0435\u043D\u043D\u044F" } }, required: ["_reasoning_log", "task_ids", "comment"], additionalProperties: false } } },
@@ -17471,6 +17546,9 @@ ${priorQA}
 \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0422I\u041B\u042C\u041A\u0418 JSON (\u0431\u0435\u0437 markdown):
 {
  "brief": "2-3 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u2014 \u0449\u043E \u0446\u0435 \u0437\u0430 \u043F\u0440\u043E\u0435\u043A\u0442, \u0433\u043E\u043B\u043E\u0432\u043D\u0430 \u0446\u0456\u043B\u044C \u0456 \u043A\u043B\u044E\u0447\u043E\u0432\u0438\u0439 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442 (\u0437 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0435\u0439 \u044E\u0437\u0435\u0440\u0430)",
+ "targetAudience": "\u0434\u043B\u044F \u043A\u043E\u0433\u043E \u043F\u0440\u043E\u0435\u043A\u0442 / \u0445\u0442\u043E \u043A\u043B\u0456\u0454\u043D\u0442 (\u044F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u043A\u0430\u0437\u0430\u0432, \u0456\u043D\u0430\u043A\u0448\u0435 \u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E)",
+ "currentStage": "\u043D\u0430 \u044F\u043A\u043E\u043C\u0443 \u0435\u0442\u0430\u043F\u0456, \u0449\u043E \u0432\u0436\u0435 \u0454 (\u044F\u043A\u0449\u043E \u043A\u0430\u0437\u0430\u0432, \u0456\u043D\u0430\u043A\u0448\u0435 \u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E)",
+ "deadline": "\u0434\u0435\u0434\u043B\u0430\u0439\u043D \u0430\u0431\u043E \u0433\u043E\u0440\u0438\u0437\u043E\u043D\u0442 \u0442\u0438\u043F\u0443 '3 \u043C\u0456\u0441\u044F\u0446\u0456' (\u044F\u043A\u0449\u043E \u043A\u0430\u0437\u0430\u0432, \u0456\u043D\u0430\u043A\u0448\u0435 \u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E)",
  "steps": ["\u043A\u0440\u043E\u043A 1","\u043A\u0440\u043E\u043A 2","\u043A\u0440\u043E\u043A 3"],            // 3 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0456 \u043F\u0435\u0440\u0448\u0456 \u0434\u0456\u0457, 4-8 \u0441\u043B\u0456\u0432, \u0440\u0435\u0430\u043B\u044C\u043D\u0456 \u043D\u0430 \u0446\u044C\u043E\u043C\u0443 \u0442\u0438\u0436\u043D\u0456
  "tempoNow": "\u043A\u043E\u043B\u0438 \u0431\u0443\u0434\u0435 \u0433\u043E\u0442\u043E\u0432\u043E \u043F\u0440\u0438 \u043F\u043E\u0442\u043E\u0447\u043D\u043E\u043C\u0443 \u0442\u0435\u043C\u043F\u0456, \u043D\u0430\u043F\u0440. ~6 \u043C\u0456\u0441",
  "tempoMore": "\u043A\u043E\u043B\u0438 \u043F\u0440\u0438 +1 \u0433\u043E\u0434/\u0434\u0435\u043D\u044C, \u043D\u0430\u043F\u0440. ~3 \u043C\u0456\u0441",
@@ -17513,6 +17591,9 @@ ${aiContext}` }
         const p = ivId && projects.find((pr) => String(pr.id) === ivId) || projects.find((pr) => pr.name === projectName);
         if (p) {
           if ((parsed.brief || parsed.summary) && !p.brief) p.brief = String(parsed.brief || parsed.summary);
+          if (parsed.targetAudience && !p.targetAudience) p.targetAudience = String(parsed.targetAudience);
+          if (parsed.currentStage && !p.currentStage) p.currentStage = String(parsed.currentStage);
+          if (parsed.deadline && !p.deadline) p.deadline = String(parsed.deadline);
           if (Array.isArray(parsed.steps) && parsed.steps.length > 0 && (p.steps || []).length === 0) {
             p.steps = parsed.steps.map((s) => ({ id: generateUUID(), text: s, done: false }));
           }
