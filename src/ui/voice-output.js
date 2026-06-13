@@ -129,16 +129,16 @@ async function _speakBrowser(text) {
 }
 
 async function _speakOpenAI(text, key) {
-  // gpt-4o-mini-tts (steerable) — приймає instructions, читає природною
-  // українською набагато краще за tts-1. Ціна порівнянна з tts-1.
+  // tts-1 — надійна + низьколатентна, приймає вибраний голос. (gpt-4o-mini-tts
+  // не на всіх ключах → падало на браузерний голос. Точність укр-вимови без
+  // акценту — через ElevenLabs.)
   const res = await fetch('https://api.openai.com/v1/audio/speech', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
     body: JSON.stringify({
-      model: 'gpt-4o-mini-tts',
+      model: 'tts-1',
       voice: _openaiVoice(),
       input: text,
-      instructions: _ttsInstruction(),
       response_format: 'mp3',
     }),
   });
@@ -303,8 +303,10 @@ if (typeof window !== 'undefined') {
   });
   // Перший тап будь-де — розблокувати аудіо на iOS.
   document.addEventListener('touchend', unlockAudio, { once: true, passive: true });
-  // У фон — зупинити озвучку.
+  // У фон / згортання PWA / перехід в інший застосунок — зупинити озвучку.
   document.addEventListener('visibilitychange', () => { if (document.hidden) stopSpeaking(); });
+  window.addEventListener('pagehide', stopSpeaking);
+  window.addEventListener('blur', () => { if (document.hidden) stopSpeaking(); });
   window.nmVoiceSpeak = speak;
   window.nmVoiceToggle = toggleVoiceMode;
   window.nmVoiceIsOn = isVoiceMode;
