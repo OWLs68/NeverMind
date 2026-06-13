@@ -26224,6 +26224,7 @@ ${legacy}`;
     });
     window.addEventListener("nm-agent-message", (e) => {
       if (!isVoiceMode()) return;
+      if (!_chatOpen()) return;
       const d = e && e.detail || {};
       if (!d.text) return;
       if (d.tab && d.tab !== currentTab) return;
