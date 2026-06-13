@@ -66,6 +66,9 @@ export function makeProject({ name, subtitle = '' } = {}) {
     name,
     subtitle,
     brief: '',          // що це за проект — суть/ціль/контекст (OWL розуміє ПЕРШ ніж радити)
+    targetAudience: '', // для кого / хто користувач-клієнт (вимір 2 повноти)
+    currentStage: '',   // на якому етапі, що вже є (вимір 3 повноти)
+    deadline: null,     // дедлайн або горизонт (вимір 5 повноти)
     images: [],         // про запас під Supabase Storage (зараз не зберігаємо самі фото — памʼять iOS)
     progress: 0,
     steps: [],
