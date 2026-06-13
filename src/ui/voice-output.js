@@ -44,7 +44,8 @@ const DEFAULT_ELEVEN_VOICE = '21m00Tcm4TlvDq8ikWAM'; // Rachel (multilingual, т
 
 // Налаштування голосу з nm_settings (вибір у Налаштуваннях → блок «Голос Агента»).
 function _settings() { return getSettings(); }
-function _openaiVoice() { return _settings().ttsVoice || DEFAULT_OPENAI_VOICE; }
+const TTS1_VOICES = ['alloy', 'echo', 'fable', 'onyx', 'nova', 'shimmer']; // які підтримує tts-1
+function _openaiVoice() { const v = _settings().ttsVoice; return TTS1_VOICES.includes(v) ? v : DEFAULT_OPENAI_VOICE; }
 function _elevenKey() { return (_settings().elevenKey || '').trim(); }
 function _elevenVoice() { return _settings().elevenVoiceId || DEFAULT_ELEVEN_VOICE; }
 // 0.05с тиша — розблокування аудіо на iOS (один раз з user-gesture).
@@ -310,9 +311,17 @@ if (typeof window !== 'undefined') {
     if (!d.text) return;
     if (d.tab && d.tab !== currentTab) return;
     const txt = String(d.text).trim();
-    if (txt.length < 20) return;
-    if (/^[✓✅\[(]/.test(txt)) return;
-    speak(txt);
+    // Озвучуємо лише змістовні репліки (не «✓ Зроблено»/підтвердження).
+    const speakable = txt.length >= 20 && !/^[✓✅\[(]/.test(txt);
+    if (speakable) {
+      speak(txt); // мік сам перезапуститься після озвучки (_done → _afterSpeak)
+    } else {
+      // Репліку не озвучуємо, але хід знову юзера → вмикаємо мік (інакше петля
+      // рвалась на коротких відповідях — мік не вмикався, Роман).
+      if (_chatOpen() && !(typeof document !== 'undefined' && document.hidden)) {
+        setTimeout(() => { try { if (window.nmStartListening) window.nmStartListening(); } catch (er) {} }, 400);
+      }
+    }
   });
   // Перший тап будь-де — розблокувати аудіо на iOS.
   document.addEventListener('touchend', unlockAudio, { once: true, passive: true });
