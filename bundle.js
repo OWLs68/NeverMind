@@ -1,8 +1,13 @@
 (() => {
   var __defProp = Object.defineProperty;
   var __getOwnPropNames = Object.getOwnPropertyNames;
-  var __esm = (fn, res) => function __init() {
-    return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
+  var __esm = (fn, res, err) => function __init() {
+    if (err) throw err[0];
+    try {
+      return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
+    } catch (e) {
+      throw err = [e], e;
+    }
   };
   var __export = (target, all) => {
     for (var name in all)
@@ -3596,6 +3601,12 @@ ${lines.join("\n")}`;
     const listEl = document.getElementById("projects-list");
     const emptyEl = document.getElementById("projects-empty");
     if (!listEl) return;
+    const wsEl = document.getElementById("projects-workspace");
+    if (wsEl) {
+      wsEl.style.display = "none";
+      wsEl.innerHTML = "";
+    }
+    listEl.style.display = "";
     if (projects.length === 0) {
       listEl.innerHTML = "";
       if (emptyEl) emptyEl.style.display = "block";
@@ -3731,8 +3742,13 @@ ${lines.join("\n")}`;
       { label: t("projects.empty.chip_budget", "\u{1F4B0} \u0411\u044E\u0434\u0436\u0435\u0442 \u0456 \u0442\u0435\u043C\u043F"), prompt: t("projects.empty.prompt_budget", "\u0414\u043E\u043F\u043E\u043C\u043E\u0436\u0438 \u043E\u0446\u0456\u043D\u0438\u0442\u0438 \u0431\u044E\u0434\u0436\u0435\u0442 \u0456 \u0442\u0435\u043C\u043F \u0440\u043E\u0431\u043E\u0442\u0438 \u0434\u043B\u044F \u0446\u044C\u043E\u0433\u043E \u043F\u0440\u043E\u0435\u043A\u0442\u0443") },
       { label: t("projects.empty.chip_risks", "\u26A0\uFE0F \u042F\u043A\u0456 \u0440\u0438\u0437\u0438\u043A\u0438"), prompt: t("projects.empty.prompt_risks", "\u042F\u043A\u0456 \u0433\u043E\u043B\u043E\u0432\u043D\u0456 \u0440\u0438\u0437\u0438\u043A\u0438 \u0456 \u0441\u043A\u043B\u0430\u0434\u043D\u043E\u0449\u0456 \u0432 \u0446\u044C\u043E\u043C\u0443 \u043F\u0440\u043E\u0435\u043A\u0442\u0456?") }
     ] : [];
-    const scrollEl = document.getElementById("projects-scroll");
+    const scrollEl = document.getElementById("projects-workspace");
     if (!scrollEl) return;
+    const listEl0 = document.getElementById("projects-list");
+    const emptyEl0 = document.getElementById("projects-empty");
+    if (listEl0) listEl0.style.display = "none";
+    if (emptyEl0) emptyEl0.style.display = "none";
+    scrollEl.style.display = "block";
     scrollEl.innerHTML = `
     <!-- \u041D\u0430\u0437\u0430\u0434. B-118 (mUpS8 02.05): position+z-index \u0449\u043E\u0431 OWL board overlay
          \u043D\u0435 \u043F\u0435\u0440\u0435\u0445\u043E\u043F\u043B\u044E\u0432\u0430\u0432 \u043A\u043B\u0456\u043A. Padding 8\xD74 + negative margin = \u0431\u0456\u043B\u044C\u0448\u0430 hit-area
