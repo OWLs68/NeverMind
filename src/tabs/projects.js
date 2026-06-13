@@ -6,6 +6,7 @@
 
 import { currentTab, showToast, switchTab } from '../core/nav.js';
 import { makeProject } from '../data/entity-factories.js';
+import { assessProjectCompleteness, PROJECT_DIM_LABELS } from '../data/project-completeness.js';
 import { escapeHtml, safeHref, parseContentChips, t } from '../core/utils.js';
 import { logUsage } from '../core/usage-meter.js';
 import { callAIWithTools, getAIContext, getOWLPersonality, openChatBar, safeAgentReply, saveChatMsg, INBOX_TOOLS, handleChatError } from '../ai/core.js';
@@ -636,7 +637,9 @@ export function getProjectsContext() {
     const next = steps.find(s => !s.done);
     const silenceDays = p.lastActivity ? Math.floor((now - p.lastActivity) / 86400000) : null;
     const silence = silenceDays !== null && silenceDays >= 3 ? ` ⚠️ ${silenceDays} дн. тиші` : '';
-    parts.push(`- [ID:${p.id}] "${p.name}" ${pct}%${next ? ' → наступний крок: ' + next.text : ''}${silence}`);
+    // brief (суть) — щоб OWL у будь-якому чаті знав ПРО ЩО проект, не лише назву.
+    const briefShort = p.brief ? ` — ${String(p.brief).slice(0, 120)}` : '';
+    parts.push(`- [ID:${p.id}] "${p.name}" ${pct}%${briefShort}${next ? ' → наступний крок: ' + next.text : ''}${silence}`);
   });
   return parts.join('\n');
 }
@@ -716,7 +719,8 @@ export async function sendProjectsBarMessage() {
   const activeSteps = activeProject ? (activeProject.steps || []).map(s =>
     `[ID:${s.id}] ${s.done ? '✓' : '○'} ${s.text}`).join('\n') : '';
 
-  const systemPrompt = getProjectsChatSystem({ activeProject, projectsContext, activeSteps })
+  const completeness = activeProject ? assessProjectCompleteness(activeProject) : null;
+  const systemPrompt = getProjectsChatSystem({ activeProject, projectsContext, activeSteps, completeness })
     + (getAIContext() ? '\n\n' + getAIContext() : '');
 
   try {
