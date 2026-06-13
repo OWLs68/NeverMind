@@ -12679,7 +12679,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
       chipsHTML.push(`<div class="owl-chip owl-chip-speak">\u041F\u043E\u0433\u043E\u0432\u043E\u0440\u0438\u0442\u0438</div>`);
     }
     if (options.showSpeak || options.showVoice) {
-      chipsHTML.push(`<div class="owl-chip owl-chip-voice">${isVoiceMode() ? "\u{1F50A}" : "\u{1F507}"}</div>`);
+      chipsHTML.push(`<div class="owl-chip owl-chip-voice">${isVoiceMode() ? "\u{1F50A} \u0413\u043E\u043B\u043E\u0441 \u0443\u0432\u0456\u043C\u043A" : "\u{1F507} \u041E\u0437\u0432\u0443\u0447\u0438\u0442\u0438"}</div>`);
     }
     containerEl.innerHTML = chipsHTML.join("");
     containerEl.scrollLeft = 0;
@@ -12705,7 +12705,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
         } else {
           stopSpeaking();
         }
-        chipEl.textContent = on ? "\u{1F50A}" : "\u{1F507}";
+        chipEl.textContent = on ? "\u{1F50A} \u0413\u043E\u043B\u043E\u0441 \u0443\u0432\u0456\u043C\u043A" : "\u{1F507} \u041E\u0437\u0432\u0443\u0447\u0438\u0442\u0438";
         chipEl._fired = false;
         chipEl.style.pointerEvents = "";
         return;
