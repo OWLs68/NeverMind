@@ -10436,6 +10436,18 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
   function _browserLocale() {
     return BROWSER_LOCALE[getLang()] || "uk-UA";
   }
+  function _settings() {
+    return getSettings();
+  }
+  function _openaiVoice() {
+    return _settings().ttsVoice || DEFAULT_OPENAI_VOICE;
+  }
+  function _elevenKey() {
+    return (_settings().elevenKey || "").trim();
+  }
+  function _elevenVoice() {
+    return _settings().elevenVoiceId || DEFAULT_ELEVEN_VOICE;
+  }
   function isVoiceMode() {
     return localStorage.getItem(VOICE_MODE_KEY) === "1";
   }
@@ -10554,7 +10566,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
       headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}` },
       body: JSON.stringify({
         model: "gpt-4o-mini-tts",
-        voice: OPENAI_VOICE,
+        voice: _openaiVoice(),
         input: text,
         instructions: _ttsInstruction(),
         response_format: "mp3"
@@ -10562,6 +10574,9 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
     });
     if (!res.ok) throw new Error("tts " + res.status);
     const blob = await res.blob();
+    await _playBlob(blob);
+  }
+  async function _playBlob(blob) {
     const url = URL.createObjectURL(blob);
     stopSpeaking();
     _audio = new Audio(url);
@@ -10574,6 +10589,19 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
     };
     await _audio.play();
   }
+  async function _speakElevenLabs(text, key) {
+    const voiceId = _elevenVoice();
+    const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
+      method: "POST",
+      headers: { "xi-api-key": key, "Content-Type": "application/json", "Accept": "audio/mpeg" },
+      // turbo_v2_5 — низька затримка (Роман: голос з'являвся з лагом) +
+      // багатомовна, добра українська. Якість трохи нижча за multilingual_v2,
+      // але відчутно швидше.
+      body: JSON.stringify({ text, model_id: "eleven_turbo_v2_5" })
+    });
+    if (!res.ok) throw new Error("11labs " + res.status);
+    await _playBlob(await res.blob());
+  }
   async function speak(text) {
     if (!text) return;
     if (typeof document !== "undefined" && document.hidden) return;
@@ -10583,36 +10611,58 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
     if (clean.length > MAX_CHARS_PER_UTTERANCE) clean = clean.slice(0, MAX_CHARS_PER_UTTERANCE) + "\u2026";
     _lastSpoken = clean;
     _lastSpokenTs = Date.now();
+    const elevenKey = _elevenKey();
+    if (elevenKey) {
+      try {
+        await _speakElevenLabs(clean, elevenKey);
+        return;
+      } catch (e) {
+      }
+    }
     const key = localStorage.getItem("nm_gemini_key");
     const overCap = _ttsCharsToday() + clean.length > DAILY_CHAR_CAP;
-    if (!key || overCap) {
-      if (overCap && !_capWarned) {
-        _capWarned = true;
-        try {
-          showToast(t("tts.cap", "\u0414\u0435\u043D\u043D\u0438\u0439 \u043B\u0456\u043C\u0456\u0442 \u043F\u0440\u0438\u0440\u043E\u0434\u043D\u043E\u0433\u043E \u0433\u043E\u043B\u043E\u0441\u0443 \u0432\u0438\u0447\u0435\u0440\u043F\u0430\u043D\u043E \u2014 \u043F\u0435\u0440\u0435\u0445\u0456\u0434 \u043D\u0430 \u0431\u0435\u0437\u043A\u043E\u0448\u0442\u043E\u0432\u043D\u0438\u0439"));
-        } catch (e) {
-        }
+    if (key && !overCap) {
+      _addTtsChars(clean.length);
+      try {
+        logTtsUsage(clean.length);
+      } catch (e) {
       }
-      _speakBrowser(clean);
-      return;
+      try {
+        await _speakOpenAI(clean, key);
+        return;
+      } catch (e) {
+      }
+    } else if (overCap && !_capWarned) {
+      _capWarned = true;
+      try {
+        showToast(t("tts.cap", "\u0414\u0435\u043D\u043D\u0438\u0439 \u043B\u0456\u043C\u0456\u0442 \u043F\u0440\u0438\u0440\u043E\u0434\u043D\u043E\u0433\u043E \u0433\u043E\u043B\u043E\u0441\u0443 \u0432\u0438\u0447\u0435\u0440\u043F\u0430\u043D\u043E \u2014 \u043F\u0435\u0440\u0435\u0445\u0456\u0434 \u043D\u0430 \u0431\u0435\u0437\u043A\u043E\u0448\u0442\u043E\u0432\u043D\u0438\u0439"));
+      } catch (e) {
+      }
     }
-    _addTtsChars(clean.length);
-    try {
-      logTtsUsage(clean.length);
-    } catch (e) {
-    }
-    try {
-      await _speakOpenAI(clean, key);
-    } catch (e) {
-      _speakBrowser(clean);
-    }
+    _speakBrowser(clean);
   }
-  var TTS_INSTRUCTIONS, BROWSER_LOCALE, VOICE_MODE_KEY, TTS_USAGE_KEY, MAX_CHARS_PER_UTTERANCE, DAILY_CHAR_CAP, OPENAI_VOICE, SILENT_WAV, _audio, _audioUnlocked, _capWarned, _lastSpoken, _lastSpokenTs;
+  function setTtsVoice(voice) {
+    if (voice) updateSettings({ ttsVoice: voice });
+  }
+  function saveElevenKey(val) {
+    updateSettings({ elevenKey: (val || "").trim() });
+  }
+  function getVoicePrefs() {
+    const s = _settings();
+    return { ttsVoice: s.ttsVoice || DEFAULT_OPENAI_VOICE, elevenKey: s.elevenKey || "" };
+  }
+  function testTtsVoice() {
+    unlockAudio();
+    _lastSpoken = "";
+    speak(t("tts.sample", "\u041F\u0440\u0438\u0432\u0456\u0442! \u042F \u0442\u0432\u0456\u0439 \u0430\u0433\u0435\u043D\u0442 NeverMind. \u041E\u0441\u044C \u0442\u0430\u043A \u0437\u0432\u0443\u0447\u0438\u0442\u044C \u043C\u0456\u0439 \u0433\u043E\u043B\u043E\u0441."));
+  }
+  var TTS_INSTRUCTIONS, BROWSER_LOCALE, VOICE_MODE_KEY, TTS_USAGE_KEY, MAX_CHARS_PER_UTTERANCE, DAILY_CHAR_CAP, DEFAULT_OPENAI_VOICE, DEFAULT_ELEVEN_VOICE, SILENT_WAV, _audio, _audioUnlocked, _capWarned, _lastSpoken, _lastSpokenTs;
   var init_voice_output = __esm({
     "src/ui/voice-output.js"() {
       init_utils();
       init_nav();
       init_usage_meter();
+      init_settings();
       TTS_INSTRUCTIONS = {
         uk: "Speak in natural, fluent Ukrainian with correct Ukrainian pronunciation and a warm, calm, friendly tone. Do not use an English or Russian accent.",
         en: "Speak in natural, fluent English with a warm, calm, friendly tone."
@@ -10622,7 +10672,8 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
       TTS_USAGE_KEY = "nm_tts_usage";
       MAX_CHARS_PER_UTTERANCE = 500;
       DAILY_CHAR_CAP = 12e3;
-      OPENAI_VOICE = "nova";
+      DEFAULT_OPENAI_VOICE = "nova";
+      DEFAULT_ELEVEN_VOICE = "21m00Tcm4TlvDq8ikWAM";
       SILENT_WAV = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAIlYAAESsAAACABAAZGF0YQAAAAA=";
       _audio = null;
       _audioUnlocked = false;
@@ -10648,6 +10699,10 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
         window.nmVoiceToggle = toggleVoiceMode;
         window.nmVoiceIsOn = isVoiceMode;
         window.nmVoiceStop = stopSpeaking;
+        window.setTtsVoice = setTtsVoice;
+        window.saveElevenKey = saveElevenKey;
+        window.testTtsVoice = testTtsVoice;
+        window.getVoicePrefs = getVoicePrefs;
       }
     }
   });
@@ -21198,6 +21253,15 @@ ${logLines}
           window.onChatImagePicked(data, el);
         }
       });
+      reg("set-tts-voice", (data, el) => {
+        if (el && typeof window.setTtsVoice === "function") window.setTtsVoice(el.value);
+      });
+      reg("save-eleven-key", (data, el) => {
+        if (el && typeof window.saveElevenKey === "function") window.saveElevenKey(el.value);
+      });
+      reg("test-tts-voice", () => {
+        if (typeof window.testTtsVoice === "function") window.testTtsVoice();
+      });
       reg("open-notes-folder", (data) => {
         if (typeof window === "undefined") return;
         if (typeof window.switchTab === "function") window.switchTab("notes");
@@ -24611,6 +24675,8 @@ ${logLines}
       if (el) el.value = val;
     };
     setVal("input-api-key", key);
+    setVal("tts-voice-select", settings.ttsVoice || "nova");
+    setVal("input-eleven-key", settings.elevenKey || "");
     setVal("input-name", settings.name || "");
     setVal("input-age", settings.age || "");
     setVal("input-weight", settings.weight || "");
