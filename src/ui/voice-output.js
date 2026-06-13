@@ -55,6 +55,10 @@ let _audioUnlocked = false;
 let _capWarned = false;
 let _lastSpoken = '';
 let _lastSpokenTs = 0;
+// Єдиний замок мовлення (Роман): поки хтось говорить (табло АБО чат) — інші
+// мовчать. Природне завершення відпускає замок (_done) і запускає петлю слухання.
+let _speaking = false;
+function _done() { _speaking = false; _afterSpeak(); }
 
 export function isVoiceMode() { return localStorage.getItem(VOICE_MODE_KEY) === '1'; }
 export function setVoiceMode(on) {
@@ -85,7 +89,8 @@ export function unlockAudio() {
 }
 
 export function stopSpeaking() {
-  try { if (_audio) { _audio.pause(); _audio = null; } } catch (e) {}
+  _speaking = false; // відпускаємо замок (це перерив, не природне завершення)
+  try { if (_audio) { _audio.onended = null; _audio.pause(); _audio = null; } } catch (e) {}
   try { if (window.speechSynthesis) window.speechSynthesis.cancel(); } catch (e) {}
 }
 
@@ -114,18 +119,20 @@ function _browserVoices() {
 
 async function _speakBrowser(text) {
   try {
-    if (!window.speechSynthesis) return;
+    if (!window.speechSynthesis) { _done(); return; }
     const voices = await _browserVoices();
+    if (!_speaking) return; // зупинили поки чекали голоси
     const u = new SpeechSynthesisUtterance(text);
     const loc = _browserLocale();
     u.lang = loc;
     const pref = loc.slice(0, 2);
     const v = voices.find(x => x.lang && x.lang.toLowerCase().startsWith(pref));
     if (v) u.voice = v;
-    u.onend = () => _afterSpeak();
+    u.onend = () => _done();
+    u.onerror = () => _done();
     window.speechSynthesis.cancel();
-    setTimeout(() => { try { window.speechSynthesis.speak(u); } catch (e) {} }, 50); // iOS 17 quirk
-  } catch (e) {}
+    setTimeout(() => { try { window.speechSynthesis.speak(u); } catch (e) { _done(); } }, 50); // iOS 17 quirk
+  } catch (e) { _done(); }
 }
 
 async function _speakOpenAI(text, key) {
@@ -148,10 +155,12 @@ async function _speakOpenAI(text, key) {
 }
 
 async function _playBlob(blob) {
+  if (!_speaking) return; // зупинили поки вантажилось (вимк режим / мік) → не граємо
   const url = URL.createObjectURL(blob);
-  stopSpeaking();
+  try { if (_audio) { _audio.onended = null; _audio.pause(); } } catch (e) {}
   _audio = new Audio(url);
-  _audio.onended = () => { try { URL.revokeObjectURL(url); } catch (e) {} _audio = null; _afterSpeak(); };
+  _audio.onended = () => { try { URL.revokeObjectURL(url); } catch (e) {} _audio = null; _done(); };
+  _audio.onerror = () => { _audio = null; _done(); };
   await _audio.play();
 }
 
@@ -188,8 +197,12 @@ export async function speak(text) {
   if (!clean) return;
   // dedup: те саме за останні 5с — не повторюємо (захист від спаму табло/чату)
   if (clean === _lastSpoken && (Date.now() - _lastSpokenTs) < 5000) return;
+  // 🔒 ЗАМОК: якщо вже хтось говорить (табло чи чат) — новий мовчить, не
+  // перебиває (вимога Романа). Слово звільниться коли поточний договорить.
+  if (_speaking) return;
   if (clean.length > MAX_CHARS_PER_UTTERANCE) clean = clean.slice(0, MAX_CHARS_PER_UTTERANCE) + '…';
   _lastSpoken = clean; _lastSpokenTs = Date.now();
+  _speaking = true;
 
   // 1) ElevenLabs (преміум, окремий ключ) — якщо заданий. Найкраща вимова.
   const elevenKey = _elevenKey();
