@@ -19570,13 +19570,6 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       return [];
     }
   }
-  function getLang() {
-    try {
-      return JSON.parse(localStorage.getItem("nm_settings") || "{}").lang || "uk";
-    } catch (e) {
-      return "uk";
-    }
-  }
   function t(key, fallback, params) {
     let result = fallback;
     if (params && typeof params === "object") {
@@ -25873,10 +25866,6 @@ ${legacy}`;
       return false;
     }
   }
-  var BROWSER_LOCALE = { uk: "uk-UA", en: "en-US" };
-  function _browserLocale() {
-    return BROWSER_LOCALE[getLang()] || "uk-UA";
-  }
   var VOICE_MODE_KEY = "nm_voice_mode";
   var TTS_USAGE_KEY = "nm_tts_usage";
   var MAX_CHARS_PER_UTTERANCE = 500;
@@ -25907,7 +25896,6 @@ ${legacy}`;
   var _speaking = false;
   function _done() {
     _speaking = false;
-    _afterSpeak();
   }
   function isVoiceMode() {
     return localStorage.getItem(VOICE_MODE_KEY) === "1";
@@ -25935,14 +25923,6 @@ ${legacy}`;
       });
     } catch (e) {
     }
-    try {
-      if (window.speechSynthesis) {
-        const u = new SpeechSynthesisUtterance(" ");
-        window.speechSynthesis.speak(u);
-        window.speechSynthesis.cancel();
-      }
-    } catch (e) {
-    }
   }
   function stopSpeaking() {
     _speaking = false;
@@ -25962,10 +25942,6 @@ ${legacy}`;
       } catch (e) {
       }
     }
-    try {
-      if (window.speechSynthesis) window.speechSynthesis.cancel();
-    } catch (e) {
-    }
   }
   function _todayStr() {
     return (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
@@ -25983,60 +25959,6 @@ ${legacy}`;
     try {
       localStorage.setItem(TTS_USAGE_KEY, JSON.stringify({ date: _todayStr(), chars }));
     } catch (e) {
-    }
-  }
-  function _browserVoices() {
-    return new Promise((resolve) => {
-      if (!window.speechSynthesis) {
-        resolve([]);
-        return;
-      }
-      let v = window.speechSynthesis.getVoices();
-      if (v && v.length) {
-        resolve(v);
-        return;
-      }
-      let done = false;
-      window.speechSynthesis.onvoiceschanged = () => {
-        if (!done) {
-          done = true;
-          resolve(window.speechSynthesis.getVoices() || []);
-        }
-      };
-      setTimeout(() => {
-        if (!done) {
-          done = true;
-          resolve(window.speechSynthesis.getVoices() || []);
-        }
-      }, 600);
-    });
-  }
-  async function _speakBrowser(text) {
-    try {
-      if (!window.speechSynthesis) {
-        _done();
-        return;
-      }
-      const voices = await _browserVoices();
-      if (!_speaking) return;
-      const u = new SpeechSynthesisUtterance(text);
-      const loc = _browserLocale();
-      u.lang = loc;
-      const pref = loc.slice(0, 2);
-      const v = voices.find((x) => x.lang && x.lang.toLowerCase().startsWith(pref));
-      if (v) u.voice = v;
-      u.onend = () => _done();
-      u.onerror = () => _done();
-      window.speechSynthesis.cancel();
-      setTimeout(() => {
-        try {
-          window.speechSynthesis.speak(u);
-        } catch (e) {
-          _done();
-        }
-      }, 50);
-    } catch (e) {
-      _done();
     }
   }
   async function _genOpenAI(text, key) {
@@ -26129,17 +26051,6 @@ ${legacy}`;
     _runSequential(chunks, gen, firstBlob);
     return true;
   }
-  function _afterSpeak() {
-    if (!isVoiceMode()) return;
-    if (typeof document !== "undefined" && document.hidden) return;
-    if (!_chatOpen()) return;
-    setTimeout(() => {
-      try {
-        if (window.nmStartListening) window.nmStartListening();
-      } catch (e) {
-      }
-    }, 400);
-  }
   async function _genEleven(text, key) {
     const voiceId = _elevenVoice();
     const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
@@ -26190,7 +26101,13 @@ ${legacy}`;
       } catch (e) {
       }
     }
-    _speakBrowser(clean);
+    _speaking = false;
+    if (!key) {
+      try {
+        showToast(t("tts.no_key", "\u0414\u043E\u0434\u0430\u0439 OpenAI-\u043A\u043B\u044E\u0447 \u0443 \u041D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445 \u0449\u043E\u0431 OWL \u043E\u0437\u0432\u0443\u0447\u0443\u0432\u0430\u0432"));
+      } catch (e) {
+      }
+    }
   }
   function setTtsVoice(voice) {
     if (voice) updateSettings({ ttsVoice: voice });
@@ -26227,7 +26144,7 @@ ${legacy}`;
       const btn = document.createElement("button");
       btn.className = "icon-btn voice-mode-btn";
       btn.type = "button";
-      btn.title = t("voice.btn_title", "\u0413\u043E\u043B\u043E\u0441\u043E\u0432\u0438\u0439 \u0440\u0435\u0436\u0438\u043C (OWL \u0433\u043E\u0432\u043E\u0440\u0438\u0442\u044C \u0456 \u0441\u043B\u0443\u0445\u0430\u0454)");
+      btn.title = t("voice.btn_title", "\u041E\u0437\u0432\u0443\u0447\u043A\u0430 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0435\u0439 OWL (\u0433\u043E\u0432\u043E\u0440\u0438\u0442\u0438 \u2014 \u0442\u0438\u0441\u043D\u0438 \u{1F3A4})");
       btn.innerHTML = _voiceIcon(isVoiceMode());
       btn.addEventListener("click", () => {
         const on = toggleVoiceMode();
@@ -26238,11 +26155,7 @@ ${legacy}`;
           } catch (e) {
           }
           try {
-            showToast(t("voice.on", "\u{1F399} \u0413\u043E\u043B\u043E\u0441\u043E\u0432\u0438\u0439 \u0440\u0435\u0436\u0438\u043C \u0443\u0432\u0456\u043C\u043A\u043D\u0435\u043D\u043E \u2014 \u0433\u043E\u0432\u043E\u0440\u0456\u0442\u044C"));
-          } catch (e) {
-          }
-          try {
-            if (window.nmStartListening) setTimeout(() => window.nmStartListening(), 300);
+            showToast(t("voice.on", "\u{1F399} OWL \u043E\u0437\u0432\u0443\u0447\u0443\u0432\u0430\u0442\u0438\u043C\u0435 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456 \u2014 \u0442\u0438\u0441\u043D\u0438 \u{1F3A4} \u0449\u043E\u0431 \u0433\u043E\u0432\u043E\u0440\u0438\u0442\u0438"));
           } catch (e) {
           }
         } else {
@@ -26276,15 +26189,6 @@ ${legacy}`;
     if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", _injectVoiceButtons);
     else setTimeout(_injectVoiceButtons, 0);
     window.addEventListener("nm-voice-mode-changed", _syncVoiceButtons);
-    window.addEventListener("nm-chat-opened", () => {
-      if (!isVoiceMode()) return;
-      setTimeout(() => {
-        try {
-          if (window.nmStartListening) window.nmStartListening();
-        } catch (e) {
-        }
-      }, 350);
-    });
     window.addEventListener("nm-board-message", (e) => {
       if (!isVoiceMode()) return;
       if (_chatOpen()) return;
@@ -26300,18 +26204,7 @@ ${legacy}`;
       if (d.tab && d.tab !== currentTab) return;
       const txt = String(d.text).trim();
       const speakable = txt.length >= 20 && !/^[✓✅\[(]/.test(txt);
-      if (speakable) {
-        speak(txt);
-      } else {
-        if (_chatOpen() && !(typeof document !== "undefined" && document.hidden)) {
-          setTimeout(() => {
-            try {
-              if (window.nmStartListening) window.nmStartListening();
-            } catch (er) {
-            }
-          }, 400);
-        }
-      }
+      if (speakable) speak(txt);
     });
     document.addEventListener("touchend", unlockAudio, { once: true, passive: true });
     document.addEventListener("visibilitychange", () => {
