@@ -25886,8 +25886,10 @@ ${legacy}`;
   function _settings() {
     return getSettings();
   }
+  var TTS1_VOICES = ["alloy", "echo", "fable", "onyx", "nova", "shimmer"];
   function _openaiVoice() {
-    return _settings().ttsVoice || DEFAULT_OPENAI_VOICE;
+    const v = _settings().ttsVoice;
+    return TTS1_VOICES.includes(v) ? v : DEFAULT_OPENAI_VOICE;
   }
   function _elevenKey() {
     return (_settings().elevenKey || "").trim();
@@ -26226,9 +26228,19 @@ ${legacy}`;
       if (!d.text) return;
       if (d.tab && d.tab !== currentTab) return;
       const txt = String(d.text).trim();
-      if (txt.length < 20) return;
-      if (/^[✓✅\[(]/.test(txt)) return;
-      speak(txt);
+      const speakable = txt.length >= 20 && !/^[✓✅\[(]/.test(txt);
+      if (speakable) {
+        speak(txt);
+      } else {
+        if (_chatOpen() && !(typeof document !== "undefined" && document.hidden)) {
+          setTimeout(() => {
+            try {
+              if (window.nmStartListening) window.nmStartListening();
+            } catch (er) {
+            }
+          }, 400);
+        }
+      }
     });
     document.addEventListener("touchend", unlockAudio, { once: true, passive: true });
     document.addEventListener("visibilitychange", () => {
