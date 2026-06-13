@@ -3742,6 +3742,23 @@ ${lines.join("\n")}`;
       { label: t("projects.empty.chip_budget", "\u{1F4B0} \u0411\u044E\u0434\u0436\u0435\u0442 \u0456 \u0442\u0435\u043C\u043F"), prompt: t("projects.empty.prompt_budget", "\u0414\u043E\u043F\u043E\u043C\u043E\u0436\u0438 \u043E\u0446\u0456\u043D\u0438\u0442\u0438 \u0431\u044E\u0434\u0436\u0435\u0442 \u0456 \u0442\u0435\u043C\u043F \u0440\u043E\u0431\u043E\u0442\u0438 \u0434\u043B\u044F \u0446\u044C\u043E\u0433\u043E \u043F\u0440\u043E\u0435\u043A\u0442\u0443") },
       { label: t("projects.empty.chip_risks", "\u26A0\uFE0F \u042F\u043A\u0456 \u0440\u0438\u0437\u0438\u043A\u0438"), prompt: t("projects.empty.prompt_risks", "\u042F\u043A\u0456 \u0433\u043E\u043B\u043E\u0432\u043D\u0456 \u0440\u0438\u0437\u0438\u043A\u0438 \u0456 \u0441\u043A\u043B\u0430\u0434\u043D\u043E\u0449\u0456 \u0432 \u0446\u044C\u043E\u043C\u0443 \u043F\u0440\u043E\u0435\u043A\u0442\u0456?") }
     ] : [];
+    const silenceDays = p.lastActivity ? Math.floor((Date.now() - p.lastActivity) / (1e3 * 60 * 60 * 24)) : null;
+    let owlInsight = "";
+    if (hasBrief) {
+      if (steps.length > 0 && !nextStep) owlInsight = t("projects.insight.all_done", "\u0423\u0441\u0456 \u043A\u0440\u043E\u043A\u0438 \u0437\u0430\u043A\u0440\u0438\u0442\u043E \u{1F389} \u0414\u043E\u0434\u0430\u0439 \u043D\u043E\u0432\u0456 \u0430\u0431\u043E \u043F\u0440\u0438\u0437\u043D\u0430\u0447 \u043F\u0440\u043E\u0435\u043A\u0442 \u0437\u0430\u0432\u0435\u0440\u0448\u0435\u043D\u0438\u043C.");
+      else if (silenceDays !== null && silenceDays >= 3 && nextStep) owlInsight = t("projects.insight.silence", "\u041D\u0435 \u0447\u0456\u043F\u0430\u0432 {n} \u0434\u043D. \u041F\u0440\u043E\u0434\u043E\u0432\u0436\u0438\u043C\u043E? \u041D\u0430\u0441\u0442\u0443\u043F\u043D\u0435 \u2014 {step}", { n: silenceDays, step: escapeHtml(nextStep.text) });
+      else if (nextStep) owlInsight = t("projects.insight.next", "\u0420\u0443\u0445\u0430\u0454\u043C\u043E\u0441\u044C \u{1F44C} \u041D\u0430\u0441\u0442\u0443\u043F\u043D\u0435 \u2014 {step}", { step: escapeHtml(nextStep.text) });
+      else owlInsight = t("projects.insight.start", "\u0413\u043E\u0442\u043E\u0432\u043E \u0434\u043E \u0441\u0442\u0430\u0440\u0442\u0443. \u0414\u043E\u0434\u0430\u0439 \u043F\u0435\u0440\u0448\u0438\u0439 \u043A\u0440\u043E\u043A \u0430\u0431\u043E \u0441\u043F\u0438\u0442\u0430\u0439 \u043C\u0435\u043D\u0435 \u0437 \u0447\u043E\u0433\u043E \u043F\u043E\u0447\u0430\u0442\u0438.");
+    }
+    const linkStats = [];
+    if (hasBrief) {
+      linkStats.push({ icon: "\u{1F4CB}", label: t("projects.stat.steps", "\u041A\u0440\u043E\u043A\u0438 {d}/{t}", { d: doneSteps, t: steps.length }), action: "" });
+      linkStats.push({ icon: "\u{1F4DD}", label: t("projects.stat.notes", "\u041D\u043E\u0442\u0430\u0442\u043A\u0438 {n}", { n: noteCount }), action: "notes" });
+      if (projectSpent > 0) linkStats.push({ icon: "\u{1F4B0}", label: `${getCurrency()}${projectSpent}`, action: "" });
+    }
+    const qaStepPrompt = t("projects.qa.add_step_prompt", "\u0414\u043E\u0434\u0430\u0439 \u043A\u0440\u043E\u043A \u0434\u043E \u0446\u044C\u043E\u0433\u043E \u043F\u0440\u043E\u0435\u043A\u0442\u0443");
+    const qaAskPrompt = t("projects.qa.ask_prompt", "\u041C\u0430\u044E \u043F\u0438\u0442\u0430\u043D\u043D\u044F \u043F\u043E \u0446\u044C\u043E\u043C\u0443 \u043F\u0440\u043E\u0435\u043A\u0442\u0443");
+    const stuckPrompt = nextStep ? t("projects.next.stuck_prompt", '\u042F \u0437\u0430\u0441\u0442\u0440\u044F\u0433 \u043D\u0430 \u043A\u0440\u043E\u0446\u0456 "{step}" \u2014 \u0434\u043E\u043F\u043E\u043C\u043E\u0436\u0438 \u0437\u0440\u0443\u0448\u0438\u0442\u0438', { step: nextStep.text }) : "";
     const scrollEl = document.getElementById("projects-workspace");
     if (!scrollEl) return;
     const listEl0 = document.getElementById("projects-list");
@@ -3795,6 +3812,24 @@ ${lines.join("\n")}`;
            <button data-action="project-chat-prompt" data-prompt="${escapeHtml(briefPrompt)}" style="font-size:12px;font-weight:700;color:white;background:#3d2e1e;border:none;border-radius:10px;padding:8px 14px;cursor:pointer">${t("projects.brief.cta", "\u{1F4AC} \u0420\u043E\u0437\u043A\u0430\u0436\u0438 \u043F\u0440\u043E \u043F\u0440\u043E\u0435\u043A\u0442 \u2192")}</button>`}
     </div>
 
+    ${owlInsight ? `<div style="display:flex;gap:9px;align-items:flex-start;background:rgba(12,6,28,0.78);border-radius:14px;padding:11px 13px;margin-bottom:10px">
+      <span style="font-size:16px;flex-shrink:0">\u{1F989}</span>
+      <div style="font-size:12.5px;font-weight:600;color:white;line-height:1.5">${owlInsight}</div>
+    </div>` : ""}
+
+    ${hasBrief ? `<div style="display:flex;gap:6px;margin-bottom:10px">
+      <button data-action="project-chat-prompt" data-prompt="${escapeHtml(qaStepPrompt)}" style="flex:1;font-size:11px;font-weight:700;color:#3d2e1e;background:rgba(255,255,255,0.5);border:1px solid rgba(30,16,64,0.1);border-radius:10px;padding:8px 4px;cursor:pointer">\uFF0B ${t("projects.qa.step", "\u043A\u0440\u043E\u043A")}</button>
+      <button data-action="open-notes-folder" data-folder="${escapeHtml(p.name)}" style="flex:1;font-size:11px;font-weight:700;color:#3d2e1e;background:rgba(255,255,255,0.5);border:1px solid rgba(30,16,64,0.1);border-radius:10px;padding:8px 4px;cursor:pointer">\uFF0B ${t("projects.qa.note", "\u043D\u043E\u0442\u0430\u0442\u043A\u0430")}</button>
+      <button data-action="call" data-fn="openProjectImagePicker" style="flex:1;font-size:11px;font-weight:700;color:#3d2e1e;background:rgba(255,255,255,0.5);border:1px solid rgba(30,16,64,0.1);border-radius:10px;padding:8px 4px;cursor:pointer">\u{1F5BC} ${t("projects.qa.photo", "\u0444\u043E\u0442\u043E")}</button>
+      <button data-action="project-chat-prompt" data-prompt="${escapeHtml(qaAskPrompt)}" style="flex:1;font-size:11px;font-weight:700;color:#3d2e1e;background:rgba(255,255,255,0.5);border:1px solid rgba(30,16,64,0.1);border-radius:10px;padding:8px 4px;cursor:pointer">\u{1F4AC} OWL</button>
+    </div>` : ""}
+
+    ${linkStats.length ? `<div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">
+      ${linkStats.map(
+      (s) => s.action === "notes" ? `<div data-action="open-notes-folder" data-folder="${escapeHtml(p.name)}" style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.6);background:rgba(255,255,255,0.45);border-radius:8px;padding:5px 9px;cursor:pointer">${s.icon} ${escapeHtml(s.label)}</div>` : `<div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.6);background:rgba(255,255,255,0.45);border-radius:8px;padding:5px 9px">${s.icon} ${escapeHtml(s.label)}</div>`
+    ).join("")}
+    </div>` : ""}
+
     ${isNewProject && hasBrief ? `<div class="card-glass" style="text-align:center">
       <div style="font-size:22px;margin-bottom:6px">\u2728</div>
       <div style="font-size:13px;font-weight:500;color:rgba(30,16,64,0.55);line-height:1.5;margin-bottom:10px">${t("projects.empty.hint2", "OWL \u0437\u0440\u043E\u0437\u0443\u043C\u0456\u0432 \u043F\u0440\u043E\u0435\u043A\u0442. \u0429\u043E \u0434\u0430\u043B\u0456?")}</div>
@@ -3822,12 +3857,13 @@ ${lines.join("\n")}`;
       </div>`).join("")}
     </div>` : ""}
 
-    <!-- \u041D\u0430\u0441\u0442\u0443\u043F\u043D\u0430 \u0434\u0456\u044F -->
-    ${nextStep ? `<div style="display:flex;align-items:center;gap:9px;border-radius:12px;padding:10px 12px;margin-bottom:10px;background:rgba(61,46,30,0.08);border:1.5px solid rgba(61,46,30,0.15)">
-      <div style="width:24px;height:24px;border-radius:8px;background:#3d2e1e;display:flex;align-items:center;justify-content:center;flex-shrink:0">
-        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+    ${nextStep ? `<div style="border-radius:12px;padding:11px 13px;margin-bottom:10px;background:rgba(61,46,30,0.1);border:1.5px solid rgba(61,46,30,0.2)">
+      <div style="font-size:9px;font-weight:800;color:rgba(61,46,30,0.5);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px">${t("projects.next.label", "\u041D\u0430\u0441\u0442\u0443\u043F\u043D\u0438\u0439 \u043A\u0440\u043E\u043A")}</div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <div data-action="toggle-project-step" data-project-id="${p.id}" data-step-id="${nextStep.id}" style="width:24px;height:24px;border-radius:8px;border:2px solid #3d2e1e;background:rgba(255,255,255,0.6);flex-shrink:0;cursor:pointer"></div>
+        <div style="flex:1;font-size:14px;font-weight:800;color:#1e1040;line-height:1.3">${escapeHtml(nextStep.text)}</div>
       </div>
-      <div style="font-size:13px;font-weight:700;color:#3d2e1e">${escapeHtml(nextStep.text)}</div>
+      <div data-action="project-chat-prompt" data-prompt="${escapeHtml(stuckPrompt)}" style="font-size:11px;font-weight:700;color:#3d2e1e;margin-top:8px;cursor:pointer;opacity:0.7">${t("projects.next.stuck", "\u0437\u0430\u0441\u0442\u0440\u044F\u0433? \u2192 \u0441\u043F\u0438\u0442\u0430\u0442\u0438 OWL")}</div>
     </div>` : ""}
 
     <!-- \u041A\u043B\u044E\u0447\u043E\u0432\u0456 \u043C\u0435\u0442\u0440\u0438\u043A\u0438 -->
