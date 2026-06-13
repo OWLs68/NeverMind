@@ -19,6 +19,7 @@
 import { t, getLang } from '../core/utils.js';
 import { showToast, currentTab } from '../core/nav.js';
 import { logTtsUsage } from '../core/usage-meter.js';
+import { getSettings, updateSettings } from '../core/settings.js';
 
 // Інструкція вимови та locale браузерного голосу — за мовою застосунку
 // (getLang). Додаємо мови сюди коли зʼявляються (forward-looking під i18n).
@@ -34,7 +35,14 @@ const VOICE_MODE_KEY = 'nm_voice_mode';
 const TTS_USAGE_KEY = 'nm_tts_usage';        // {date:'YYYY-MM-DD', chars:N}
 const MAX_CHARS_PER_UTTERANCE = 500;
 const DAILY_CHAR_CAP = 12000;                 // ~$0.18/день стеля OpenAI TTS
-const OPENAI_VOICE = 'nova';
+const DEFAULT_OPENAI_VOICE = 'nova';
+const DEFAULT_ELEVEN_VOICE = '21m00Tcm4TlvDq8ikWAM'; // Rachel (multilingual, тепла)
+
+// Налаштування голосу з nm_settings (вибір у Налаштуваннях → блок «Голос Агента»).
+function _settings() { return getSettings(); }
+function _openaiVoice() { return _settings().ttsVoice || DEFAULT_OPENAI_VOICE; }
+function _elevenKey() { return (_settings().elevenKey || '').trim(); }
+function _elevenVoice() { return _settings().elevenVoiceId || DEFAULT_ELEVEN_VOICE; }
 // 0.05с тиша — розблокування аудіо на iOS (один раз з user-gesture).
 const SILENT_WAV = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAIlYAAESsAAACABAAZGF0YQAAAAA=';
 
@@ -123,7 +131,7 @@ async function _speakOpenAI(text, key) {
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
     body: JSON.stringify({
       model: 'gpt-4o-mini-tts',
-      voice: OPENAI_VOICE,
+      voice: _openaiVoice(),
       input: text,
       instructions: _ttsInstruction(),
       response_format: 'mp3',
@@ -131,11 +139,31 @@ async function _speakOpenAI(text, key) {
   });
   if (!res.ok) throw new Error('tts ' + res.status);
   const blob = await res.blob();
+  await _playBlob(blob);
+}
+
+async function _playBlob(blob) {
   const url = URL.createObjectURL(blob);
   stopSpeaking();
   _audio = new Audio(url);
   _audio.onended = () => { try { URL.revokeObjectURL(url); } catch (e) {} _audio = null; };
   await _audio.play();
+}
+
+// ElevenLabs — найкраща якість/характер, українська майже без акценту (преміум,
+// окремий ключ у Налаштуваннях). multilingual_v2 стабільно тягне українську.
+async function _speakElevenLabs(text, key) {
+  const voiceId = _elevenVoice();
+  const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
+    method: 'POST',
+    headers: { 'xi-api-key': key, 'Content-Type': 'application/json', 'Accept': 'audio/mpeg' },
+    // turbo_v2_5 — низька затримка (Роман: голос з'являвся з лагом) +
+    // багатомовна, добра українська. Якість трохи нижча за multilingual_v2,
+    // але відчутно швидше.
+    body: JSON.stringify({ text, model_id: 'eleven_turbo_v2_5' }),
+  });
+  if (!res.ok) throw new Error('11labs ' + res.status);
+  await _playBlob(await res.blob());
 }
 
 // Озвучити текст (з тапу або авто). Чистить markdown/emoji, ріже, рахує ліміт.
@@ -149,23 +177,40 @@ export async function speak(text) {
   if (clean.length > MAX_CHARS_PER_UTTERANCE) clean = clean.slice(0, MAX_CHARS_PER_UTTERANCE) + '…';
   _lastSpoken = clean; _lastSpokenTs = Date.now();
 
+  // 1) ElevenLabs (преміум, окремий ключ) — якщо заданий. Найкраща вимова.
+  const elevenKey = _elevenKey();
+  if (elevenKey) {
+    try { await _speakElevenLabs(clean, elevenKey); return; }
+    catch (e) { /* нижче падаємо на OpenAI/браузер */ }
+  }
+  // 2) OpenAI gpt-4o-mini-tts (твій ключ) у межах денного ліміту.
   const key = localStorage.getItem('nm_gemini_key');
   const overCap = _ttsCharsToday() + clean.length > DAILY_CHAR_CAP;
-  if (!key || overCap) {
-    if (overCap && !_capWarned) {
-      _capWarned = true;
-      try { showToast(t('tts.cap', 'Денний ліміт природного голосу вичерпано — перехід на безкоштовний')); } catch (e) {}
-    }
-    _speakBrowser(clean);
-    return;
+  if (key && !overCap) {
+    _addTtsChars(clean.length); // резервуємо ДО fetch (без гонки)
+    try { logTtsUsage(clean.length); } catch (e) {}
+    try { await _speakOpenAI(clean, key); return; }
+    catch (e) { /* нижче браузер */ }
+  } else if (overCap && !_capWarned) {
+    _capWarned = true;
+    try { showToast(t('tts.cap', 'Денний ліміт природного голосу вичерпано — перехід на безкоштовний')); } catch (e) {}
   }
-  _addTtsChars(clean.length); // резервуємо ДО fetch (без гонки)
-  try { logTtsUsage(clean.length); } catch (e) {}
-  try {
-    await _speakOpenAI(clean, key);
-  } catch (e) {
-    _speakBrowser(clean); // мережа/помилка → безкоштовний голос, не мовчимо
-  }
+  // 3) Браузерний голос (безкоштовно) — крайній fallback.
+  _speakBrowser(clean);
+}
+
+// === Налаштування голосу (блок «Голос Агента») ===
+export function setTtsVoice(voice) { if (voice) updateSettings({ ttsVoice: voice }); }
+export function saveElevenKey(val) { updateSettings({ elevenKey: (val || '').trim() }); }
+export function getVoicePrefs() {
+  const s = _settings();
+  return { ttsVoice: s.ttsVoice || DEFAULT_OPENAI_VOICE, elevenKey: s.elevenKey || '' };
+}
+// 🎧 Прослухати — тап (gesture) → озвучити зразок поточним голосом.
+export function testTtsVoice() {
+  unlockAudio();
+  _lastSpoken = ''; // дозволити повтор того ж зразка
+  speak(t('tts.sample', 'Привіт! Я твій агент NeverMind. Ось так звучить мій голос.'));
 }
 
 // Авто-озвучка відповідей OWL у чаті — ЛИШЕ активна вкладка + змістовні репліки
@@ -189,4 +234,8 @@ if (typeof window !== 'undefined') {
   window.nmVoiceToggle = toggleVoiceMode;
   window.nmVoiceIsOn = isVoiceMode;
   window.nmVoiceStop = stopSpeaking;
+  window.setTtsVoice = setTtsVoice;
+  window.saveElevenKey = saveElevenKey;
+  window.testTtsVoice = testTtsVoice;
+  window.getVoicePrefs = getVoicePrefs;
 }

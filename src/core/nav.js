@@ -751,6 +751,9 @@ export function openSettings() {
   // Той самий патерн як у closeSettings → fcebe88.
   const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
   setVal('input-api-key', key);
+  // Голос Агента — поточний вибір + ключ ElevenLabs.
+  setVal('tts-voice-select', settings.ttsVoice || 'nova');
+  setVal('input-eleven-key', settings.elevenKey || '');
   setVal('input-name', settings.name || '');
   setVal('input-age', settings.age || '');
   setVal('input-weight', settings.weight || '');
