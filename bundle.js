@@ -25924,29 +25924,6 @@ ${legacy}`;
     } catch (e) {
     }
   }
-  var _micPrimed = false;
-  async function ensureMicPermission() {
-    if (_micPrimed) return true;
-    try {
-      if (navigator.permissions && navigator.permissions.query) {
-        const st = await navigator.permissions.query({ name: "microphone" });
-        if (st.state === "granted") {
-          _micPrimed = true;
-          return true;
-        }
-      }
-    } catch (e) {
-    }
-    try {
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return false;
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      stream.getTracks().forEach((tr) => tr.stop());
-      _micPrimed = true;
-      return true;
-    } catch (e) {
-      return false;
-    }
-  }
   function stopSpeaking() {
     _speaking = false;
     try {
@@ -26174,10 +26151,6 @@ ${legacy}`;
         _syncVoiceButtons();
         if (on) {
           try {
-            ensureMicPermission();
-          } catch (e) {
-          }
-          try {
             openChatBar(currentTab);
           } catch (e) {
           }
@@ -26245,7 +26218,6 @@ ${legacy}`;
     window.nmVoiceToggle = toggleVoiceMode;
     window.nmVoiceIsOn = isVoiceMode;
     window.nmVoiceStop = stopSpeaking;
-    window.nmEnsureMic = ensureMicPermission;
     window.setTtsVoice = setTtsVoice;
     window.saveElevenKey = saveElevenKey;
     window.testTtsVoice = testTtsVoice;
