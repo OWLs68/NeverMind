@@ -349,6 +349,15 @@ jobs:
               ERROR_MSG=$(jq -r '.error.message // .error.type // "невідомо"' /tmp/api-response.json 2>/dev/null || cat /tmp/api-response.json)
               echo "   → $ERROR_MSG"   # у stdout-лог, щоб причину 400 було видно без артефакту
               echo "**⚠️ Chunk $CHUNK_NUM — API ERROR $HTTP_CODE:** $ERROR_MSG" >> /tmp/chunk-reports.md
+              # Білінг/кредити/авторизація — це стан акаунта Anthropic, не баг коду
+              # і не загроза. НЕ валимо CI (інакше спам «failed» на кожен push).
+              # Скан відновиться сам коли зʼявляться кредити / виправлять ключ.
+              case "$HTTP_CODE:$ERROR_MSG" in
+                401:*|403:*|*"credit balance"*|*"billing"*|*"Plans & Billing"*)
+                  echo "ℹ️ Anthropic API недоступний (кредити/білінг/ключ) — скан ПРОПУЩЕНО, CI зелений."
+                  echo "has_findings=false" >> "$GITHUB_OUTPUT"
+                  exit 0 ;;
+              esac
               FAILED_CHUNKS=$((FAILED_CHUNKS + 1))
             else
               CHUNK_REPORT=$(jq -r '.content[0].text' /tmp/api-response.json)
