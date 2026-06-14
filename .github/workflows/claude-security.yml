@@ -224,9 +224,12 @@ jobs:
 
             changed)
               echo "🔍 Changed scan: git diff проти попереднього коміту"
-              git diff --name-only HEAD~1 HEAD -- \
-                'src/**/*.js' 'index.html' 'sw.js' '.github/workflows/**/*.yml' \
-                2>/dev/null >> "$FILES_LIST" || true
+              # grep-фільтр надійніший за git pathspec '**' (той НЕ матчив
+              # .github/workflows/*.yml → порожній збір → 0-байтний чанк → API 400,
+              # корінь падінь Claude-Sec на merge-комітах).
+              git diff --name-only HEAD~1 HEAD 2>/dev/null \
+                | grep -E '^(src/.*\.js|index\.html|sw\.js|\.github/workflows/.*\.yml)$' \
+                >> "$FILES_LIST" || true
               ;;
 
             file)
@@ -307,6 +310,12 @@ jobs:
           for chunk_file in $(ls -1 /tmp/chunks/chunk-*.txt 2>/dev/null | sort -V); do
             CHUNK_NUM=$(basename "$chunk_file" .txt | sed 's/chunk-//')
             CHUNK_SIZE=$(wc -c < "$chunk_file")
+            # Пропускаємо ПОРОЖНІЙ чанк — порожній запит = Claude API 400 (корінь
+            # падінь). Нема що сканувати у цьому чанку → просто далі, не помилка.
+            if [ "$CHUNK_SIZE" -eq 0 ]; then
+              echo "⏭️ Chunk $CHUNK_NUM порожній (0 байт) — пропуск"
+              continue
+            fi
             echo "🤖 Chunk $CHUNK_NUM/$TOTAL_CHUNKS ($CHUNK_SIZE байт) → Claude API..."
 
             jq -n \
