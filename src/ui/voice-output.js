@@ -76,27 +76,10 @@ export function unlockAudio() {
   try { const s = new Audio(SILENT_WAV); s.play().catch(() => {}); } catch (e) {}
 }
 
-// Запит дозволу мікрофона — щоб і ЗЕЛЕНА кнопка режиму (зверху), і ЧЕРВОНИЙ мік
-// (у барі) питали дозвіл, залежно що натиснув першим (Роман). Дозвіл береться
-// раз на сесію (браузер далі памʼятає; iOS-PWA може перепитати після перезапуску
-// — обмеження Apple). Якщо дозвіл уже є — не нагнітаємо повторним запитом.
-let _micPrimed = false;
-export async function ensureMicPermission() {
-  if (_micPrimed) return true;
-  try {
-    if (navigator.permissions && navigator.permissions.query) {
-      const st = await navigator.permissions.query({ name: 'microphone' });
-      if (st.state === 'granted') { _micPrimed = true; return true; }
-    }
-  } catch (e) { /* iOS Safari не підтримує Permissions API → нижче через getUserMedia */ }
-  try {
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return false;
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    stream.getTracks().forEach(tr => tr.stop()); // одразу відпускаємо мік
-    _micPrimed = true;
-    return true;
-  } catch (e) { return false; }
-}
+// ⚠️ Дозвіл мікрофона НЕ просимо заздалегідь (revert v1d9eo): на iOS єдиний спосіб
+// «спитати» — відкрити мік через getUserMedia, а це перемикає аудіо-сесію у режим
+// запису → динамік глухне (звук у розмовник) + псує запис. Тому дозвіл бере сам
+// червоний мік (SpeechRecognition) коли юзер реально тисне говорити.
 
 export function stopSpeaking() {
   _speaking = false; // відпускаємо замок (це перерив, не природне завершення)
@@ -304,8 +287,6 @@ function _injectVoiceButtons() {
       const on = toggleVoiceMode();           // тап = gesture → розблок аудіо/мік
       _syncVoiceButtons();
       if (on) {
-        // Дозвіл мікрофона одразу (тап = gesture) — щоб push-to-talk потім не питав.
-        try { ensureMicPermission(); } catch (e) {}
         // Відкриваємо чат поточної вкладки — діалог працює лише у відкритому чаті.
         try { openChatBar(currentTab); } catch (e) {}
         try { showToast(t('voice.on', '🎙 OWL озвучуватиме відповіді — тисни 🎤 щоб говорити')); } catch (e) {}
@@ -372,7 +353,6 @@ if (typeof window !== 'undefined') {
   window.nmVoiceToggle = toggleVoiceMode;
   window.nmVoiceIsOn = isVoiceMode;
   window.nmVoiceStop = stopSpeaking;
-  window.nmEnsureMic = ensureMicPermission;
   window.setTtsVoice = setTtsVoice;
   window.saveElevenKey = saveElevenKey;
   window.testTtsVoice = testTtsVoice;
