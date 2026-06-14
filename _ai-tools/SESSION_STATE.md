@@ -333,6 +333,12 @@
 
 ## ⚠️ ДЛЯ НОВОГО ЧАТУ — найважливіше
 
+**🆕 ХВОСТИ v1d9eo (14.06):**
+- **ГОЛОС:** режим архівовано, лишився нижній мік (диктування). Smoke на iPhone: мік диктує текст у поле, зеленої кнопки нема. Велика збірка — КОНВЕЄР STT→мозок→TTS після Supabase (`docs/VOICE_REALTIME_PLAN.md`, переписано; Realtime відхилено).
+- **E2E → GitHub Actions** (Hetzner вимкнено, `tester-config enabled:false`). 2 зелені тести. **Крок 2:** портувати інтеракційні (свайп-видалення/Проекти) батчами через MCP. Фізично вимкнути VPS — Роман у панелі Hetzner.
+- **Anthropic кредити:** на акаунті Security-Scan скінчились → скан тепер graceful-skip (зелений). Рішення Романа: поповнити (скан запрацює) чи лишити.
+- **MCP:** є доступ GitHub (Actions/PR/пошта/диск). Прогони CI перевіряю звідси.
+
 **🚀 SUPABASE ФАЗА 1 — стан після 7uxlr7 (план → `docs/SUPABASE_MIGRATION_PLAN.md`):**
 - ✅ **Ворота 1 (єдиний шар запису) — ЗАКРИТО.** Усі справжні записи через канонічні сеттери (settings/memory/quit_log + усі 5 сутностей через фабрики). Прямі setItem що лишились — легітимні (boot-міграції, ефемерні прапори).
 - ✅ **Ворота 3 (конверт сутності) — ЗАКРИТО на 5 сутностях.** `stampEntity` у 5 фабриках (`src/data/entity-factories.js` + `habit-classifier.js`). Кожна нова habit/event/task/moment/finance має конверт `{id-uuid, user_id, created_at, updated_at, deleted_at, hlc}` + легасі createdAt/ts поряд.
