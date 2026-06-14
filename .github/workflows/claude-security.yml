@@ -325,7 +325,7 @@ jobs:
               --arg total "$TOTAL_CHUNKS" \
               --rawfile code "$chunk_file" \
               '{
-                model: "claude-sonnet-4-5-20250929",
+                model: "claude-sonnet-4-6",
                 max_tokens: 4000,
                 system: $system,
                 messages: [{role: "user", content: ("Mode: " + $mode + " (chunk " + $chunk_num + "/" + $total + "). Кодова база для аудиту нижче. Поверни звіт у Markdown.\n\n" + $code)}]
@@ -336,7 +336,6 @@ jobs:
               -H "Content-Type: application/json" \
               -H "x-api-key: $ANTHROPIC_API_KEY" \
               -H "anthropic-version: 2023-06-01" \
-              -H "anthropic-beta: context-1m-2025-08-07" \
               -d @/tmp/api-payload.json)
 
             {
@@ -348,6 +347,7 @@ jobs:
             if [ "$HTTP_CODE" != "200" ]; then
               echo "❌ Chunk $CHUNK_NUM: HTTP $HTTP_CODE"
               ERROR_MSG=$(jq -r '.error.message // .error.type // "невідомо"' /tmp/api-response.json 2>/dev/null || cat /tmp/api-response.json)
+              echo "   → $ERROR_MSG"   # у stdout-лог, щоб причину 400 було видно без артефакту
               echo "**⚠️ Chunk $CHUNK_NUM — API ERROR $HTTP_CODE:** $ERROR_MSG" >> /tmp/chunk-reports.md
               FAILED_CHUNKS=$((FAILED_CHUNKS + 1))
             else
