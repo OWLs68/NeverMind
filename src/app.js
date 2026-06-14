@@ -17,7 +17,10 @@ import './ui/voice-input.js';
 import './ui/unread-badge.js';
 import './ui/modal-overlay-sync.js';
 import './ui/chat-image.js';
-import './ui/voice-output.js';
+// АРХІВОВАНО v1d9eo: голосовий режим (TTS-озвучка + зелена кнопка) відкладено —
+// лишився лише нижній мік (voice-input) для диктування. Повернеться у великій
+// збірці голосу (docs/VOICE_REALTIME_PLAN.md). Файл voice-output.js збережено.
+// import './ui/voice-output.js';
 
 // AI (штучний інтелект)
 import './ai/ui-tools.js';
