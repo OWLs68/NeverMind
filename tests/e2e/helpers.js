@@ -88,9 +88,13 @@ async function mockAI(page, { content = 'Готово', toolCalls = null } = {})
   });
 }
 
-// Перемикає вкладку через реальний клік по таб-бару.
+// Перемикає вкладку через справжню функцію переходу switchTab() — те саме, що
+// викликає тап по нижній навігації. НЕ клікаємо по data-tab напряму: (1) нижня
+// навігація — рухомий «барабан», далекі вкладки приховані translateX → клік падає
+// по таймауту; (2) data-tab є і на прихованій кнопці допомоги поза навігацією.
+// switchTab — детерміновано, незалежно від положення барабана (CI 15.06).
 async function gotoTab(page, tab) {
-  await page.locator(`[data-tab="${tab}"]`).first().click();
+  await page.evaluate((t) => window.switchTab(t), tab);
   await page.waitForTimeout(250);
 }
 
