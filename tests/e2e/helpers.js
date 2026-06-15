@@ -63,8 +63,24 @@ async function boot(page, opts = {}) {
     await page.route('**/api.openai.com/**', (route) => route.abort());
   }
 
+  // Вимикаємо онбординг ДО завантаження — інакше на чистому старті він
+  // запускає вітальний слайд-тур (#slides-tour), який оверлеєм перекриває
+  // кліки у модалках і валить тести (CI 15.06).
+  await page.addInitScript(() => {
+    try { localStorage.setItem('nm_onboarding_done', '1'); } catch (e) {}
+  });
+
   await page.goto('/');
   await page.waitForFunction(() => window.NM_BOOT_DONE === true, { timeout: 15000 });
+
+  // Захисно: якщо вітальний оверлей усе ж зʼявився — прибрати, щоб не ловив кліки.
+  await page.evaluate(() => {
+    try { window.closeSlidesTour && window.closeSlidesTour(); } catch (e) {}
+    const tour = document.getElementById('slides-tour');
+    if (tour) tour.style.display = 'none';
+    const ob = document.getElementById('onboarding');
+    if (ob) ob.style.display = 'none';
+  });
   return errors;
 }
 
