@@ -12,9 +12,19 @@ const { defineConfig, devices } = require('@playwright/test');
 module.exports = defineConfig({
   testDir: './tests/e2e',
   timeout: 30000,
-  expect: { timeout: 7000 },
   retries: process.env.CI ? 2 : 0,   // мережеві блипи/race → 2 повтори перед FAIL
   reporter: [['list'], ['html', { open: 'never' }]],
+  // Знімки-еталони (visual regression): глушимо анімації + дозволяємо мікро-різницю
+  // рендеру (антиаліасинг/blur у CI). Еталони генеруються ТІЛЬКИ в CI (Linux) —
+  // ніколи локально, інакше шрифти не збігаються (web-розвідка Council 15.06).
+  expect: {
+    timeout: 7000,
+    toHaveScreenshot: {
+      animations: 'disabled',
+      maxDiffPixelRatio: 0.02,  // до 2% пікселів можуть відрізнятись (blur/шрифти)
+      threshold: 0.25,          // толерантність кольору окремого пікселя (0-1)
+    },
+  },
   use: {
     baseURL: 'http://127.0.0.1:4173/',
     serviceWorkers: 'block',
@@ -26,5 +36,12 @@ module.exports = defineConfig({
     reuseExistingServer: !process.env.CI,
     timeout: 30000,
   },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  // Mobile Safari (WebKit) — головна платформа Романа (iPhone), найближче до
+  // реального Safari. Desktop Chrome — швидкий крос-чек логіки. Реальні iOS-quirks
+  // (rubber-band/backdrop-filter composite) не ловить жоден headless — лишається
+  // ручний смоук на айфоні (Council Red Team 15.06).
+  projects: [
+    { name: 'Mobile Safari', use: { ...devices['iPhone 13'] } },
+    { name: 'Desktop Chrome', use: { ...devices['Desktop Chrome'] } },
+  ],
 });

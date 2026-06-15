@@ -16,3 +16,7 @@ _ai-tools/tester-screenshots/*.jpeg
 # Python bytecode (scripts/ai-tester.py compiles during syntax check)
 scripts/__pycache__/
 **/__pycache__/
+
+# Playwright E2E артефакти (звіт + сліди) — генеруються щопрогону, у CI як artifact
+playwright-report/
+test-results/

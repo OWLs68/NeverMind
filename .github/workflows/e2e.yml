@@ -40,8 +40,8 @@ jobs:
       - name: Build bundle
         run: npm run build
 
-      - name: Install Playwright Chromium
-        run: npx playwright install --with-deps chromium
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium webkit
 
       - name: Run E2E
         run: npx playwright test
