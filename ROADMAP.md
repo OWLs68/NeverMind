@@ -122,8 +122,8 @@ EAA (мікро-виняток), NIS2 (мікро-виняток), DSA (особ
 - Explicit consent flow при першому логіні (health/finance окремо)
 - Right to erasure (видалити акаунт) + Right to portability (експорт JSON)
 
-**Hetzner AI-тестер — ФIКС РIШЕННЯ Романа 19.05.2026 OBErR:**
-Обрано Hetzner (НЕ Managed Agents, НЕ Playwright Skill локально). Причини: якість тесту 24/7 без залежності від Mac (мобільність — Роман на телефоні), AI-planning через `tester-commands.md` (юзер пише «перевір X» природною мовою → тестер сам розуміє), persistent Chrome profile як справжній юзер. Альтернативи відхилено: Playwright Skill потребує Mac постійно включений; Managed Agents можливо не вміє headless Chrome.
+**Hetzner AI-тестер — ⛔ ЗАМІНЕНО на Playwright у CI (foyz2r 16.06.2026).** Council: окремий сервер = борг + гроші + крихкий CDP. Тести → `tests/e2e/` (Playwright у GitHub Actions, безкоштовно). Архів + причини → `_archive/hetzner-tester/README.md`. Нижче — історичне рішення, лишене для контексту:
+~~Обрано Hetzner (НЕ Managed Agents, НЕ Playwright Skill локально). Причини: якість тесту 24/7 без залежності від Mac (мобільність — Роман на телефоні), AI-planning через `tester-commands.md` (юзер пише «перевір X» природною мовою → тестер сам розуміє), persistent Chrome profile як справжній юзер. Альтернативи відхилено: Playwright Skill потребує Mac постійно включений; Managed Agents можливо не вміє headless Chrome.~~
 
 **Архітектурне виправлення (Brain-Claude 19.05):** Brain не має SSH доступу до 94.130.25.22 — це фундаментальна помилка handoff'у 14.05. Setup робить **Роман через свою Claude Code Web сесію по SSH** (як 14.05 коли ставив Chrome+browser-harness). NM-Claude (тут) готує конкретні step-by-step + перевіряє результати у `_ai-tools/tester-status.json` після кожного кроку.
 

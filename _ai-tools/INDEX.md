@@ -86,18 +86,17 @@
 | AI Act compliance (Health Isolation — ✅ завершено) | `docs/AI_ACT_COMPLIANCE.md` |
 | Активний блок ROADMAP | `ROADMAP.md` § «🚨 Pre-EU-MVP Compliance» |
 
-### AI-тестер 24/7 (Hetzner, e9t3N 15.05.2026)
+### E2E-тести (Playwright у CI, foyz2r 16.06.2026)
 
 | Питання | Файл / секція |
 |---|---|
-| Контракт NM↔Hetzner, 10 готових сценаріїв, безпека | `_ai-tools/AI_TESTER_INTEGRATION.md` |
-| Налаштування тестера (Claude edit'ить за запитом) | `_ai-tools/tester-config.json` |
-| Черга задач від Романа / Claude → тестеру | `_ai-tools/tester-commands.md` |
-| Поточний стан + heartbeat + останні фейли | `_ai-tools/tester-status.json` |
-| Журнал запусків останніх 7 днів | `_ai-tools/tester-log.md` |
-| Інтеграція з `/start` (читання статусу) | `.claude/commands/start.md` § Крок 1.5 |
-| Інтеграція з `/finish` (додавання регресій) | `.claude/commands/finish.md` § Фаза 3.5 |
-| Workflow auto-merge для гілок `claude/ai-tester-*` | `.github/workflows/auto-merge-tester.yml` |
+| Самі тести (boot, навігація, задачі, модалки) | `tests/e2e/*.spec.js` |
+| Фундамент: boot/seedState/mockAI/gotoTab | `tests/e2e/helpers.js` |
+| Конфіг (движки Mobile Safari + Desktop Chrome, знімки) | `playwright.config.js` |
+| Workflow (запуск на кожен push, безкоштовно) | `.github/workflows/e2e.yml` |
+| Інтеграція з `/start` (звірка зеленого прогону) | `.claude/commands/start.md` § Крок 1.5 |
+| Інтеграція з `/finish` (додати тест на зміну) | `.claude/commands/finish.md` § Фаза 3.5 |
+| Старий Hetzner-тестер (архів + чому замінили) | `_archive/hetzner-tester/README.md` |
 
 ### Технічна довідка
 
