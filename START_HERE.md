@@ -16,7 +16,7 @@
 | 6 | `lessons.md` | Щоденник уроків Claude — патерни, анти-патерни, журнал рішень |
 | 7 | `_ai-tools/INDEX.md` | **Семантичний індекс "куди йти за чим"** — читай коли треба поглиблюватись у конкретну тему |
 | 8 | `_ai-tools/HOT_RULES.md` | **🔥 ОСТАННІМ перед першою реплікою** (LW3j8 01.05) — 8 найболючіших правил з ❌/✅ прикладами. Самотест видалено у iWyjU 03.05 (перевіряв правила з тренування, не реальне читання файлів). Замість нього — у `start.md` Крок 1 жорстка вимога: ПЕРШИЙ Read у сесії = CLAUDE.md повністю. |
-| 9 | `_ai-tools/TESTER_SCENARIOS_PLAN.md` | **35 UI-сценаріїв AI-Tester** (план Ug2Jw 21.05). Що покриває (кнопки/модалки/поля), що НЕ покриває (AI behavior — Roman сам, iOS — manual, Projects — TBD, Auth/Sync/Offline — після Supabase). 3 принципи стабільності + maintenance rule (CLAUDE.md правило 13). Читай якщо: додаєш UI, питання про test coverage, починаєш Batch 1-4 імплементації. |
+| 9 | `tests/e2e/` + `tests/e2e/helpers.js` | **E2E-тести (Playwright у CI, foyz2r 16.06)** — boot/навігація/задачі/модалки, движки Mobile Safari + Desktop Chrome, безкоштовно на кожен push. Фундамент: `boot`/`seedState`/`mockAI`/`gotoTab`. Читай якщо: додаєш UI, питання про покриття, додаєш тест. Старий Hetzner-тестер → `_archive/hetzner-tester/`. |
 
 **Інші файли** — читай через INDEX або посилання з CLAUDE.md. Карта → секція "Карта документації" у CLAUDE.md.
 
