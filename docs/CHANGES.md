@@ -4,6 +4,31 @@
 > Формат: дата, що зроблено, які файли змінено, чи є відкриті проблеми.
 > Старіші записи → `_archive/CHANGES_OLD.md`
 
+> ⚠️ **Дрейф журналу:** записи між JMQuT (17.05) і foyz2r (18.06) — DGH6F/OBErR/HKnlM/Ug2Jw/RQmdC/WML2Z/7uxlr7/vdlyeg/qpzj7k/v1d9eo — у CHANGES НЕ заносились; їхній стислий опис у `_ai-tools/SESSION_STATE.md` + `_archive/SESSION_STATE_archive.md`. Бекфіл — окрема задача.
+
+---
+
+## 2026-06-18 — foyz2r: E2E-тестер (Playwright у CI) + архів Хетзнера + UUID v7 (Supabase) + фікс CI-блокера
+
+**Гілка:** `claude/new-session-foyz2r` · коміти `971c3b4` (lock) → `9722e2a` (v7) · CACHE `nm-20260617-0930` · Council 5+4 агенти Sonnet + 3 web-дослідження
+
+### A. Фікс CI-блокера (package-lock розсинхрон)
+Коміт `dc272b6` (минула сесія) додав `@playwright/test` у package.json, але не оновив `package-lock.json`. `npm ci` (в авто-злитті + E2E) вимагає точної відповідності → **падало все, нічого не деплоїлось**. Фікс `971c3b4`: `npm install` регенерував lock. Влито dependabot PR #17 (gitleaks v2→v3), #18 (setup-node v4→v6); #19 (playwright bump) закрився сам.
+
+### B. Новий E2E-тестер на Playwright (замінив Hetzner)
+Council 5 агентів + веб-дослід. Рішення «золота середина»: автоматично + безкоштовно у GitHub Actions, без окремого сервера. Створено `tests/e2e/helpers.js` (boot глушить OpenAI=$0, seedState через addInitScript, mockAI route-intercept, gotoTab через `switchTab()`, прапор `__NM_TEST_SEED__` як шов під Supabase-boot), `tests/e2e/{smoke,tasks,modals}.spec.js`, `playwright.config.js` (проекти Mobile Safari WebKit + Desktop Chrome; `toHaveScreenshot` anti-flaky), оновлено `e2e.yml` (chromium+webkit). **12 тестів зелені.** CI зловив 3 реальні пастки: lock-розсинхрон, дубль `data-tab` (клік чіпляв приховану кнопку допомоги), вітальний `#slides-tour` що оверлеєм перекривав кліки модалок. Headless НЕ ловить iOS-quirks (rubber-band/backdrop) — ручний смоук лишається.
+
+### C. Hetzner AI-тестер → архів
+Перенесено у `_archive/hetzner-tester/` (ai-tester.py 32 сценарії + health-check + setup + auto-merge-tester.yml + tester-*.json/md + README з причинами). Оновлено згадки: CLAUDE.md правило 13, START_HERE, INDEX, `/start` Крок 1.5 (тепер звірка E2E через GitHub MCP), `/finish` Фаза 3.5 (тест у `*.spec.js`), ROADMAP. Сервер вимикає Роман вручну.
+
+### D. Supabase Фаза-1 розслідування (Council×2 + web)
+- **Проекти вже на фабриці** — `makeProject`+`stampEntity` закрила qpzj7k; нотатка «2 точки без фабрики» застаріла (ледь не спричинила переробку готового → урок).
+- **«Критичний finance.projectId баг» від агентів — порожній.** Перевірено по коду: projectId пишеться лише з AI (UUID), прив'язка фінанс↔проект постала 13.06 ПІСЛЯ міграції v14 (11.05) → числових projectId не існує. Міграцію не писали.
+- **UUID v4 → v7** (`9722e2a`): `generateUUID()` → ручна збірка time-ordered v7 (RFC 9562, `crypto.getRandomValues`). Postgres-індекс не фрагментується (page splitting). Старі v4 валідні поряд; ніде не сортуємо за id → мікс безпечний. Верифіковано (формат/версія/монотонність/унікальність) + E2E зелений.
+- Веб-дослід підтвердив: наш підхід (клієнтський UUID, legacy_id, конверт, версійні міграції, soft-delete поле) — правильний; HLC/CRDT відкласти до multi-device.
+
+**Відкрите:** Ворота 2 (структурний payload — iPhone), структуровані чіпи, кредити Anthropic для Security Scan, iPhone-смоук (календар/B-198/B-199/CSP).
+
 ---
 
 ## 2026-05-17 — JMQuT: Health AI Isolation (8 фаз, EU AI Act) + Event Delegation +4 файли (44 onclick) + EU Compliance research (14 комітів, 8 Council Sonnet, 4 WebSearch)
