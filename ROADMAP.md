@@ -17,9 +17,11 @@
 > **Принцип:** мінімально у фічах, повно у фундаменті (двері в один бік закласти зараз).
 > **Sync:** DIY на власному action-log (НЕ Electric/PowerSync — ламають 345 синхронних читань) — HLC + field-LWW + IndexedDB/persist + tombstones + pull-on-reconnect.
 > **Фаза 1 (без Supabase) — ПРОГРЕС після 7uxlr7 (12.06):**
-> - ✅ **Ворота 1** (єдиний шар запису) — канонічні сеттери settings/memory/quit_log + 5 фабрик сутностей (`src/data/entity-factories.js`).
-> - ✅ **Ворота 3** (конверт сутності) — `stampEntity` у 5 фабриках (habit/event/task/moment/finance). Date.now id → UUID.
-> - ⏳ **Лишилось:** проекти (makeProject + конверт); **Ворота 2** (структурний `nm-data-changed` {type,action,id} — 7/9 слухачів ламаються, strangler-shim, потребує iPhone-smoke); структуровані чіпи (`send_chips`); maintenance конверта на edit'ах → Фаза 2.
+> - ✅ **Ворота 1** (єдиний шар запису) — канонічні сеттери settings/memory/quit_log + фабрики сутностей (`src/data/entity-factories.js`).
+> - ✅ **Ворота 3** (конверт сутності) — `stampEntity` у 6/6 фабриках (habit/event/task/moment/finance/**project** — проекти закрила qpzj7k 13.06). Date.now id → UUID.
+> - ✅ **UUID v7** (foyz2r 17.06) — `generateUUID()` час-сортований (кращий Postgres-індекс); старі v4 валідні поряд.
+> - ✅ **E2E-тестер на Playwright у CI** (foyz2r 16.06) — замінив Hetzner; `tests/e2e/`, безкоштовно на кожен push.
+> - ⏳ **Лишилось:** **Ворота 2** (структурний `nm-data-changed` {type,action,id} — 7/9 слухачів ламаються, strangler-shim, потребує iPhone-smoke); структуровані чіпи (`send_chips`); maintenance + backfill конверта → Фаза 2.
 
 **✅ Рефакторинг документації + «мозок» Claude — ЗАВЕРШЕНО 20.04.2026 (сесія g05tu).** 5 фаз, 6 комітів. Деталі → `ROADMAP_DONE.md` секція "Завершені Active-блоки".
 

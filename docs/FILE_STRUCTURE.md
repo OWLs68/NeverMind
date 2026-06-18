@@ -15,7 +15,21 @@
 | `sw.js` | Service Worker. **CACHE_NAME треба міняти при кожному деплої** |
 | `bundle.js` | Згенерований esbuild з `src/`. **Не комітити** — генерується CI |
 | `build.js` | Конфіг esbuild (10 рядків) |
-| `package.json` | Одна залежність: esbuild |
+| `package.json` | Залежності: esbuild + @playwright/test (devDep, для E2E) |
+| `playwright.config.js` | Конфіг E2E (foyz2r 16.06). Проекти Mobile Safari (WebKit) + Desktop Chrome, `toHaveScreenshot` anti-flaky, webServer python http.server |
+
+---
+
+## Тести (E2E — Playwright у CI, foyz2r 16.06.2026)
+
+Запуск автоматично на кожен push через `.github/workflows/e2e.yml` (безкоштовно). Замінив Hetzner-тестер (→ `_archive/hetzner-tester/`).
+
+| Файл | Відповідальність |
+|------|------------------|
+| `tests/e2e/helpers.js` | Фундамент: `boot()` (глушить OpenAI=$0, чекає `NM_BOOT_DONE`, гасить онбординг/слайд-тур), `seedState()` (підставляє localStorage через addInitScript + прапор `__NM_TEST_SEED__` під Supabase), `mockAI()` (route-intercept), `gotoTab()` (через `switchTab`) |
+| `tests/e2e/smoke.spec.js` | boot + навігація 8 вкладок без падінь |
+| `tests/e2e/tasks.spec.js` | додавання задачі + persistence після reload + модалка |
+| `tests/e2e/modals.spec.js` | Налаштування + Календар відкр/закр |
 
 ---
 
