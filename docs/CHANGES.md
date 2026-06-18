@@ -4,8 +4,6 @@
 > Формат: дата, що зроблено, які файли змінено, чи є відкриті проблеми.
 > Старіші записи → `_archive/CHANGES_OLD.md`
 
-> ⚠️ **Дрейф журналу:** записи між JMQuT (17.05) і foyz2r (18.06) — DGH6F/OBErR/HKnlM/Ug2Jw/RQmdC/WML2Z/7uxlr7/vdlyeg/qpzj7k/v1d9eo — у CHANGES НЕ заносились; їхній стислий опис у `_ai-tools/SESSION_STATE.md` + `_archive/SESSION_STATE_archive.md`. Бекфіл — окрема задача.
-
 ---
 
 ## 2026-06-18 — foyz2r: E2E-тестер (Playwright у CI) + архів Хетзнера + UUID v7 (Supabase) + фікс CI-блокера
@@ -28,6 +26,94 @@ Council 5 агентів + веб-дослід. Рішення «золота с
 - Веб-дослід підтвердив: наш підхід (клієнтський UUID, legacy_id, конверт, версійні міграції, soft-delete поле) — правильний; HLC/CRDT відкласти до multi-device.
 
 **Відкрите:** Ворота 2 (структурний payload — iPhone), структуровані чіпи, кредити Anthropic для Security Scan, iPhone-смоук (календар/B-198/B-199/CSP).
+
+---
+
+## 2026-06-13 — v1d9eo: Голос OWL — дослідження Realtime vs конвеєр + 4 інтерим-фікси + голос архівовано
+
+**Гілка:** `claude/new-session-v1d9eo` · коміт `632a10c` · CACHE `nm-20260613-1955` · Council 3 Sonnet (Realtime-факти / red-team / Supabase-кут) + web
+
+Council + Brain/Fable незалежно зійшлись: OpenAI Realtime — погано для iOS PWA (Apple вбиває веб-голос у фоні, cost-bomb ×100, VAD ламає function-calling). Рішення Романа: **КОНВЕЄР** Deepgram STT → GPT-4o-mini → ElevenLabs stream (4-12× дешевше, без WebRTC-засідок). `docs/VOICE_REALTIME_PLAN.md` переписано Realtime→Конвеєр. 4 фікси `voice-output.js`: «голос не той» (список у Налаштуваннях = єдине джерело правди + міграція `ttsEngineMigrated`), затримка (chunk по реченнях + prefetch), видалено Web Speech fallback (чесний стоп замість роботоголосу), STT push-to-talk (прибрано авто-петлю). **ГОЛОСОВИЙ РЕЖИМ АРХІВОВАНО** — TTS на iOS-вебі ненадійний; `voice-output.js` відключено з `app.js`, блок «Голос Агента» прибрано з Налаштувань. Лишився нижній мік `voice-input.js` для диктування. Урок: iOS getUserMedia перемикає аудіо-сесію → TTS глухне.
+
+---
+
+## 2026-06-13 — qpzj7k: Проекти (makeProject + воркспейс) + Голос OWL TTS + Фото-vision
+
+**Гілка:** `claude/new-session-qpzj7k` · ~37 комітів `125ccd6`→`02038bd` · CACHE `nm-20260613-1840` · Council 2× (Проекти 5 агентів, Голос 3 агенти) + web
+
+**Проекти:** `makeProject` фабрика + `stampEntity` (Ворота 3 закриті на 6/6 сутностях). Адаптивне інтерв'ю — питання генеруються під контекст, відповіді ловить `captureProjectInterviewAnswer` і наповнюють `brief/targetAudience/currentStage/deadline`. `src/data/project-completeness.js` — детермінований мозок повноти (7 вимірів, `canAdvise` гейтить поради кодом). `set_project_budget`/`set_project_brief` tools. **Фото-vision:** `src/ui/chat-image.js` — кнопка камери у кожному барі → gpt-4o-mini vision → опис → звичайний потік. **Голос OWL TTS:** `src/ui/voice-output.js` — кнопка 🎙, вибір голосу, ElevenLabs опціонально, єдиний замок мовлення. Фікс деплою: esbuild 0.28.0→0.28.1 (advisory блокував auto-merge). Фікс регресії: voice mode персистив між запусками → застосунок завис на вході (`02038bd`). Деталі → SESSION_STATE_archive.md.
+
+---
+
+## 2026-06-12 — 7uxlr7: Supabase Фаза 1 — Ворота 1+3 + 5 фабрик сутностей + класифікатори
+
+**Гілка:** `claude/new-session-7uxlr7` · 16 комітів `63c9586`→`3a7a0fd` · Council 5 Sonnet + silent-bug-scout
+
+**Ворота 1 (єдиний шар запису):** канонічні сеттери `updateSettings/getSettings` (`src/core/settings.js`), `saveMemory` (`src/ai/memory.js`), `getQuitLog/saveQuitLog`. **5 фабрик сутностей** (`src/data/entity-factories.js`): `makeHabit/makeEvent/makeTask/makeMoment/makeFinance` — 23 точки створення → 5. **Ворота 3 (конверт `stampEntity`)** у всіх 5 фабриках: кожна нова сутність отримує `{id-uuid, user_id, created_at, updated_at, deleted_at, hlc}`. `src/data/habit-classifier.js` + `inferHabitType()` у 4 точках. Багфікси: quit-звичка через чат (`d8713a9`), «час → подія» (`convertTaskToEventOnTime` у dispatcher-guards, `605321f`), 5 orphan NM_KEYS. 5 юніт-сторожів у `pre-push-check.js`.
+
+---
+
+## 2026-06-10 — vdlyeg: Аудит безпеки + 4 кореневі фікси (SEC-1..4) + deep research Supabase-плану
+
+**Гілка:** `claude/new-session-vdlyeg` · Council 3 Sonnet (SEC-1 регресія)
+
+**SEC-1** (`8c2f7fa`): `escapeHtml` не екранував лапки → XSS у ~25 місцях через attr-розрив. Фікс: `&quot;`/`&#39;` + 8/8 unit. **SEC-2** (`1370a9c`): `safeHref()` — `projects.js` рендерив `<a href>` без перевірки → `javascript:` XSS; 16/16 unit. **SEC-3** (`be7bd1d`): CI command injection у 3 workflow — `github.ref_name` у shell → `env:` + `"$VAR"`. **SEC-4** (`185354e`): `gitleaks.yml` щотижневий скан. Закрито B-197 (notes.js data-folder `escapeJsArg`→`escapeHtml`), B-200 (task-chat race). Deep research 5 web-агентів → план `docs/SUPABASE_MIGRATION_PLAN.md` (DIY-sync, HLC, ключ на Edge, Mastra=Фаза 4).
+
+---
+
+## 2026-06-03 — WML2Z: Ремонт AI-тестера + 2 баги з телефону + хук «не технічною мовою»
+
+**Гілка:** `claude/...WML2Z` · 5 комітів `651ab85`→`c7f80b4` · CACHE `nm-20260603-1952`
+
+Ремонт тестера: видалено мертвий `--full` mode, `max_tests_per_run` 30→33. **Баг 1 з телефону** (`00b377b`): `parseContentChips` lenient-парсер (trailing-коми) → AI-шматки JSON не показуються сирим текстом. **Баг 2 з телефону** (`0e24085`): `brain-pulse.js` — табло оновлювалось лише через 45с/10хв; фікс `visibilitychange`+`pageshow` → debounced 2с, cold-start 45с→5с. Новий `UserPromptSubmit` хук: «не технічною мовою».
+
+---
+
+## 2026-05-23 — RQmdC: B-192 закрито (хибний сигнал тестера) + AI-Tester infra-фікс
+
+**Гілка:** `claude/...RQmdC` · 4 коміти `f4a1a70`→`5426fea`
+
+B-192 «backup зникає за 0.8с» — **не баг**: Council 3 агентів (0 знахідок) + runtime monkey-patch (`removeItem`/`setItem` + polling) довів що backup живий; хибний сигнал = race у старих CDP вимірах. test_4 переписано на stability polling, baseline 22→23 PASS. Інфра: on-demand `TARGET_SCENARIOS` bypass'ить `disabled_scenarios`. Деталі → SESSION_STATE_archive.md.
+
+---
+
+## 2026-05-20 — Ug2Jw: AI-Tester coverage 11→32 тести + B-193 знайдено тестером автономно
+
+**Гілка:** `claude/start-session-Ug2Jw` · 31 коміт · Council 7 Sonnet
+
+Debug HKnlM-хвостів (screenshot fix, JS-escape системний). 22 нових сценарії test_11→32 (Globals/Settings/Inbox/Tasks/Notes/Habits/Evening/Health/Finance). **Stable baseline 5→24 PASS.** `max_tests_per_run` 5→30. **B-193 знайдено самим тестером**: `openAddHabit` не у window export → Habits ➕ тихо нічого (фікс +1 рядок `habits.js:1945`). `_ai-tools/TESTER_SCENARIOS_PLAN.md` — план 35 сценаріїв.
+
+---
+
+## 2026-05-19 — HKnlM: AI-Tester Hetzner deploy (0→autonomous) + Pre-mortem hardening (B-187/188/189)
+
+**Гілка:** `claude/start-session-HKnlM` · 16 комітів · Council 7 Sonnet · 2 Gemini
+
+Hetzner 94.130.25.22: deploy з нуля → autonomous cron 3×/день + health-check. Debug 5 кореневих проблем setup (uv pip, browser-harness 0.1.0, UTF-8). **B-187** (shell injection у heredoc'ах + secrets masking + cron.log chmod 600). **B-188** (test_9 false-PASS + max_tests 5→10). **B-189** (PAT 90-day alert). On-demand trigger (`tester-trigger.json`). `nm_error_log` polling telemetry. Baseline 4/4. *(уся ця інфра архівована foyz2r 18.06 → `_archive/hetzner-tester/`.)*
+
+---
+
+## 2026-05-18 — OBErR: Event Delegation 241→0 + Backup Phase 2 + Кошик UI + CSP -78% + EU Compliance DRAFT
+
+**Гілка:** `claude/...OBErR` · 26 комітів · ~20 Council Sonnet · 14 CACHE bumps
+
+**Event Delegation Phase 0-6** (5 файлів + index.html): `initDelegation()`, universal `close-backdrop`, 241 onclick → 0, registry 49→119 actions. CSS `touch-action:manipulation` (300мс iOS delay). **Backup Phase 2**: `createFullBackup()`/`importBackupJson()`, iOS PWA `navigator.share` fallback, trash UUID race fix. Backup+Кошик UI у Налаштуваннях (2 модалки). **EU Compliance DRAFT**: LEGAL_CONTENT + #legal-overlay + `docs/EU_LAUNCH_CHECKLIST.md`. **CSP Phase 2.1-2.5**: 55 inline → 12; новий `src/ui/touch-detect.js`. CALL_PREFIX_WHITELIST(43)+BLACKLIST(12). AI-Tester Hetzner setup scripts.
+
+---
+
+## 2026-05-16 — DGH6F: NM_KEYS 50→94 + Backup hardening (B-184/185) + Event Delegation Phase 1а-1д
+
+**Гілка:** `claude/start-session-DGH6F` · 26 комітів · 13 Council Sonnet
+
+**NM_KEYS 50→94** (`56f4d41`): 137 ключів у коді проти 50 у реєстрі → `clearAllData()` лишала дані. Boot `_assertAllKeysKnown()`. Закрито B-184. **Backup hardening** (B-185): 4 латентні дірки Pre-mortem (quota fail, race lock, migration flag, init swallow) + 7 self-аудит. **Event Delegation Phase 1а-1д**: новий `src/core/delegation.js`, 40 inline → 23 actions у 6 файлах. pre-commit-onclick-freeze hook. 334→296 onclick, 0 регресій.
+
+---
+
+## 2026-05-15 — e9t3N: AI-тестер 24/7 інфраструктура + Security Hardening (Council 9 Sonnet)
+
+**Гілка:** `claude/start-session-e9t3N` · 15 комітів · CACHE `nm-20260515-2230` · Council 9 Sonnet + 4 WebSearch
+
+**AI-тестер інфраструктура (NM-сторона):** `auto-merge-tester.yml`, 5 обмінних файлів (`tester-config/status/log/commands.json/md` + `AI_TESTER_INTEGRATION.md`), `window.NM_BOOT_DONE`. **Security Hardening** (Council 5 агентів): Stored XSS у `notes.js` datalist, `SECURITY.md`+аудит, `ANTI_INJECTION_RULE` у `BASE_CHAT_RULES`, screenshot_b64→path, `dependabot.yml`+`npm audit`+`claude-security.yml`. *(тестер-інфра архівована foyz2r 18.06 → `_archive/hetzner-tester/`.)*
 
 ---
 
