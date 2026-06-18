@@ -16,12 +16,16 @@
 
   // src/core/uuid.js
   function generateUUID() {
-    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-      return crypto.randomUUID();
-    }
     const buf = new Uint8Array(16);
     crypto.getRandomValues(buf);
-    buf[6] = buf[6] & 15 | 64;
+    const ts = Date.now();
+    buf[0] = Math.floor(ts / 2 ** 40) % 256;
+    buf[1] = Math.floor(ts / 2 ** 32) % 256;
+    buf[2] = Math.floor(ts / 2 ** 24) % 256;
+    buf[3] = Math.floor(ts / 2 ** 16) % 256;
+    buf[4] = Math.floor(ts / 2 ** 8) % 256;
+    buf[5] = ts % 256;
+    buf[6] = buf[6] & 15 | 112;
     buf[8] = buf[8] & 63 | 128;
     const hex = [...buf].map((b) => b.toString(16).padStart(2, "0"));
     return `${hex.slice(0, 4).join("")}-${hex.slice(4, 6).join("")}-${hex.slice(6, 8).join("")}-${hex.slice(8, 10).join("")}-${hex.slice(10, 16).join("")}`;
