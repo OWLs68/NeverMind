@@ -50,6 +50,10 @@
         "hooks": [
           {
             "type": "command",
+            "command": "node .claude/hooks/byyou-push-lock.js"
+          },
+          {
+            "type": "command",
             "command": "node .claude/hooks/pre-push-check.js"
           },
           {

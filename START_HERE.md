@@ -51,6 +51,8 @@ Claude пушить у `claude/**` → auto-merge в `main` → esbuild збир
 
 **Базові:** `/start` `/finish` `/audit` `/fix B-XX` `/deploy` `/mockup` `/new-file` `/gemini`
 
+**Автономний потік:** `/byyou <ціль>` — план 10-15 кроків → ОК Романа → Claude іде сам (зупинка лише на брамах і важливому). Стан: `_ai-tools/BYYOU_PLAN.md`. Push заблоковано до слова «деплой» (хук `byyou-push-lock.js`). Деталі → `docs/adr/001-byyou-mode.md`.
+
 **Спеціалізовані:** `/ux-ui` `/prompt-engineer` `/pwa-ios-fix` `/supabase-prep` `/a11y-enforcer` `/gamification-engine` (⏸️ `/owl-motion` відкладено)
 
 ---
