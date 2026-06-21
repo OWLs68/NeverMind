@@ -2455,7 +2455,7 @@ ${lines.join("\n")}`;
     "src/data/dispatcher-guards.js"() {
       init_ua_time_parser();
       PAST_INDICATORS_RE = /(вчора|позавчора|минулого|тому\s|назад)|\b(гуля|жари|їл|пил|зустрі|сходи|створи|купи|зроби|написа|закінчи|поми|поча|відкри|приготува|пройш|по[бг]ачи|зустрі)(в|ла|ло|ли|вся|лася|лися|лось)\b/i;
-      MOMENT_KEYWORD_RE = /\bмомент/i;
+      MOMENT_KEYWORD_RE = /момент/i;
       MONEY_RE = /(?:[€$₴]\s*\d+(?:[.,]\d+)?)|(?:\d+(?:[.,]\d+)?\s*(?:€|\$|₴|грн|грив(?:ень|ні|ні)?|евр[оa]|євр[оа]|долар(?:ів|и|а)?|euro|usd|eur|uah))/i;
     }
   });
@@ -19149,7 +19149,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
           const hasEveryDay = /щодня|кожного дня|кожен день/i.test(txt);
           const hasWeekdays = /будн|пн.*ср.*пт/i.test(txt);
           const hasWeekend = /вихідн|субот.*неділ|сб.*нд/i.test(txt);
-          const hasWeekday = /понеділ|вівтор|серед|четвер|п.ятниц|субот|неділ|^пн\b|^вт\b|^ср\b|^чт\b|^пт\b|^сб\b|^нд\b/i.test(txt);
+          const hasWeekday = /понеділ|вівтор|серед|четвер|п.ятниц|субот|неділ|(?<![а-яіїєґ])(пн|вт|ср|чт|пт|сб|нд)(?![а-яіїєґ])/i.test(txt);
           if (hasEveryDay) {
             days = [0, 1, 2, 3, 4, 5, 6];
           } else if (hasWeekdays) {
@@ -19158,13 +19158,13 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
             days = [5, 6];
           } else if (hasWeekday) {
             days = [];
-            if (/понеділ|\bпн\b/i.test(txt)) days.push(0);
-            if (/вівтор|\bвт\b/i.test(txt)) days.push(1);
-            if (/серед|\bср\b/i.test(txt)) days.push(2);
-            if (/четвер|\bчт\b/i.test(txt)) days.push(3);
-            if (/п.ятниц|\bпт\b/i.test(txt)) days.push(4);
-            if (/субот|\bсб\b/i.test(txt)) days.push(5);
-            if (/неділ|\bнд\b/i.test(txt)) days.push(6);
+            if (/понеділ|(?<![а-яіїєґ])пн(?![а-яіїєґ])/i.test(txt)) days.push(0);
+            if (/вівтор|(?<![а-яіїєґ])вт(?![а-яіїєґ])/i.test(txt)) days.push(1);
+            if (/серед|(?<![а-яіїєґ])ср(?![а-яіїєґ])/i.test(txt)) days.push(2);
+            if (/четвер|(?<![а-яіїєґ])чт(?![а-яіїєґ])/i.test(txt)) days.push(3);
+            if (/п.ятниц|(?<![а-яіїєґ])пт(?![а-яіїєґ])/i.test(txt)) days.push(4);
+            if (/субот|(?<![а-яіїєґ])сб(?![а-яіїєґ])/i.test(txt)) days.push(5);
+            if (/неділ|(?<![а-яіїєґ])нд(?![а-яіїєґ])/i.test(txt)) days.push(6);
             if (days.length === 0) days = [0, 1, 2, 3, 4, 5, 6];
           }
         }
