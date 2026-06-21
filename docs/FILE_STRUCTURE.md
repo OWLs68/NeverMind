@@ -30,6 +30,8 @@
 | `tests/e2e/smoke.spec.js` | boot + навігація 8 вкладок без падінь |
 | `tests/e2e/tasks.spec.js` | додавання задачі + persistence після reload + модалка |
 | `tests/e2e/modals.spec.js` | Налаштування + Календар відкр/закр |
+| `tests/e2e/contract.spec.js` | Контракт повного конвеєра: текст в Inbox → mockAI save_task → задача у Tasks + persist |
+| `tests/e2e/golden-journey.spec.js` | Наскрізний шлях: задача+нотатка через екрани+reload (міжекранні баги «одного мозку») |
 
 ---
 

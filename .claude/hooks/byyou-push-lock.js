@@ -31,7 +31,9 @@ const fs = require('fs');
 const path = require('path');
 
 const PLAN_PATH = path.join(__dirname, '..', '..', '_ai-tools', 'BYYOU_PLAN.md');
-const RELEASE_WORD = /\bдеплой\b/i;       // релізне слово (обрав Роман)
+// Увага: БЕЗ \b — у JS \b не працює з кирилицею (той самий баг що ловили
+// контракт-тести gfrvu5). Просто підрядок «деплой».
+const RELEASE_WORD = /деплой/i;            // релізне слово (обрав Роман)
 const N_RECENT_USER_MESSAGES = 2;          // тільки свіже рішення Романа
 
 // Чи активний потік /byyou? Файл існує + статус active (не idle/done/archived).
