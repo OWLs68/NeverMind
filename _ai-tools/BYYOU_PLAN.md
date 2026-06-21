@@ -22,8 +22,8 @@
 | 1 | Розширити `scripts/check-guards.js` — покрити всі 7 guards + `applyAllGuards` порядок (35/35) + **фікс баґу `\b`-кирилиця** (момент-guard + дні тижня) | 🟢 | ✅ | step1 |
 | 2 | Новий `scripts/check-intent-router.js` — `parseExplicitIntent` (routine/reminder, дата, bail) — 17/17 | 🟢 | ✅ | step2 |
 | 3 | Зареєструвати `check-intent-router.js` у `pre-push-check.js` UNIT_GUARD_SCRIPTS | 🟢 | ✅ | step3 |
-| 4 | `tests/e2e/contract.spec.js` — текст→mockAI tool_call→сутність збережена+видима (save_task, save_finance) | 🟡 | ⏳ | — |
-| 5 | `tests/e2e/golden-journey.spec.js` — наскрізний: Inbox задача → Notes нотатка → reload → обидві на місці → 0 помилок | 🟡 | ⏳ | — |
+| 4 | `tests/e2e/contract.spec.js` — текст→mockAI save_task→Tasks+persist (finance/notes — наступним) | 🟡 | ✅ | step4 |
+| 5 | `tests/e2e/golden-journey.spec.js` — задача+нотатка через екрани+reload+0 помилок | 🟡 | ✅ | step5 |
 | 6 | Додати у `.github/workflows/e2e.yml` крок «node scripts/check-*.js» (контракт-тести як CI-гейт, не лише pre-push) | 🟡 | ⏳ | — |
 | 7 | Локальна перевірка: всі `node scripts/check-*.js` зелені + `npx playwright test --list` парситься | 🟢 | ⏳ | — |
 | 8 | Оновити `docs/FILE_STRUCTURE.md` (нові тест-файли) + короткий запис | 🟢 | ⏳ | — |
