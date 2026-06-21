@@ -37,6 +37,18 @@ jobs:
       - name: Install deps
         run: npm install
 
+      # Контракт-тести (детерміновані: guards/parser/factories/entity/escape).
+      # Швидкі, без браузера — падають ДО важкого install browsers. Той самий
+      # набір що ганяє pre-push (UNIT_GUARD_SCRIPTS), тепер і як CI-гейт (gfrvu5).
+      - name: Contract tests (node)
+        run: |
+          node scripts/check-guards.js
+          node scripts/check-intent-router.js
+          node scripts/check-factories.js
+          node scripts/check-entity.js
+          node scripts/check-habit-type.js
+          node scripts/check-escape.js
+
       - name: Build bundle
         run: npm run build
 
