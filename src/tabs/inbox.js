@@ -1208,19 +1208,21 @@ async function processSaveAction(parsed, originalText) {
         const hasEveryDay = /щодня|кожного дня|кожен день/i.test(txt);
         const hasWeekdays = /будн|пн.*ср.*пт/i.test(txt);
         const hasWeekend = /вихідн|субот.*неділ|сб.*нд/i.test(txt);
-        const hasWeekday = /понеділ|вівтор|серед|четвер|п.ятниц|субот|неділ|^пн\b|^вт\b|^ср\b|^чт\b|^пт\b|^сб\b|^нд\b/i.test(txt);
+        // Кирилично-безпечна межа для скорочень (пн/вт…): \b у JS не працює з
+        // кирилицею → раніше скорочення не матчились (фікс gfrvu5 20.06).
+        const hasWeekday = /понеділ|вівтор|серед|четвер|п.ятниц|субот|неділ|(?<![а-яіїєґ])(пн|вт|ср|чт|пт|сб|нд)(?![а-яіїєґ])/i.test(txt);
         if (hasEveryDay) { days = [0,1,2,3,4,5,6]; }
         else if (hasWeekdays) { days = [0,1,2,3,4]; }
         else if (hasWeekend) { days = [5,6]; }
         else if (hasWeekday) {
           days = [];
-          if (/понеділ|\bпн\b/i.test(txt)) days.push(0);
-          if (/вівтор|\bвт\b/i.test(txt)) days.push(1);
-          if (/серед|\bср\b/i.test(txt)) days.push(2);
-          if (/четвер|\bчт\b/i.test(txt)) days.push(3);
-          if (/п.ятниц|\bпт\b/i.test(txt)) days.push(4);
-          if (/субот|\bсб\b/i.test(txt)) days.push(5);
-          if (/неділ|\bнд\b/i.test(txt)) days.push(6);
+          if (/понеділ|(?<![а-яіїєґ])пн(?![а-яіїєґ])/i.test(txt)) days.push(0);
+          if (/вівтор|(?<![а-яіїєґ])вт(?![а-яіїєґ])/i.test(txt)) days.push(1);
+          if (/серед|(?<![а-яіїєґ])ср(?![а-яіїєґ])/i.test(txt)) days.push(2);
+          if (/четвер|(?<![а-яіїєґ])чт(?![а-яіїєґ])/i.test(txt)) days.push(3);
+          if (/п.ятниц|(?<![а-яіїєґ])пт(?![а-яіїєґ])/i.test(txt)) days.push(4);
+          if (/субот|(?<![а-яіїєґ])сб(?![а-яіїєґ])/i.test(txt)) days.push(5);
+          if (/неділ|(?<![а-яіїєґ])нд(?![а-яіїєґ])/i.test(txt)) days.push(6);
           if (days.length === 0) days = [0,1,2,3,4,5,6];
         }
       }
