@@ -67,7 +67,12 @@ async function boot(page, opts = {}) {
   // запускає вітальний слайд-тур (#slides-tour), який оверлеєм перекриває
   // кліки у модалках і валить тести (CI 15.06).
   await page.addInitScript(() => {
-    try { localStorage.setItem('nm_onboarding_done', '1'); } catch (e) {}
+    try {
+      localStorage.setItem('nm_onboarding_done', '1');
+      // Прапор глушить і update-тур (#slides-tour), чий оверлей перехоплював
+      // кліки. Ставимо завжди (навіть без seedState) — інакше golden-journey падав.
+      window.__NM_TEST_SEED__ = true;
+    } catch (e) {}
   });
 
   await page.goto('/');
