@@ -1046,9 +1046,12 @@ export function checkOnboarding() {
   if (!localStorage.getItem('nm_onboarding_done')) {
     localStorage.setItem('nm_onboarding_done', '1');
   }
-  // Існуючий користувач — перевіряємо чи бачив оновлення
+  // Існуючий користувач — перевіряємо чи бачив оновлення.
+  // Тести: прапор __NM_TEST_SEED__ глушить update-тур — інакше його оверлей
+  // (#slides-tour) зʼявляється через 500мс і перехоплює кліки E2E (gfrvu5).
   const seenUpdate = localStorage.getItem('nm_seen_update');
-  if (seenUpdate !== UPDATE_VERSION) {
+  const isTest = typeof window !== 'undefined' && window.__NM_TEST_SEED__;
+  if (seenUpdate !== UPDATE_VERSION && !isTest) {
     setTimeout(() => openUpdateSlides(), 500);
     return false;
   }
