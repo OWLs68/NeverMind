@@ -17639,7 +17639,8 @@ ${userText}
       localStorage.setItem("nm_onboarding_done", "1");
     }
     const seenUpdate = localStorage.getItem("nm_seen_update");
-    if (seenUpdate !== UPDATE_VERSION) {
+    const isTest = typeof window !== "undefined" && window.__NM_TEST_SEED__;
+    if (seenUpdate !== UPDATE_VERSION && !isTest) {
       setTimeout(() => openUpdateSlides(), 500);
       return false;
     }
