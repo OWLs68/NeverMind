@@ -165,6 +165,10 @@
           {
             "type": "command",
             "command": "node .claude/hooks/check-estimate-without-read.js"
+          },
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/byyou-context-guard.sh"
           }
         ]
       }
