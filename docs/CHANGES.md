@@ -6,6 +6,13 @@
 
 ---
 
+## 2026-06-23 — gfrvu5: Режим `/byyou` (напівавтономний потік) з нуля + дог-фуд
+
+Створено напівавтономний режим розробки **`/byyou`**: 2 брами (план 10-15 кроків→ОК; push лише на слово «деплой»), push-замок хук, стан у `BYYOU_PLAN.md`, видимий пульс, MCP E2E-петля, self-correction вікно, pre-flight перед пушем, контекст-стоп на 75% (Stop-хук exit 2). 3 ADR (`docs/adr/001-003`). Обкатано на собі: контракт-тести «мислення» (`check-guards` 2→35, `check-intent-router` 17, `check-byyou-lock`, `check-cyrillic-boundary`) + E2E `contract.spec`+`golden-journey`, у pre-push і CI. 🎯 Дог-фуд знайшов+пофіксив 3 баги класу `\b`-кирилиця (вартовий «момент», дні тижня, власний push-замок — усі мовчки мертві). E2E #17 зелений. Черга: правило категоризації OWL (чекає Роби) + фіча списків в Inbox.
+
+**Коміти:** `3b35e9f` каркас /byyou · `e28249b` фікс \b-кирилиця guards · `9fde920` intent-router тест · `a28cb7a`/`d22158b` E2E contract+golden · `62d0fb7` фікс update-тур · `ddeb996` hardening · `04a0970` контекст-запобіжник
+**Метрики:** ~16 комітів, ~v1078, CACHE_NAME `nm-20260621-1821`
+
 ## 2026-06-18 — foyz2r: E2E-тестер (Playwright у CI) + архів Хетзнера + UUID v7 (Supabase) + фікс CI-блокера
 
 **Гілка:** `claude/new-session-foyz2r` · коміти `971c3b4` (lock) → `9722e2a` (v7) · CACHE `nm-20260617-0930` · Council 5+4 агенти Sonnet + 3 web-дослідження
