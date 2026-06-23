@@ -30,10 +30,13 @@
 const fs = require('fs');
 const path = require('path');
 
+const { isReleaseApproved } = require('./lib/byyou-release.js');
+
 const PLAN_PATH = path.join(__dirname, '..', '..', '_ai-tools', 'BYYOU_PLAN.md');
-// Увага: БЕЗ \b — у JS \b не працює з кирилицею (той самий баг що ловили
-// контракт-тести gfrvu5). Просто підрядок «деплой».
-const RELEASE_WORD = /деплой/i;            // релізне слово (обрав Роман)
+// Маркер вікна self-correction: створюється коли Роман сказав «деплой» для
+// блоку → дозволяє авто-перепуш ВИПРАВЛЕНЬ того ж блоку поки CI не зелений
+// (без повторного «деплой»). Видаляється коли блок зелений / зміна блоку.
+const RELEASE_MARKER = path.join(__dirname, '..', '.byyou-release');
 const N_RECENT_USER_MESSAGES = 2;          // тільки свіже рішення Романа
 
 // Чи активний потік /byyou? Файл існує + статус active (не idle/done/archived).
@@ -83,7 +86,8 @@ process.stdin.on('end', () => {
     if (!isByyouActive()) process.exit(0);
 
     const userText = readRecentUserTexts(data.transcript_path, N_RECENT_USER_MESSAGES);
-    if (RELEASE_WORD.test(userText)) process.exit(0); // Роман дозволив реліз
+    const releaseWindowOpen = fs.existsSync(RELEASE_MARKER);
+    if (isReleaseApproved(userText, releaseWindowOpen)) process.exit(0); // Роман дозволив реліз / відкрите вікно ремонту
 
     console.error('\n=== 🔒 BYYOU PUSH-ЗАМОК (.claude/hooks/byyou-push-lock.js) ===\n');
     console.error(

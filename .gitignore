@@ -6,6 +6,7 @@ bundle.js.map
 .claude/last-estimate-warnings.txt
 .claude/violations-log.txt
 .claude/settings.local.json
+.claude/.byyou-release
 
 # AI-тестер скріншоти — тільки на сервері Hetzner, base64 у tester-status.json
 # для фейлів. Інакше репо росте на 1.5 GB/рік.
