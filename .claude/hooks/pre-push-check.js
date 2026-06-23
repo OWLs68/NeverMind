@@ -263,7 +263,7 @@ function checkNestedBackticks(repoRoot) {
 //                     «кинути курити» → quit-челендж, не build; баг 7uxlr7).
 // Це НЕ евристики на тексті — або тест проходить, або ні. False positive
 // неможливий → жорсткий блок, bypass-фраза не діє.
-const UNIT_GUARD_SCRIPTS = ['check-escape.js', 'check-entity.js', 'check-habit-type.js', 'check-factories.js', 'check-guards.js', 'check-intent-router.js'];
+const UNIT_GUARD_SCRIPTS = ['check-escape.js', 'check-entity.js', 'check-habit-type.js', 'check-factories.js', 'check-guards.js', 'check-intent-router.js', 'check-byyou-lock.js', 'check-cyrillic-boundary.js'];
 
 function runUnitGuards(repoRoot) {
   for (const name of UNIT_GUARD_SCRIPTS) {

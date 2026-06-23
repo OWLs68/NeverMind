@@ -48,6 +48,8 @@ jobs:
           node scripts/check-entity.js
           node scripts/check-habit-type.js
           node scripts/check-escape.js
+          node scripts/check-byyou-lock.js
+          node scripts/check-cyrillic-boundary.js
 
       - name: Build bundle
         run: npm run build
