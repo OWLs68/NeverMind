@@ -14,8 +14,12 @@ const path = require('path');
 
 const SRC = path.join(__dirname, '..', 'src');
 const CYR = 'а-яіїєґА-ЯІЇЄҐ';
-const RE_AFTER = new RegExp('\\\\b[' + CYR + ']');   // \b притул до кирилиці
-const RE_BEFORE = new RegExp('[' + CYR + ']\\\\b');  // кирилиця притул до \b
+// \b перед кирилицею — НАПРЯМУ (\bмомент) АБО через відкриття групи \b(момент,
+// \b(?:момент, \b[ ... (v3pexs: саме \b( була сліпа пляма — 11 категорій core.js
+// мовчки мертві бо \b стояв перед дужкою групи з кириличною першою гілкою).
+const RE_AFTER = new RegExp('\\\\b(?:\\(\\?:|\\(|\\[)*[' + CYR + ']');
+// кирилиця перед \b — напряму (момент\b) або через закриття групи (ити)\b.
+const RE_BEFORE = new RegExp('[' + CYR + '](?:\\)|\\])*\\\\b');
 
 function walk(dir, out) {
   for (const name of fs.readdirSync(dir)) {
