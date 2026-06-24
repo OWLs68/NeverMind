@@ -21,8 +21,10 @@ import { resolveDateFromText } from './ua-time-parser.js';
 // ⚠️ JS `\b` НЕ працює з кирилицею навіть з прапором `u` (Unicode word boundary
 // у Cyrillic context повертає false — перевірено node-side). Тому використовуємо
 // explicit `(?:^|[\s,.:;])X(?=[\s,.:;]|$)` патерн.
-const BL = '(?:^|[\\s,.:;\\-])';  // ліва межа: початок або whitespace/пунктуація
-const BR = '(?=[\\s,.:;\\-]|$)';  // права межа: whitespace/пунктуація/кінець
+// Експортуються — єдине джерело правди для кирилично-безпечної межі слова
+// у всьому застосунку (core.js selectRelevantTools переюзує замість мертвого \b).
+export const BL = '(?:^|[\\s,.:;\\-])';  // ліва межа: початок або whitespace/пунктуація
+export const BR = '(?=[\\s,.:;\\-]|$)';  // права межа: whitespace/пунктуація/кінець
 
 const DAY_MAP = [
   [new RegExp(BL + '(?:понеділ\\p{L}*|пн|у\\s+понеділок|по\\s+понеділк\\p{L}*)' + BR, 'iu'), 'mon'],

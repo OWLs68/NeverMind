@@ -23,7 +23,7 @@ import { formatFactsForContext, getFacts } from './memory.js';
 import { getOWLPersonality, INBOX_SYSTEM_PROMPT, INBOX_TOOLS, getOwlChatSystemPrompt } from './prompts.js';
 import { clearUnreadBadge, showUnreadBadge } from '../ui/unread-badge.js';
 import { logUsage } from '../core/usage-meter.js';
-import { parseExplicitIntent } from '../data/intent-router.js';
+import { parseExplicitIntent, BL as CYR_BL, BR as CYR_BR } from '../data/intent-router.js';
 
 // Backward-compat: re-export промптів з prompts.js — щоб 11 файлів
 // які імпортують ці константи з './ai/core.js' продовжували працювати без змін.
@@ -567,49 +567,53 @@ const _BASE_TOOL_NAMES = new Set([
 ]);
 
 const _TOOL_CATEGORIES = {
+  // ⚠️ Кирилично-безпечна межа CYR_BL замість мертвого /\b/ (v3pexs): у JS \b
+  // рахує межу лише по латиниці → /\b(кирилиця)/ НIКОЛИ не матчив укр-текст і
+  // фільтр мовчки падав у повний fallback (економія токенів була мертва).
+  // CYR_BL/CYR_BR — спільні з intent-router.js. Внутрішній \b у task → CYR_BR.
   finance: {
-    rx: /\b(гр(н|івн)|€|\$|usd|usdt|eur|витрат|дохо|оплат|плат[іиї]|ціна|сума|бюджет|категор[іи]|підкатегор|зарплат|грош|каса|платіж)/i,
+    rx: new RegExp(CYR_BL + '(гр(н|івн)|€|\\$|usd|usdt|eur|витрат|дохо|оплат|плат[іиї]|ціна|сума|бюджет|категор[іи]|підкатегор|зарплат|грош|каса|платіж)', 'i'),
     tools: ['save_finance', 'update_transaction', 'delete_transaction', 'set_finance_budget', 'add_finance_category', 'rename_finance_category', 'delete_finance_category', 'add_finance_subcategory', 'rename_finance_subcategory', 'delete_finance_subcategory', 'set_finance_period', 'open_finance_analytics']
   },
   habit: {
-    rx: /\b(звичк|щодня|повторюй|кожен ?(день|ранок|вечір)|трекер|стрік|streak)/i,
+    rx: new RegExp(CYR_BL + '(звичк|щодня|повторюй|кожен ?(день|ранок|вечір)|трекер|стрік|streak)', 'i'),
     tools: ['save_habit', 'edit_habit', 'delete_habit', 'complete_habit']
   },
   task: {
-    rx: /\b(задач|треба зробити|нагада[йт]|напомни|зроби|куп(и|ити)\b|відправ|зателефонуй|написати|подати|оплатити|поприбирай|поміняй)/i,
+    rx: new RegExp(CYR_BL + '(задач|треба зробити|нагада[йт]|напомни|зроби|куп(и|ити)' + CYR_BR + '|відправ|зателефонуй|написати|подати|оплатити|поприбирай|поміняй)', 'i'),
     tools: ['save_task', 'edit_task', 'delete_task', 'complete_task', 'reopen_task', 'add_step', 'set_reminder']
   },
   event: {
-    rx: /\b(подія|подію|зустріч|прийом|приїзд|концерт|рейс|тренуван|відміни|відмін|перенес|завтра|післязавтра|сьогодні о|у (понеділ|вівтор|серед|четвер|пятниц|субот|неділ))/i,
+    rx: new RegExp(CYR_BL + '(подія|подію|зустріч|прийом|приїзд|концерт|рейс|тренуван|відміни|відмін|перенес|завтра|післязавтра|сьогодні о|у (понеділ|вівтор|серед|четвер|пятниц|субот|неділ))', 'i'),
     tools: ['create_event', 'edit_event', 'delete_event', 'open_calendar']
   },
   // health category REMOVED (EU AI Act compliance JMQuT 17.05.2026) — AI більше не вгадує health-tools за регексом симптомів.
   note: {
-    rx: /\b(нотатк|запиши думк|щоден|рефлекс|папк[уи])/i,
+    rx: new RegExp(CYR_BL + '(нотатк|запиши думк|щоден|рефлекс|папк[уи])', 'i'),
     tools: ['save_note', 'edit_note', 'move_note', 'delete_folder']
   },
   project: {
-    rx: /\b(проект|ремонт|запуск|розробк|організац|крок проект|етап|віх|milestone|метрик|ризик)/i,
+    rx: new RegExp(CYR_BL + '(проект|ремонт|запуск|розробк|організац|крок проект|етап|віх|milestone|метрик|ризик)', 'i'),
     tools: ['create_project', 'complete_project_step', 'add_project_step', 'update_project_progress', 'add_project_decision', 'add_project_metric', 'add_project_resource', 'update_project_tempo', 'update_project_risks']
   },
   moment: {
-    rx: /\b(момент|щойно|поїхав|зустрів(ся|ла)|побачив|був на)/i,
+    rx: new RegExp(CYR_BL + '(момент|щойно|поїхав|зустрів(ся|ла)|побачив|був на)', 'i'),
     tools: ['save_moment']
   },
   routine: {
-    rx: /\b(розклад|розпорядок|прокидаюсь|лягаю|режим дня)/i,
+    rx: new RegExp(CYR_BL + '(розклад|розпорядок|прокидаюсь|лягаю|режим дня)', 'i'),
     tools: ['save_routine']
   },
   trash: {
-    rx: /\b(відновити|повернути назад|з кошика|undo|поверни)/i,
+    rx: new RegExp(CYR_BL + '(відновити|повернути назад|з кошика|undo|поверни)', 'i'),
     tools: ['restore_deleted']
   },
   memory: {
-    rx: /\b(запамʼятай|що ти про мене|памʼять|memory)/i,
+    rx: new RegExp(CYR_BL + '(запамʼятай|що ти про мене|памʼять|memory)', 'i'),
     tools: ['save_memory_fact', 'open_memory']
   },
   ui: {
-    rx: /\b(відкрий|покажи|перейди|переключи|режим тиші|дай спокій|не доставай|тренер|партнер|ментор)/i,
+    rx: new RegExp(CYR_BL + '(відкрий|покажи|перейди|переключи|режим тиші|дай спокій|не доставай|тренер|партнер|ментор)', 'i'),
     tools: ['switch_tab', 'open_settings', 'set_owl_mode', 'request_quiet']
   }
 };
