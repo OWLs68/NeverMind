@@ -2454,7 +2454,7 @@ ${lines.join("\n")}`;
   var init_dispatcher_guards = __esm({
     "src/data/dispatcher-guards.js"() {
       init_ua_time_parser();
-      PAST_INDICATORS_RE = /(вчора|позавчора|минулого|тому\s|назад)|\b(гуля|жари|їл|пил|зустрі|сходи|створи|купи|зроби|написа|закінчи|поми|поча|відкри|приготува|пройш|по[бг]ачи|зустрі)(в|ла|ло|ли|вся|лася|лися|лось)\b/i;
+      PAST_INDICATORS_RE = /(вчора|позавчора|минулого|тому\s|назад)|(?:^|[\s,.:;\-])(гуля|жари|їл|пил|зустрі|сходи|створи|купи|зроби|написа|закінчи|поми|поча|відкри|приготува|пройш|по[бг]ачи|зустрі)(в|ла|ло|ли|вся|лася|лися|лось)(?=[\s,.:;\-]|$)/i;
       MOMENT_KEYWORD_RE = /момент/i;
       MONEY_RE = /(?:[€$₴]\s*\d+(?:[.,]\d+)?)|(?:\d+(?:[.,]\d+)?\s*(?:€|\$|₴|грн|грив(?:ень|ні|ні)?|евр[оa]|євр[оа]|долар(?:ів|и|а)?|euro|usd|eur|uah))/i;
     }
@@ -3576,10 +3576,9 @@ ${lines.join("\n")}`;
     if (!hasSuspicious) return null;
     if (COMMAND_RE.test(trimmed)) return null;
     if (HAS_NUMBER_RE.test(trimmed)) return null;
-    const isPastTense = PAST_VERBS_RE.test(trimmed);
-    const isBareNoun = BARE_NOUN_RE.test(trimmed) && !PAST_VERBS_RE.test(trimmed);
-    if (!isPastTense && !isBareNoun) return null;
-    const question = isBareNoun ? t("clarify.where_save_noun", '"{text}" \u2014 \u043A\u0443\u0434\u0438 \u0446\u0435 \u0437\u0430\u043F\u0438\u0441\u0430\u0442\u0438?', { text: trimmed }) : t("clarify.where_save_past", '"{text}" \u2014 \u043A\u0443\u0434\u0438 \u0446\u0435 \u0437\u0430\u043F\u0438\u0441\u0430\u0442\u0438?', { text: trimmed });
+    const isBareNoun = BARE_NOUN_RE.test(trimmed);
+    if (!isBareNoun) return null;
+    const question = t("clarify.where_save_noun", '"{text}" \u2014 \u043A\u0443\u0434\u0438 \u0446\u0435 \u0437\u0430\u043F\u0438\u0441\u0430\u0442\u0438?', { text: trimmed });
     const businessMatch = trimmed.match(BUSINESS_NOUN_RE);
     const projectChip = businessMatch ? [{
       label: t("clarify.chip.project", "\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u043F\u0440\u043E\u0435\u043A\u0442"),
@@ -3630,16 +3629,15 @@ ${lines.join("\n")}`;
     }
     return ok;
   }
-  var PAST_VERBS_RE, BARE_NOUN_RE, BUSINESS_NOUN_RE, COMMAND_RE, HAS_NUMBER_RE, SUSPICIOUS_TOOLS;
+  var BARE_NOUN_RE, BUSINESS_NOUN_RE, COMMAND_RE, HAS_NUMBER_RE, SUSPICIOUS_TOOLS;
   var init_clarify_guard = __esm({
     "src/owl/clarify-guard.js"() {
       init_utils();
       init_tool_dispatcher();
       init_uuid();
-      PAST_VERBS_RE = /\b(відкрив|купив|зробив|написав|зателефонував|з[’']їв|сходив|помив|поправ|виправ|запустив|створив|закінчив|почав|поставив|віддав|отримав|продав|замовив|скачав|встановив|подивився|прочитав|випив|забув|знайшов|вивчив|відремонтував|посадив|зустрів|приготував|зварив|спік|закрив|відкупив|оновив|вилікував)\b/i;
       BARE_NOUN_RE = /^[А-ЯҐЄІЇа-яґєії'’\-]{2,30}$/;
       BUSINESS_NOUN_RE = /(автомий\w*|салон\w*|сайт\w*|магазин\w*|студі\w*|курс\w*|школ\w*|кав['’]ярн\w*|майстерн\w*|бар|ресторан\w*|клуб\w*|спортзал\w*|атель\w*|пекарн\w*|хімчистк\w*|агентств\w*|компані\w*|стартап\w*|бізнес\w*|проект\w*)/i;
-      COMMAND_RE = /(створи|додай|запиши|нагада|постав|зроби|куп(и|ити)\b|зателефонуй|видали|перенеси|зміни|поміняй|онови)/i;
+      COMMAND_RE = /(створи|додай|запиши|нагада|постав|зроби|куп(и|ити)|зателефонуй|видали|перенеси|зміни|поміняй|онови)/i;
       HAS_NUMBER_RE = /\d/;
       SUSPICIOUS_TOOLS = /* @__PURE__ */ new Set([
         "create_project",
@@ -15512,6 +15510,87 @@ ${CHIP_PROMPT_RULES}`;
     }
   });
 
+  // src/data/tool-filter.js
+  function selectRelevantTools(userText, fullTools) {
+    if (!userText || typeof userText !== "string" || !Array.isArray(fullTools)) return fullTools;
+    const text = userText.toLowerCase();
+    const matched = /* @__PURE__ */ new Set();
+    let hits = 0;
+    for (const cat of Object.values(TOOL_CATEGORIES)) {
+      if (cat.rx.test(text)) {
+        hits++;
+        cat.tools.forEach((n) => matched.add(n));
+      }
+    }
+    if (hits === 0 || hits > 4) return fullTools;
+    BASE_TOOL_NAMES.forEach((n) => matched.add(n));
+    const filtered = fullTools.filter((t2) => matched.has(t2.function?.name));
+    return filtered.length >= 5 ? filtered : fullTools;
+  }
+  var BASE_TOOL_NAMES, TOOL_CATEGORIES;
+  var init_tool_filter = __esm({
+    "src/data/tool-filter.js"() {
+      init_intent_router();
+      BASE_TOOL_NAMES = /* @__PURE__ */ new Set([
+        "save_memory_fact",
+        "save_task",
+        "save_note",
+        "save_finance",
+        "create_event",
+        "clarify",
+        "switch_tab",
+        "request_quiet"
+      ]);
+      TOOL_CATEGORIES = {
+        finance: {
+          rx: new RegExp(BL + "(\u0433\u0440(\u043D|\u0456\u0432\u043D)|\u20AC|\\$|usd|usdt|eur|\u0432\u0438\u0442\u0440\u0430\u0442|\u0434\u043E\u0445\u043E|\u043E\u043F\u043B\u0430\u0442|\u043F\u043B\u0430\u0442[\u0456\u0438\u0457]|\u0446\u0456\u043D\u0430|\u0441\u0443\u043C\u0430|\u0431\u044E\u0434\u0436\u0435\u0442|\u043A\u0430\u0442\u0435\u0433\u043E\u0440[\u0456\u0438]|\u043F\u0456\u0434\u043A\u0430\u0442\u0435\u0433\u043E\u0440|\u0437\u0430\u0440\u043F\u043B\u0430\u0442|\u0433\u0440\u043E\u0448|\u043A\u0430\u0441\u0430|\u043F\u043B\u0430\u0442\u0456\u0436)", "i"),
+          tools: ["save_finance", "update_transaction", "delete_transaction", "set_finance_budget", "add_finance_category", "rename_finance_category", "delete_finance_category", "add_finance_subcategory", "rename_finance_subcategory", "delete_finance_subcategory", "set_finance_period", "open_finance_analytics"]
+        },
+        habit: {
+          rx: new RegExp(BL + "(\u0437\u0432\u0438\u0447\u043A|\u0449\u043E\u0434\u043D\u044F|\u043F\u043E\u0432\u0442\u043E\u0440\u044E\u0439|\u043A\u043E\u0436\u0435\u043D ?(\u0434\u0435\u043D\u044C|\u0440\u0430\u043D\u043E\u043A|\u0432\u0435\u0447\u0456\u0440)|\u0442\u0440\u0435\u043A\u0435\u0440|\u0441\u0442\u0440\u0456\u043A|streak)", "i"),
+          tools: ["save_habit", "edit_habit", "delete_habit", "complete_habit"]
+        },
+        task: {
+          rx: new RegExp(BL + "(\u0437\u0430\u0434\u0430\u0447|\u0442\u0440\u0435\u0431\u0430 \u0437\u0440\u043E\u0431\u0438\u0442\u0438|\u043D\u0430\u0433\u0430\u0434\u0430[\u0439\u0442]|\u043D\u0430\u043F\u043E\u043C\u043D\u0438|\u0437\u0440\u043E\u0431\u0438|\u043A\u0443\u043F(\u0438|\u0438\u0442\u0438)" + BR + "|\u0432\u0456\u0434\u043F\u0440\u0430\u0432|\u0437\u0430\u0442\u0435\u043B\u0435\u0444\u043E\u043D\u0443\u0439|\u043D\u0430\u043F\u0438\u0441\u0430\u0442\u0438|\u043F\u043E\u0434\u0430\u0442\u0438|\u043E\u043F\u043B\u0430\u0442\u0438\u0442\u0438|\u043F\u043E\u043F\u0440\u0438\u0431\u0438\u0440\u0430\u0439|\u043F\u043E\u043C\u0456\u043D\u044F\u0439)", "i"),
+          tools: ["save_task", "edit_task", "delete_task", "complete_task", "reopen_task", "add_step", "set_reminder"]
+        },
+        event: {
+          rx: new RegExp(BL + "(\u043F\u043E\u0434\u0456\u044F|\u043F\u043E\u0434\u0456\u044E|\u0437\u0443\u0441\u0442\u0440\u0456\u0447|\u043F\u0440\u0438\u0439\u043E\u043C|\u043F\u0440\u0438\u0457\u0437\u0434|\u043A\u043E\u043D\u0446\u0435\u0440\u0442|\u0440\u0435\u0439\u0441|\u0442\u0440\u0435\u043D\u0443\u0432\u0430\u043D|\u0432\u0456\u0434\u043C\u0456\u043D\u0438|\u0432\u0456\u0434\u043C\u0456\u043D|\u043F\u0435\u0440\u0435\u043D\u0435\u0441|\u0437\u0430\u0432\u0442\u0440\u0430|\u043F\u0456\u0441\u043B\u044F\u0437\u0430\u0432\u0442\u0440\u0430|\u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u043E|\u0443 (\u043F\u043E\u043D\u0435\u0434\u0456\u043B|\u0432\u0456\u0432\u0442\u043E\u0440|\u0441\u0435\u0440\u0435\u0434|\u0447\u0435\u0442\u0432\u0435\u0440|\u043F\u044F\u0442\u043D\u0438\u0446|\u0441\u0443\u0431\u043E\u0442|\u043D\u0435\u0434\u0456\u043B))", "i"),
+          tools: ["create_event", "edit_event", "delete_event", "open_calendar"]
+        },
+        // health category REMOVED (EU AI Act compliance JMQuT 17.05.2026) — AI більше не вгадує health-tools за регексом симптомів.
+        note: {
+          rx: new RegExp(BL + "(\u043D\u043E\u0442\u0430\u0442\u043A|\u0437\u0430\u043F\u0438\u0448\u0438 \u0434\u0443\u043C\u043A|\u0449\u043E\u0434\u0435\u043D|\u0440\u0435\u0444\u043B\u0435\u043A\u0441|\u043F\u0430\u043F\u043A[\u0443\u0438])", "i"),
+          tools: ["save_note", "edit_note", "move_note", "delete_folder"]
+        },
+        project: {
+          rx: new RegExp(BL + "(\u043F\u0440\u043E\u0435\u043A\u0442|\u0440\u0435\u043C\u043E\u043D\u0442|\u0437\u0430\u043F\u0443\u0441\u043A|\u0440\u043E\u0437\u0440\u043E\u0431\u043A|\u043E\u0440\u0433\u0430\u043D\u0456\u0437\u0430\u0446|\u043A\u0440\u043E\u043A \u043F\u0440\u043E\u0435\u043A\u0442|\u0435\u0442\u0430\u043F|\u0432\u0456\u0445|milestone|\u043C\u0435\u0442\u0440\u0438\u043A|\u0440\u0438\u0437\u0438\u043A)", "i"),
+          tools: ["create_project", "complete_project_step", "add_project_step", "update_project_progress", "add_project_decision", "add_project_metric", "add_project_resource", "update_project_tempo", "update_project_risks"]
+        },
+        moment: {
+          rx: new RegExp(BL + "(\u043C\u043E\u043C\u0435\u043D\u0442|\u0449\u043E\u0439\u043D\u043E|\u043F\u043E\u0457\u0445\u0430\u0432|\u0437\u0443\u0441\u0442\u0440\u0456\u0432(\u0441\u044F|\u043B\u0430)|\u043F\u043E\u0431\u0430\u0447\u0438\u0432|\u0431\u0443\u0432 \u043D\u0430)", "i"),
+          tools: ["save_moment"]
+        },
+        routine: {
+          rx: new RegExp(BL + "(\u0440\u043E\u0437\u043A\u043B\u0430\u0434|\u0440\u043E\u0437\u043F\u043E\u0440\u044F\u0434\u043E\u043A|\u043F\u0440\u043E\u043A\u0438\u0434\u0430\u044E\u0441\u044C|\u043B\u044F\u0433\u0430\u044E|\u0440\u0435\u0436\u0438\u043C \u0434\u043D\u044F)", "i"),
+          tools: ["save_routine"]
+        },
+        trash: {
+          rx: new RegExp(BL + "(\u0432\u0456\u0434\u043D\u043E\u0432\u0438\u0442\u0438|\u043F\u043E\u0432\u0435\u0440\u043D\u0443\u0442\u0438 \u043D\u0430\u0437\u0430\u0434|\u0437 \u043A\u043E\u0448\u0438\u043A\u0430|undo|\u043F\u043E\u0432\u0435\u0440\u043D\u0438)", "i"),
+          tools: ["restore_deleted"]
+        },
+        memory: {
+          rx: new RegExp(BL + "(\u0437\u0430\u043F\u0430\u043C\u02BC\u044F\u0442\u0430\u0439|\u0449\u043E \u0442\u0438 \u043F\u0440\u043E \u043C\u0435\u043D\u0435|\u043F\u0430\u043C\u02BC\u044F\u0442\u044C|memory)", "i"),
+          tools: ["save_memory_fact", "open_memory"]
+        },
+        ui: {
+          rx: new RegExp(BL + "(\u0432\u0456\u0434\u043A\u0440\u0438\u0439|\u043F\u043E\u043A\u0430\u0436\u0438|\u043F\u0435\u0440\u0435\u0439\u0434\u0438|\u043F\u0435\u0440\u0435\u043A\u043B\u044E\u0447\u0438|\u0440\u0435\u0436\u0438\u043C \u0442\u0438\u0448\u0456|\u0434\u0430\u0439 \u0441\u043F\u043E\u043A\u0456\u0439|\u043D\u0435 \u0434\u043E\u0441\u0442\u0430\u0432\u0430\u0439|\u0442\u0440\u0435\u043D\u0435\u0440|\u043F\u0430\u0440\u0442\u043D\u0435\u0440|\u043C\u0435\u043D\u0442\u043E\u0440)", "i"),
+          tools: ["switch_tab", "open_settings", "set_owl_mode", "request_quiet"]
+        }
+      };
+    }
+  });
+
   // src/ai/core.js
   function setActiveChatBar(v) {
     activeChatBar = v;
@@ -15944,22 +16023,6 @@ ${JSON.stringify(contextData, null, 2)}` : "";
       return null;
     }
   }
-  function selectRelevantTools(userText, fullTools) {
-    if (!userText || typeof userText !== "string" || !Array.isArray(fullTools)) return fullTools;
-    const text = userText.toLowerCase();
-    const matched = /* @__PURE__ */ new Set();
-    let hits = 0;
-    for (const cat of Object.values(_TOOL_CATEGORIES)) {
-      if (cat.rx.test(text)) {
-        hits++;
-        cat.tools.forEach((n) => matched.add(n));
-      }
-    }
-    if (hits === 0 || hits > 4) return fullTools;
-    _BASE_TOOL_NAMES.forEach((n) => matched.add(n));
-    const filtered = fullTools.filter((t2) => matched.has(t2.function?.name));
-    return filtered.length >= 5 ? filtered : fullTools;
-  }
   async function callAIWithTools(systemPrompt, history, tools, module = "callAIWithTools") {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 25e3);
@@ -16252,7 +16315,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
       activeChatBar = null;
     }
   }
-  var activeChatBar, lastChatClosedTs, _BASE_TOOL_NAMES, _TOOL_CATEGORIES, CHAT_STORE_MAX, CHAT_STORE_KEYS, _ALL_CHAT_TABS, _TAB_LABELS_CHAT, SEND_BTN_MAP;
+  var activeChatBar, lastChatClosedTs, CHAT_STORE_MAX, CHAT_STORE_KEYS, _ALL_CHAT_TABS, _TAB_LABELS_CHAT, SEND_BTN_MAP;
   var init_core = __esm({
     "src/ai/core.js"() {
       init_nav();
@@ -16275,66 +16338,11 @@ ${JSON.stringify(contextData, null, 2)}` : "";
       init_unread_badge();
       init_usage_meter();
       init_intent_router();
+      init_tool_filter();
       init_prompts();
+      init_tool_filter();
       activeChatBar = null;
       lastChatClosedTs = 0;
-      _BASE_TOOL_NAMES = /* @__PURE__ */ new Set([
-        "save_memory_fact",
-        "save_task",
-        "save_note",
-        "save_finance",
-        "create_event",
-        "clarify",
-        "switch_tab",
-        "request_quiet"
-      ]);
-      _TOOL_CATEGORIES = {
-        finance: {
-          rx: /\b(гр(н|івн)|€|\$|usd|usdt|eur|витрат|дохо|оплат|плат[іиї]|ціна|сума|бюджет|категор[іи]|підкатегор|зарплат|грош|каса|платіж)/i,
-          tools: ["save_finance", "update_transaction", "delete_transaction", "set_finance_budget", "add_finance_category", "rename_finance_category", "delete_finance_category", "add_finance_subcategory", "rename_finance_subcategory", "delete_finance_subcategory", "set_finance_period", "open_finance_analytics"]
-        },
-        habit: {
-          rx: /\b(звичк|щодня|повторюй|кожен ?(день|ранок|вечір)|трекер|стрік|streak)/i,
-          tools: ["save_habit", "edit_habit", "delete_habit", "complete_habit"]
-        },
-        task: {
-          rx: /\b(задач|треба зробити|нагада[йт]|напомни|зроби|куп(и|ити)\b|відправ|зателефонуй|написати|подати|оплатити|поприбирай|поміняй)/i,
-          tools: ["save_task", "edit_task", "delete_task", "complete_task", "reopen_task", "add_step", "set_reminder"]
-        },
-        event: {
-          rx: /\b(подія|подію|зустріч|прийом|приїзд|концерт|рейс|тренуван|відміни|відмін|перенес|завтра|післязавтра|сьогодні о|у (понеділ|вівтор|серед|четвер|пятниц|субот|неділ))/i,
-          tools: ["create_event", "edit_event", "delete_event", "open_calendar"]
-        },
-        // health category REMOVED (EU AI Act compliance JMQuT 17.05.2026) — AI більше не вгадує health-tools за регексом симптомів.
-        note: {
-          rx: /\b(нотатк|запиши думк|щоден|рефлекс|папк[уи])/i,
-          tools: ["save_note", "edit_note", "move_note", "delete_folder"]
-        },
-        project: {
-          rx: /\b(проект|ремонт|запуск|розробк|організац|крок проект|етап|віх|milestone|метрик|ризик)/i,
-          tools: ["create_project", "complete_project_step", "add_project_step", "update_project_progress", "add_project_decision", "add_project_metric", "add_project_resource", "update_project_tempo", "update_project_risks"]
-        },
-        moment: {
-          rx: /\b(момент|щойно|поїхав|зустрів(ся|ла)|побачив|був на)/i,
-          tools: ["save_moment"]
-        },
-        routine: {
-          rx: /\b(розклад|розпорядок|прокидаюсь|лягаю|режим дня)/i,
-          tools: ["save_routine"]
-        },
-        trash: {
-          rx: /\b(відновити|повернути назад|з кошика|undo|поверни)/i,
-          tools: ["restore_deleted"]
-        },
-        memory: {
-          rx: /\b(запамʼятай|що ти про мене|памʼять|memory)/i,
-          tools: ["save_memory_fact", "open_memory"]
-        },
-        ui: {
-          rx: /\b(відкрий|покажи|перейди|переключи|режим тиші|дай спокій|не доставай|тренер|партнер|ментор)/i,
-          tools: ["switch_tab", "open_settings", "set_owl_mode", "request_quiet"]
-        }
-      };
       CHAT_STORE_MAX = 30;
       CHAT_STORE_KEYS = {
         inbox: "nm_chat_inbox",
