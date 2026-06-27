@@ -3568,12 +3568,15 @@ ${lines.join("\n")}`;
 
   // src/owl/clarify-guard.js
   function shouldClarify(text, toolCalls, tab) {
-    if (!Array.isArray(toolCalls) || toolCalls.length === 0) return null;
+    if (!Array.isArray(toolCalls)) return null;
     if (!text || typeof text !== "string") return null;
     const trimmed = text.trim();
     if (trimmed.length === 0) return null;
-    const hasSuspicious = toolCalls.some((tc) => SUSPICIOUS_TOOLS.has(tc?.function?.name));
-    if (!hasSuspicious) return null;
+    if (toolCalls.length > 0) {
+      const hasSuspicious = toolCalls.some((tc) => SUSPICIOUS_TOOLS.has(tc?.function?.name));
+      if (!hasSuspicious) return null;
+    }
+    if (GREETING_STOPLIST.has(trimmed.toLowerCase())) return null;
     if (COMMAND_RE.test(trimmed)) return null;
     if (HAS_NUMBER_RE.test(trimmed)) return null;
     const isBareNoun = BARE_NOUN_RE.test(trimmed);
@@ -3629,7 +3632,7 @@ ${lines.join("\n")}`;
     }
     return ok;
   }
-  var BARE_NOUN_RE, BUSINESS_NOUN_RE, COMMAND_RE, HAS_NUMBER_RE, SUSPICIOUS_TOOLS;
+  var BARE_NOUN_RE, BUSINESS_NOUN_RE, COMMAND_RE, HAS_NUMBER_RE, GREETING_STOPLIST, SUSPICIOUS_TOOLS;
   var init_clarify_guard = __esm({
     "src/owl/clarify-guard.js"() {
       init_utils();
@@ -3639,6 +3642,42 @@ ${lines.join("\n")}`;
       BUSINESS_NOUN_RE = /(автомий\w*|салон\w*|сайт\w*|магазин\w*|студі\w*|курс\w*|школ\w*|кав['’]ярн\w*|майстерн\w*|бар|ресторан\w*|клуб\w*|спортзал\w*|атель\w*|пекарн\w*|хімчистк\w*|агентств\w*|компані\w*|стартап\w*|бізнес\w*|проект\w*)/i;
       COMMAND_RE = /(створи|додай|запиши|нагада|постав|зроби|куп(и|ити)|зателефонуй|видали|перенеси|зміни|поміняй|онови)/i;
       HAS_NUMBER_RE = /\d/;
+      GREETING_STOPLIST = /* @__PURE__ */ new Set([
+        "\u043F\u0440\u0438\u0432\u0456\u0442",
+        "\u0432\u0456\u0442\u0430\u044E",
+        "\u0434\u044F\u043A\u0443\u044E",
+        "\u0434\u044F\u043A",
+        "\u043E\u043A\u0435\u0439",
+        "\u043E\u043A",
+        "\u0442\u0430\u043A",
+        "\u043D\u0456",
+        "\u0434\u043E\u0431\u0440\u0435",
+        "\u0433\u0430\u0440\u0430\u0437\u0434",
+        "\u0437\u0440\u043E\u0437\u0443\u043C\u0456\u0432",
+        "\u0437\u0440\u043E\u0437\u0443\u043C\u0456\u043B\u0430",
+        "\u0447\u0443\u0434\u043E\u0432\u043E",
+        "\u0441\u0443\u043F\u0435\u0440",
+        "\u043A\u043B\u0430\u0441\u043D\u043E",
+        "\u044F\u0441\u043D\u043E",
+        "\u0441\u043F\u0440\u0430\u0432\u0434\u0456",
+        "\u0446\u0456\u043A\u0430\u0432\u043E",
+        "\u043C\u043E\u0436\u043B\u0438\u0432\u043E",
+        "\u043E\u0433\u043E",
+        "\u043D\u0456\u044F\u043A",
+        "\u0431\u0443\u0432\u0430\u0439",
+        "\u043F\u043E\u043A\u0430",
+        "\u043F\u0440\u0438\u0432\u0456\u0442!",
+        "\u0434\u044F\u043A\u0443\u044E!",
+        "\u0432\u0438\u0431\u0430\u0447",
+        "\u0432\u0438\u0431\u0430\u0447\u0442\u0435",
+        "\u0430\u0433\u043E\u0432",
+        "\u0433\u0435\u0439",
+        "\u0445\u043C",
+        "\u0430\u0433\u0430",
+        "\u0443\u0433\u0443",
+        "\u043D\u0435\u0430",
+        "\u0430\u044F\u043A\u0436\u0435"
+      ]);
       SUSPICIOUS_TOOLS = /* @__PURE__ */ new Set([
         "create_project",
         "create_event",
@@ -4298,6 +4337,12 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
       const reply = msg && msg.content ? msg.content.trim() : "";
       if (!reply) {
         handleChatError(addProjectsChatMsg);
+        projectsBarLoading = false;
+        return;
+      }
+      const bnGuard = shouldClarify(text, [], "projects");
+      if (bnGuard) {
+        addProjectsChatMsg("agent", bnGuard.question, false, bnGuard.chips);
         projectsBarLoading = false;
         return;
       }
@@ -6492,6 +6537,12 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
         financeBarLoading = false;
         return;
       }
+      const bnGuard = shouldClarify(text, [], "finance");
+      if (bnGuard) {
+        addFinanceChatMsg("agent", bnGuard.question, false, bnGuard.chips);
+        financeBarLoading = false;
+        return;
+      }
       const { text: replyText, chips } = parseContentChips(reply);
       if (replyText) {
         const looksLikeJson = replyText.startsWith("{") && replyText.endsWith("}") || replyText.startsWith("[") && replyText.endsWith("]");
@@ -7636,6 +7687,12 @@ ${UI_TOOLS_RULES}${context ? "\n\n" + context : ""}${stats ? "\n\n" + stats : ""
       }
       meChatHistory.push(buildAssistantHistoryEntry(msg));
       if (meChatHistory.length > 20) meChatHistory = meChatHistory.slice(-20);
+      return;
+    }
+    const bnGuard = shouldClarify(text, [], "me");
+    if (bnGuard) {
+      if (loadEl) loadEl.remove();
+      addMeChatMsg("agent", bnGuard.question, false, "", bnGuard.chips);
       return;
     }
     const rawReply = msg && msg.content ? msg.content : "";
@@ -9818,6 +9875,12 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
         notesBarLoading = false;
         return;
       }
+      const bnGuard = shouldClarify(text, [], "notes");
+      if (bnGuard) {
+        addNotesChatMsg("agent", bnGuard.question, false, bnGuard.chips);
+        notesBarLoading = false;
+        return;
+      }
       const { text: reply, chips: extractedChips } = parseContentChips(rawReply);
       try {
         const parsed = JSON.parse(reply.replace(/```json|```/g, "").trim());
@@ -10956,6 +11019,14 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
             continue;
           }
           dispatchEveningTool(tc.function.name, args, addEveningBarMsg);
+        }
+      }
+      if (!msg.tool_calls || msg.tool_calls.length === 0) {
+        const bnGuard = shouldClarify(text, [], "evening");
+        if (bnGuard) {
+          addEveningBarMsg("agent", bnGuard.question, false, bnGuard.chips);
+          eveningBarLoading = false;
+          return;
         }
       }
       const { text: replyText, chips } = _parseContentChips(msg.content || "");
@@ -15203,6 +15274,12 @@ ${CHIP_PROMPT_RULES}`;
         setTaskBarLoading(false);
         return;
       }
+      const bnGuard = shouldClarify(text, [], "tasks");
+      if (bnGuard) {
+        addTaskBarMsg("agent", bnGuard.question, false, bnGuard.chips);
+        setTaskBarLoading(false);
+        return;
+      }
       const _processOne = (parsed) => {
         if (processUniversalAction(parsed, text, addTaskBarMsg)) return true;
         if (parsed.action === "complete_step") {
@@ -18941,8 +19018,13 @@ ${aiContext}`;
           addInboxChatMsg("agent", t("inbox.chat.memorized", "\u0417\u0430\u043F\u0430\u043C\u02BC\u044F\u0442\u0430\u0432 \u2713"));
         }
       } else if (msg.content) {
-        const { text: replyText, chips } = _parseContentChips2(msg.content);
-        if (replyText) addInboxChatMsg("agent", replyText, chips);
+        const bnGuard = shouldClarify(text, [], "inbox");
+        if (bnGuard) {
+          addInboxChatMsg("agent", bnGuard.question, bnGuard.chips);
+        } else {
+          const { text: replyText, chips } = _parseContentChips2(msg.content);
+          if (replyText) addInboxChatMsg("agent", replyText, chips);
+        }
       } else {
         addInboxChatMsg("agent", t(
           "inbox.chat.ai_empty",
