@@ -43,7 +43,13 @@ _B-158 закрито у PJi7l 08.05 — див. секцію "✅ Закрит�
 
 ## ✅ Закриті (активні сесії)
 
-_Зберігаються закриті у 2 останніх активних сесіях (gfrvu5 + foyz2r). Старіші перенесено у [`_archive/BUGS_HISTORY.md`](_archive/BUGS_HISTORY.md). ⏳ vdlyeg+7uxlr7 — кандидати на ротацію у наступний /finish (зараз лишені для контексту)._
+_Зберігаються закриті у 2 останніх активних сесіях (gfrvu5 + v3pexs). Старіші перенесено у [`_archive/BUGS_HISTORY.md`](_archive/BUGS_HISTORY.md)._
+
+_Сесія **v3pexs** (27.06.2026) — без B-XX; клас-фікс + фічі через /byyou:_
+
+- **токен-баг `\b`-кирилиця у фільтрі інструментів** (`7a72423`) — regex з `\b` перед кириличним словом НIКОЛИ не матчив → фільтр «звузити tools під намір» мертвий → у кожен запит летіли ВСI інструменти (~30-40% зайвих токенів на схеми). **Фікс:** кирилично-безпечні межі. +`9d5f38b` детект минулого часу (той клас) +`72957cc` `check-cyrillic-boundary` розширено на `\b(`. Класифікатор винесено у `src/data/` з контракт-тестом (`8ab23f9`).
+- **момент без локації-підтвердження** (`dadfab0`) — момент з місцем тепер дає «у Моменти (Вечір)».
+- **bareNoun без чіпів у no-tool гілці** (`6a53105`+`94b748a`) — одне слово при текстовій відповіді AI давало текст «- [...]» замість клікабельних чіпів. **Фікс:** `shouldClarify` у no-tool гілці 7 чатів + GREETING_STOPLIST проти «Так/Ні/Дякую».
 
 _Сесія **gfrvu5** (20-23.06.2026) — багфікси знайдені контракт-тестами під час дог-фуду /byyou (клас `\b`-кирилиця, не B-XX):_
 
@@ -53,21 +59,7 @@ _Сесія **gfrvu5** (20-23.06.2026) — багфікси знайдені к�
 - **E2E: update-тур ловив кліки** (`62d0fb7`) — `#slides-tour` на чистому тест-профілі (`nm_seen_update≠v065`, +500мс після boot) перехоплював кліки. **Фікс:** глушити за `__NM_TEST_SEED__` (onboarding.js + helpers).
 - **Профілактика:** `check-cyrillic-boundary.js` тепер стереже весь `src/` від рецидиву класу `\b`-кирилиця (pre-push + CI).
 
-
-_Сесія **7uxlr7** (12.06.2026) — Supabase Фаза 1 + багфікси (знайдені+виправлені цієї сесії, не B-XX):_
-
-- **quit-звичка закрито** (`d8713a9`) — «кинути курити» через чат → був build замість quit-челенджу. Корінь: tool `save_habit` без параметра `type` → AI не міг позначити quit. **Фікс:** `inferHabitType()` (`src/data/habit-classifier.js`, правило 12 — детермінований класифікатор) у 4 точках створення. +«менше курити» (`0ec333d` аудит).
-- **час→подія закрито** (`605321f`) — «подзвонити о 12:00» → був задачею, не потрапляв у Розпорядок дня (задача має лише дату, без слота). **Фікс:** гард `convertTaskToEventOnTime` (`dispatcher-guards.js`, усі 8 чатів) + `hasExplicitClockTime()` строгий детектор (не ловить дати «15.05»). Захисти: минулий час / кроки / вже-подія.
-- **NM_KEYS закрито** (`fc063f3`) — 5 orphan-ключів поза реєстром → `clearAllData`/Supabase-backup пропускали. **Фікс:** патерни `nm_fin_insight_`, `nm_tasks_backup_` + 2 точкові.
-- **closeSettings зайвий regen закрито** (`0ec333d`, silent-bug-scout) — закриття Налаштувань щоразу слало подію `'memory'` → `proactive.js` регенерував OWL-табло (зайвий OpenAI). **Фікс:** писати пам'ять лише якщо змінилась.
-
-_Сесія **vdlyeg** (10.06.2026) — аудит безпеки за бібліотекою Anthropic-Cybersecurity-Skills, 4 кореневі фікси:_
-
-- **SEC-1 escapeHtml + лапки закрито** (`8c2f7fa`) — **XSS-клас через пробій атрибута.** `escapeHtml` (`src/core/utils.js`) екранував лише `& < >`, НЕ лапки. Значення з лапкою всередині `attr="${escapeHtml(x)}"` розривало атрибут і дозволяло підставити обробник події (XSS) у ~25 місцях (chips/finance/health/notes/projects/nav). **Фікс:** escapeHtml тепер екранує подвійну лапку у `&quot;` та одинарну у `&#39;` (regex через String.fromCharCode у module-константах). Один корінь → всі 25 місць. Прибрано дубль-костур chips.js:340. Верифіковано: Council 3 агенти Sonnet (round-trip dataset цілий, нема не-HTML sinks), 8/8 unit, node --check, i18n. «Регресія» finance-modals.js:421/439 від агента — хибнопозитив (перевірено по коду: моя зміна цей кейс виправляє, не ламає).
-- **SEC-2 safeHref закрито** (`1370a9c`) — **javascript:-посилання.** `projects.js:393` рендерив `<a href>` з URL ресурсу через escapeHtml — а той не блокує схему, тож `javascript:alert()` виконувався при кліку. **Фікс:** новий `safeHref(url)` у utils.js (дозволяє http/https/mailto/tel + відносні, інакше null; стрипає контрольні символи проти `java⇥script:` обходу) + `rel=noopener`. 16/16 unit.
-- **SEC-3 CI command injection закрито** (`be7bd1d`) — `github.ref_name` + workflow_dispatch inputs підставлялись прямо у `run:` shell (метасимволи → виконання у runner з contents:write). **Фікс:** винесено у `env:` блок, у shell беруться як `"$VAR"`. Зачеплено auto-merge.yml (×2), auto-merge-tester.yml (×3), claude-security.yml. YAML валідний 4/4.
-- **SEC-4 gitleaks закрито** (`185354e`) — додано `.github/workflows/gitleaks.yml` (secret-scanning, push/PR + щотижневий повний скан). Профілактика перед Supabase. Зараз секретів нема.
-- **Відкладено:** ключ OpenAI у localStorage (справжній фікс = Supabase Edge Functions, у плані); CSP (оцінено — strict не готовий через ~20 inline iOS-хаків + Report-Only неможливий на GitHub Pages; готова чернетка meta-CSP у звіті для тесту на реальному iPhone). Нова знахідка → **B-197** (notes.js data-folder escapeJsArg).
+_Сесії **7uxlr7** (12.06 quit/час→подія/NM_KEYS) + **vdlyeg** (10.06 SEC-1..4 + B-197) — ротовано v3pexs 27.06 → [`_archive/BUGS_HISTORY.md`](_archive/BUGS_HISTORY.md)._
 
 _Сесії **WML2Z** (B-194/195/196) + **RQmdC** (B-192) — ротовано 7uxlr7 12.06 → [`_archive/BUGS_HISTORY.md`](_archive/BUGS_HISTORY.md)._
 

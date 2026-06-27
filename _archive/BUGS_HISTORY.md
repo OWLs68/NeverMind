@@ -1,5 +1,22 @@
 # NeverMind — Історія закритих багів (архів)
 
+## Ротовано v3pexs 27.06.2026 — сесії 7uxlr7 + vdlyeg
+
+_Сесія **7uxlr7** (12.06.2026) — Supabase Фаза 1 + багфікси (не B-XX):_
+
+- **quit-звичка закрито** (`d8713a9`) — «кинути курити» через чат → був build замість quit-челенджу. Корінь: tool `save_habit` без параметра `type` → AI не міг позначити quit. **Фікс:** `inferHabitType()` (`src/data/habit-classifier.js`, правило 12 — детермінований класифікатор) у 4 точках створення. +«менше курити» (`0ec333d` аудит).
+- **час→подія закрито** (`605321f`) — «подзвонити о 12:00» → був задачею, не потрапляв у Розпорядок дня (задача має лише дату, без слота). **Фікс:** гард `convertTaskToEventOnTime` (`dispatcher-guards.js`, усі 8 чатів) + `hasExplicitClockTime()` строгий детектор (не ловить дати «15.05»). Захисти: минулий час / кроки / вже-подія.
+- **NM_KEYS закрито** (`fc063f3`) — 5 orphan-ключів поза реєстром → `clearAllData`/Supabase-backup пропускали. **Фікс:** патерни `nm_fin_insight_`, `nm_tasks_backup_` + 2 точкові.
+- **closeSettings зайвий regen закрито** (`0ec333d`, silent-bug-scout) — закриття Налаштувань щоразу слало подію `'memory'` → `proactive.js` регенерував OWL-табло (зайвий OpenAI). **Фікс:** писати пам'ять лише якщо змінилась.
+
+_Сесія **vdlyeg** (10.06.2026) — аудит безпеки за бібліотекою Anthropic-Cybersecurity-Skills, 4 кореневі фікси:_
+
+- **SEC-1 escapeHtml + лапки закрито** (`8c2f7fa`) — **XSS-клас через пробій атрибута.** `escapeHtml` (`src/core/utils.js`) екранував лише `& < >`, НЕ лапки. Значення з лапкою всередині `attr="${escapeHtml(x)}"` розривало атрибут і дозволяло підставити обробник події (XSS) у ~25 місцях. **Фікс:** escapeHtml тепер екранує `"`→`&quot;` та `'`→`&#39;`. Один корінь → всі 25 місць. 8/8 unit, Council 3 Sonnet верифікували round-trip.
+- **SEC-2 safeHref закрито** (`1370a9c`) — **javascript:-посилання.** `projects.js:393` рендерив `<a href>` з URL ресурсу через escapeHtml — а той не блокує схему, тож `javascript:alert()` виконувався при кліку. **Фікс:** новий `safeHref(url)` (дозволяє http/https/mailto/tel + відносні, стрипає контрольні символи) + `rel=noopener`. 16/16 unit.
+- **SEC-3 CI command injection закрито** (`be7bd1d`) — `github.ref_name` + workflow_dispatch inputs підставлялись прямо у `run:` shell. **Фікс:** винесено у `env:` блок, у shell беруться як `"$VAR"`. Зачеплено auto-merge.yml + auto-merge-tester.yml + claude-security.yml.
+- **SEC-4 gitleaks закрито** (`185354e`) — додано `.github/workflows/gitleaks.yml` (secret-scanning, push/PR + щотижневий повний скан). Профілактика перед Supabase.
+- **Відкладено:** ключ OpenAI у localStorage (справжній фікс = Supabase Edge Functions); CSP (strict не готовий через ~20 inline iOS-хаків, Report-Only неможливий на GitHub Pages; чернетка meta-CSP для тесту на iPhone). Породило **B-197** (закрито vdlyeg) + B-198/B-199 (відкриті).
+
 ## Ротовано 7uxlr7 12.06.2026 — сесії WML2Z + RQmdC
 
 _Сесія **WML2Z** (03.06.2026):_
