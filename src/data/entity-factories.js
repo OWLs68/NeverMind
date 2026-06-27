@@ -105,3 +105,18 @@ export function makeFinance({ type, amount, category, comment = '', ts, subcateg
   if (projectId) tx.projectId = projectId;
   return stampEntity(tx);
 }
+
+// Список (nm_lists) — окрема легка сутність-чекліст (v3pexs, варіант A). НЕ задача:
+// живе у стрічці Inbox як картка-чекліст, нуль слідів у nm_tasks. items — масив
+// під-сутностей {id, text, done} (та сама форма що task.steps — реюз renderChecklist).
+// items НЕ штампуються власним конвертом (як task.steps/project.steps зараз) — лише
+// список верхнього рівня через stampEntity. Якщо list_items стануть окремою Supabase-
+// таблицею у майбутньому — додати stampEntity на кожен item (окрема міграція).
+export function makeList({ title = '', items = [] } = {}) {
+  return stampEntity({
+    title,
+    items: Array.isArray(items) ? items : [],
+    status: 'active',
+    createdAt: Date.now(),
+  });
+}

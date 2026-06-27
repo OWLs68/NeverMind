@@ -20,6 +20,10 @@ export function toolCallToAction(name, args) {
       return [{ action: 'create_task', title: args.title, desc: args.text, steps: args.steps || [], dueDate: args.due_date, priority: args.priority }];
     case 'save_note':
       return [{ action: 'create_note', text: args.text, folder: args.folder }];
+    case 'save_list':
+      return [{ action: 'create_list', title: args.title, items: Array.isArray(args.items) ? args.items : [] }];
+    case 'delete_list':
+      return [{ action: 'delete_list', list_id: args.list_id }];
     case 'save_habit':
       return [{ action: 'create_habit', name: args.name, details: args.details, days: args.days, target_count: args.target_count }];
     case 'save_moment':

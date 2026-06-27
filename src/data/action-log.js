@@ -150,6 +150,7 @@ export function captureSnapshotBefore(name, args) {
 // Post-hoc capture ID нової сутності з localStorage (для tools що unshift/push).
 const POST_ID_POSITIONS = {
   save_task:    { key: 'nm_tasks',    pos: 'first' },
+  save_list:    { key: 'nm_lists',    pos: 'first' },
   save_finance: { key: 'nm_finance',  pos: 'first' },
   save_habit:   { key: 'nm_habits2',  pos: 'last' },
   create_event: { key: 'nm_events',   pos: 'last' },

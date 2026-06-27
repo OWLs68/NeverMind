@@ -8,7 +8,8 @@ import { escapeHtml, logRecentAction, extractJsonBlocks, parseContentChips, leve
 import { logUsage } from '../core/usage-meter.js';
 import { generateUUID } from '../core/uuid.js';
 import { makeHabit } from '../data/habit-classifier.js';
-import { makeEvent, makeTask } from '../data/entity-factories.js';
+import { makeEvent, makeTask, makeList } from '../data/entity-factories.js';
+import { getLists, saveLists } from './lists.js';
 import { addToTrash, showUndoToast } from '../core/trash.js';
 import { callAIWithTools, getAIContext, getOWLPersonality, safeAgentReply, INBOX_TOOLS, handleChatError } from '../ai/core.js';
 import { UI_TOOLS_RULES, BASE_CHAT_RULES } from '../ai/prompts.js';
@@ -1030,6 +1031,40 @@ export function processUniversalAction(parsed, originalText, addMsg) {
     const items = getInbox(); items.unshift({ id: generateUUID(), text: title, category: 'task', ts: Date.now(), processed: true }); saveInbox(items);
     addMsg('agent', t('habits.task.created', '✅ Задачу "{title}" створено', { title }));
     if (parsed.ask_after) setTimeout(() => addMsg('agent', parsed.ask_after), 600);
+    return true;
+  }
+
+  // Список-чекліст (v3pexs) — окрема сутність nm_lists + картка в стрічці Inbox.
+  // НЕ задача: жодного запису у nm_tasks.
+  if (action === 'create_list') {
+    const title = (parsed.title || t('lists.untitled', 'Список')).trim();
+    const items = (Array.isArray(parsed.items) ? parsed.items : [])
+      .map(s => (typeof s === 'string' ? s : (s && s.text ? String(s.text) : '')).trim())
+      .filter(Boolean)
+      .map(text => ({ id: generateUUID(), text, done: false }));
+    if (items.length === 0) return false;
+    const list = makeList({ title, items });
+    const lists = getLists();
+    lists.unshift(list);
+    saveLists(lists);
+    const inbox = getInbox();
+    inbox.unshift({ id: generateUUID(), listId: list.id, text: title, category: 'list', ts: Date.now(), processed: true });
+    saveInbox(inbox);
+    if (currentTab === 'inbox') renderInbox();
+    addMsg('agent', t('lists.created', '📝 Список "{title}" ({n}) — у стрічці Inbox', { title, n: items.length }));
+    return true;
+  }
+
+  if (action === 'delete_list') {
+    const lists = getLists();
+    const idx = lists.findIndex(l => String(l.id) === String(parsed.list_id));
+    if (idx === -1) { addMsg('agent', t('lists.not_found', 'Список не знайдено.')); return true; }
+    const removed = lists[idx];
+    lists.splice(idx, 1);
+    saveLists(lists);
+    saveInbox(getInbox().filter(i => String(i.listId) !== String(parsed.list_id)));
+    if (currentTab === 'inbox') renderInbox();
+    addMsg('agent', t('lists.deleted', '🗑 Список "{title}" видалено', { title: removed.title || '' }));
     return true;
   }
 

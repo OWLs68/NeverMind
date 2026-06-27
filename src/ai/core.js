@@ -24,6 +24,7 @@ import { getOWLPersonality, INBOX_SYSTEM_PROMPT, INBOX_TOOLS, getOwlChatSystemPr
 import { clearUnreadBadge, showUnreadBadge } from '../ui/unread-badge.js';
 import { logUsage } from '../core/usage-meter.js';
 import { parseExplicitIntent } from '../data/intent-router.js';
+import { parseListIntent } from '../data/list-detector.js';
 import { selectRelevantTools } from '../data/tool-filter.js';
 
 // Backward-compat: re-export промптів з prompts.js — щоб 11 файлів
@@ -598,6 +599,27 @@ export async function callAIWithTools(systemPrompt, history, tools, module = 'ca
             id: 'router_' + Date.now(),
             type: 'function',
             function: { name: parsed.tool, arguments: JSON.stringify(parsed.args) },
+          }],
+        };
+      }
+      // v3pexs: список-чекліст (правило 12) — детермінований save_list БЕЗ AI,
+      // щоб список НЕ потрапив у Задачі (вимога Романа). Guard dropTaskOnList —
+      // бекстоп для fuzzy-фраз що пройшли повз детектор у AI.
+      const parsedList = parseListIntent(userText);
+      if (parsedList) {
+        try {
+          const log = JSON.parse(localStorage.getItem('nm_intent_router_log') || '[]');
+          log.unshift({ ts: Date.now(), module, tool: parsedList.tool, text: userText.slice(0, 80) });
+          localStorage.setItem('nm_intent_router_log', JSON.stringify(log.slice(0, 50)));
+        } catch {}
+        clearTimeout(timeout);
+        return {
+          role: 'assistant',
+          content: null,
+          tool_calls: [{
+            id: 'listrouter_' + Date.now(),
+            type: 'function',
+            function: { name: parsedList.tool, arguments: JSON.stringify(parsedList.args) },
           }],
         };
       }

@@ -324,7 +324,9 @@ export const NM_KEYS = {
          // залишала їх після wipe, Supabase backup їх би НЕ включив. Все —
          // юзерські дані: події календаря, нагадування, розпорядок дня,
          // алергії у health-картках, лог дій для undo (7 днів TTL).
-         'nm_events','nm_reminders','nm_routine','nm_allergies','nm_action_log'],
+         'nm_events','nm_reminders','nm_routine','nm_allergies','nm_action_log',
+         // v3pexs 27.06: списки-чеклісти в Inbox (окрема сутність, не задачі).
+         'nm_lists'],
   // Налаштування (→ Supabase user_settings)
   settings: ['nm_settings','nm_gemini_key','nm_memory','nm_memory_ts',
               'nm_facts','nm_facts_migrated','nm_voice_mode',

@@ -27,6 +27,7 @@ const argsOf = (arr, i) => JSON.parse(arr[i].function.arguments);
     dropTaskOnFinance,
     dropTaskOnComplete,
     dropEventOnMoment,
+    dropTaskOnList,
     applyAllGuards,
   } = g;
 
@@ -104,9 +105,20 @@ const argsOf = (arr, i) => JSON.parse(arr[i].function.arguments);
   const d3 = dropEventOnMoment([tc('save_moment', { text: 'жарили' }), tc('create_event', { title: 'x' })]);
   ck('moment+event → лишається moment', d3.length === 1 && nameOf(d3, 0) === 'save_moment');
 
+  // --- dropTaskOnList: список ≠ задача (vдимога Романа) ---
+  const dl1 = dropTaskOnList([tc('save_list', { title: 'Покупки' }), tc('save_task', { title: 'купити' })], 'склади список покупок: молоко, хліб');
+  ck('list+task batch → лишається list', dl1.length === 1 && nameOf(dl1, 0) === 'save_list');
+  const dl2 = dropTaskOnList([tc('save_task', { title: 'Список покупок' })], 'склади список покупок: молоко, хліб, яйця');
+  ck('лише task + текст=список → конверт у save_list', nameOf(dl2, 0) === 'save_list');
+  ck('конверт: items з детектора (3)', Array.isArray(argsOf(dl2, 0).items) && argsOf(dl2, 0).items.length === 3);
+  const dl3 = dropTaskOnList([tc('save_task', { title: 'Купити хліб' })], 'купити хліб');
+  ck('звичайна задача (не список) → лишається save_task', nameOf(dl3, 0) === 'save_task');
+
   // --- applyAllGuards: порядок (один guard готує стан для наступного) ---
   const a1 = applyAllGuards([tc('save_note', { content: 'хліб' }), tc('save_task', { title: 'хліб' })], 'купив хліб 3 євро');
   ck('ланцюг: note→finance, далі task дропнуто', a1.length === 1 && nameOf(a1, 0) === 'save_finance');
+  const a3 = applyAllGuards([tc('save_task', { title: 'Список' })], 'склади список покупок: молоко, хліб, яйця');
+  ck('ланцюг: текст=список → save_list (не задача)', a3.length === 1 && nameOf(a3, 0) === 'save_list');
   const a2 = applyAllGuards([tc('create_event', { title: 'Жарили' })], 'вчора жарили мʼясо');
   ck('ланцюг: past event→moment, дубль-event чисто', a2.length === 1 && nameOf(a2, 0) === 'save_moment');
 

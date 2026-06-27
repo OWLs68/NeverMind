@@ -39,11 +39,15 @@ const tc = (name) => ({ function: { name } });
     trash: 'поверни видалене з кошика',
     memory: 'запамʼятай що я люблю каву',
     ui: 'відкрий фінанси',
+    list: 'склади список покупок',
   };
   for (const [key, phrase] of Object.entries(phrases)) {
     ck(`категорія «${key}» матчить «${phrase}»`, TOOL_CATEGORIES[key].rx.test(phrase.toLowerCase()));
   }
-  ck('усі 11 категорій присутні', Object.keys(TOOL_CATEGORIES).length === 11);
+  ck('усі 12 категорій присутні', Object.keys(TOOL_CATEGORIES).length === 12);
+  // list-категорія МУСИТЬ давати save_list (інакше AI його не побачить — клас токен-бага).
+  ck('«список покупок» → save_list у наборі',
+     selectRelevantTools('склади список покупок: хліб, молоко', fullTools).some(t => t.function.name === 'save_list'));
 
   // (2) Чіткий single-category запит → фільтрує, АЛЕ base tools завжди в наборі.
   const fin = selectRelevantTools('витратив 200 на каву', fullTools);
@@ -73,6 +77,6 @@ const tc = (name) => ({ function: { name } });
     console.error('(категорія не матчить укр-фразу) → економія токенів мертва. НЕ пушити.\n');
     process.exit(1);
   }
-  console.log(`✅ tool-filter сторож: ${passed} перевірок ок (11 категорій живі, base tools + fallback)`);
+  console.log(`✅ tool-filter сторож: ${passed} перевірок ок (12 категорій живі, base tools + fallback)`);
   process.exit(0);
 })();
