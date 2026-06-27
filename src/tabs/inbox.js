@@ -20,6 +20,7 @@ import { applyAllGuards } from '../data/dispatcher-guards.js';
 import { attachSwipeDelete } from '../ui/swipe-delete.js';
 import { renderChecklist } from '../ui/checklist.js';
 import { getLists, saveLists } from './lists.js';
+import { regTouch } from '../ui/touch-detect.js';
 import { getTasks, saveTasks, renderTasks, autoGenerateTaskSteps } from './tasks.js';
 import { getEvents, saveEvents, addEventDedup } from './calendar.js';
 import { getHabits, saveHabits, getHabitLog, saveHabitLog, renderHabits, renderProdHabits, processUniversalAction } from './habits.js';
@@ -186,6 +187,24 @@ export function saveInbox(arr) {
   // не реагували миттєво — тільки після наступного nm-data-changed від ІНШОГО джерела.
   try { window.dispatchEvent(new CustomEvent('nm-data-changed', { detail: 'inbox' })); } catch(e) {}
 }
+
+// Тап по квадратику пункту списку (v3pexs) — закреслює пункт, зберігає, перемальовує.
+// Та сама механіка що toggle-task-step у задачах (спільний renderChecklist).
+export function toggleListItem(listId, itemId) {
+  const lists = getLists();
+  const list = lists.find(l => String(l.id) === String(listId));
+  if (!list) return;
+  const item = (list.items || []).find(i => String(i.id) === String(itemId));
+  if (!item) return;
+  item.done = !item.done;
+  list.updatedAt = Date.now();
+  saveLists(lists);
+  renderInbox();
+}
+regTouch('toggle-list-item', (data) => {
+  if (!data.listId || !data.itemId) return;
+  toggleListItem(data.listId, data.itemId);
+});
 
 
 // Датовий сепаратор для стрічки
