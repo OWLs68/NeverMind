@@ -1244,6 +1244,7 @@ async function processSaveAction(parsed, originalText) {
       undoRef = { type: 'habit', id: habit.id, label: t('inbox.type.habit', 'звичку') };
     }
   }
+  let savedAsMoment = false;
   if (cat === 'event') {
     // Перевіряємо чи є дата → календарна подія (nm_events), інакше → момент дня
     const eventDetected = _detectEventDate(savedText);
@@ -1267,6 +1268,7 @@ async function processSaveAction(parsed, originalText) {
       moments.push(newMoment);
       saveMoments(moments);
       generateMomentSummary(newMoment.id, savedText);
+      savedAsMoment = true;
     }
   }
   const catConfirm2 = {
@@ -1276,9 +1278,14 @@ async function processSaveAction(parsed, originalText) {
     idea:  t('inbox.confirm.idea',  '💡 Ідею збережено'),
     event: t('inbox.confirm.event', '📅 Подію додано')
   };
+  // v3pexs: момент (подія без дати) має власне підтвердження З ЛОКАЦІЄЮ —
+  // юзер має знати куди дивитись (раніше падало у «📅 Подію додано» — двічі хибно).
+  const savedLabel = savedAsMoment
+    ? t('inbox.confirm.moment', '📝 у Моменти (вкладка Вечір)')
+    : catConfirm2[cat];
   const confirmMsg2 = parsed.comment
-    ? `${parsed.comment} ${catConfirm2[cat] ? '/ ' + catConfirm2[cat] : ''}`
-    : (catConfirm2[cat] || t('inbox.chat.saved', '✓ Збережено'));
+    ? `${parsed.comment}${savedLabel ? ' / ' + savedLabel : ''}`
+    : (savedLabel || t('inbox.chat.saved', '✓ Збережено'));
   addInboxChatMsg('agent', confirmMsg2);
 
   // Якщо є уточнення після збереження — показуємо через паузу
