@@ -34,6 +34,10 @@ export const TOOL_CATEGORIES = {
     rx: new RegExp(CYR_BL + '(задач|треба зробити|нагада[йт]|напомни|зроби|куп(и|ити)' + CYR_BR + '|відправ|зателефонуй|написати|подати|оплатити|поприбирай|поміняй)', 'i'),
     tools: ['save_task', 'edit_task', 'delete_task', 'complete_task', 'reopen_task', 'add_step', 'set_reminder']
   },
+  list: {
+    rx: new RegExp(CYR_BL + '(список|переліку?|перелік|чеклист|чекліст|куп(и|ити)' + CYR_BR + ')', 'i'),
+    tools: ['save_list', 'delete_list']
+  },
   event: {
     rx: new RegExp(CYR_BL + '(подія|подію|зустріч|прийом|приїзд|концерт|рейс|тренуван|відміни|відмін|перенес|завтра|післязавтра|сьогодні о|у (понеділ|вівтор|серед|четвер|пятниц|субот|неділ))', 'i'),
     tools: ['create_event', 'edit_event', 'delete_event', 'open_calendar']
