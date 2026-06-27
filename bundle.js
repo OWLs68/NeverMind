@@ -6841,27 +6841,45 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     currentFinTab = currentFinTab === "expense" ? "income" : "expense";
     renderFinance();
   }
+  function _finDayLabel(ts) {
+    const d = new Date(ts);
+    const today = /* @__PURE__ */ new Date();
+    const yest = /* @__PURE__ */ new Date();
+    yest.setDate(today.getDate() - 1);
+    if (d.toDateString() === today.toDateString()) return t("finance.tx.day_today", "\u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456");
+    if (d.toDateString() === yest.toDateString()) return t("finance.tx.day_yesterday", "\u0412\u0447\u043E\u0440\u0430");
+    return d.toLocaleDateString("uk-UA", { day: "numeric", month: "short" });
+  }
+  function _finDayHeaderHtml(label) {
+    return `<div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.3px;margin:12px 2px 4px">${label}</div>`;
+  }
   function _finTxsBlock(allTxs) {
     const sorted = [...allTxs].sort((a, b) => b.ts - a.ts).slice(0, 8);
-    const rows = sorted.map((t2) => {
-      const isExp = t2.type === "expense";
-      const dateStr = new Date(t2.ts).toLocaleDateString("uk-UA", { day: "numeric", month: "short" });
-      const _catBubble = `<span style="display:inline-block;padding:2px 8px;border-radius:999px;background:rgba(30,16,64,0.09);color:#1e1040;font-size:11px;font-weight:700;line-height:1.4">${escapeHtml(t2.category)}</span>`;
-      const _subBubble = t2.subcategory ? `<span style="display:inline-block;padding:1px 8px;border-radius:999px;background:transparent;border:1px solid rgba(30,16,64,0.18);color:rgba(30,16,64,0.55);font-size:10px;font-weight:500;line-height:1.5;margin-left:5px">${escapeHtml(t2.subcategory)}</span>` : "";
+    let lastDay = null;
+    const parts = [];
+    for (const tx of sorted) {
+      const dayLabel = _finDayLabel(tx.ts);
+      if (dayLabel !== lastDay) {
+        lastDay = dayLabel;
+        parts.push(_finDayHeaderHtml(dayLabel));
+      }
+      const isExp = tx.type === "expense";
+      const _catBubble = `<span style="display:inline-block;padding:2px 8px;border-radius:999px;background:rgba(30,16,64,0.09);color:#1e1040;font-size:11px;font-weight:700;line-height:1.4">${escapeHtml(tx.category)}</span>`;
+      const _subBubble = tx.subcategory ? `<span style="display:inline-block;padding:1px 8px;border-radius:999px;background:transparent;border:1px solid rgba(30,16,64,0.18);color:rgba(30,16,64,0.55);font-size:10px;font-weight:500;line-height:1.5;margin-left:5px">${escapeHtml(tx.subcategory)}</span>` : "";
       const categoryLine = _catBubble + _subBubble;
-      return `<div class="fin-tx-swipe-wrap" data-tx-id="${t2.id}" style="position:relative;overflow:hidden;border-radius:10px">
-      <div class="tx-row" data-action="open-edit-transaction" data-id="${t2.id}" style="position:relative;z-index:1;background:#fff">
+      parts.push(`<div class="fin-tx-swipe-wrap" data-tx-id="${tx.id}" style="position:relative;overflow:hidden;border-radius:10px">
+      <div class="tx-row" data-action="open-edit-transaction" data-id="${tx.id}" style="position:relative;z-index:1;background:#fff">
         <div style="flex:1;min-width:0">
           <div style="font-size:13px">${categoryLine}</div>
-          ${t2.comment ? `<div style="font-size:11px;color:rgba(30,16,64,0.4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(t2.comment)}</div>` : ""}
+          ${tx.comment ? `<div style="font-size:11px;color:rgba(30,16,64,0.4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(tx.comment)}</div>` : ""}
         </div>
         <div style="text-align:right;flex-shrink:0">
-          <div style="font-size:14px;font-weight:800;color:${isExp ? "#c2410c" : "#16a34a"}">${isExp ? "-" : "+"}${formatMoney(t2.amount)}</div>
-          <div style="font-size:10px;color:rgba(30,16,64,0.35)">${dateStr}</div>
+          <div style="font-size:14px;font-weight:800;color:${isExp ? "#c2410c" : "#16a34a"}">${isExp ? "-" : "+"}${formatMoney(tx.amount)}</div>
         </div>
       </div>
-    </div>`;
-    }).join("");
+    </div>`);
+    }
+    const rows = parts.join("");
     const moreBtn = allTxs.length > 8 ? `<div data-action="open-all-transactions" style="text-align:center;margin-top:10px;font-size:13px;font-weight:700;color:#c2410c;cursor:pointer">${t("finance.tx.all_count", "\u0412\u0441\u0456 \u043E\u043F\u0435\u0440\u0430\u0446\u0456\u0457 ({n})", { n: allTxs.length })} <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#c2410c" stroke-width="2.5" stroke-linecap="round" style="vertical-align:middle"><polyline points="9 18 15 12 9 6"/></svg></div>` : "";
     return `<div class="card-glass-blur">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
@@ -6880,23 +6898,29 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     const modal = document.createElement("div");
     modal.id = "fin-all-txs-modal";
     modal.style.cssText = "position:fixed;inset:0;z-index:500;display:flex;align-items:flex-end;justify-content:center";
-    const rows = allTxs.map((t2) => {
-      const isExp = t2.type === "expense";
-      const dateStr = new Date(t2.ts).toLocaleDateString("uk-UA", { day: "numeric", month: "short" });
-      const _catBubble = `<span style="display:inline-block;padding:2px 8px;border-radius:999px;background:rgba(30,16,64,0.09);color:#1e1040;font-size:11px;font-weight:700;line-height:1.4">${escapeHtml(t2.category)}</span>`;
-      const _subBubble = t2.subcategory ? `<span style="display:inline-block;padding:1px 8px;border-radius:999px;background:transparent;border:1px solid rgba(30,16,64,0.18);color:rgba(30,16,64,0.55);font-size:10px;font-weight:500;line-height:1.5;margin-left:5px">${escapeHtml(t2.subcategory)}</span>` : "";
+    let lastDay = null;
+    const parts = [];
+    for (const tx of allTxs) {
+      const dayLabel = _finDayLabel(tx.ts);
+      if (dayLabel !== lastDay) {
+        lastDay = dayLabel;
+        parts.push(_finDayHeaderHtml(dayLabel));
+      }
+      const isExp = tx.type === "expense";
+      const _catBubble = `<span style="display:inline-block;padding:2px 8px;border-radius:999px;background:rgba(30,16,64,0.09);color:#1e1040;font-size:11px;font-weight:700;line-height:1.4">${escapeHtml(tx.category)}</span>`;
+      const _subBubble = tx.subcategory ? `<span style="display:inline-block;padding:1px 8px;border-radius:999px;background:transparent;border:1px solid rgba(30,16,64,0.18);color:rgba(30,16,64,0.55);font-size:10px;font-weight:500;line-height:1.5;margin-left:5px">${escapeHtml(tx.subcategory)}</span>` : "";
       const categoryLine = _catBubble + _subBubble;
-      return `<div class="tx-row" data-action="open-edit-transaction-from-all" data-id="${t2.id}">
+      parts.push(`<div class="tx-row" data-action="open-edit-transaction-from-all" data-id="${tx.id}">
       <div style="flex:1;min-width:0">
         <div style="font-size:13px">${categoryLine}</div>
-        ${t2.comment ? `<div style="font-size:11px;color:rgba(30,16,64,0.4)">${escapeHtml(t2.comment)}</div>` : ""}
+        ${tx.comment ? `<div style="font-size:11px;color:rgba(30,16,64,0.4)">${escapeHtml(tx.comment)}</div>` : ""}
       </div>
       <div style="text-align:right;flex-shrink:0">
-        <div style="font-size:14px;font-weight:800;color:${isExp ? "#c2410c" : "#16a34a"}">${isExp ? "-" : "+"}${formatMoney(t2.amount)}</div>
-        <div style="font-size:10px;color:rgba(30,16,64,0.35)">${dateStr}</div>
+        <div style="font-size:14px;font-weight:800;color:${isExp ? "#c2410c" : "#16a34a"}">${isExp ? "-" : "+"}${formatMoney(tx.amount)}</div>
       </div>
-    </div>`;
-    }).join("");
+    </div>`);
+    }
+    const rows = parts.join("");
     modal.innerHTML = `
     <div data-action="close-element-by-id" data-target-id="fin-all-txs-modal" class="modal-backdrop"></div>
     <div style="position:relative;width:100%;max-width:480px;background:rgba(255,255,255,0.95);backdrop-filter:blur(24px);border-radius:24px;margin:0 16px 16px;z-index:1;padding:16px 16px calc(env(safe-area-inset-bottom) + 16px);max-height:80vh;overflow-y:auto;box-sizing:border-box">
@@ -19191,6 +19215,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
         undoRef = { type: "habit", id: habit.id, label: t("inbox.type.habit", "\u0437\u0432\u0438\u0447\u043A\u0443") };
       }
     }
+    let savedAsMoment = false;
     if (cat === "event") {
       const eventDetected = _detectEventDate(savedText);
       if (eventDetected) {
@@ -19210,6 +19235,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
         moments.push(newMoment);
         saveMoments(moments);
         generateMomentSummary(newMoment.id, savedText);
+        savedAsMoment = true;
       }
     }
     const catConfirm2 = {
@@ -19219,7 +19245,8 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       idea: t("inbox.confirm.idea", "\u{1F4A1} \u0406\u0434\u0435\u044E \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E"),
       event: t("inbox.confirm.event", "\u{1F4C5} \u041F\u043E\u0434\u0456\u044E \u0434\u043E\u0434\u0430\u043D\u043E")
     };
-    const confirmMsg2 = parsed.comment ? `${parsed.comment} ${catConfirm2[cat] ? "/ " + catConfirm2[cat] : ""}` : catConfirm2[cat] || t("inbox.chat.saved", "\u2713 \u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E");
+    const savedLabel = savedAsMoment ? t("inbox.confirm.moment", "\u{1F4DD} \u0443 \u041C\u043E\u043C\u0435\u043D\u0442\u0438 (\u0432\u043A\u043B\u0430\u0434\u043A\u0430 \u0412\u0435\u0447\u0456\u0440)") : catConfirm2[cat];
+    const confirmMsg2 = parsed.comment ? `${parsed.comment}${savedLabel ? " / " + savedLabel : ""}` : savedLabel || t("inbox.chat.saved", "\u2713 \u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E");
     addInboxChatMsg("agent", confirmMsg2);
     if (parsed.ask_after) {
       setTimeout(() => addInboxChatMsg("agent", parsed.ask_after), 600);
