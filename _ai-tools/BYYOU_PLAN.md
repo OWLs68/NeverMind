@@ -20,16 +20,38 @@
 
 | # | Крок | Маркер | Статус | Коміт |
 |---|------|--------|--------|-------|
-| 1 | **Фундамент даних.** `makeList({title,items})` у `entity-factories.js` (stampEntity конверт) + `nm_lists` у реєстр `NM_KEYS` (clearAllData/backup) + новий `src/tabs/lists.js` з `getLists/saveLists` (канонічний сеттер, структурний `nm-data-changed {type:'list',action,id}`). supabase-prep-сумісно. | 🔴→OK(A) | ⬜ | — |
-| 2 | **Детермінований детект** `src/data/list-detector.js` (правило 12): тригери «список:», «купити:», перелік через кому/новий рядок/«1.» → `{title, items[]}`. Pure-function + контракт-тест `check-list-detector.js`. | 🟢 | ⬜ | — |
-| 3 | **Guard `dropTaskOnList`** у `dispatcher-guards.js` + у ланцюг `applyAllGuards` (після dropTaskOnComplete). Якщо AI видав save_task на список-намір → скидає save_task. Розширити `check-guards`. | 🟢 | ⬜ | — |
-| 4 | **DRY-хелпер** `src/ui/checklist.js` `renderChecklist(items, opts)` — винести інлайн-рендер квадратиків з `tasks.js:301-306`, спрямувати tasks на нього (2 споживачі). Перевірити що задачі не зламані. | 🟢 | ⬜ | — |
-| 5 | **AI tools** `save_list`+`delete_list` у `INBOX_TOOLS` (`prompts.js`) + **переписати §СПИСОК (517-518 міна)**: список→save_list, задача-з-діями→save_task + рядок у quick-таблицю (507) + заблокувати `autoGenerateTaskSteps` для списків. | 🟡 | ⬜ | — |
-| 6 | **Маршрут (єдині точки).** `action-mapper.js` case save_list + синк дубля `inbox.js _toolCallToAction` + `processUniversalAction` create_list/delete_list (habits.js) + action-log POST_RESULT_STORAGE + action-reversers (undo save_list→delete_list). | 🟢 | ⬜ | — |
-| 7 | **Рендер у Inbox.** `CAT_META/CAT_DOT_SOLID/CAT_TAG_STYLE` ключ `list` (inbox.js) + гілка картки-чеклісту у `renderInbox` (через renderChecklist) + `attachSwipeDelete`. | 🟢 | ⬜ | — |
-| 8 | **Взаємодія.** `toggle-list-item` у `delegation.js` + `window.toggleListItem` у lists.js (тап галочки → persist + re-render + структурний dispatch). | 🟢 | ⬜ | — |
-| 9 | **E2E** `tests/e2e/lists.spec.js` (правило 13): список → картка з квадратиками в Inbox, НЕ в Задачах; тап галочки persist; reload виживає. | 🟢 | ⬜ | — |
-| 10 | **Pre-flight** (усі check-*.js + node --check + playwright --list) + bump CACHE + реліз-нотатки + iPhone-смоук-лист. | 🟢 | ⬜ | — |
+| 1 | **Фундамент даних.** `makeList({title,items})` у `entity-factories.js` (stampEntity конверт) + `nm_lists` у реєстр `NM_KEYS` (clearAllData/backup) + новий `src/tabs/lists.js` з `getLists/saveLists` (канонічний сеттер, РЯДКОВИЙ `nm-data-changed:'lists'` — Ворота 2 ще не зроблено). supabase-prep-сумісно. | 🔴→OK(A) | ✅ | 38aa5e0 |
+| 2 | **Детермінований детект** `src/data/list-detector.js` (правило 12): тригери «список:», «купити:», перелік через кому/новий рядок/«1.» → `{title, items[]}`. Pure-function + контракт-тест `check-list-detector.js` (19/19, у CI). | 🟢 | ✅ | 93347f8 |
+| 3 | **Guard `dropTaskOnList`** у `dispatcher-guards.js` + ланцюг `applyAllGuards`. Дроп save_task-дублю АБО конверт самотньої save_task→save_list (items з детектора). guards 35→40. | 🟢 | ✅ | 250ee5d |
+| 4 | **DRY-хелпер** `src/ui/checklist.js` `renderChecklist(items, opts)` — винесено з tasks, tasks спрямовано (ті самі data-атрибути). | 🟢 | ✅ | 5c1871b |
+| 5 | **AI tools** `save_list`+`delete_list` + переписано §СПИСОК + категорія `list` у tool-filter (інакше фільтр відкидав save_list). autoGenerateTaskSteps НЕ чіпав (списки не в nm_tasks → міна закрита структурно). | 🟡 | ✅ | e53f7dc |
+| 6 | **Маршрут.** `parseListIntent` у core.js fast-path + action-mapper case + inbox `_toolCallToAction` синк + `processUniversalAction` create_list/delete_list (habits.js) + undo (action-log POST_ID + reverser save_list→delete_list). | 🟢 | ✅ | f7614dd |
+| 7 | **Рендер у Inbox.** `list` у 4 мапах кольорів + гілка картки-чеклісту у `renderInbox` (renderChecklist + lookup nm_lists) + свайп. | 🟢 | ✅ | 771bb12 |
+| 8 | **Взаємодія.** `regTouch('toggle-list-item')` → `toggleListItem` у inbox.js (тап → done toggle + saveLists + renderInbox). Та сама механіка що toggle-task-step. | 🟢 | ✅ | 84826c4 |
+| 9 | **E2E** `tests/e2e/lists.spec.js` (3 сценарії): картка-чекліст в Inbox + НЕ в Задачах + persist. Тап-тогл → ручний смоук. | 🟢 | ✅ | 715dd86 |
+| 10 | **Pre-flight** (10 сторожів + 15× node --check + imports/i18n/uniformity зелені) + bump CACHE + реліз-нотатки. | 🟢 | ✅ | — |
+
+---
+
+## Реліз-нотатки (перед «деплой»)
+
+**ЩО ЗМІНИЛОСЬ:**
+- Нова сутність **Списки** (`nm_lists`, окремо від задач). «Склади список покупок: молоко, хліб, яйця» або «купити: X, Y» → **картка-чекліст прямо у стрічці Inbox** з квадратиками + прогрес N/M. Тап по квадратику закреслює пункт.
+- Список **НЕ зберігається у Задачах** — двошаровий захист: детермінований `list-detector` маршрутизує у `save_list` ще до AI; guard `dropTaskOnList` конвертує помилковий `save_task`→`save_list`.
+- НЕ плутається з кроками задач/проектів — фізично окреме сховище `nm_lists`, спільний лише вигляд (renderChecklist).
+
+**ЩО МОЖЕ ЗЛАМАТИСЬ (міні pre-mortem):**
+- Детектор over-trigger? — консервативний: тригер «список/купити:» + ≥2 пунктів. «купити молоко» (1 пункт) → звичайна задача (19/19 тест).
+- Задачі зламані рефактором renderChecklist? — ті самі data-атрибути, tasks E2E у CI підтвердить.
+- save_list відкинуто фільтром? — додано категорію `list` (інакше AI не побачив би tool). Тест 23 перевірки.
+- Тап-тогл на iPhone — touch headless не ловить, лише ручний смоук.
+
+**ЩО ПЕРЕВІРИТИ НА IPHONE (≤5):**
+- [ ] «склади список покупок: молоко, хліб, яйця» в Inbox → картка-чекліст з 3 квадратиками у стрічці (не текст, не задача).
+- [ ] Відкрий вкладку **Задачі** → списку там НЕМАЄ (головна вимога).
+- [ ] Тап по квадратику пункту → закреслюється, прогрес змінюється (1/3 → 2/3).
+- [ ] «купити молоко» (один пункт) → працює як звичайна задача, НЕ список.
+- [ ] Свайп по картці-списку → видаляється.
 
 > **Маркери:** 🟢 GO · 🟡 ТВІЙ ХІД (смоук) · 🔴 СТОП. Крок 1 чіпає схему (новий storage-ключ) — Роман схвалив варіант A на брамі, тож проходить.
 
