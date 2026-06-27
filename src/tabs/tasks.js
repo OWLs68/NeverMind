@@ -12,6 +12,7 @@ import { addToTrash, showUndoToast } from '../core/trash.js';
 import { callAI, getAIContext, getOWLPersonality, openChatBar, saveChatMsg, handleChatError } from '../ai/core.js';
 import { renderChips } from '../owl/chips.js';
 import { attachSwipeDelete } from '../ui/swipe-delete.js';
+import { renderChecklist } from '../ui/checklist.js';
 import { updateProdTabCounters, processUniversalAction } from './habits.js';
 import { closeNoteView } from './notes.js';
 
@@ -277,8 +278,6 @@ export function renderTasks() {
   updateProdTabCounters();
   list.innerHTML = sorted.map(task => {
     const steps = task.steps || [];
-    const doneCount = steps.filter(s => s.done).length;
-    const pct = steps.length > 0 ? Math.round(doneCount / steps.length * 100) : (task.status === 'done' ? 100 : 0);
     const isDone = task.status === 'done';
 
     return `<div class="task-item-wrap" id="task-wrap-${task.id}" style="position:relative;margin:0 14px var(--card-gap);border-radius:16px">
@@ -293,19 +292,7 @@ export function renderTasks() {
           ${task.desc ? `<div style="font-size:14px;color:rgba(30,16,64,0.45);margin-top:2px">${escapeHtml(task.desc)}</div>` : ''}
         </div>
       </div>
-      ${steps.length > 0 ? `
-        <div style="height:3px;background:rgba(0,0,0,0.06);border-radius:3px;overflow:hidden;margin-bottom:8px">
-          <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,#f97316,#ea580c);border-radius:3px;transition:width 0.3s"></div>
-        </div>
-        <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:10px">
-          ${steps.map(s => `
-            <div data-step-check="1" data-tap-detect data-tap-action="toggle-task-step" data-task-id="${task.id}" data-step-id="${s.id}" style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:4px 0">
-              <div style="width:24px;height:24px;border-radius:7px;border:1.5px solid ${s.done ? '#ea580c' : 'rgba(30,16,64,0.18)'};background:rgba(255,255,255,0.6);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px;color:#ea580c">${s.done ? '✓' : ''}</div>
-              <div style="flex:1;font-size:14px;color:rgba(30,16,64,0.65);${s.done ? 'text-decoration:line-through;opacity:0.4' : ''}">${escapeHtml(s.text)}</div>
-            </div>
-          `).join('')}
-        </div>
-      ` : ''}
+      ${renderChecklist(steps, { tapAction: 'toggle-task-step', entityAttr: 'data-task-id', entityId: task.id, itemAttr: 'data-step-id' })}
     </div></div>`;
   }).join('');
   // Підключаємо B-54 свайп-видалення (винесено у спільну утиліту 18.04 14zLe)
