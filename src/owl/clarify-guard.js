@@ -45,6 +45,16 @@ const COMMAND_RE = /(створи|додай|запиши|нагада|пост�
 // Сума з валютою → save_finance, не наша справа.
 const HAS_NUMBER_RE = /\d/;
 
+// Однослівні привітання/згоди/відмови/реакції — НЕ записи (v3pexs). Без цього
+// bareNoun-clarify без інструмента ловив би «Так/Ні/Дякую/Окей» (~30-40% коротких
+// реплік у діалозі) → тупе питання «куди записати?». Стоп-лист гасить цей клас.
+const GREETING_STOPLIST = new Set([
+  'привіт', 'вітаю', 'дякую', 'дяк', 'окей', 'ок', 'так', 'ні', 'добре', 'гаразд',
+  'зрозумів', 'зрозуміла', 'чудово', 'супер', 'класно', 'ясно', 'справді', 'цікаво',
+  'можливо', 'ого', 'ніяк', 'бувай', 'пока', 'привіт!', 'дякую!', 'вибач', 'вибачте',
+  'агов', 'гей', 'хм', 'ага', 'угу', 'неа', 'аякже',
+]);
+
 // Tools які guard ловить — створення нової сутності з потенційно неправильним типом.
 // NpBmN audit fix #5: додано save_finance + set_reminder, бо AI на «був у
 // дерматолога» може видати save_finance як creative hallucination → guard
@@ -65,15 +75,23 @@ const SUSPICIOUS_TOOLS = new Set([
 // Перевіряє чи треба показати clarify-чіпи замість виконання tool_calls.
 // Повертає null (виконуй як є) або {question, chips} (показати чіпи).
 export function shouldClarify(text, toolCalls, tab) {
-  if (!Array.isArray(toolCalls) || toolCalls.length === 0) return null;
+  if (!Array.isArray(toolCalls)) return null;
   if (!text || typeof text !== 'string') return null;
   const trimmed = text.trim();
   if (trimmed.length === 0) return null;
 
-  // Перевіряємо ВСІ tool_calls — якщо хоч один SUSPICIOUS і немає явних
-  // індикаторів (число/команда), guard має право втрутитись.
-  const hasSuspicious = toolCalls.some(tc => SUSPICIOUS_TOOLS.has(tc?.function?.name));
-  if (!hasSuspicious) return null;
+  // v3pexs: guard працює у ДВОХ режимах.
+  //  • AI повернув інструмент → втручаємось лише якщо хоч один SUSPICIOUS.
+  //  • AI відповів ТЕКСТОМ (toolCalls порожні) → пропускаємо цю перевірку, але
+  //    нижче лишається bareNoun-гілка: одне слово → справжні клікабельні чіпи
+  //    замість текстової імітації «- [...]» яку інколи пише AI.
+  if (toolCalls.length > 0) {
+    const hasSuspicious = toolCalls.some(tc => SUSPICIOUS_TOOLS.has(tc?.function?.name));
+    if (!hasSuspicious) return null;
+  }
+
+  // Однослівне привітання/згода/відмова («Так/Ні/Дякую/Окей») → НЕ запис. v3pexs.
+  if (GREETING_STOPLIST.has(trimmed.toLowerCase())) return null;
 
   // Явна команда → AI вирішує
   if (COMMAND_RE.test(trimmed)) return null;

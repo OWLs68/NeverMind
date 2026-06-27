@@ -1837,6 +1837,10 @@ export async function sendTasksBarMessage() {
     const reply = msg && msg.content ? msg.content.trim() : '';
     if (!reply) { handleChatError(addTaskBarMsg); setTaskBarLoading(false); return; }
 
+    // v3pexs: одне слово без інструмента (bareNoun) → справжні клікабельні чіпи.
+    const bnGuard = shouldClarify(text, [], 'tasks');
+    if (bnGuard) { addTaskBarMsg('agent', bnGuard.question, false, bnGuard.chips); setTaskBarLoading(false); return; }
+
     // Fallback text-JSON — специфічні actions не в INBOX_TOOLS (complete_step, undo_step, complete_habit by name)
     const _processOne = (parsed) => {
       if (processUniversalAction(parsed, text, addTaskBarMsg)) return true;

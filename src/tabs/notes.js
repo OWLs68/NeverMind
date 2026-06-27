@@ -1305,6 +1305,9 @@ ${UI_TOOLS_RULES}` + (aiContext ? ('\n\n' + aiContext) : '');
 
     const rawReply = msg && msg.content ? msg.content.trim() : '';
     if (!rawReply) { handleChatError(addNotesChatMsg); notesBarLoading = false; return; }
+    // v3pexs: одне слово без інструмента (bareNoun) → справжні клікабельні чіпи.
+    const bnGuard = shouldClarify(text, [], 'notes');
+    if (bnGuard) { addNotesChatMsg('agent', bnGuard.question, false, bnGuard.chips); notesBarLoading = false; return; }
     // Виділяємо {chips:[...]} окремо щоб не ламати розбір action-JSON
     const { text: reply, chips: extractedChips } = parseContentChips(rawReply);
 
