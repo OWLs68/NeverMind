@@ -22,6 +22,7 @@
 // Створено: 10.05.2026 dyhJu (G4 Bridge-плану + B-166 фікс одним системним кроком).
 
 import { hasExplicitClockTime, parseUaTimeOfDay } from './ua-time-parser.js';
+import { parseListIntent } from './list-detector.js';
 
 // === Регекси (приватні) ===
 
@@ -250,7 +251,41 @@ export function dropEventOnMoment(toolCalls) {
 }
 
 /**
- * Convenience: всі 6 guards у каноничному порядку.
+ * Список ≠ задача (v3pexs, вимога Романа: «не зберігати картку в Задачах»).
+ * Детермінований list-detector у core.js маршрутизує чіткі списки у save_list
+ * ще ДО AI. Цей guard — БЕКСТОП для випадків коли AI все одно повернув save_task:
+ *  (1) batch save_list + save_task → дроп save_task (дубль, як dropTaskOnFinance);
+ *  (2) лише save_task, але текст = чіткий список (parseListIntent матчить) →
+ *      КОНВЕРТУЮ save_task → save_list, items беру з детектора (єдине джерело
+ *      правди — не парсю окремо тут, щоб не розійтись з core.js).
+ * Так список НIКОЛИ не лишається задачею. Безпечно: parseListIntent
+ * консервативний (тригер «список» + ≥2 пунктів), звичайна задача його не матчить.
+ */
+export function dropTaskOnList(toolCalls, text) {
+  if (!Array.isArray(toolCalls) || toolCalls.length === 0) return toolCalls;
+  const taskIdx = _findIdx(toolCalls, 'save_task');
+  if (taskIdx === -1) return toolCalls;
+  // (1) AI зробив і список, і задачу — лишаємо список, дропаємо задачу.
+  if (_has(toolCalls, 'save_list')) {
+    console.warn('[guard] dropTaskOnList: save_list+save_task batch — викидаю save_task');
+    return _drop(toolCalls, 'save_task');
+  }
+  // (2) Лише задача, але текст чітко = список → конвертуємо у save_list.
+  const parsed = text ? parseListIntent(text) : null;
+  if (!parsed) return toolCalls;
+  const oldTc = toolCalls[taskIdx];
+  const newTc = {
+    ...oldTc,
+    function: { ...oldTc.function, name: 'save_list', arguments: JSON.stringify(parsed.args) }
+  };
+  const out = toolCalls.slice();
+  out[taskIdx] = newTc;
+  console.warn('[guard] dropTaskOnList: текст=список → save_task конвертовано у save_list');
+  return out;
+}
+
+/**
+ * Convenience: всі 7 guards у каноничному порядку.
  *
  * Порядок важливий — кожен guard може створити стан у якому наступний спрацює:
  * - convertPastEventToMoment створює save_moment → dropEventOnMoment чистить дубль
@@ -268,6 +303,9 @@ export function applyAllGuards(toolCalls, text) {
   tc = dropTaskOnFinance(tc);
   tc = dropTaskOnComplete(tc);
   tc = dropEventOnMoment(tc);
+  // Список-намір → save_task стає save_list (або дроп при дублі) ПЕРЕД event-guard,
+  // щоб список ніколи не перетворився на подію/задачу.
+  tc = dropTaskOnList(tc, text);
   // Останнім: save_task що ВИЖИВ усі dedup + має явний час → create_event
   // (щоб не конвертувати задачу яку щойно дропнули як finance/complete-дубль).
   tc = convertTaskToEventOnTime(tc, text);
