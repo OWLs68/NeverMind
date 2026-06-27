@@ -850,6 +850,7 @@ body {
 .inbox-item[data-cat="idea"]    { background: linear-gradient(135deg, #f5f0a8, #eee97a); }
 .inbox-item[data-cat="event"]   { background: linear-gradient(135deg, #c9dffe, #b0ccfe); }
 .inbox-item[data-cat="finance"] { background: linear-gradient(135deg, #fcddc4, #fbc89a); }
+.inbox-item[data-cat="list"]    { background: linear-gradient(135deg, #c4ece6, #9bdcd0); }
 .inbox-item-inner {
   padding: var(--card-pad-y) var(--card-pad-x);
   display: flex;
