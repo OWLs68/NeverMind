@@ -51,6 +51,7 @@ jobs:
           node scripts/check-byyou-lock.js
           node scripts/check-cyrillic-boundary.js
           node scripts/check-tool-filter.js
+          node scripts/check-list-detector.js
 
       - name: Build bundle
         run: npm run build
