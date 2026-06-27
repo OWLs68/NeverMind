@@ -18,6 +18,8 @@ import { handleScheduleAnswer } from '../owl/inbox-board.js';
 import { shouldClarify } from '../owl/clarify-guard.js';
 import { applyAllGuards } from '../data/dispatcher-guards.js';
 import { attachSwipeDelete } from '../ui/swipe-delete.js';
+import { renderChecklist } from '../ui/checklist.js';
+import { getLists, saveLists } from './lists.js';
 import { getTasks, saveTasks, renderTasks, autoGenerateTaskSteps } from './tasks.js';
 import { getEvents, saveEvents, addEventDedup } from './calendar.js';
 import { getHabits, saveHabits, getHabitLog, saveHabitLog, renderHabits, renderProdHabits, processUniversalAction } from './habits.js';
@@ -142,6 +144,7 @@ const CAT_DOT_BG = {
   event:    'background:rgba(59,130,246,0.15)',
   finance:  'background:rgba(194,65,12,0.15)',
   reminder: 'background:rgba(194,121,10,0.15)',
+  list:     'background:rgba(234,88,12,0.15)',
 };
 // Solid кольори для 8px крапки в компактній стрічці
 const CAT_DOT_SOLID = {
@@ -152,6 +155,7 @@ const CAT_DOT_SOLID = {
   event:    'background:#3b82f6',
   finance:  'background:#c2410c',
   reminder: 'background:#c2790a',
+  list:     'background:#ea580c',
 };
 const CAT_TAG_STYLE = {
   task:     'background:rgba(47,208,249,0.2);color:#0a7a97',
@@ -161,6 +165,7 @@ const CAT_TAG_STYLE = {
   event:    'background:rgba(59,130,246,0.15);color:#1d4ed8',
   finance:  'background:rgba(194,65,12,0.15);color:#7c2d12',
   reminder: 'background:rgba(194,121,10,0.18);color:#7a4e05',
+  list:     'background:rgba(234,88,12,0.15);color:#9a3412',
 };
 const CAT_META = {
   idea:     { icon: '💡', label: t('inbox.cat.idea',     'Ідея'),        dotClass: 'cat-dot-idea',     tagClass: 'cat-idea'     },
@@ -170,6 +175,7 @@ const CAT_META = {
   event:    { icon: '📅', label: t('inbox.cat.event',    'Подія'),       dotClass: 'cat-dot-event',    tagClass: 'cat-event'    },
   finance:  { icon: '₴',  label: t('inbox.cat.finance',  'Фінанси'),     dotClass: 'cat-dot-finance',  tagClass: 'cat-finance'  },
   reminder: { icon: '⏰', label: t('inbox.cat.reminder', 'Нагадування'), dotClass: 'cat-dot-reminder', tagClass: 'cat-reminder' },
+  list:     { icon: '☑️', label: t('inbox.cat.list',     'Список'),      dotClass: 'cat-dot-list',     tagClass: 'cat-list'     },
 };
 
 export function getInbox() { return JSON.parse(localStorage.getItem('nm_inbox') || '[]'); }
@@ -314,6 +320,30 @@ export function renderInbox() {
     const meta = CAT_META[item.category] || CAT_META.note;
     const dotBg = CAT_DOT_SOLID[item.category] || CAT_DOT_SOLID.note;
     const tagStyle = CAT_TAG_STYLE[item.category] || CAT_TAG_STYLE.note;
+
+    // Список-чекліст (v3pexs): розгорнута картка з квадратиками прямо у стрічці.
+    // Дані живуть у nm_lists; картка стрічки лише посилається через listId.
+    if (item.category === 'list') {
+      const listData = getLists().find(l => String(l.id) === String(item.listId));
+      const lItems = (listData && Array.isArray(listData.items)) ? listData.items : [];
+      const doneN = lItems.filter(i => i.done).length;
+      html += `<div class="inbox-item-wrap" id="wrap-${item.id}" data-id="${item.id}">
+        <div class="inbox-item" id="item-${item.id}" data-id="${item.id}" data-cat="list" style="cursor:default">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px">
+            <div style="display:flex;align-items:center;gap:8px;min-width:0">
+              <div class="inbox-item-dot" style="${dotBg}"></div>
+              <div style="font-size:15px;font-weight:700;color:#1e1040;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(item.text)}</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+              <span style="font-size:12px;color:rgba(30,16,64,0.45)">${doneN}/${lItems.length}</span>
+              <span class="inbox-item-tag" style="${tagStyle}">${meta.label}</span>
+            </div>
+          </div>
+          ${renderChecklist(lItems, { tapAction: 'toggle-list-item', entityAttr: 'data-list-id', entityId: item.listId, itemAttr: 'data-item-id' })}
+        </div>
+      </div>`;
+      return;
+    }
 
     html += `<div class="inbox-item-wrap" id="wrap-${item.id}" data-id="${item.id}">
       <div class="inbox-item" id="item-${item.id}" data-id="${item.id}" data-cat="${item.category}"
