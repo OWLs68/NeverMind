@@ -469,34 +469,51 @@ function _finEmptyState() {
   </div>`;
 }
 
+// Заголовок-роздільник дня для списку операцій (Сьогодні/Вчора/дата).
+function _finDayLabel(ts) {
+  const d = new Date(ts);
+  const today = new Date();
+  const yest = new Date(); yest.setDate(today.getDate() - 1);
+  if (d.toDateString() === today.toDateString()) return t('finance.tx.day_today', 'Сьогодні');
+  if (d.toDateString() === yest.toDateString()) return t('finance.tx.day_yesterday', 'Вчора');
+  return d.toLocaleDateString('uk-UA', { day: 'numeric', month: 'short' });
+}
+
+function _finDayHeaderHtml(label) {
+  return `<div style="font-size:11px;font-weight:700;color:rgba(30,16,64,0.4);text-transform:uppercase;letter-spacing:0.3px;margin:12px 2px 4px">${label}</div>`;
+}
+
 function _finTxsBlock(allTxs) {
   const sorted = [...allTxs].sort((a,b) => b.ts-a.ts).slice(0, 8);
-  const rows = sorted.map(t => {
-    const isExp = t.type === 'expense';
-    const dateStr = new Date(t.ts).toLocaleDateString('uk-UA', { day: 'numeric', month: 'short' });
+  let lastDay = null;
+  const parts = [];
+  for (const tx of sorted) {
+    const dayLabel = _finDayLabel(tx.ts);
+    if (dayLabel !== lastDay) { lastDay = dayLabel; parts.push(_finDayHeaderHtml(dayLabel)); }
+    const isExp = tx.type === 'expense';
     // B-53: підкатегорія дрібним текстом біля категорії.
     // nliW8 13.05: bubble-стиль — категорія solid pill (тлом), підкатегорія
-    // outlined pill (рамкою) щоб візуально не зливалось з коментарем нижче
-    // коли текст коментаря збігається з підкатегорією («Кафе» / «Кафе»).
-    const _catBubble = `<span style="display:inline-block;padding:2px 8px;border-radius:999px;background:rgba(30,16,64,0.09);color:#1e1040;font-size:11px;font-weight:700;line-height:1.4">${escapeHtml(t.category)}</span>`;
-    const _subBubble = t.subcategory
-      ? `<span style="display:inline-block;padding:1px 8px;border-radius:999px;background:transparent;border:1px solid rgba(30,16,64,0.18);color:rgba(30,16,64,0.55);font-size:10px;font-weight:500;line-height:1.5;margin-left:5px">${escapeHtml(t.subcategory)}</span>`
+    // outlined pill (рамкою) щоб візуально не зливалось з коментарем нижче.
+    // v3pexs: дату винесено у заголовок дня (вище) — у рядку лишається лише сума.
+    const _catBubble = `<span style="display:inline-block;padding:2px 8px;border-radius:999px;background:rgba(30,16,64,0.09);color:#1e1040;font-size:11px;font-weight:700;line-height:1.4">${escapeHtml(tx.category)}</span>`;
+    const _subBubble = tx.subcategory
+      ? `<span style="display:inline-block;padding:1px 8px;border-radius:999px;background:transparent;border:1px solid rgba(30,16,64,0.18);color:rgba(30,16,64,0.55);font-size:10px;font-weight:500;line-height:1.5;margin-left:5px">${escapeHtml(tx.subcategory)}</span>`
       : '';
     const categoryLine = _catBubble + _subBubble;
     // B-37: обгортка для swipe-delete (swipe-wrap → tx-row)
-    return `<div class="fin-tx-swipe-wrap" data-tx-id="${t.id}" style="position:relative;overflow:hidden;border-radius:10px">
-      <div class="tx-row" data-action="open-edit-transaction" data-id="${t.id}" style="position:relative;z-index:1;background:#fff">
+    parts.push(`<div class="fin-tx-swipe-wrap" data-tx-id="${tx.id}" style="position:relative;overflow:hidden;border-radius:10px">
+      <div class="tx-row" data-action="open-edit-transaction" data-id="${tx.id}" style="position:relative;z-index:1;background:#fff">
         <div style="flex:1;min-width:0">
           <div style="font-size:13px">${categoryLine}</div>
-          ${t.comment ? `<div style="font-size:11px;color:rgba(30,16,64,0.4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(t.comment)}</div>` : ''}
+          ${tx.comment ? `<div style="font-size:11px;color:rgba(30,16,64,0.4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(tx.comment)}</div>` : ''}
         </div>
         <div style="text-align:right;flex-shrink:0">
-          <div style="font-size:14px;font-weight:800;color:${isExp?'#c2410c':'#16a34a'}">${isExp?'-':'+'}${formatMoney(t.amount)}</div>
-          <div style="font-size:10px;color:rgba(30,16,64,0.35)">${dateStr}</div>
+          <div style="font-size:14px;font-weight:800;color:${isExp?'#c2410c':'#16a34a'}">${isExp?'-':'+'}${formatMoney(tx.amount)}</div>
         </div>
       </div>
-    </div>`;
-  }).join('');
+    </div>`);
+  }
+  const rows = parts.join('');
 
   const moreBtn = allTxs.length > 8
     ? `<div data-action="open-all-transactions" style="text-align:center;margin-top:10px;font-size:13px;font-weight:700;color:#c2410c;cursor:pointer">${t('finance.tx.all_count', 'Всі операції ({n})', { n: allTxs.length })} <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#c2410c" stroke-width="2.5" stroke-linecap="round" style="vertical-align:middle"><polyline points="9 18 15 12 9 6"/></svg></div>`
@@ -520,28 +537,30 @@ function openAllTransactions() {
   const modal = document.createElement('div');
   modal.id = 'fin-all-txs-modal';
   modal.style.cssText = 'position:fixed;inset:0;z-index:500;display:flex;align-items:flex-end;justify-content:center';
-  const rows = allTxs.map(t => {
-    const isExp = t.type === 'expense';
-    const dateStr = new Date(t.ts).toLocaleDateString('uk-UA', { day:'numeric', month:'short' });
-    // B-53: підкатегорія дрібним текстом поруч
-    // nliW8 13.05: bubble-стиль (як у _finTxsBlock) — категорія solid pill,
-    // підкатегорія outlined pill. Коментар лишається звичайним текстом.
-    const _catBubble = `<span style="display:inline-block;padding:2px 8px;border-radius:999px;background:rgba(30,16,64,0.09);color:#1e1040;font-size:11px;font-weight:700;line-height:1.4">${escapeHtml(t.category)}</span>`;
-    const _subBubble = t.subcategory
-      ? `<span style="display:inline-block;padding:1px 8px;border-radius:999px;background:transparent;border:1px solid rgba(30,16,64,0.18);color:rgba(30,16,64,0.55);font-size:10px;font-weight:500;line-height:1.5;margin-left:5px">${escapeHtml(t.subcategory)}</span>`
+  let lastDay = null;
+  const parts = [];
+  for (const tx of allTxs) {
+    const dayLabel = _finDayLabel(tx.ts);
+    if (dayLabel !== lastDay) { lastDay = dayLabel; parts.push(_finDayHeaderHtml(dayLabel)); }
+    const isExp = tx.type === 'expense';
+    // B-53: підкатегорія дрібним текстом поруч. nliW8 13.05: bubble-стиль.
+    // v3pexs: дату винесено у заголовок дня — у рядку лишається лише сума.
+    const _catBubble = `<span style="display:inline-block;padding:2px 8px;border-radius:999px;background:rgba(30,16,64,0.09);color:#1e1040;font-size:11px;font-weight:700;line-height:1.4">${escapeHtml(tx.category)}</span>`;
+    const _subBubble = tx.subcategory
+      ? `<span style="display:inline-block;padding:1px 8px;border-radius:999px;background:transparent;border:1px solid rgba(30,16,64,0.18);color:rgba(30,16,64,0.55);font-size:10px;font-weight:500;line-height:1.5;margin-left:5px">${escapeHtml(tx.subcategory)}</span>`
       : '';
     const categoryLine = _catBubble + _subBubble;
-    return `<div class="tx-row" data-action="open-edit-transaction-from-all" data-id="${t.id}">
+    parts.push(`<div class="tx-row" data-action="open-edit-transaction-from-all" data-id="${tx.id}">
       <div style="flex:1;min-width:0">
         <div style="font-size:13px">${categoryLine}</div>
-        ${t.comment ? `<div style="font-size:11px;color:rgba(30,16,64,0.4)">${escapeHtml(t.comment)}</div>` : ''}
+        ${tx.comment ? `<div style="font-size:11px;color:rgba(30,16,64,0.4)">${escapeHtml(tx.comment)}</div>` : ''}
       </div>
       <div style="text-align:right;flex-shrink:0">
-        <div style="font-size:14px;font-weight:800;color:${isExp?'#c2410c':'#16a34a'}">${isExp?'-':'+'}${formatMoney(t.amount)}</div>
-        <div style="font-size:10px;color:rgba(30,16,64,0.35)">${dateStr}</div>
+        <div style="font-size:14px;font-weight:800;color:${isExp?'#c2410c':'#16a34a'}">${isExp?'-':'+'}${formatMoney(tx.amount)}</div>
       </div>
-    </div>`;
-  }).join('');
+    </div>`);
+  }
+  const rows = parts.join('');
   modal.innerHTML = `
     <div data-action="close-element-by-id" data-target-id="fin-all-txs-modal" class="modal-backdrop"></div>
     <div style="position:relative;width:100%;max-width:480px;background:rgba(255,255,255,0.95);backdrop-filter:blur(24px);border-radius:24px;margin:0 16px 16px;z-index:1;padding:16px 16px calc(env(safe-area-inset-bottom) + 16px);max-height:80vh;overflow-y:auto;box-sizing:border-box">
