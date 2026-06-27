@@ -18666,7 +18666,7 @@ ${userText}
         const lItems = listData && Array.isArray(listData.items) ? listData.items : [];
         const doneN = lItems.filter((i) => i.done).length;
         html += `<div class="inbox-item-wrap" id="wrap-${item.id}" data-id="${item.id}">
-        <div class="inbox-item" id="item-${item.id}" data-id="${item.id}" data-cat="list" style="cursor:default">
+        <div class="inbox-item" id="item-${item.id}" data-id="${item.id}" data-cat="list" style="cursor:default;padding:var(--card-pad-y) var(--card-pad-x)">
           <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px">
             <div style="display:flex;align-items:center;gap:8px;min-width:0">
               <div class="inbox-item-dot" style="${dotBg}"></div>
