@@ -417,6 +417,8 @@ function _toolCallToAction(name, args) {
   switch(name) {
     case 'save_task': return { action: 'save', category: 'task', task_title: args.title, text: args.text, task_steps: args.steps || [], dueDate: args.due_date, priority: args.priority, comment: args.comment };
     case 'save_note': return { action: 'save', category: args.folder === 'Ідеї' ? 'idea' : 'note', text: args.text, folder: args.folder, comment: args.comment };
+    case 'save_list': return { action: 'create_list', title: args.title, items: Array.isArray(args.items) ? args.items : [], comment: args.comment };
+    case 'delete_list': return { action: 'delete_list', list_id: args.list_id };
     case 'save_habit': return { action: 'save', category: 'habit', text: args.name, details: args.details, days: args.days, targetCount: args.target_count, comment: args.comment };
     case 'save_moment': return { action: 'save', category: 'event', text: args.text, mood: args.mood, comment: args.comment };
     case 'create_event': return { action: 'create_event', title: args.title, date: args.date, time: args.time || null, end_time: args.end_time || null, priority: args.priority || 'normal', comment: args.comment };

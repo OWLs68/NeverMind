@@ -28,6 +28,10 @@ const REVERSERS = {
     ? { type: 'tool_call', tool: 'delete_task', args: { task_id: String(result.id) } }
     : null,
 
+  save_list: (args, result) => result?.id
+    ? { type: 'tool_call', tool: 'delete_list', args: { list_id: String(result.id) } }
+    : null,
+
   save_finance: (args, result) => result?.id != null
     ? { type: 'tool_call', tool: 'delete_transaction', args: { id: result.id } }
     : null,
