@@ -364,6 +364,14 @@
     if (projectId) tx.projectId = projectId;
     return stampEntity(tx);
   }
+  function makeList({ title = "", items = [] } = {}) {
+    return stampEntity({
+      title,
+      items: Array.isArray(items) ? items : [],
+      status: "active",
+      createdAt: Date.now()
+    });
+  }
   var init_entity_factories = __esm({
     "src/data/entity-factories.js"() {
       init_entity();
@@ -395,6 +403,23 @@
       init_entity();
       QUIT_PREFIXES = ["\u043A\u0438\u043D\u0443", "\u043A\u0438\u043D\u044C", "\u043F\u043E\u043A\u0438\u043D\u0443", "\u0431\u0440\u043E\u0441", "\u0432\u0456\u0434\u043C\u043E\u0432", "\u043F\u0435\u0440\u0435\u0441\u0442", "\u043F\u043E\u0437\u0431\u0443", "\u0437\u0430\u0432'\u044F\u0437"];
       QUIT_NEG_RE = /(^|\s)(не|менше)\s+(пал|кур|пи|вжива|їст|жер)/;
+    }
+  });
+
+  // src/tabs/lists.js
+  function getLists() {
+    try {
+      return JSON.parse(localStorage.getItem("nm_lists") || "[]");
+    } catch {
+      return [];
+    }
+  }
+  function saveLists(arr) {
+    localStorage.setItem("nm_lists", JSON.stringify(arr));
+    window.dispatchEvent(new CustomEvent("nm-data-changed", { detail: "lists" }));
+  }
+  var init_lists = __esm({
+    "src/tabs/lists.js"() {
     }
   });
 
@@ -2300,6 +2325,216 @@ ${lines.join("\n")}`;
     }
   });
 
+  // src/data/intent-router.js
+  function _extractDays(text) {
+    for (const [re, days] of DAY_GROUPS) {
+      if (re.test(text)) return days;
+    }
+    const found = /* @__PURE__ */ new Set();
+    for (const [re, code] of DAY_MAP) {
+      if (re.test(text)) found.add(code);
+    }
+    return found.size > 0 ? Array.from(found) : null;
+  }
+  function _stripDays(text) {
+    let out = text;
+    for (const [re] of DAY_GROUPS) out = out.replace(re, " ");
+    for (const [re] of DAY_MAP) out = out.replace(re, " ");
+    return out;
+  }
+  function _extractTime(text) {
+    for (const re of TIME_PATTERNS) {
+      const m = text.match(re);
+      if (!m) continue;
+      let h = parseInt(m[1], 10);
+      let mm = m[2] && /^\d{2}$/.test(m[2]) ? parseInt(m[2], 10) : 0;
+      const periodWord = m[2] && /(ранку|вечора|дня|ночі)/i.test(m[2]) ? m[2].toLowerCase() : null;
+      if (periodWord === "\u0432\u0435\u0447\u043E\u0440\u0430" && h >= 1 && h <= 11) h += 12;
+      if (periodWord === "\u043D\u043E\u0447\u0456" && h >= 1 && h <= 4) h += 0;
+      if (periodWord === "\u0434\u043D\u044F" && h >= 1 && h <= 6) h += 12;
+      if (h < 0 || h > 23 || mm < 0 || mm > 59) continue;
+      return {
+        time: `${String(h).padStart(2, "0")}:${String(mm).padStart(2, "0")}`,
+        matched: m[0]
+      };
+    }
+    return null;
+  }
+  function _stripTime(text, matched) {
+    return text.replace(matched, " ");
+  }
+  function _parseRoutineIntent(text) {
+    if (!ROUTINE_TRIGGER.test(text)) return null;
+    if (ONE_OFF_DATE_INDICATORS.test(text) && !RECURRING_OVERRIDE.test(text)) {
+      return null;
+    }
+    let rest = text.replace(ROUTINE_TRIGGER, " ").trim();
+    const timeInfo = _extractTime(rest);
+    if (!timeInfo) return null;
+    rest = _stripTime(rest, timeInfo.matched);
+    if (_extractTime(rest)) return null;
+    const days = _extractDays(rest);
+    if (!days || days.length === 0) return null;
+    rest = _stripDays(rest);
+    let activity = rest.replace(/(?:^|\s)(?:в|у|о|на|щоб|до|ранку|вечора|дня|ночі|і|та|також)(?=\s|$)/giu, " ").replace(/[:\-—]+/g, " ").replace(/\s+/g, " ").trim();
+    if (!activity || activity.length < 2) return null;
+    activity = activity.toLowerCase();
+    activity = activity.charAt(0).toUpperCase() + activity.slice(1);
+    return {
+      tool: "save_routine",
+      args: {
+        _reasoning_log: "\u0414\u0435\u0440\u0435\u0442\u0435\u0440\u043C\u0456\u043D\u043E\u0432\u0430\u043D\u0438\u0439 \u043F\u0430\u0440\u0441\u0435\u0440 intent-router \u0440\u043E\u0437\u043F\u0456\u0437\u043D\u0430\u0432 \u044F\u0432\u043D\u0443 \u043A\u043E\u043C\u0430\u043D\u0434\u0443 save_routine. Bypass AI.",
+        day: days,
+        blocks: [{ time: timeInfo.time, activity }]
+      }
+    };
+  }
+  function _parseReminderIntent(text) {
+    if (!REMINDER_TRIGGER.test(text)) return null;
+    let rest = text.replace(REMINDER_TRIGGER, " ").trim();
+    if (!rest) return null;
+    const timeInfo = _extractTime(rest);
+    if (!timeInfo) return null;
+    let time = timeInfo.time;
+    rest = _stripTime(rest, timeInfo.matched);
+    if (_extractTime(rest)) return null;
+    let dateISO = null;
+    const dateObj = resolveDateFromText(rest, /* @__PURE__ */ new Date(), "future");
+    if (dateObj) {
+      const y = dateObj.getFullYear();
+      const m = String(dateObj.getMonth() + 1).padStart(2, "0");
+      const d = String(dateObj.getDate()).padStart(2, "0");
+      dateISO = `${y}-${m}-${d}`;
+      rest = rest.replace(DATE_STRIP_RE, " ");
+    }
+    let reminderText = rest.replace(REMINDER_STOP_WORDS, " ").replace(/[:\-—]+/g, " ").replace(/\s+/g, " ").trim();
+    if (!reminderText || reminderText.length < 2) return null;
+    reminderText = reminderText.toLowerCase();
+    reminderText = reminderText.charAt(0).toUpperCase() + reminderText.slice(1);
+    return {
+      tool: "set_reminder",
+      args: {
+        _reasoning_log: "\u0414\u0435\u0440\u0435\u0442\u0435\u0440\u043C\u0456\u043D\u043E\u0432\u0430\u043D\u0438\u0439 \u043F\u0430\u0440\u0441\u0435\u0440 intent-router \u0440\u043E\u0437\u043F\u0456\u0437\u043D\u0430\u0432 \u044F\u0432\u043D\u0443 \u043A\u043E\u043C\u0430\u043D\u0434\u0443 set_reminder. Bypass AI.",
+        text: reminderText,
+        time,
+        date: dateISO
+      }
+    };
+  }
+  function parseExplicitIntent(text) {
+    if (!text || typeof text !== "string") return null;
+    const trimmed = text.trim();
+    if (!trimmed) return null;
+    const routine = _parseRoutineIntent(trimmed);
+    if (routine) return routine;
+    const reminder = _parseReminderIntent(trimmed);
+    if (reminder) return reminder;
+    return null;
+  }
+  var BL, BR, DAY_MAP, DAY_GROUPS, TIME_PATTERNS, ROUTINE_TRIGGER, ONE_OFF_DATE_INDICATORS, RECURRING_OVERRIDE, REMINDER_TRIGGER, REMINDER_STOP_WORDS, DATE_STRIP_RE;
+  var init_intent_router = __esm({
+    "src/data/intent-router.js"() {
+      init_ua_time_parser();
+      BL = "(?:^|[\\s,.:;\\-])";
+      BR = "(?=[\\s,.:;\\-]|$)";
+      DAY_MAP = [
+        [new RegExp(BL + "(?:\u043F\u043E\u043D\u0435\u0434\u0456\u043B\\p{L}*|\u043F\u043D|\u0443\\s+\u043F\u043E\u043D\u0435\u0434\u0456\u043B\u043E\u043A|\u043F\u043E\\s+\u043F\u043E\u043D\u0435\u0434\u0456\u043B\u043A\\p{L}*)" + BR, "iu"), "mon"],
+        [new RegExp(BL + "(?:\u0432\u0456\u0432\u0442\u043E\u0440\\p{L}*|\u0432\u0442|\u0443\\s+\u0432\u0456\u0432\u0442\u043E\u0440\u043E\u043A|\u043F\u043E\\s+\u0432\u0456\u0432\u0442\u043E\u0440\u043A\\p{L}*)" + BR, "iu"), "tue"],
+        [new RegExp(BL + "(?:\u0441\u0435\u0440\u0435\u0434\\p{L}*|\u0441\u0440|\u0443\\s+\u0441\u0435\u0440\u0435\u0434\u0443|\u043F\u043E\\s+\u0441\u0435\u0440\u0435\u0434\\p{L}*)" + BR, "iu"), "wed"],
+        [new RegExp(BL + "(?:\u0447\u0435\u0442\u0432\u0435\u0440\\p{L}*|\u0447\u0442|\u0443\\s+\u0447\u0435\u0442\u0432\u0435\u0440|\u043F\u043E\\s+\u0447\u0435\u0442\u0432\u0435\u0440\u0433\\p{L}*)" + BR, "iu"), "thu"],
+        [new RegExp(BL + "(?:\u043F['\u02BC']?\u044F\u0442\u043D\u0438\u0446\\p{L}*|\u043F\u0442|\u0443\\s+\u043F['\u02BC']?\u044F\u0442\u043D\u0438\u0446\u044E|\u043F\u043E\\s+\u043F['\u02BC']?\u044F\u0442\u043D\u0438\u0446\\p{L}*)" + BR, "iu"), "fri"],
+        [new RegExp(BL + "(?:\u0441\u0443\u0431\u043E\u0442\\p{L}*|\u0441\u0431|\u0443\\s+\u0441\u0443\u0431\u043E\u0442\u0443|\u043F\u043E\\s+\u0441\u0443\u0431\u043E\u0442\\p{L}*)" + BR, "iu"), "sat"],
+        [new RegExp(BL + "(?:\u043D\u0435\u0434\u0456\u043B\\p{L}*|\u043D\u0434|\u0443\\s+\u043D\u0435\u0434\u0456\u043B\u044E|\u043F\u043E\\s+\u043D\u0435\u0434\u0456\u043B\\p{L}*)" + BR, "iu"), "sun"]
+      ];
+      DAY_GROUPS = [
+        [new RegExp(BL + "(?:\u0431\u0443\u0434\u043D\\p{L}*|\u0437\\s+\u043F\u043D\\s+\u043F\u043E\\s+\u043F\u0442|\u0440\u043E\u0431\\p{L}*\\s+\u0434\u043D\\p{L}*)" + BR, "iu"), ["mon", "tue", "wed", "thu", "fri"]],
+        [new RegExp(BL + "(?:\u0432\u0438\u0445\u0456\u0434\u043D\\p{L}*|\u0441\u0431[\\s-]+\u043D\u0434|\u043D\u0430\\s+\u0432\u0438\u0445\u0456\u0434\u043D\u0438\u0445)" + BR, "iu"), ["sat", "sun"]],
+        [new RegExp(BL + "(?:\u0449\u043E\u0434\u043D\u044F|\u043A\u043E\u0436\u0435\u043D\\s+\u0434\u0435\u043D\u044C|\u043A\u043E\u0436\u043D\u043E\u0433\u043E\\s+\u0434\u043D\u044F|\u0432\u0435\u0441\u044C\\s+\u0442\u0438\u0436\u0434\u0435\u043D\u044C)" + BR, "iu"), ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]]
+      ];
+      TIME_PATTERNS = [
+        // HH:MM з префіксом «о/у/в/на»
+        /(?:^|\s)(?:о|у|в|на)\s+(\d{1,2})[:.](\d{2})(?=\s|$)/iu,
+        // Голий HH:MM
+        /(?:^|\s)(\d{1,2})[:.](\d{2})(?=\s|$)/u,
+        // HH з ранку/вечора/дня/ночі — period word ПЕРЕД бар-HH
+        /(?:^|\s)(?:о|у|в|на)\s+(\d{1,2})\s+(ранку|вечора|дня|ночі)(?=\s|$|[.,])/iu,
+        // Голий «о HH» / «в HH» / «на HH»
+        /(?:^|\s)(?:о|у|в|на)\s+(\d{1,2})(?=\s|$|[.,])/iu,
+        // БЕЗ префіксу: голий «N ранку/вечора/дня/ночі» — period word робить це
+        // безпечним (не зачіпає «купив каву 50» бо там нема period word).
+        /(?:^|\s)(\d{1,2})\s+(ранку|вечора|дня|ночі)(?=\s|$|[.,])/iu
+      ];
+      ROUTINE_TRIGGER = new RegExp(
+        BL + "(?:(?:\u0434\u043E\u0434\u0430\u0439|\u043F\u043E\u0441\u0442\u0430\u0432|\u0441\u0442\u0432\u043E\u0440\\p{L}+|\u0432\u043D\u0435\u0441\u0438|\u0437\u0430\u043F\u0438\u0448\u0438|\u0437\u0440\u043E\u0431\u0438)\\s+(?:(?:\u0432|\u0443)\\s+)?\u0440\u043E\u0437\u043F\u043E\u0440\u044F\u0434\\p{L}+|(?:\u0432|\u0443)\\s+\u0440\u043E\u0437\u043F\u043E\u0440\u044F\u0434\\p{L}+\\s*:?)",
+        "iu"
+      );
+      ONE_OFF_DATE_INDICATORS = new RegExp(
+        BL + "(?:\u0437\u0430\u0432\u0442\u0440\u0430|\u043F\u0456\u0441\u043B\u044F\u0437\u0430\u0432\u0442\u0440\u0430|\u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456|\u0432\u0447\u043E\u0440\u0430|\u043F\u043E\u0437\u0430\u0432\u0447\u043E\u0440\u0430|\\d{1,2}\\s+(?:\u0441\u0456\u0447\u043D|\u043B\u044E\u0442|\u0431\u0435\u0440\u0435\u0437|\u043A\u0432\u0456\u0442\u043D|\u0442\u0440\u0430\u0432\u043D|\u0447\u0435\u0440\u0432\u043D|\u043B\u0438\u043F\u043D|\u0441\u0435\u0440\u043F\u043D|\u0432\u0435\u0440\u0435\u0441\u043D|\u0436\u043E\u0432\u0442\u043D|\u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434|\u0433\u0440\u0443\u0434\u043D)\\p{L}*|\\d{1,2}[.\\/]\\d{1,2})",
+        "iu"
+      );
+      RECURRING_OVERRIDE = new RegExp(BL + "(?:\u0449\u043E\u0442\u0438\u0436\u043D\u044F|\u043F\u043E\u0441\u0442\u0456\u0439\u043D\u043E|\u0440\u0435\u0433\u0443\u043B\u044F\u0440\u043D\u043E|\u043A\u043E\u0436\u0435\u043D\\s+\u0442\u0438\u0436\u0434\u0435\u043D\u044C)", "iu");
+      REMINDER_TRIGGER = new RegExp(
+        BL + "(?:\u043D\u0430\u0433\u0430\u0434\u0430\u0439|\u043D\u0430\u043F\u043E\u043C\u043D\u0438|\u043F\u043E\u0441\u0442\u0430\u0432\\s+\u043D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\\p{L}*|\u043F\u043E\u0441\u0442\u0430\u0432\\s+\u0440\u0435\u043C\u0430\u0439\u043D\u0434\u0435\u0440|\u043D\u0430\u0433\u0430\u0434\u0430\u0442\\p{L}*)(?:\\s+\u043C\u0435\u043D\u0456|\\s+\u043C\u0435\u043D\u0435)?",
+        "iu"
+      );
+      REMINDER_STOP_WORDS = /(?:^|\s)(?:в|у|о|на|щоб|про|щодо|треба|потрібно|ранку|вечора|дня|ночі)(?=\s|$)/giu;
+      DATE_STRIP_RE = /(?:^|[\s,.:;\-])(?:завтра|післязавтра|сьогодні|вчора|позавчора|у\s+понеділок|у\s+вівторок|у\s+середу|у\s+четвер|у\s+п['ʼ']?ятницю|у\s+суботу|у\s+неділю|по\s+понеділк\p{L}*|\d{1,2}\s+(?:січн|лют|берез|квітн|травн|червн|липн|серпн|вересн|жовтн|листопад|грудн)\p{L}*|\d{1,2}[.\/]\d{1,2})(?=[\s,.:;\-]|$)/giu;
+    }
+  });
+
+  // src/data/list-detector.js
+  function _extractTitle(before, fallback = "\u0421\u043F\u0438\u0441\u043E\u043A") {
+    let s = (before || "").replace(TITLE_STRIP_VERB, " ").replace(TITLE_STRIP_WORD, " ").replace(/[:\-—]+/g, " ").replace(/\s+/g, " ").trim();
+    if (!s || s.length < 2) return fallback;
+    s = s.toLowerCase();
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  }
+  function _splitItems(body) {
+    return (body || "").replace(/(?:^|\s)\d+[.)]\s+/gu, "\n").replace(/(?:^|\s)[•·*]\s+/gu, "\n").replace(/(?:^|[\n\s])[\-–—]\s+/gu, "\n").split(/[\n,;]+/).map((s) => s.trim()).filter((s) => s.length > 0 && s.length <= 100);
+  }
+  function parseListIntent(text) {
+    if (!text || typeof text !== "string") return null;
+    const trimmed = text.trim();
+    if (!trimmed) return null;
+    if (NOT_LIST.test(trimmed)) return null;
+    const hasListWord = LIST_WORD.test(trimmed);
+    const hasShopping = SHOPPING_TRIGGER.test(trimmed);
+    if (!hasListWord && !hasShopping) return null;
+    let title;
+    let body;
+    const colonIdx = trimmed.indexOf(":");
+    if (colonIdx !== -1) {
+      body = trimmed.slice(colonIdx + 1);
+      title = _extractTitle(trimmed.slice(0, colonIdx), hasShopping && !hasListWord ? "\u041F\u043E\u043A\u0443\u043F\u043A\u0438" : "\u0421\u043F\u0438\u0441\u043E\u043A");
+    } else {
+      const lines = trimmed.split(/\n/);
+      if (lines.length < 2) return null;
+      title = _extractTitle(lines[0]);
+      body = lines.slice(1).join("\n");
+    }
+    const items = _splitItems(body);
+    if (items.length < 2) return null;
+    return {
+      tool: "save_list",
+      args: {
+        _reasoning_log: "\u0414\u0435\u0442\u0435\u0440\u043C\u0456\u043D\u043E\u0432\u0430\u043D\u0438\u0439 list-detector: \u0442\u0440\u0438\u0433\u0435\u0440 \u0441\u043F\u0438\u0441\u043A\u0443 + \u22652 \u043F\u0443\u043D\u043A\u0442\u0456\u0432. Bypass AI \u2014 save_list, \u043D\u0435 save_task.",
+        title,
+        items
+      }
+    };
+  }
+  var LIST_WORD, SHOPPING_TRIGGER, NOT_LIST, TITLE_STRIP_VERB, TITLE_STRIP_WORD;
+  var init_list_detector = __esm({
+    "src/data/list-detector.js"() {
+      init_intent_router();
+      LIST_WORD = new RegExp(BL + "(?:\u0441\u043F\u0438\u0441\u043E\u043A\\p{L}*|\u043F\u0435\u0440\u0435\u043B\u0456\u043A\u0443?|\u043F\u0435\u0440\u0435\u043B\u0456\u043A|\u0447\u0435\u043A\u043B\u0438\u0441\u0442\\p{L}*|\u0447\u0435\u043A\u043B\u0456\u0441\u0442\\p{L}*)" + BR, "iu");
+      SHOPPING_TRIGGER = new RegExp(BL + "(?:\u043A\u0443\u043F\u0438\u0442\u0438|\u043A\u0443\u043F\u0438|\u043F\u0440\u0438\u0434\u0431\u0430\u0442\u0438|\u0442\u0440\u0435\u0431\u0430\\s+\u043A\u0443\u043F\u0438\u0442\u0438|\u043F\u043E\u0442\u0440\u0456\u0431\u043D\u043E\\s+\u043A\u0443\u043F\u0438\u0442\u0438)\\s*:", "iu");
+      NOT_LIST = new RegExp(BL + "(?:\u043D\u0430\u0433\u0430\u0434\u0430\u0439|\u043D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\\p{L}*|\u0440\u0435\u043C\u0430\u0439\u043D\u0434\u0435\u0440|\\d{1,2}[:.]\\d{2}|\u043E\\s+\\d{1,2}\\s+(?:\u0440\u0430\u043D\u043A\u0443|\u0432\u0435\u0447\u043E\u0440\u0430|\u0434\u043D\u044F|\u043D\u043E\u0447\u0456))", "iu");
+      TITLE_STRIP_VERB = new RegExp(BL + "(?:\u0441\u043A\u043B\u0430\u0434\u0438|\u0441\u0442\u0432\u043E\u0440\\p{L}+|\u0437\u0440\u043E\u0431\u0438|\u0434\u043E\u0434\u0430\u0439|\u0437\u0430\u043F\u0438\u0448\u0438|\u043D\u043E\u0432\u0438\u0439|\u043D\u043E\u0432\u0430|\u043F\u043E\u0442\u0440\u0456\u0431\u0435\u043D|\u0442\u0440\u0435\u0431\u0430|\u043A\u0443\u043F\u0438\u0442\u0438|\u043A\u0443\u043F\u0438|\u043F\u0440\u0438\u0434\u0431\u0430\u0442\u0438|\u043F\u043E\u0442\u0440\u0456\u0431\u043D\u043E)" + BR, "giu");
+      TITLE_STRIP_WORD = new RegExp(BL + "(?:\u0441\u043F\u0438\u0441\u043E\u043A\\p{L}*|\u043F\u0435\u0440\u0435\u043B\u0456\u043A\u0443?|\u043F\u0435\u0440\u0435\u043B\u0456\u043A|\u0447\u0435\u043A\u043B\u0438\u0441\u0442\\p{L}*|\u0447\u0435\u043A\u043B\u0456\u0441\u0442\\p{L}*)" + BR, "giu");
+    }
+  });
+
   // src/data/dispatcher-guards.js
   function _findIdx(toolCalls, name) {
     for (let i = 0; i < toolCalls.length; i++) {
@@ -2438,6 +2673,26 @@ ${lines.join("\n")}`;
     console.warn("[guard] dropEventOnMoment: save_moment+create_event batch \u2014 \u0432\u0438\u043A\u0438\u0434\u0430\u044E create_event");
     return _drop(toolCalls, "create_event");
   }
+  function dropTaskOnList(toolCalls, text) {
+    if (!Array.isArray(toolCalls) || toolCalls.length === 0) return toolCalls;
+    const taskIdx = _findIdx(toolCalls, "save_task");
+    if (taskIdx === -1) return toolCalls;
+    if (_has(toolCalls, "save_list")) {
+      console.warn("[guard] dropTaskOnList: save_list+save_task batch \u2014 \u0432\u0438\u043A\u0438\u0434\u0430\u044E save_task");
+      return _drop(toolCalls, "save_task");
+    }
+    const parsed = text ? parseListIntent(text) : null;
+    if (!parsed) return toolCalls;
+    const oldTc = toolCalls[taskIdx];
+    const newTc = {
+      ...oldTc,
+      function: { ...oldTc.function, name: "save_list", arguments: JSON.stringify(parsed.args) }
+    };
+    const out = toolCalls.slice();
+    out[taskIdx] = newTc;
+    console.warn("[guard] dropTaskOnList: \u0442\u0435\u043A\u0441\u0442=\u0441\u043F\u0438\u0441\u043E\u043A \u2192 save_task \u043A\u043E\u043D\u0432\u0435\u0440\u0442\u043E\u0432\u0430\u043D\u043E \u0443 save_list");
+    return out;
+  }
   function applyAllGuards(toolCalls, text) {
     if (!Array.isArray(toolCalls) || toolCalls.length === 0) return toolCalls;
     let tc = toolCalls;
@@ -2447,6 +2702,7 @@ ${lines.join("\n")}`;
     tc = dropTaskOnFinance(tc);
     tc = dropTaskOnComplete(tc);
     tc = dropEventOnMoment(tc);
+    tc = dropTaskOnList(tc, text);
     tc = convertTaskToEventOnTime(tc, text);
     return tc;
   }
@@ -2454,6 +2710,7 @@ ${lines.join("\n")}`;
   var init_dispatcher_guards = __esm({
     "src/data/dispatcher-guards.js"() {
       init_ua_time_parser();
+      init_list_detector();
       PAST_INDICATORS_RE = /(вчора|позавчора|минулого|тому\s|назад)|(?:^|[\s,.:;\-])(гуля|жари|їл|пил|зустрі|сходи|створи|купи|зроби|написа|закінчи|поми|поча|відкри|приготува|пройш|по[бг]ачи|зустрі)(в|ла|ло|ли|вся|лася|лися|лось)(?=[\s,.:;\-]|$)/i;
       MOMENT_KEYWORD_RE = /момент/i;
       MONEY_RE = /(?:[€$₴]\s*\d+(?:[.,]\d+)?)|(?:\d+(?:[.,]\d+)?\s*(?:€|\$|₴|грн|грив(?:ень|ні|ні)?|евр[оa]|євр[оа]|долар(?:ів|и|а)?|euro|usd|eur|uah))/i;
@@ -6017,6 +6274,7 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
       REVERSERS = {
         // === Type A: tool_call reverse (additive tools) ===
         save_task: (args, result) => result?.id ? { type: "tool_call", tool: "delete_task", args: { task_id: String(result.id) } } : null,
+        save_list: (args, result) => result?.id ? { type: "tool_call", tool: "delete_list", args: { list_id: String(result.id) } } : null,
         save_finance: (args, result) => result?.id != null ? { type: "tool_call", tool: "delete_transaction", args: { id: result.id } } : null,
         save_habit: (args, result) => result?.id != null ? { type: "tool_call", tool: "delete_habit", args: { habit_id: result.id } } : null,
         create_event: (args, result) => result?.id != null ? { type: "tool_call", tool: "delete_event", args: { event_id: result.id } } : null,
@@ -6176,6 +6434,7 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
       SCHEMA_VERSION = 1;
       POST_ID_POSITIONS = {
         save_task: { key: "nm_tasks", pos: "first" },
+        save_list: { key: "nm_lists", pos: "first" },
         save_finance: { key: "nm_finance", pos: "first" },
         save_habit: { key: "nm_habits2", pos: "last" },
         create_event: { key: "nm_events", pos: "last" }
@@ -7579,6 +7838,10 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
         return [{ action: "create_task", title: args.title, desc: args.text, steps: args.steps || [], dueDate: args.due_date, priority: args.priority }];
       case "save_note":
         return [{ action: "create_note", text: args.text, folder: args.folder }];
+      case "save_list":
+        return [{ action: "create_list", title: args.title, items: Array.isArray(args.items) ? args.items : [] }];
+      case "delete_list":
+        return [{ action: "delete_list", list_id: args.list_id }];
       case "save_habit":
         return [{ action: "create_habit", name: args.name, details: args.details, days: args.days, target_count: args.target_count }];
       case "save_moment":
@@ -13591,6 +13854,7 @@ C) \u041D\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E (\u043D\u0430\u
 
 \u0422\u0418\u041F\u0418 \u0417\u0410\u041F\u0418\u0421\u0406\u0412 \u2014 \u043A\u043E\u0440\u043E\u0442\u043A\u0456 \u0432\u0438\u0437\u043D\u0430\u0447\u0435\u043D\u043D\u044F:
 - save_task \u2014 \u0434\u0456\u044F \u0417\u0420\u041E\u0411\u0418\u0422\u0418 \u0443 \u043C\u0430\u0439\u0431\u0443\u0442\u043D\u044C\u043E\u043C\u0443 (\u0456\u043D\u0444\u0456\u043D\u0456\u0442\u0438\u0432/\u043D\u0430\u043A\u0430\u0437).
+- save_list \u2014 \u0441\u043F\u0438\u0441\u043E\u043A-\u0447\u0435\u043A\u043B\u0456\u0441\u0442 (\u043D\u0430\u0431\u0456\u0440 \u0421\u0410\u041C\u041E\u0421\u0422I\u0419\u041D\u0418\u0425 \u043F\u0443\u043D\u043A\u0442\u0456\u0432: \u043F\u043E\u043A\u0443\u043F\u043A\u0438, \u0441\u043F\u0440\u0430\u0432\u0438). \u041E\u043A\u0440\u0435\u043C\u0430 \u043A\u0430\u0440\u0442\u043A\u0430 \u0432 Inbox, \u041D\u0415 \u0437\u0430\u0434\u0430\u0447\u0430.
 - create_event \u2014 \u0449\u043E\u0441\u044C \u0443 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0443 \u0434\u0430\u0442\u0443 ("\u043F\u0440\u0438\u0457\u0437\u0434 \u043B\u0456\u043A\u0430\u0440\u044F \u0432 \u043F'\u044F\u0442\u043D\u0438\u0446\u044E", "\u0434\u0435\u043D\u044C \u043D\u0430\u0440\u043E\u0434\u0436\u0435\u043D\u043D\u044F 12 \u0442\u0440\u0430\u0432\u043D\u044F"). \u041D\u0415 \u0434\u043B\u044F \u043C\u0438\u043D\u0443\u043B\u043E\u0433\u043E ("\u0432\u0456\u0434\u043A\u0440\u0438\u0432 X" \u2192 save_moment).
 - save_moment \u2014 \u0434\u043E\u043A\u043E\u043D\u0430\u043D\u0438\u0439 \u0444\u0430\u043A\u0442 \u0434\u043D\u044F \u0431\u0435\u0437 \u043F\u0440\u0438\u0432'\u044F\u0437\u043A\u0438 \u0434\u043E \u043C\u0430\u0439\u0431\u0443\u0442\u043D\u044C\u043E\u0433\u043E.
 - save_note \u2014 \u0434\u0443\u043C\u043A\u0438, \u0440\u0435\u0444\u043B\u0435\u043A\u0441\u0456\u044F, \u043E\u043F\u0438\u0441 \u0434\u043D\u044F \u0431\u0435\u0437 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E\u0457 \u0434\u0456\u0457.
@@ -13599,9 +13863,11 @@ C) \u041D\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E (\u043D\u0430\u
 
 \u041A\u041E\u041D\u0422\u0415\u041A\u0421\u0422 \u0406\u041D\u0422\u0415\u0420\u0412'\u042E: \u044F\u043A\u0449\u043E \u0442\u0438 \u0449\u043E\u0439\u043D\u043E \u0441\u0442\u0430\u0432\u0438\u0432 \u043F\u0438\u0442\u0430\u043D\u043D\u044F \u043F\u0440\u043E \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u0438\u0439 \u043F\u0440\u043E\u0435\u043A\u0442 (capital, \u0440\u0435\u0441\u0443\u0440\u0441\u0438, \u043A\u0440\u043E\u043A\u0438) \u0456 \u044E\u0437\u0435\u0440 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0454 \u0437 \u041D\u041E\u0412\u041E\u042E \u0441\u0443\u0442\u043D\u0456\u0441\u0442\u044E (\u0456\u043D\u0448\u0430 \u043D\u0430\u0437\u0432\u0430, \u0456\u043D\u0448\u0438\u0439 \u0431\u0456\u0437\u043D\u0435\u0441) \u2014 \u0446\u0435 \u041D\u0415 \u0443\u0442\u043E\u0447\u043D\u0435\u043D\u043D\u044F \u043F\u043E\u0442\u043E\u0447\u043D\u043E\u0433\u043E \u043F\u0440\u043E\u0435\u043A\u0442\u0443. \u0417\u0433\u0435\u043D\u0435\u0440\u0443\u0439 clarify-\u0447\u0456\u043F\u0438 \u0447\u0435\u0440\u0435\u0437 CLARIFY_INLINE_RULES (action='clarify_save'), \u043D\u0435 \u043F\u043B\u0443\u0442\u0430\u0439 \u0437 \u043C\u0438\u043D\u0443\u043B\u0438\u043C \u0456\u043D\u0442\u0435\u0440\u0432'\u044E.
 
-\u0421\u041F\u0418\u0421\u041E\u041A vs \u041E\u041A\u0420\u0415\u041C\u0406 \u0417\u0410\u0414\u0410\u0427\u0406:
-"\u0421\u043F\u0438\u0441\u043E\u043A \u043F\u043E\u043A\u0443\u043F\u043E\u043A: \u0445\u043B\u0456\u0431, \u043C\u043E\u043B\u043E\u043A\u043E" \u2192 \u041E\u0414\u041D\u0410 save_task \u0437 steps. "\u0417\u0430\u0442\u0435\u043B\u0435\u0444\u043E\u043D\u0443\u0432\u0430\u0442\u0438 \u0412\u043E\u0432\u0456, \u0437\u0430\u043F\u0438\u0441\u0430\u0442\u0438\u0441\u044F \u0434\u043E \u043B\u0456\u043A\u0430\u0440\u044F" \u2192 \u0414\u0412\u0410 \u043E\u043A\u0440\u0435\u043C\u0456 save_task.
-"\u0421\u043A\u043B\u0430\u0434\u0438/\u0441\u0442\u0432\u043E\u0440\u0438/\u0437\u0440\u043E\u0431\u0438 \u0441\u043F\u0438\u0441\u043E\u043A \u043F\u043E\u043A\u0443\u043F\u043E\u043A (\u0441\u043F\u0440\u0430\u0432, \u0437\u0430\u0432\u0434\u0430\u043D\u044C)" \u2014 \u0446\u0435 \u0417\u0410\u0414\u0410\u0427\u0410-\u0427\u0415\u041A\u041B\u0406\u0421\u0422 (save_task), \u041D\u0415 \u043D\u043E\u0442\u0430\u0442\u043A\u0430 \u0456 \u041D\u0415 \u043F\u0440\u0438\u0432\u0456\u0434 \u043F\u0438\u0442\u0430\u0442\u0438 "\u043A\u0443\u0434\u0438 \u0437\u0430\u043F\u0438\u0441\u0430\u0442\u0438". \u042F\u043A\u0449\u043E \u0442\u043E\u0432\u0430\u0440\u0438/\u043F\u0443\u043D\u043A\u0442\u0438 \u041D\u0410\u0417\u0412\u0410\u041D\u0406 \u2192 \u043E\u0434\u0440\u0430\u0437\u0443 save_task \u0437 steps. \u042F\u043A\u0449\u043E \u041D\u0415 \u043D\u0430\u0437\u0432\u0430\u043D\u0456 \u2192 \u041D\u0415 \u0441\u0442\u0430\u0432 clarify \u043F\u0440\u043E \u0442\u0438\u043F/\u043C\u0456\u0441\u0446\u0435; \u043A\u043E\u0440\u043E\u0442\u043A\u043E \u0441\u043F\u0438\u0442\u0430\u0439 \u041F\u0420\u041E \u0412\u041C\u0406\u0421\u0422 \u0443 content: "\u0429\u043E \u0434\u043E\u0434\u0430\u0442\u0438 \u0434\u043E \u0441\u043F\u0438\u0441\u043A\u0443?" (\u0431\u0435\u0437 tool call \u2014 \u0447\u0435\u043A\u0430\u0454\u0448 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C \u044E\u0437\u0435\u0440\u0430, \u0442\u043E\u0434\u0456 save_task \u0437 steps).
+\u0421\u041F\u0418\u0421\u041E\u041A (\u0447\u0435\u043A\u043B\u0456\u0441\u0442) vs \u0417\u0410\u0414\u0410\u0427\u0410 \u2014 \u0420I\u0417\u041DI \u0421\u0423\u0422\u041D\u041E\u0421\u0422I:
+- "\u0421\u043A\u043B\u0430\u0434\u0438/\u0441\u0442\u0432\u043E\u0440\u0438 \u0441\u043F\u0438\u0441\u043E\u043A \u043F\u043E\u043A\u0443\u043F\u043E\u043A: \u0445\u043B\u0456\u0431, \u043C\u043E\u043B\u043E\u043A\u043E" \u0430\u0431\u043E "\u043A\u0443\u043F\u0438\u0442\u0438: X, Y, Z" \u2192 save_list (items = \u043C\u0430\u0441\u0438\u0432 \u0440\u044F\u0434\u043A\u0456\u0432). \u0426\u0435 \u041E\u041A\u0420\u0415\u041C\u0410 \u043A\u0430\u0440\u0442\u043A\u0430-\u0447\u0435\u043A\u043B\u0456\u0441\u0442 \u0432 Inbox, \u041D\u0415 \u0437\u0430\u0434\u0430\u0447\u0430 \u0456 \u041D\u0415 \u043D\u043E\u0442\u0430\u0442\u043A\u0430. \u{1F6AB} \u041DI\u041A\u041E\u041B\u0418 \u043D\u0435 save_task \u0434\u043B\u044F \u0441\u043F\u0438\u0441\u043A\u0443 \u2014 \u0441\u043F\u0438\u0441\u043E\u043A \u041D\u0415 \u0437\u0431\u0435\u0440\u0456\u0433\u0430\u0454\u0442\u044C\u0441\u044F \u0443 \u0432\u043A\u043B\u0430\u0434\u0446\u0456 \u0417\u0430\u0434\u0430\u0447\u0456.
+- \u042F\u043A\u0449\u043E \u043F\u0443\u043D\u043A\u0442\u0438 \u041D\u0410\u0417\u0412\u0410\u041D\u0406 \u2192 \u043E\u0434\u0440\u0430\u0437\u0443 save_list \u0437 items. \u042F\u043A\u0449\u043E \u041D\u0415 \u043D\u0430\u0437\u0432\u0430\u043D\u0456 ("\u0441\u043A\u043B\u0430\u0434\u0438 \u0441\u043F\u0438\u0441\u043E\u043A \u043F\u043E\u043A\u0443\u043F\u043E\u043A") \u2192 \u041D\u0415 \u0441\u0442\u0430\u0432 clarify \u043F\u0440\u043E \u043C\u0456\u0441\u0446\u0435; \u043A\u043E\u0440\u043E\u0442\u043A\u043E \u0441\u043F\u0438\u0442\u0430\u0439 \u041F\u0420\u041E \u0412\u041C\u0406\u0421\u0422 \u0443 content: "\u0429\u043E \u0434\u043E\u0434\u0430\u0442\u0438 \u0434\u043E \u0441\u043F\u0438\u0441\u043A\u0443?" (\u0431\u0435\u0437 tool call \u2014 \u0447\u0435\u043A\u0430\u0454\u0448 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C, \u0442\u043E\u0434\u0456 save_list).
+- \u0411\u0430\u0433\u0430\u0442\u043E\u043A\u0440\u043E\u043A\u043E\u0432\u0430 \u0417\u0410\u0414\u0410\u0427\u0410 (\u041E\u0414\u041D\u0410 \u0434\u0456\u044F \u0440\u043E\u0437\u0431\u0438\u0442\u0430 \u043D\u0430 \u043F\u0456\u0434-\u043A\u0440\u043E\u043A\u0438: "\u043F\u0456\u0434\u0433\u043E\u0442\u0443\u0432\u0430\u0442\u0438 \u0437\u0432\u0456\u0442: \u0437\u0456\u0431\u0440\u0430\u0442\u0438 \u0434\u0430\u043D\u0456, \u043D\u0430\u043F\u0438\u0441\u0430\u0442\u0438, \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u0442\u0438") \u2192 save_task \u0437 steps. \u0420\u0456\u0437\u043D\u0438\u0446\u044F: \u0441\u043F\u0438\u0441\u043E\u043A = \u043D\u0430\u0431\u0456\u0440 \u0421\u0410\u041C\u041E\u0421\u0422I\u0419\u041D\u0418\u0425 \u043F\u0443\u043D\u043A\u0442\u0456\u0432 (\u043F\u043E\u043A\u0443\u043F\u043A\u0438, \u0441\u043F\u0440\u0430\u0432\u0438); \u0437\u0430\u0434\u0430\u0447\u0430-\u0437-\u043A\u0440\u043E\u043A\u0430\u043C\u0438 = \u041E\u0414\u041D\u0410 \u0446\u0456\u043B\u044C \u0437 \u043F\u0456\u0434-\u0434\u0456\u044F\u043C\u0438.
+- "\u0417\u0430\u0442\u0435\u043B\u0435\u0444\u043E\u043D\u0443\u0432\u0430\u0442\u0438 \u0412\u043E\u0432\u0456, \u0437\u0430\u043F\u0438\u0441\u0430\u0442\u0438\u0441\u044F \u0434\u043E \u043B\u0456\u043A\u0430\u0440\u044F" \u2192 \u0414\u0412\u0410 \u043E\u043A\u0440\u0435\u043C\u0456 save_task (\u0440\u0456\u0437\u043D\u0456 \u0434\u0456\u0457, \u043D\u0435 \u0441\u043F\u0438\u0441\u043E\u043A).
 
 \u0420\u0415\u0414\u0410\u0413\u0423\u0412\u0410\u041D\u041D\u042F: "\u043F\u0435\u0440\u0435\u043D\u0435\u0441\u0438"/"\u0437\u043C\u0456\u043D\u0438"/"\u043F\u043E\u043C\u0456\u043D\u044F\u0439" \u2192 edit_event/edit_task/edit_note/edit_habit. \u041D\u0435 \u0441\u0442\u0432\u043E\u0440\u044E\u0439 \u043D\u043E\u0432\u0438\u0439 \u0437\u0430\u043C\u0456\u0441\u0442\u044C \u0440\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u043D\u043D\u044F.
 
@@ -13621,6 +13887,8 @@ ${CHIP_PROMPT_RULES}`;
       INBOX_TOOLS = [
         // --- СТВОРЕННЯ ---
         { type: "function", function: { name: "save_task", description: "\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u043D\u043E\u0432\u0443 \u0440\u0430\u0437\u043E\u0432\u0443 \u0437\u0430\u0434\u0430\u0447\u0443. \u0414\u0456\u044F \u044F\u043A\u0443 \u0442\u0440\u0435\u0431\u0430 \u0417\u0420\u041E\u0411\u0418\u0422\u0418: \u043A\u0443\u043F\u0438\u0442\u0438, \u0437\u0430\u0442\u0435\u043B\u0435\u0444\u043E\u043D\u0443\u0432\u0430\u0442\u0438, \u0432\u0456\u0434\u043F\u0440\u0430\u0432\u0438\u0442\u0438, \u0437\u0440\u043E\u0431\u0438\u0442\u0438, \u043D\u0430\u043F\u0438\u0441\u0430\u0442\u0438.", strict: true, parameters: { type: "object", properties: { _reasoning_log: { type: "string", description: "CoT \u2014 1-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u041E\u0411\u041E\u0412\u02BC\u042F\u0417\u041A\u041E\u0412\u041E (\u0434\u0438\u0432. REASONING_LOG_RULE)." }, title: { type: "string", description: "\u041A\u043E\u0440\u043E\u0442\u043A\u0430 \u043D\u0430\u0437\u0432\u0430 2-5 \u0441\u043B\u0456\u0432. \u0412\u043A\u043B\u044E\u0447\u0430\u0439 \u0447\u0430\u0441/\u0434\u0430\u0442\u0443 \u044F\u043A\u0449\u043E \u0454" }, text: { type: "string", description: "\u041F\u043E\u0432\u043D\u0438\u0439 \u0442\u0435\u043A\u0441\u0442 \u0437 \u0432\u0438\u043F\u0440\u0430\u0432\u043B\u0435\u043D\u043E\u044E \u0433\u0440\u0430\u043C\u0430\u0442\u0438\u043A\u043E\u044E" }, steps: { type: ["array", "null"], items: { type: "string" }, description: "\u0421\u043F\u0438\u0441\u043E\u043A \u043A\u0440\u043E\u043A\u0456\u0432. null \u044F\u043A\u0449\u043E \u0437\u0430\u0434\u0430\u0447\u0430 \u0431\u0435\u0437 \u0440\u043E\u0437\u0431\u0438\u0432\u043A\u0438." }, due_date: { type: ["string", "null"], description: "YYYY-MM-DD \u044F\u043A\u0449\u043E \u042F\u0412\u041D\u041E \u0432\u043A\u0430\u0437\u0430\u043D\u043E. null \u044F\u043A\u0449\u043E \u043D\u0435\u043C\u0430\u0454 \u0434\u0430\u0442\u0438." }, priority: { type: ["string", "null"], enum: ["normal", "important", "critical", null], description: "null \u044F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u043D\u0435 \u0432\u043A\u0430\u0437\u0430\u0432 \u0432\u0430\u0436\u043B\u0438\u0432\u043E\u0441\u0442\u0456" }, comment: { type: "string", description: "\u041A\u043E\u0440\u043E\u0442\u043A\u0430 \u0440\u0435\u043C\u0430\u0440\u043A\u0430 \u0430\u0433\u0435\u043D\u0442\u0430, 1 \u0440\u0435\u0447\u0435\u043D\u043D\u044F. \u041D\u0415 \u0445\u0432\u0430\u043B\u0438" } }, required: ["_reasoning_log", "title", "text", "steps", "due_date", "priority", "comment"], additionalProperties: false } } },
+        { type: "function", function: { name: "save_list", description: "\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u0441\u043F\u0438\u0441\u043E\u043A-\u0447\u0435\u043A\u043B\u0456\u0441\u0442 \u2014 \u043D\u0430\u0431\u0456\u0440 \u0421\u0410\u041C\u041E\u0421\u0422I\u0419\u041D\u0418\u0425 \u043F\u0443\u043D\u043A\u0442\u0456\u0432 (\u043F\u043E\u043A\u0443\u043F\u043A\u0438, \u0441\u043F\u0440\u0430\u0432\u0438): \xAB\u0441\u043A\u043B\u0430\u0434\u0438 \u0441\u043F\u0438\u0441\u043E\u043A \u043F\u043E\u043A\u0443\u043F\u043E\u043A: \u0445\u043B\u0456\u0431, \u043C\u043E\u043B\u043E\u043A\u043E\xBB, \xAB\u043A\u0443\u043F\u0438\u0442\u0438: X, Y, Z\xBB. \u0426\u0435 \u041E\u041A\u0420\u0415\u041C\u0410 \u043A\u0430\u0440\u0442\u043A\u0430-\u0447\u0435\u043A\u043B\u0456\u0441\u0442 \u0432 Inbox, \u041D\u0415 \u0437\u0430\u0434\u0430\u0447\u0430 (\u041D\u0415 \u0437\u0431\u0435\u0440\u0456\u0433\u0430\u0454\u0442\u044C\u0441\u044F \u0443 \u0432\u043A\u043B\u0430\u0434\u0446\u0456 \u0417\u0430\u0434\u0430\u0447\u0456) \u0456 \u041D\u0415 \u043D\u043E\u0442\u0430\u0442\u043A\u0430. items \u2014 \u043C\u0430\u0441\u0438\u0432 \u0440\u044F\u0434\u043A\u0456\u0432 (\u043A\u043E\u0436\u0435\u043D \u043F\u0443\u043D\u043A\u0442 \u043E\u043A\u0440\u0435\u043C\u043E).", strict: true, parameters: { type: "object", properties: { _reasoning_log: { type: "string", description: "CoT \u2014 1-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u041E\u0411\u041E\u0412\u02BC\u042F\u0417\u041A\u041E\u0412\u041E (\u0434\u0438\u0432. REASONING_LOG_RULE)." }, title: { type: "string", description: "\u041D\u0430\u0437\u0432\u0430 \u0441\u043F\u0438\u0441\u043A\u0443 1-3 \u0441\u043B\u043E\u0432\u0430 (\u043D\u0430\u043F\u0440. \xAB\u041F\u043E\u043A\u0443\u043F\u043A\u0438\xBB, \xAB\u0421\u043F\u0440\u0430\u0432\u0438\xBB)" }, items: { type: "array", items: { type: "string" }, description: "\u041F\u0443\u043D\u043A\u0442\u0438 \u0441\u043F\u0438\u0441\u043A\u0443 \u2014 \u043A\u043E\u0436\u0435\u043D \u043E\u043A\u0440\u0435\u043C\u0438\u043C \u0440\u044F\u0434\u043A\u043E\u043C, \u0411\u0415\u0417 \u043D\u0443\u043C\u0435\u0440\u0430\u0446\u0456\u0457/\u043C\u0430\u0440\u043A\u0435\u0440\u0456\u0432" }, comment: { type: "string", description: "\u041A\u043E\u0440\u043E\u0442\u043A\u0430 \u0440\u0435\u043C\u0430\u0440\u043A\u0430 1 \u0440\u0435\u0447\u0435\u043D\u043D\u044F. \u041D\u0415 \u0445\u0432\u0430\u043B\u0438" } }, required: ["_reasoning_log", "title", "items", "comment"], additionalProperties: false } } },
+        { type: "function", function: { name: "delete_list", description: "\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0441\u043F\u0438\u0441\u043E\u043A \u0437\u0430 id (\u0434\u043B\u044F undo \u0430\u0431\u043E \u044F\u0432\u043D\u043E\u0433\u043E \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043D\u044F).", parameters: { type: "object", properties: { _reasoning_log: { type: "string", description: "CoT \u2014 1-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u041E\u0411\u041E\u0412\u02BC\u042F\u0417\u041A\u041E\u0412\u041E (\u0434\u0438\u0432. REASONING_LOG_RULE)." }, list_id: { type: "string", description: "ID \u0441\u043F\u0438\u0441\u043A\u0443" } }, required: ["_reasoning_log", "list_id"], additionalProperties: false } } },
         { type: "function", function: { name: "save_note", description: "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u043D\u043E\u0442\u0430\u0442\u043A\u0443 \u2014 \u0422\u0406\u041B\u042C\u041A\u0418 \u0434\u0443\u043C\u043A\u0438, \u0440\u0435\u0444\u043B\u0435\u043A\u0441\u0456\u044F, \u0435\u043C\u043E\u0446\u0456\u0457, \u0456\u0434\u0435\u0457, \u0441\u0442\u0430\u043D \u0437\u0434\u043E\u0440\u043E\u0432'\u044F, \u0449\u043E\u0434\u0435\u043D\u043D\u0438\u043A\u043E\u0432\u0438\u0439 \u0437\u0430\u043F\u0438\u0441, \u043E\u043F\u0438\u0441 \u0434\u043D\u044F/\u0441\u0438\u0442\u0443\u0430\u0446\u0456\u0457. \u041D\u0415 \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0432\u0430\u0442\u0438 \u0434\u043B\u044F \u0434\u0456\u0439 \u044F\u043A\u0456 \u0442\u0440\u0435\u0431\u0430 \u0437\u0440\u043E\u0431\u0438\u0442\u0438 (\u043A\u0443\u043F\u0438\u0442\u0438, \u0437\u0440\u043E\u0431\u0438\u0442\u0438, \u0437\u0430\u0442\u0435\u043B\u0435\u0444\u043E\u043D\u0443\u0432\u0430\u0442\u0438) \u2014 \u0446\u0435 save_task.", parameters: { type: "object", properties: { _reasoning_log: { type: "string", description: "CoT \u2014 1-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u041E\u0411\u041E\u0412\u02BC\u042F\u0417\u041A\u041E\u0412\u041E (\u0434\u0438\u0432. REASONING_LOG_RULE)." }, text: { type: "string", description: "\u0422\u0435\u043A\u0441\u0442 \u043D\u043E\u0442\u0430\u0442\u043A\u0438 \u0437 \u0432\u0438\u043F\u0440\u0430\u0432\u043B\u0435\u043D\u043E\u044E \u0433\u0440\u0430\u043C\u0430\u0442\u0438\u043A\u043E\u044E" }, folder: { type: "string", enum: ["\u041E\u0441\u043E\u0431\u0438\u0441\u0442\u0435", "\u0417\u0434\u043E\u0440\u043E\u0432'\u044F", "\u0420\u043E\u0431\u043E\u0442\u0430", "\u041D\u0430\u0432\u0447\u0430\u043D\u043D\u044F", "\u0425\u0430\u0440\u0447\u0443\u0432\u0430\u043D\u043D\u044F", "\u0424\u0456\u043D\u0430\u043D\u0441\u0438", "\u041F\u043E\u0434\u043E\u0440\u043E\u0436\u0456", "\u0406\u0434\u0435\u0457"], description: "\u041F\u0430\u043F\u043A\u0430. \u042F\u043A\u0449\u043E \u0441\u0443\u043C\u043D\u0456\u0432 \u2014 \u041E\u0441\u043E\u0431\u0438\u0441\u0442\u0435. \u0406\u0434\u0435\u0457 \u2014 \u0434\u043B\u044F \u0442\u0432\u043E\u0440\u0447\u0438\u0445 \u0456\u0434\u0435\u0439. \u0420\u043E\u0431\u043E\u0442\u0430 \u2014 \u0422\u0406\u041B\u042C\u041A\u0418 \u0440\u043E\u0431\u043E\u0447\u0456 \u0437\u0430\u043F\u0438\u0441\u0438. \u041F\u043E\u0434\u043E\u0440\u043E\u0436\u0456 \u2014 \u0422\u0406\u041B\u042C\u041A\u0418 \u0440\u0435\u0430\u043B\u044C\u043D\u0456 \u043F\u043E\u0457\u0437\u0434\u043A\u0438" }, comment: { type: "string", description: "\u041A\u043E\u0440\u043E\u0442\u043A\u0430 \u0440\u0435\u043C\u0430\u0440\u043A\u0430 1 \u0440\u0435\u0447\u0435\u043D\u043D\u044F" } }, required: ["_reasoning_log", "text", "folder", "comment"], additionalProperties: false } } },
         { type: "function", function: { name: "save_habit", description: "\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u041D\u041E\u0412\u0423 \u0440\u0435\u0433\u0443\u043B\u044F\u0440\u043D\u0443 \u043F\u043E\u0432\u0442\u043E\u0440\u044E\u0432\u0430\u043D\u0443 \u0437\u0432\u0438\u0447\u043A\u0443. \u0429\u043E\u0434\u043D\u044F, \u043A\u043E\u0436\u0435\u043D \u0440\u0430\u043D\u043E\u043A, \u0442\u0440\u0438\u0447\u0456 \u043D\u0430 \u0442\u0438\u0436\u0434\u0435\u043D\u044C.", parameters: { type: "object", properties: { _reasoning_log: { type: "string", description: "CoT \u2014 1-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u041E\u0411\u041E\u0412\u02BC\u042F\u0417\u041A\u041E\u0412\u041E (\u0434\u0438\u0432. REASONING_LOG_RULE)." }, name: { type: "string", description: "\u041D\u0430\u0437\u0432\u0430 2-4 \u0441\u043B\u043E\u0432\u0430" }, details: { type: "string", description: "\u0414\u0435\u0442\u0430\u043B\u0456 \u044F\u043A\u0449\u043E \u0454" }, days: { type: "array", items: { type: "integer" }, description: "\u0414\u043D\u0456 \u0442\u0438\u0436\u043D\u044F: 0=\u041F\u043D,1=\u0412\u0442,2=\u0421\u0440,3=\u0427\u0442,4=\u041F\u0442,5=\u0421\u0431,6=\u041D\u0434. \u041F\u043E\u0440\u043E\u0436\u043D\u0456\u0439 \u043C\u0430\u0441\u0438\u0432 = \u0449\u043E\u0434\u043D\u044F" }, target_count: { type: "integer", description: "\u0420\u0430\u0437\u0456\u0432 \u043D\u0430 \u0434\u0435\u043D\u044C (8 \u0441\u043A\u043B\u044F\u043D\u043E\u043A = 8). \u0417\u0430 \u0437\u0430\u043C\u043E\u0432\u0447\u0443\u0432\u0430\u043D\u043D\u044F\u043C 1" }, comment: { type: "string", description: "\u041A\u043E\u0440\u043E\u0442\u043A\u0430 \u0440\u0435\u043C\u0430\u0440\u043A\u0430" } }, required: ["_reasoning_log", "name", "comment"], additionalProperties: false } } },
         { type: "function", function: { name: "save_moment", description: "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u043C\u043E\u043C\u0435\u043D\u0442 \u0434\u043D\u044F \u2014 \u0449\u043E \u0421\u0422\u0410\u041B\u041E\u0421\u042F (\u043C\u0438\u043D\u0443\u043B\u0438\u0439 \u0447\u0430\u0441), \u043A\u043E\u0440\u043E\u0442\u043A\u0438\u0439 \u0444\u0430\u043A\u0442 \u0411\u0415\u0417 \u0434\u0430\u0442\u0438 \u0432 \u043C\u0430\u0439\u0431\u0443\u0442\u043D\u044C\u043E\u043C\u0443: \u043F\u043E\u0457\u0445\u0430\u0432, \u0437\u0443\u0441\u0442\u0440\u0456\u0432\u0441\u044F, \u043F\u043E\u0431\u0430\u0447\u0438\u0432, \u0431\u0443\u0432 \u043D\u0430, \u0436\u0430\u0440\u0438\u043B\u0438, \u043F\u0438\u043B\u0438. \u{1F6AB} \u0417\u0410\u0411\u041E\u0420\u041E\u041D\u0415\u041D\u041E \u0432\u0438\u043A\u043B\u0438\u043A\u0430\u0442\u0438 create_event \u043F\u0430\u0440\u0430\u043B\u0435\u043B\u044C\u043D\u043E \u0437 save_moment \u2014 \u043E\u0431\u0435\u0440\u0438 \u041E\u0414\u041D\u0415. \u041C\u0438\u043D\u0443\u043B\u0438\u0439 \u0447\u0430\u0441 = save_moment. \u041C\u0430\u0439\u0431\u0443\u0442\u043D\u0454 = create_event.", strict: true, parameters: { type: "object", properties: { _reasoning_log: { type: "string", description: "CoT \u2014 1-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u041E\u0411\u041E\u0412\u02BC\u042F\u0417\u041A\u041E\u0412\u041E (\u0434\u0438\u0432. REASONING_LOG_RULE)." }, text: { type: "string", description: "\u0422\u0435\u043A\u0441\u0442 \u043C\u043E\u043C\u0435\u043D\u0442\u0443" }, mood: { type: "string", enum: ["positive", "neutral", "negative"] }, date: { type: ["string", "null"], description: "YYYY-MM-DD \u0434\u0430\u0442\u0430 \u041A\u041E\u041B\u0418 \u0446\u0435 \u0441\u0442\u0430\u043B\u043E\u0441\u044F. \u0412\u0418\u041A\u041E\u0420\u0418\u0421\u0422\u041E\u0412\u0423\u0419 null \u044F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u041D\u0415 \u0432\u043A\u0430\u0437\u0430\u0432 \u0434\u0430\u0442\u0443 \u042F\u0412\u041D\u041E \u2014 \u043A\u043E\u0434 \u0441\u0430\u043C \u0441\u043F\u0430\u0440\u0441\u0438\u0442\u044C \xAB\u0432\u0447\u043E\u0440\u0430\xBB/\xABN \u0434\u043D\u0456\u0432 \u0442\u043E\u043C\u0443\xBB/etc \u0447\u0435\u0440\u0435\u0437 ua-time-parser. \u041DI\u041A\u041E\u041B\u0418 \u043D\u0435 \u0432\u0438\u0433\u0430\u0434\u0443\u0439 \u0434\u0430\u0442\u0443 \u044F\u043A\u0449\u043E \u0442\u0435\u043A\u0441\u0442 \u044E\u0437\u0435\u0440\u0430 \u043D\u0435 \u043C\u0456\u0441\u0442\u0438\u0442\u044C \u0447\u0430\u0441\u043E\u0432\u043E\u0433\u043E \u043C\u0430\u0440\u043A\u0435\u0440\u0430. \u041D\u0435 \u043C\u0430\u0439\u0431\u0443\u0442\u043D\u0456 \u2014 \u0446\u0435 create_event." }, comment: { type: "string", description: "\u041A\u043E\u0440\u043E\u0442\u043A\u0430 \u0440\u0435\u043C\u0430\u0440\u043A\u0430" } }, required: ["_reasoning_log", "text", "mood", "date", "comment"], additionalProperties: false } } },
@@ -14525,6 +14793,36 @@ ${CHIP_PROMPT_RULES}`;
       if (parsed.ask_after) setTimeout(() => addMsg("agent", parsed.ask_after), 600);
       return true;
     }
+    if (action === "create_list") {
+      const title = (parsed.title || t("lists.untitled", "\u0421\u043F\u0438\u0441\u043E\u043A")).trim();
+      const items = (Array.isArray(parsed.items) ? parsed.items : []).map((s) => (typeof s === "string" ? s : s && s.text ? String(s.text) : "").trim()).filter(Boolean).map((text) => ({ id: generateUUID(), text, done: false }));
+      if (items.length === 0) return false;
+      const list = makeList({ title, items });
+      const lists = getLists();
+      lists.unshift(list);
+      saveLists(lists);
+      const inbox = getInbox();
+      inbox.unshift({ id: generateUUID(), listId: list.id, text: title, category: "list", ts: Date.now(), processed: true });
+      saveInbox(inbox);
+      if (currentTab === "inbox") renderInbox();
+      addMsg("agent", t("lists.created", '\u{1F4DD} \u0421\u043F\u0438\u0441\u043E\u043A "{title}" ({n}) \u2014 \u0443 \u0441\u0442\u0440\u0456\u0447\u0446\u0456 Inbox', { title, n: items.length }));
+      return true;
+    }
+    if (action === "delete_list") {
+      const lists = getLists();
+      const idx = lists.findIndex((l) => String(l.id) === String(parsed.list_id));
+      if (idx === -1) {
+        addMsg("agent", t("lists.not_found", "\u0421\u043F\u0438\u0441\u043E\u043A \u043D\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E."));
+        return true;
+      }
+      const removed = lists[idx];
+      lists.splice(idx, 1);
+      saveLists(lists);
+      saveInbox(getInbox().filter((i) => String(i.listId) !== String(parsed.list_id)));
+      if (currentTab === "inbox") renderInbox();
+      addMsg("agent", t("lists.deleted", '\u{1F5D1} \u0421\u043F\u0438\u0441\u043E\u043A "{title}" \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E', { title: removed.title || "" }));
+      return true;
+    }
     if (action === "edit_habit") {
       const habits = getHabits();
       const h = habits.find((x) => x.id === parsed.habit_id);
@@ -15418,6 +15716,7 @@ ${CHIP_PROMPT_RULES}`;
       init_uuid();
       init_habit_classifier();
       init_entity_factories();
+      init_lists();
       init_trash();
       init_core();
       init_prompts();
@@ -15464,163 +15763,6 @@ ${CHIP_PROMPT_RULES}`;
     }
   });
 
-  // src/data/intent-router.js
-  function _extractDays(text) {
-    for (const [re, days] of DAY_GROUPS) {
-      if (re.test(text)) return days;
-    }
-    const found = /* @__PURE__ */ new Set();
-    for (const [re, code] of DAY_MAP) {
-      if (re.test(text)) found.add(code);
-    }
-    return found.size > 0 ? Array.from(found) : null;
-  }
-  function _stripDays(text) {
-    let out = text;
-    for (const [re] of DAY_GROUPS) out = out.replace(re, " ");
-    for (const [re] of DAY_MAP) out = out.replace(re, " ");
-    return out;
-  }
-  function _extractTime(text) {
-    for (const re of TIME_PATTERNS) {
-      const m = text.match(re);
-      if (!m) continue;
-      let h = parseInt(m[1], 10);
-      let mm = m[2] && /^\d{2}$/.test(m[2]) ? parseInt(m[2], 10) : 0;
-      const periodWord = m[2] && /(ранку|вечора|дня|ночі)/i.test(m[2]) ? m[2].toLowerCase() : null;
-      if (periodWord === "\u0432\u0435\u0447\u043E\u0440\u0430" && h >= 1 && h <= 11) h += 12;
-      if (periodWord === "\u043D\u043E\u0447\u0456" && h >= 1 && h <= 4) h += 0;
-      if (periodWord === "\u0434\u043D\u044F" && h >= 1 && h <= 6) h += 12;
-      if (h < 0 || h > 23 || mm < 0 || mm > 59) continue;
-      return {
-        time: `${String(h).padStart(2, "0")}:${String(mm).padStart(2, "0")}`,
-        matched: m[0]
-      };
-    }
-    return null;
-  }
-  function _stripTime(text, matched) {
-    return text.replace(matched, " ");
-  }
-  function _parseRoutineIntent(text) {
-    if (!ROUTINE_TRIGGER.test(text)) return null;
-    if (ONE_OFF_DATE_INDICATORS.test(text) && !RECURRING_OVERRIDE.test(text)) {
-      return null;
-    }
-    let rest = text.replace(ROUTINE_TRIGGER, " ").trim();
-    const timeInfo = _extractTime(rest);
-    if (!timeInfo) return null;
-    rest = _stripTime(rest, timeInfo.matched);
-    if (_extractTime(rest)) return null;
-    const days = _extractDays(rest);
-    if (!days || days.length === 0) return null;
-    rest = _stripDays(rest);
-    let activity = rest.replace(/(?:^|\s)(?:в|у|о|на|щоб|до|ранку|вечора|дня|ночі|і|та|також)(?=\s|$)/giu, " ").replace(/[:\-—]+/g, " ").replace(/\s+/g, " ").trim();
-    if (!activity || activity.length < 2) return null;
-    activity = activity.toLowerCase();
-    activity = activity.charAt(0).toUpperCase() + activity.slice(1);
-    return {
-      tool: "save_routine",
-      args: {
-        _reasoning_log: "\u0414\u0435\u0440\u0435\u0442\u0435\u0440\u043C\u0456\u043D\u043E\u0432\u0430\u043D\u0438\u0439 \u043F\u0430\u0440\u0441\u0435\u0440 intent-router \u0440\u043E\u0437\u043F\u0456\u0437\u043D\u0430\u0432 \u044F\u0432\u043D\u0443 \u043A\u043E\u043C\u0430\u043D\u0434\u0443 save_routine. Bypass AI.",
-        day: days,
-        blocks: [{ time: timeInfo.time, activity }]
-      }
-    };
-  }
-  function _parseReminderIntent(text) {
-    if (!REMINDER_TRIGGER.test(text)) return null;
-    let rest = text.replace(REMINDER_TRIGGER, " ").trim();
-    if (!rest) return null;
-    const timeInfo = _extractTime(rest);
-    if (!timeInfo) return null;
-    let time = timeInfo.time;
-    rest = _stripTime(rest, timeInfo.matched);
-    if (_extractTime(rest)) return null;
-    let dateISO = null;
-    const dateObj = resolveDateFromText(rest, /* @__PURE__ */ new Date(), "future");
-    if (dateObj) {
-      const y = dateObj.getFullYear();
-      const m = String(dateObj.getMonth() + 1).padStart(2, "0");
-      const d = String(dateObj.getDate()).padStart(2, "0");
-      dateISO = `${y}-${m}-${d}`;
-      rest = rest.replace(DATE_STRIP_RE, " ");
-    }
-    let reminderText = rest.replace(REMINDER_STOP_WORDS, " ").replace(/[:\-—]+/g, " ").replace(/\s+/g, " ").trim();
-    if (!reminderText || reminderText.length < 2) return null;
-    reminderText = reminderText.toLowerCase();
-    reminderText = reminderText.charAt(0).toUpperCase() + reminderText.slice(1);
-    return {
-      tool: "set_reminder",
-      args: {
-        _reasoning_log: "\u0414\u0435\u0440\u0435\u0442\u0435\u0440\u043C\u0456\u043D\u043E\u0432\u0430\u043D\u0438\u0439 \u043F\u0430\u0440\u0441\u0435\u0440 intent-router \u0440\u043E\u0437\u043F\u0456\u0437\u043D\u0430\u0432 \u044F\u0432\u043D\u0443 \u043A\u043E\u043C\u0430\u043D\u0434\u0443 set_reminder. Bypass AI.",
-        text: reminderText,
-        time,
-        date: dateISO
-      }
-    };
-  }
-  function parseExplicitIntent(text) {
-    if (!text || typeof text !== "string") return null;
-    const trimmed = text.trim();
-    if (!trimmed) return null;
-    const routine = _parseRoutineIntent(trimmed);
-    if (routine) return routine;
-    const reminder = _parseReminderIntent(trimmed);
-    if (reminder) return reminder;
-    return null;
-  }
-  var BL, BR, DAY_MAP, DAY_GROUPS, TIME_PATTERNS, ROUTINE_TRIGGER, ONE_OFF_DATE_INDICATORS, RECURRING_OVERRIDE, REMINDER_TRIGGER, REMINDER_STOP_WORDS, DATE_STRIP_RE;
-  var init_intent_router = __esm({
-    "src/data/intent-router.js"() {
-      init_ua_time_parser();
-      BL = "(?:^|[\\s,.:;\\-])";
-      BR = "(?=[\\s,.:;\\-]|$)";
-      DAY_MAP = [
-        [new RegExp(BL + "(?:\u043F\u043E\u043D\u0435\u0434\u0456\u043B\\p{L}*|\u043F\u043D|\u0443\\s+\u043F\u043E\u043D\u0435\u0434\u0456\u043B\u043E\u043A|\u043F\u043E\\s+\u043F\u043E\u043D\u0435\u0434\u0456\u043B\u043A\\p{L}*)" + BR, "iu"), "mon"],
-        [new RegExp(BL + "(?:\u0432\u0456\u0432\u0442\u043E\u0440\\p{L}*|\u0432\u0442|\u0443\\s+\u0432\u0456\u0432\u0442\u043E\u0440\u043E\u043A|\u043F\u043E\\s+\u0432\u0456\u0432\u0442\u043E\u0440\u043A\\p{L}*)" + BR, "iu"), "tue"],
-        [new RegExp(BL + "(?:\u0441\u0435\u0440\u0435\u0434\\p{L}*|\u0441\u0440|\u0443\\s+\u0441\u0435\u0440\u0435\u0434\u0443|\u043F\u043E\\s+\u0441\u0435\u0440\u0435\u0434\\p{L}*)" + BR, "iu"), "wed"],
-        [new RegExp(BL + "(?:\u0447\u0435\u0442\u0432\u0435\u0440\\p{L}*|\u0447\u0442|\u0443\\s+\u0447\u0435\u0442\u0432\u0435\u0440|\u043F\u043E\\s+\u0447\u0435\u0442\u0432\u0435\u0440\u0433\\p{L}*)" + BR, "iu"), "thu"],
-        [new RegExp(BL + "(?:\u043F['\u02BC']?\u044F\u0442\u043D\u0438\u0446\\p{L}*|\u043F\u0442|\u0443\\s+\u043F['\u02BC']?\u044F\u0442\u043D\u0438\u0446\u044E|\u043F\u043E\\s+\u043F['\u02BC']?\u044F\u0442\u043D\u0438\u0446\\p{L}*)" + BR, "iu"), "fri"],
-        [new RegExp(BL + "(?:\u0441\u0443\u0431\u043E\u0442\\p{L}*|\u0441\u0431|\u0443\\s+\u0441\u0443\u0431\u043E\u0442\u0443|\u043F\u043E\\s+\u0441\u0443\u0431\u043E\u0442\\p{L}*)" + BR, "iu"), "sat"],
-        [new RegExp(BL + "(?:\u043D\u0435\u0434\u0456\u043B\\p{L}*|\u043D\u0434|\u0443\\s+\u043D\u0435\u0434\u0456\u043B\u044E|\u043F\u043E\\s+\u043D\u0435\u0434\u0456\u043B\\p{L}*)" + BR, "iu"), "sun"]
-      ];
-      DAY_GROUPS = [
-        [new RegExp(BL + "(?:\u0431\u0443\u0434\u043D\\p{L}*|\u0437\\s+\u043F\u043D\\s+\u043F\u043E\\s+\u043F\u0442|\u0440\u043E\u0431\\p{L}*\\s+\u0434\u043D\\p{L}*)" + BR, "iu"), ["mon", "tue", "wed", "thu", "fri"]],
-        [new RegExp(BL + "(?:\u0432\u0438\u0445\u0456\u0434\u043D\\p{L}*|\u0441\u0431[\\s-]+\u043D\u0434|\u043D\u0430\\s+\u0432\u0438\u0445\u0456\u0434\u043D\u0438\u0445)" + BR, "iu"), ["sat", "sun"]],
-        [new RegExp(BL + "(?:\u0449\u043E\u0434\u043D\u044F|\u043A\u043E\u0436\u0435\u043D\\s+\u0434\u0435\u043D\u044C|\u043A\u043E\u0436\u043D\u043E\u0433\u043E\\s+\u0434\u043D\u044F|\u0432\u0435\u0441\u044C\\s+\u0442\u0438\u0436\u0434\u0435\u043D\u044C)" + BR, "iu"), ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]]
-      ];
-      TIME_PATTERNS = [
-        // HH:MM з префіксом «о/у/в/на»
-        /(?:^|\s)(?:о|у|в|на)\s+(\d{1,2})[:.](\d{2})(?=\s|$)/iu,
-        // Голий HH:MM
-        /(?:^|\s)(\d{1,2})[:.](\d{2})(?=\s|$)/u,
-        // HH з ранку/вечора/дня/ночі — period word ПЕРЕД бар-HH
-        /(?:^|\s)(?:о|у|в|на)\s+(\d{1,2})\s+(ранку|вечора|дня|ночі)(?=\s|$|[.,])/iu,
-        // Голий «о HH» / «в HH» / «на HH»
-        /(?:^|\s)(?:о|у|в|на)\s+(\d{1,2})(?=\s|$|[.,])/iu,
-        // БЕЗ префіксу: голий «N ранку/вечора/дня/ночі» — period word робить це
-        // безпечним (не зачіпає «купив каву 50» бо там нема period word).
-        /(?:^|\s)(\d{1,2})\s+(ранку|вечора|дня|ночі)(?=\s|$|[.,])/iu
-      ];
-      ROUTINE_TRIGGER = new RegExp(
-        BL + "(?:(?:\u0434\u043E\u0434\u0430\u0439|\u043F\u043E\u0441\u0442\u0430\u0432|\u0441\u0442\u0432\u043E\u0440\\p{L}+|\u0432\u043D\u0435\u0441\u0438|\u0437\u0430\u043F\u0438\u0448\u0438|\u0437\u0440\u043E\u0431\u0438)\\s+(?:(?:\u0432|\u0443)\\s+)?\u0440\u043E\u0437\u043F\u043E\u0440\u044F\u0434\\p{L}+|(?:\u0432|\u0443)\\s+\u0440\u043E\u0437\u043F\u043E\u0440\u044F\u0434\\p{L}+\\s*:?)",
-        "iu"
-      );
-      ONE_OFF_DATE_INDICATORS = new RegExp(
-        BL + "(?:\u0437\u0430\u0432\u0442\u0440\u0430|\u043F\u0456\u0441\u043B\u044F\u0437\u0430\u0432\u0442\u0440\u0430|\u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456|\u0432\u0447\u043E\u0440\u0430|\u043F\u043E\u0437\u0430\u0432\u0447\u043E\u0440\u0430|\\d{1,2}\\s+(?:\u0441\u0456\u0447\u043D|\u043B\u044E\u0442|\u0431\u0435\u0440\u0435\u0437|\u043A\u0432\u0456\u0442\u043D|\u0442\u0440\u0430\u0432\u043D|\u0447\u0435\u0440\u0432\u043D|\u043B\u0438\u043F\u043D|\u0441\u0435\u0440\u043F\u043D|\u0432\u0435\u0440\u0435\u0441\u043D|\u0436\u043E\u0432\u0442\u043D|\u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434|\u0433\u0440\u0443\u0434\u043D)\\p{L}*|\\d{1,2}[.\\/]\\d{1,2})",
-        "iu"
-      );
-      RECURRING_OVERRIDE = new RegExp(BL + "(?:\u0449\u043E\u0442\u0438\u0436\u043D\u044F|\u043F\u043E\u0441\u0442\u0456\u0439\u043D\u043E|\u0440\u0435\u0433\u0443\u043B\u044F\u0440\u043D\u043E|\u043A\u043E\u0436\u0435\u043D\\s+\u0442\u0438\u0436\u0434\u0435\u043D\u044C)", "iu");
-      REMINDER_TRIGGER = new RegExp(
-        BL + "(?:\u043D\u0430\u0433\u0430\u0434\u0430\u0439|\u043D\u0430\u043F\u043E\u043C\u043D\u0438|\u043F\u043E\u0441\u0442\u0430\u0432\\s+\u043D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\\p{L}*|\u043F\u043E\u0441\u0442\u0430\u0432\\s+\u0440\u0435\u043C\u0430\u0439\u043D\u0434\u0435\u0440|\u043D\u0430\u0433\u0430\u0434\u0430\u0442\\p{L}*)(?:\\s+\u043C\u0435\u043D\u0456|\\s+\u043C\u0435\u043D\u0435)?",
-        "iu"
-      );
-      REMINDER_STOP_WORDS = /(?:^|\s)(?:в|у|о|на|щоб|про|щодо|треба|потрібно|ранку|вечора|дня|ночі)(?=\s|$)/giu;
-      DATE_STRIP_RE = /(?:^|[\s,.:;\-])(?:завтра|післязавтра|сьогодні|вчора|позавчора|у\s+понеділок|у\s+вівторок|у\s+середу|у\s+четвер|у\s+п['ʼ']?ятницю|у\s+суботу|у\s+неділю|по\s+понеділк\p{L}*|\d{1,2}\s+(?:січн|лют|берез|квітн|травн|червн|липн|серпн|вересн|жовтн|листопад|грудн)\p{L}*|\d{1,2}[.\/]\d{1,2})(?=[\s,.:;\-]|$)/giu;
-    }
-  });
-
   // src/data/tool-filter.js
   function selectRelevantTools(userText, fullTools) {
     if (!userText || typeof userText !== "string" || !Array.isArray(fullTools)) return fullTools;
@@ -15664,6 +15806,10 @@ ${CHIP_PROMPT_RULES}`;
         task: {
           rx: new RegExp(BL + "(\u0437\u0430\u0434\u0430\u0447|\u0442\u0440\u0435\u0431\u0430 \u0437\u0440\u043E\u0431\u0438\u0442\u0438|\u043D\u0430\u0433\u0430\u0434\u0430[\u0439\u0442]|\u043D\u0430\u043F\u043E\u043C\u043D\u0438|\u0437\u0440\u043E\u0431\u0438|\u043A\u0443\u043F(\u0438|\u0438\u0442\u0438)" + BR + "|\u0432\u0456\u0434\u043F\u0440\u0430\u0432|\u0437\u0430\u0442\u0435\u043B\u0435\u0444\u043E\u043D\u0443\u0439|\u043D\u0430\u043F\u0438\u0441\u0430\u0442\u0438|\u043F\u043E\u0434\u0430\u0442\u0438|\u043E\u043F\u043B\u0430\u0442\u0438\u0442\u0438|\u043F\u043E\u043F\u0440\u0438\u0431\u0438\u0440\u0430\u0439|\u043F\u043E\u043C\u0456\u043D\u044F\u0439)", "i"),
           tools: ["save_task", "edit_task", "delete_task", "complete_task", "reopen_task", "add_step", "set_reminder"]
+        },
+        list: {
+          rx: new RegExp(BL + "(\u0441\u043F\u0438\u0441\u043E\u043A|\u043F\u0435\u0440\u0435\u043B\u0456\u043A\u0443?|\u043F\u0435\u0440\u0435\u043B\u0456\u043A|\u0447\u0435\u043A\u043B\u0438\u0441\u0442|\u0447\u0435\u043A\u043B\u0456\u0441\u0442|\u043A\u0443\u043F(\u0438|\u0438\u0442\u0438)" + BR + ")", "i"),
+          tools: ["save_list", "delete_list"]
         },
         event: {
           rx: new RegExp(BL + "(\u043F\u043E\u0434\u0456\u044F|\u043F\u043E\u0434\u0456\u044E|\u0437\u0443\u0441\u0442\u0440\u0456\u0447|\u043F\u0440\u0438\u0439\u043E\u043C|\u043F\u0440\u0438\u0457\u0437\u0434|\u043A\u043E\u043D\u0446\u0435\u0440\u0442|\u0440\u0435\u0439\u0441|\u0442\u0440\u0435\u043D\u0443\u0432\u0430\u043D|\u0432\u0456\u0434\u043C\u0456\u043D\u0438|\u0432\u0456\u0434\u043C\u0456\u043D|\u043F\u0435\u0440\u0435\u043D\u0435\u0441|\u0437\u0430\u0432\u0442\u0440\u0430|\u043F\u0456\u0441\u043B\u044F\u0437\u0430\u0432\u0442\u0440\u0430|\u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u043E|\u0443 (\u043F\u043E\u043D\u0435\u0434\u0456\u043B|\u0432\u0456\u0432\u0442\u043E\u0440|\u0441\u0435\u0440\u0435\u0434|\u0447\u0435\u0442\u0432\u0435\u0440|\u043F\u044F\u0442\u043D\u0438\u0446|\u0441\u0443\u0431\u043E\u0442|\u043D\u0435\u0434\u0456\u043B))", "i"),
@@ -16160,6 +16306,25 @@ ${JSON.stringify(contextData, null, 2)}` : "";
             }]
           };
         }
+        const parsedList = parseListIntent(userText);
+        if (parsedList) {
+          try {
+            const log = JSON.parse(localStorage.getItem("nm_intent_router_log") || "[]");
+            log.unshift({ ts: Date.now(), module, tool: parsedList.tool, text: userText.slice(0, 80) });
+            localStorage.setItem("nm_intent_router_log", JSON.stringify(log.slice(0, 50)));
+          } catch {
+          }
+          clearTimeout(timeout);
+          return {
+            role: "assistant",
+            content: null,
+            tool_calls: [{
+              id: "listrouter_" + Date.now(),
+              type: "function",
+              function: { name: parsedList.tool, arguments: JSON.stringify(parsedList.args) }
+            }]
+          };
+        }
       } catch (e) {
         console.warn("[intent-router] parse failed, fallback to AI", e);
       }
@@ -16449,6 +16614,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
       init_unread_badge();
       init_usage_meter();
       init_intent_router();
+      init_list_detector();
       init_tool_filter();
       init_prompts();
       init_tool_filter();
@@ -16476,6 +16642,37 @@ ${JSON.stringify(contextData, null, 2)}` : "";
         projects: "projects-send-btn"
       };
       Object.assign(window, { openChatBar, closeChatBar });
+    }
+  });
+
+  // src/ui/checklist.js
+  function renderChecklist(items, opts = {}) {
+    const {
+      tapAction = "toggle-list-item",
+      entityAttr = "data-list-id",
+      entityId = "",
+      itemAttr = "data-item-id"
+    } = opts;
+    const list = Array.isArray(items) ? items : [];
+    if (list.length === 0) return "";
+    const doneCount = list.filter((s) => s.done).length;
+    const pct = Math.round(doneCount / list.length * 100);
+    return `
+    <div style="height:3px;background:rgba(0,0,0,0.06);border-radius:3px;overflow:hidden;margin-bottom:8px">
+      <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,#f97316,#ea580c);border-radius:3px;transition:width 0.3s"></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:10px">
+      ${list.map((s) => `
+        <div data-step-check="1" data-tap-detect data-tap-action="${tapAction}" ${entityAttr}="${entityId}" ${itemAttr}="${s.id}" style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:4px 0">
+          <div style="width:24px;height:24px;border-radius:7px;border:1.5px solid ${s.done ? "#ea580c" : "rgba(30,16,64,0.18)"};background:rgba(255,255,255,0.6);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px;color:#ea580c">${s.done ? "\u2713" : ""}</div>
+          <div style="flex:1;font-size:14px;color:rgba(30,16,64,0.65);${s.done ? "text-decoration:line-through;opacity:0.4" : ""}">${escapeHtml(s.text)}</div>
+        </div>
+      `).join("")}
+    </div>`;
+  }
+  var init_checklist = __esm({
+    "src/ui/checklist.js"() {
+      init_utils();
     }
   });
 
@@ -16729,8 +16926,6 @@ ${JSON.stringify(contextData, null, 2)}` : "";
     updateProdTabCounters();
     list.innerHTML = sorted.map((task) => {
       const steps = task.steps || [];
-      const doneCount = steps.filter((s) => s.done).length;
-      const pct = steps.length > 0 ? Math.round(doneCount / steps.length * 100) : task.status === "done" ? 100 : 0;
       const isDone = task.status === "done";
       return `<div class="task-item-wrap" id="task-wrap-${task.id}" style="position:relative;margin:0 14px var(--card-gap);border-radius:16px">
       <div id="task-item-${task.id}" data-action="task-card-click" data-id="${task.id}"
@@ -16744,19 +16939,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
           ${task.desc ? `<div style="font-size:14px;color:rgba(30,16,64,0.45);margin-top:2px">${escapeHtml(task.desc)}</div>` : ""}
         </div>
       </div>
-      ${steps.length > 0 ? `
-        <div style="height:3px;background:rgba(0,0,0,0.06);border-radius:3px;overflow:hidden;margin-bottom:8px">
-          <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,#f97316,#ea580c);border-radius:3px;transition:width 0.3s"></div>
-        </div>
-        <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:10px">
-          ${steps.map((s) => `
-            <div data-step-check="1" data-tap-detect data-tap-action="toggle-task-step" data-task-id="${task.id}" data-step-id="${s.id}" style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:4px 0">
-              <div style="width:24px;height:24px;border-radius:7px;border:1.5px solid ${s.done ? "#ea580c" : "rgba(30,16,64,0.18)"};background:rgba(255,255,255,0.6);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px;color:#ea580c">${s.done ? "\u2713" : ""}</div>
-              <div style="flex:1;font-size:14px;color:rgba(30,16,64,0.65);${s.done ? "text-decoration:line-through;opacity:0.4" : ""}">${escapeHtml(s.text)}</div>
-            </div>
-          `).join("")}
-        </div>
-      ` : ""}
+      ${renderChecklist(steps, { tapAction: "toggle-task-step", entityAttr: "data-task-id", entityId: task.id, itemAttr: "data-step-id" })}
     </div></div>`;
     }).join("");
     document.querySelectorAll("#tasks-list .task-item-wrap").forEach((wrap) => {
@@ -17032,6 +17215,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
       init_core();
       init_chips();
       init_swipe_delete();
+      init_checklist();
       init_habits();
       init_notes();
       init_touch_detect();
@@ -18372,6 +18556,17 @@ ${userText}
     } catch (e) {
     }
   }
+  function toggleListItem(listId, itemId) {
+    const lists = getLists();
+    const list = lists.find((l) => String(l.id) === String(listId));
+    if (!list) return;
+    const item = (list.items || []).find((i) => String(i.id) === String(itemId));
+    if (!item) return;
+    item.done = !item.done;
+    list.updatedAt = Date.now();
+    saveLists(lists);
+    renderInbox();
+  }
   function _inboxFormatHour(ts) {
     const d = new Date(ts);
     return d.getHours().toString().padStart(2, "0") + ":" + d.getMinutes().toString().padStart(2, "0");
@@ -18466,6 +18661,27 @@ ${userText}
       const meta = CAT_META[item.category] || CAT_META.note;
       const dotBg = CAT_DOT_SOLID[item.category] || CAT_DOT_SOLID.note;
       const tagStyle = CAT_TAG_STYLE[item.category] || CAT_TAG_STYLE.note;
+      if (item.category === "list") {
+        const listData = getLists().find((l) => String(l.id) === String(item.listId));
+        const lItems = listData && Array.isArray(listData.items) ? listData.items : [];
+        const doneN = lItems.filter((i) => i.done).length;
+        html += `<div class="inbox-item-wrap" id="wrap-${item.id}" data-id="${item.id}">
+        <div class="inbox-item" id="item-${item.id}" data-id="${item.id}" data-cat="list" style="cursor:default">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px">
+            <div style="display:flex;align-items:center;gap:8px;min-width:0">
+              <div class="inbox-item-dot" style="${dotBg}"></div>
+              <div style="font-size:15px;font-weight:700;color:#1e1040;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(item.text)}</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+              <span style="font-size:12px;color:rgba(30,16,64,0.45)">${doneN}/${lItems.length}</span>
+              <span class="inbox-item-tag" style="${tagStyle}">${meta.label}</span>
+            </div>
+          </div>
+          ${renderChecklist(lItems, { tapAction: "toggle-list-item", entityAttr: "data-list-id", entityId: item.listId, itemAttr: "data-item-id" })}
+        </div>
+      </div>`;
+        return;
+      }
       html += `<div class="inbox-item-wrap" id="wrap-${item.id}" data-id="${item.id}">
       <div class="inbox-item" id="item-${item.id}" data-id="${item.id}" data-cat="${item.category}"
            data-action="navigate-inbox-item">
@@ -18552,6 +18768,10 @@ ${userText}
         return { action: "save", category: "task", task_title: args.title, text: args.text, task_steps: args.steps || [], dueDate: args.due_date, priority: args.priority, comment: args.comment };
       case "save_note":
         return { action: "save", category: args.folder === "\u0406\u0434\u0435\u0457" ? "idea" : "note", text: args.text, folder: args.folder, comment: args.comment };
+      case "save_list":
+        return { action: "create_list", title: args.title, items: Array.isArray(args.items) ? args.items : [], comment: args.comment };
+      case "delete_list":
+        return { action: "delete_list", list_id: args.list_id };
       case "save_habit":
         return { action: "save", category: "habit", text: args.name, details: args.details, days: args.days, targetCount: args.target_count, comment: args.comment };
       case "save_moment":
@@ -19437,6 +19657,9 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       init_clarify_guard();
       init_dispatcher_guards();
       init_swipe_delete();
+      init_checklist();
+      init_lists();
+      init_touch_detect();
       init_tasks();
       init_calendar();
       init_habits();
@@ -19461,7 +19684,8 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
         habit: "background:#16a34a",
         event: "background:#3b82f6",
         finance: "background:#c2410c",
-        reminder: "background:#c2790a"
+        reminder: "background:#c2790a",
+        list: "background:#ea580c"
       };
       CAT_TAG_STYLE = {
         task: "background:rgba(47,208,249,0.2);color:#0a7a97",
@@ -19470,7 +19694,8 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
         habit: "background:rgba(22,163,74,0.15);color:#14532d",
         event: "background:rgba(59,130,246,0.15);color:#1d4ed8",
         finance: "background:rgba(194,65,12,0.15);color:#7c2d12",
-        reminder: "background:rgba(194,121,10,0.18);color:#7a4e05"
+        reminder: "background:rgba(194,121,10,0.18);color:#7a4e05",
+        list: "background:rgba(234,88,12,0.15);color:#9a3412"
       };
       CAT_META = {
         idea: { icon: "\u{1F4A1}", label: t("inbox.cat.idea", "\u0406\u0434\u0435\u044F"), dotClass: "cat-dot-idea", tagClass: "cat-idea" },
@@ -19479,8 +19704,13 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
         note: { icon: "\u{1F4DD}", label: t("inbox.cat.note", "\u041D\u043E\u0442\u0430\u0442\u043A\u0430"), dotClass: "cat-dot-note", tagClass: "cat-note" },
         event: { icon: "\u{1F4C5}", label: t("inbox.cat.event", "\u041F\u043E\u0434\u0456\u044F"), dotClass: "cat-dot-event", tagClass: "cat-event" },
         finance: { icon: "\u20B4", label: t("inbox.cat.finance", "\u0424\u0456\u043D\u0430\u043D\u0441\u0438"), dotClass: "cat-dot-finance", tagClass: "cat-finance" },
-        reminder: { icon: "\u23F0", label: t("inbox.cat.reminder", "\u041D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F"), dotClass: "cat-dot-reminder", tagClass: "cat-reminder" }
+        reminder: { icon: "\u23F0", label: t("inbox.cat.reminder", "\u041D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F"), dotClass: "cat-dot-reminder", tagClass: "cat-reminder" },
+        list: { icon: "\u2611\uFE0F", label: t("inbox.cat.list", "\u0421\u043F\u0438\u0441\u043E\u043A"), dotClass: "cat-dot-list", tagClass: "cat-list" }
       };
+      regTouch("toggle-list-item", (data) => {
+        if (!data.listId || !data.itemId) return;
+        toggleListItem(data.listId, data.itemId);
+      });
       INBOX_NAV_MAP = {
         task: "tasks",
         habit: "tasks",
@@ -23727,7 +23957,9 @@ ${logLines}
           "nm_reminders",
           "nm_routine",
           "nm_allergies",
-          "nm_action_log"
+          "nm_action_log",
+          // v3pexs 27.06: списки-чеклісти в Inbox (окрема сутність, не задачі).
+          "nm_lists"
         ],
         // Налаштування (→ Supabase user_settings)
         settings: [
