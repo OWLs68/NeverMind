@@ -928,9 +928,16 @@ ${aiContext}`;
         addInboxChatMsg('agent', t('inbox.chat.memorized', 'Запамʼятав ✓'));
       }
     } else if (msg.content) {
-      // Текстова відповідь без tool calls = reply
-      const { text: replyText, chips } = _parseContentChips(msg.content);
-      if (replyText) addInboxChatMsg('agent', replyText, chips);
+      // v3pexs: одне слово без інструмента (bareNoun) → справжні клікабельні
+      // clarify-чіпи замість текстової імітації «- [...]» від AI.
+      const bnGuard = shouldClarify(text, [], 'inbox');
+      if (bnGuard) {
+        addInboxChatMsg('agent', bnGuard.question, bnGuard.chips);
+      } else {
+        // Текстова відповідь без tool calls = reply
+        const { text: replyText, chips } = _parseContentChips(msg.content);
+        if (replyText) addInboxChatMsg('agent', replyText, chips);
+      }
     } else {
       // myshu 11.05 Architecture Refactor Сесія 1: AI повернув і без tool_calls,
       // і без content — порожня відповідь. Раніше silent saveOffline + ✓ Збережено

@@ -212,6 +212,12 @@ export async function sendEveningBarMessage() {
       }
     }
 
+    // v3pexs: одне слово без інструмента (bareNoun) → справжні клікабельні чіпи.
+    if (!msg.tool_calls || msg.tool_calls.length === 0) {
+      const bnGuard = shouldClarify(text, [], 'evening');
+      if (bnGuard) { addEveningBarMsg('agent', bnGuard.question, false, bnGuard.chips); eveningBarLoading = false; return; }
+    }
+
     // Показуємо Verify Loop текст + чіпи якщо AI їх дав
     const { text: replyText, chips } = _parseContentChips(msg.content || '');
     if (replyText) addEveningBarMsg('agent', replyText, false, chips);

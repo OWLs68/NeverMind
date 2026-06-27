@@ -80,6 +80,14 @@ ${UI_TOOLS_RULES}${context ? '\n\n' + context : ''}${stats ? '\n\n' + stats : ''
     return;
   }
 
+  // v3pexs: одне слово без інструмента (bareNoun) → справжні клікабельні чіпи.
+  const bnGuard = shouldClarify(text, [], 'me');
+  if (bnGuard) {
+    if (loadEl) loadEl.remove();
+    addMeChatMsg('agent', bnGuard.question, false, '', bnGuard.chips);
+    return;
+  }
+
   // Fallback на існуючий текст-JSON флоу (CRUD через processUniversalAction)
   const rawReply = msg && msg.content ? msg.content : '';
   const { text: reply, chips: extractedChips } = parseContentChips(rawReply);

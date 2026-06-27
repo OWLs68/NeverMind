@@ -756,6 +756,9 @@ export async function sendProjectsBarMessage() {
 
     const reply = msg && msg.content ? msg.content.trim() : '';
     if (!reply) { handleChatError(addProjectsChatMsg); projectsBarLoading = false; return; }
+    // v3pexs: одне слово без інструмента (bareNoun) → справжні клікабельні чіпи.
+    const bnGuard = shouldClarify(text, [], 'projects');
+    if (bnGuard) { addProjectsChatMsg('agent', bnGuard.question, false, bnGuard.chips); projectsBarLoading = false; return; }
     const { text: replyText, chips } = parseContentChips(reply);
     if (replyText) {
       const looksLikeJson = (replyText.startsWith('{') && replyText.endsWith('}')) || (replyText.startsWith('[') && replyText.endsWith(']'));

@@ -128,6 +128,10 @@ export async function sendFinanceBarMessage() {
 
     const reply = msg && msg.content ? msg.content.trim() : '';
     if (!reply) { handleChatError(addFinanceChatMsg); financeBarLoading = false; return; }
+    // v3pexs: AI відповів текстом без інструмента — одне слово (bareNoun) має дати
+    // справжні клікабельні чіпи «куди записати?», не текст «- [...]».
+    const bnGuard = shouldClarify(text, [], 'finance');
+    if (bnGuard) { addFinanceChatMsg('agent', bnGuard.question, false, bnGuard.chips); financeBarLoading = false; return; }
     const { text: replyText, chips } = parseContentChips(reply);
     if (replyText) {
       const looksLikeJson = (replyText.startsWith('{') && replyText.endsWith('}')) || (replyText.startsWith('[') && replyText.endsWith(']'));
