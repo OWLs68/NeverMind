@@ -6,6 +6,7 @@
 
 import { currentTab, showToast } from '../core/nav.js';
 import { generateUUID } from '../core/uuid.js';
+import { makeNote } from '../data/entity-factories.js';
 import { escapeHtml, formatTime, parseContentChips, t } from '../core/utils.js';
 import { logUsage } from '../core/usage-meter.js';
 import { addToTrash, showUndoToast } from '../core/trash.js';
@@ -120,7 +121,7 @@ export function addNoteFromInbox(text, category, folder = null, source = 'inbox'
   const existingFolders = [...new Set(notes.map(n => n.folder).filter(Boolean))];
   const match = existingFolders.find(f => normalizeFolderName(f).toLowerCase() === normalized.toLowerCase());
   const resolvedFolder = match || normalized;
-  notes.unshift({ id: generateUUID(), text: text.trim(), folder: resolvedFolder, source, ts: Date.now(), lastViewed: Date.now() });
+  notes.unshift(makeNote({ text: text.trim(), folder: resolvedFolder, source }));
   saveNotes(notes);
   return true;
 }
@@ -138,6 +139,9 @@ export function findOrCreateHealthCardNote(card) {
     saveNotes(notes);
     return linked.id;
   }
+  // ⚠️ СВIДОМО БЕЗ makeNote/stampEntity (health-ізоляція, план §6 + EU AI Act):
+  // нотатка повʼязана з health-карткою НЕ отримує sync-конверт (user_id/hlc/deleted_at)
+  // → структурно не може потрапити на сервер. НЕ переводити на фабрику.
   const newNote = {
     id: generateUUID(),
     text: (card.name || '') + '\n\n',
@@ -199,7 +203,7 @@ function saveNote() {
     const idx = notes.findIndex(x => x.id === editingNoteId);
     if (idx !== -1) notes[idx] = { ...notes[idx], text, folder, updatedAt: Date.now() };
   } else {
-    notes.unshift({ id: generateUUID(), text, folder, source: 'manual', ts: Date.now(), lastViewed: Date.now() });
+    notes.unshift(makeNote({ text, folder, source: 'manual' }));
   }
   saveNotes(notes);
   closeNoteModal();
@@ -1042,7 +1046,7 @@ function saveAgentResponseAsNote(text) {
   const notes = getNotes();
   const originalNote = notes.find(x => x.id === activeNoteViewId);
   const folder = originalNote?.folder || t('notes.default_folder', 'Загальне');
-  notes.unshift({ id: generateUUID(), text: text, folder, source: 'ai', ts: Date.now(), lastViewed: Date.now() });
+  notes.unshift(makeNote({ text: text, folder, source: 'ai' }));
   saveNotes(notes);
   renderNotes();
   document.getElementById('note-chat-save-btn')?.remove();
