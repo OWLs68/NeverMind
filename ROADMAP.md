@@ -120,7 +120,7 @@ EAA (мікро-виняток), NIS2 (мікро-виняток), DSA (особ
 
 **GDPR compliance** (перед публічним beta):
 - DPA (Data Processing Agreement) з Supabase — підписати
-- Supabase EU регіон (Frankfurt) — обов'язково для ЄС юзерів
+- Supabase EU регіон (Frankfurt) — обов'язково для ЄС юзерів. **Закладається при СТВОРЕННI проекту = Фаза 2 `SUPABASE_MIGRATION_PLAN.md` §3 (потім не змінити).**
 - Explicit consent flow при першому логіні (health/finance окремо)
 - Right to erasure (видалити акаунт) + Right to portability (експорт JSON)
 
@@ -844,7 +844,7 @@ EAA (мікро-виняток), NIS2 (мікро-виняток), DSA (особ
 6. Storage (файли, аудіо)
 
 **Відкладено на окреме обговорення ДО Supabase:**
-- **SyncEngine архітектура** — як саме реалізувати offline-first sync (Варіант C за Gemini: localStorage синхронний, у фоні поштар відправляє на сервер). Окрема сесія проектування.
+- ✅ **SyncEngine архітектура — ВИРIШЕНО у `docs/SUPABASE_MIGRATION_PLAN.md` §SYNC** (не «відкрита сесія»): DIY на `action-log` + HLC + field-LWW + tombstones + IndexedDB для черги запису (НЕ Electric/PowerSync — ламають 345 синхронних читань). Читання лишаються синхронними (hydrate-once), запис → IndexedDB. Деталі і обґрунтування — у плані.
 - **Деталізація freemium меж** — що саме у безкоштовній версії (скільки запитів AI на день? які вкладки доступні? базовий OWL без проактивності?), що у підписці. Впливає на UI онбордингу, Edge Functions rate limiting, систему обліку використання.
 - **BroadcastChannel cleanup** — зняти `localStorage.setItem` override після перевірки що BroadcastChannel покриває всі кейси. Низький пріоритет — працює як є.
 
@@ -975,7 +975,7 @@ EAA (мікро-виняток), NIS2 (мікро-виняток), DSA (особ
 - **Supabase Realtime** — використовувати не для всього, а тільки для критичних подій.
 
 **Від Gemini (09.04.2026, обговорення стратегії):**
-- **SyncEngine (Варіант C / 4.38 Offline-first) — шлях міграції на Supabase.** localStorage залишається синхронним джерелом істини UI, у фоні поштар відправляє на сервер через чергу. Читання — cache-first + тихе оновлення з сервера.
+- **SyncEngine (4.38 Offline-first) — шлях міграції на Supabase. ✅ Рішення фіналізовано у `docs/SUPABASE_MIGRATION_PLAN.md` §SYNC** (DIY action-log + HLC + IndexedDB-черга). Читання синхронні (hydrate-once), запис у фоні через чергу. Деталі — у плані, тут лише вказівник.
 - **Велосипед vs стандарт:** зараз велосипед виправданий (PWA без бекенду), після Supabase — перехід на pgvector/RAG (стандарт).
 - **Zep/Mem0 naming** — використовувати структуровані факти з timestamps а не наративне саммарі (зробили у 4.2).
 
