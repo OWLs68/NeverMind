@@ -364,6 +364,15 @@
     if (projectId) tx.projectId = projectId;
     return stampEntity(tx);
   }
+  function makeNote({ text = "", folder = "", source = "manual", lastViewed } = {}) {
+    return stampEntity({
+      text,
+      folder,
+      source,
+      ts: Date.now(),
+      lastViewed: lastViewed != null ? lastViewed : Date.now()
+    });
+  }
   function makeList({ title = "", items = [] } = {}) {
     return stampEntity({
       title,
@@ -9182,7 +9191,7 @@ ${recent}`;
     const existingFolders = [...new Set(notes.map((n) => n.folder).filter(Boolean))];
     const match = existingFolders.find((f) => normalizeFolderName(f).toLowerCase() === normalized.toLowerCase());
     const resolvedFolder = match || normalized;
-    notes.unshift({ id: generateUUID(), text: text.trim(), folder: resolvedFolder, source, ts: Date.now(), lastViewed: Date.now() });
+    notes.unshift(makeNote({ text: text.trim(), folder: resolvedFolder, source }));
     saveNotes(notes);
     return true;
   }
@@ -9240,7 +9249,7 @@ ${recent}`;
       const idx = notes.findIndex((x) => x.id === editingNoteId);
       if (idx !== -1) notes[idx] = { ...notes[idx], text, folder, updatedAt: Date.now() };
     } else {
-      notes.unshift({ id: generateUUID(), text, folder, source: "manual", ts: Date.now(), lastViewed: Date.now() });
+      notes.unshift(makeNote({ text, folder, source: "manual" }));
     }
     saveNotes(notes);
     closeNoteModal();
@@ -9915,7 +9924,7 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
     const notes = getNotes();
     const originalNote = notes.find((x) => x.id === activeNoteViewId);
     const folder = originalNote?.folder || t("notes.default_folder", "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435");
-    notes.unshift({ id: generateUUID(), text, folder, source: "ai", ts: Date.now(), lastViewed: Date.now() });
+    notes.unshift(makeNote({ text, folder, source: "ai" }));
     saveNotes(notes);
     renderNotes();
     document.getElementById("note-chat-save-btn")?.remove();
@@ -10234,6 +10243,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
     "src/tabs/notes.js"() {
       init_nav();
       init_uuid();
+      init_entity_factories();
       init_utils();
       init_usage_meter();
       init_trash();
