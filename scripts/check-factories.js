@@ -11,7 +11,7 @@ const { pathToFileURL } = require('url');
 
 (async () => {
   const mod = await import(pathToFileURL(path.join(__dirname, '..', 'src', 'data', 'entity-factories.js')).href);
-  const { makeEvent, makeTask, makeMoment, makeFinance, makeProject } = mod;
+  const { makeEvent, makeTask, makeMoment, makeFinance, makeProject, makeNote, makeList } = mod;
 
   let passed = 0;
   const failures = [];
@@ -132,6 +132,26 @@ const { pathToFileURL } = require('url');
   const aFull = assessProjectCompleteness({ brief: 'x'.repeat(30), targetAudience: 'люди', currentStage: 'старт', deadline: '3 міс', risks: 'конкуренти', metrics: [{ label: 'a', value: '1' }], budget: { total: 100, spent: 0, items: [] } });
   ac('усі 7 → pct 100', aFull.pct === 100 && aFull.missing.length === 0);
   ac('tempo як проксі строків (без deadline-поля)', assessProjectCompleteness({ ...makeProject({ name: 'x' }), tempoNow: '~3 міс' }).filled.includes('deadline'));
+
+  // --- makeNote (7-ма сутність, конверт доданий v3pexs) ---
+  const nk = (label, cond) => { if (cond) passed++; else failures.push('✗ makeNote: ' + label); };
+  const n1 = makeNote({ text: 'думка', folder: 'Особисте', source: 'inbox' });
+  nk('id — валідний UUID', UUID_RE.test(n1.id));
+  nk('text/folder/source збережені', n1.text === 'думка' && n1.folder === 'Особисте' && n1.source === 'inbox');
+  nk('ts — число', typeof n1.ts === 'number');
+  nk('lastViewed дефолт — число', typeof n1.lastViewed === 'number');
+  // Конверт Supabase (Ворота 3) — нотатка тепер має повний sync-конверт.
+  nk('конверт: deleted_at присутній (null)', 'deleted_at' in n1 && n1.deleted_at === null);
+  nk('конверт: hlc присутній', 'hlc' in n1);
+  nk('конверт: user_id присутній', 'user_id' in n1);
+  nk('конверт: created_at + updated_at', 'created_at' in n1 && 'updated_at' in n1);
+
+  // --- makeList (конверт на рівні сутності) ---
+  const lk = (label, cond) => { if (cond) passed++; else failures.push('✗ makeList: ' + label); };
+  const l1 = makeList({ title: 'Покупки', items: [{ id: 'i1', text: 'молоко', done: false }] });
+  lk('id — валідний UUID', UUID_RE.test(l1.id));
+  lk('title/items збережені', l1.title === 'Покупки' && Array.isArray(l1.items) && l1.items.length === 1);
+  lk('конверт: deleted_at + hlc', 'deleted_at' in l1 && 'hlc' in l1);
 
   if (failures.length > 0) {
     console.error(`\n=== ❌ FACTORIES СТОРОЖ: ${failures.length} провалів (${passed} ок) ===\n`);

@@ -40,7 +40,7 @@
    - Backfill `user_id` **ПЕРЕД** enable RLS (інакше дані «зникають» — політика `user_id=auth.uid()` не матчить NULL).
    - `index` на `user_id` (без нього — full scan).
    - Форма `(select auth.uid())` у політиках (CVE-2025-48757 — інакше re-eval на кожен рядок).
-3. **EU-регіон при СТВОРЕННІ Supabase-проекту** (потім не змінити). Tombstones (`deleted_at`) скрізь, **НІКОЛИ hard DELETE**.
+3. **EU-регіон при СТВОРЕННІ Supabase-проекту** (потім не змінити). **ПОЛIТИКА ВИДАЛЕННЯ (рішення Романа 27.06 — знімає суперечність з ROADMAP §A.4):** soft-delete (`deleted_at` ставиться) → запис лишається tombstone щоб sync НЕ воскресив на іншому пристрої → **фоновий hard DELETE через 30 днів** після `deleted_at`. Так і sync працює, і GDPR-право-на-стирання виконується. Покрівельний purge — Edge Function за розкладом (Фаза 2). НIКОЛИ hard DELETE одразу при дії юзера.
 4. **GDPR у схему:** «видалити юзера = каскад delete по `user_id`» + експорт усіх `user_id`-рядків (один запит якщо `user_id` скрізь).
 5. **Стабільні КОДИ замість тексту показу** (`priority:"high"`, не `"високий"`) — i18n (англомовний ринок) + еволюція схеми.
 6. **HEALTH структурно БЕЗ sync-конверта / `user_id`** — фізично не може потрапити на сервер за дизайном (GDPR Art. 9). Це **межа в коді, не дисципліна**.
@@ -119,10 +119,11 @@
 ## ✅ ПЕРШІ КРОКИ НАСТУПНОЇ СЕСІЇ (Фаза 1)
 
 1. **Три ворота (фундамент під sync, без Supabase ще):**
-   - Єдиний шар запису — усі дані через `saveX()` (закрити: `nm_settings` ×10 прямих, `nm_quit_log` обхід, `saveSettings()` нема).
-   - Структурний `nm-data-changed` → `{type, action, id}` (зараз голий рядок; 9 слухачів).
-   - Конверт сутності — ПОВНИЙ (як у Фундаменті §1, не скорочувати): `id` (uuid), `user_id`-заглушка, `created_at` + `updated_at` (ISO), `hlc`-поле, `deleted_at|null`. Випустиш `deleted_at` зараз → добиватимеш на живих юзерах.
+   - ✅ **Ворота 1 — Єдиний шар запису — ЗАКРИТО** (7uxlr7). `updateSettings()`/`saveQuitLog()`/`saveMemory()` є, прямі setItem лишились лише всередині канонічних сеттерів. ⚠️ **Read-path борг (звірка v3pexs):** `getSettings()` є, але ~11 місць читають `nm_settings` напряму через `JSON.parse(localStorage.getItem(...))` — при Supabase міняти 11 точок, не 1. Уніфікувати read-path коли дійде.
+   - ⏳ **Ворота 2 — Структурний `nm-data-changed` → `{type, action, id}`.** Зараз голий рядок. ⚠️ **МАСШТАБ (звірка v3pexs): 30 dispatch-точок** шлють рядок (не «9» — то кількість listeners). 9 listeners, ~7 ламаються на структурі → strangler-shim (читати обидва формати). **= Architecture Refactor Сесія 7** (`ROADMAP.md`). 🔴 Потребує iPhone (зламаний слухач = мертве табло).
+   - ✅ **Ворота 3 — Конверт сутності — на 6 сутностях** (event/task/moment/finance/project + list). Повний `{id-uuid, user_id, created_at, updated_at, hlc, deleted_at|null}` через stampEntity. ⚠️ **Notes — 7-ма сутність БЕЗ конверта** (звірка v3pexs: `makeNote` не існує, notes.js створює вручну) → див. крок нижче. Health — свідомо БЕЗ конверта (§6, AI Act).
    - У конверті — стабільні КОДИ, не текст показу (`priority:"high"`, не `"високий"`) — Фундамент §5.
    - Sync-логіку писати ПОРТАТИВНО: чиста JS за storage-adapter, не привʼязана до localStorage (§Платформа).
-2. **Структуровані чіпи** (надійність, без Supabase): окремий tool `send_chips` → tool_calls, прибрати парсинг JSON з тексту (B-194 клас). 6/8 чатів вже на tool_calls.
-3. Логи + баги-блокери прибрати (B-198/199 verify на iPhone, B-191).
+2. **Notes-конверт** (закрити 7-му сутність): `makeNote` у `entity-factories.js` + stampEntity, спрямувати 4 точки створення у `notes.js`. Без цього нотатки ламають sync. (Закрито v3pexs — див. SESSION_STATE.)
+3. **Структуровані чіпи** (надійність, без Supabase): окремий tool `send_chips` → tool_calls, прибрати парсинг JSON з тексту (B-194 клас). ⚠️ **Звірка v3pexs: реально 0/8 чатів на tool_calls для ЧIПIВ** — усі 8 парсять `parseContentChips` з тексту (попереднє «6/8» стосувалось save-tool_calls, не чіпів). Уніфікація — 1 handler у `dispatchChatToolCalls` + текст-fallback на 2-3 тиж (стара PWA-кеш). Потребує iPhone-смоуку (поведінка AI).
+4. Логи + баги-блокери прибрати (B-198/199 verify на iPhone).

@@ -106,6 +106,22 @@ export function makeFinance({ type, amount, category, comment = '', ts, subcateg
   return stampEntity(tx);
 }
 
+// Нотатка (nm_notes) — 7-ма сутність. Конверт доданий v3pexs (звірка Supabase):
+// раніше створювалась вручну без stampEntity → ламала б sync на нотатках. source:
+// inbox/manual/ai/agent. ts — час нотатки, lastViewed — останній перегляд.
+// ⚠️ ВИНЯТОК — health: нотатки повʼязані з health-карткою (findOrCreateHealthCardNote
+// у notes.js) НЕ йдуть через цю фабрику — health СВIДОМО без sync-конверта
+// (план §6 + EU AI Act): структурно не може потрапити на сервер.
+export function makeNote({ text = '', folder = '', source = 'manual', lastViewed } = {}) {
+  return stampEntity({
+    text,
+    folder,
+    source,
+    ts: Date.now(),
+    lastViewed: lastViewed != null ? lastViewed : Date.now(),
+  });
+}
+
 // Список (nm_lists) — окрема легка сутність-чекліст (v3pexs, варіант A). НЕ задача:
 // живе у стрічці Inbox як картка-чекліст, нуль слідів у nm_tasks. items — масив
 // під-сутностей {id, text, done} (та сама форма що task.steps — реюз renderChecklist).
