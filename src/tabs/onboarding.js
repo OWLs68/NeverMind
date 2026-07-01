@@ -686,7 +686,7 @@ async function finishSurvey() {
     localStorage.setItem('nm_guide_step', SURVEY_QUESTIONS.length.toString());
     return;
   }
-  const settings = JSON.parse(localStorage.getItem('nm_settings') || '{}');
+  const settings = getSettings();
   const name = settings.name || 'користувач';
 
   // Парсимо розклад з відповіді на питання #6 (індекс 5)
@@ -1086,7 +1086,7 @@ function selectOwlMode(mode) {
 }
 
 function obShowWelcome() {
-  const settings = JSON.parse(localStorage.getItem('nm_settings') || '{}');
+  const settings = getSettings();
   document.getElementById('ob-welcome-text').textContent = t('onb.welcome', 'Привіт, {name}! 👋', { name: settings.name || t('onb.welcome.fallback_name', 'друже') });
   document.getElementById('ob-step-2').style.display = 'none';
   document.getElementById('ob-step-3').style.display = 'block';

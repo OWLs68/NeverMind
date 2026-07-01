@@ -743,7 +743,7 @@ export function openSettings() {
   try { window.renderUsageMeter && window.renderUsageMeter(); } catch(e) {}
 
   const key = localStorage.getItem('nm_gemini_key') || '';
-  const settings = JSON.parse(localStorage.getItem('nm_settings') || '{}');
+  const settings = getSettings();
   const memory = localStorage.getItem('nm_memory') || '';
   const memoryTs = localStorage.getItem('nm_memory_ts');
 
@@ -1213,7 +1213,7 @@ function clearFinanceData() {
 
 // === MEMORY SYSTEM ===
 export function getProfile() {
-  const s = JSON.parse(localStorage.getItem('nm_settings') || '{}');
+  const s = getSettings();
   const parts = [];
   if (s.name) parts.push(`Імʼя: ${s.name}`);
   if (s.age) parts.push(`Вік: ${s.age}`);

@@ -10,6 +10,7 @@
 // ============================================================
 
 import { currentTab, showToast } from '../core/nav.js';
+import { getSettings } from '../core/settings.js';
 import { generateUUID } from '../core/uuid.js';
 import { makeFinance } from '../data/entity-factories.js';
 import { escapeHtml, t } from '../core/utils.js';
@@ -74,7 +75,7 @@ let _finEditMode = false; // Фаза 2 крок В: режим редагува
 export function getFinEditMode() { return _finEditMode; }
 export function setFinEditMode(v) { _finEditMode = !!v; renderFinance(); }
 export function getCurrency() {
-  const s = JSON.parse(localStorage.getItem('nm_settings') || '{}');
+  const s = getSettings();
   return s.currency || '₴';
 }
 

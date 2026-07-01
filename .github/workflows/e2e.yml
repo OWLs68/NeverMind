@@ -54,6 +54,7 @@ jobs:
           node scripts/check-list-detector.js
           node scripts/check-clarify-decision.js
           node scripts/check-llm-boundary.js
+          node scripts/check-settings-boundary.js
 
       - name: Build bundle
         run: npm run build

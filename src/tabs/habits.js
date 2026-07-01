@@ -4,6 +4,7 @@
 // ============================================================
 
 import { currentTab, showToast } from '../core/nav.js';
+import { getSettings } from '../core/settings.js';
 import { escapeHtml, logRecentAction, extractJsonBlocks, parseContentChips, levenshtein, t, getReminders, saveReminders } from '../core/utils.js';
 import { logUsage } from '../core/usage-meter.js';
 import { generateUUID } from '../core/uuid.js';
@@ -114,7 +115,7 @@ function _owlQuitRelapse(habitId, prevStreak, freedomDays) {
     addInboxChatMsg('agent', t('habits.quit.msg.hard_day_offline', 'Сьогодні важкий день з "{name}".{fdText} Завтра новий шанс.', { name, fdText }));
     return;
   }
-  const settings = JSON.parse(localStorage.getItem('nm_settings') || '{}');
+  const settings = getSettings();
   const owlMode = settings.owl_mode || 'balanced';
   const tone = owlMode === 'brutal' ? 'різкий, чесний, без зайвого жалю' : owlMode === 'soft' ? 'м\'який, підтримуючий, співчутливий' : 'збалансований, чесний але підтримуючий';
   openaiFetch('chat/completions', {

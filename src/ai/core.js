@@ -4,6 +4,7 @@
 // ============================================================
 
 import { currentTab, getProfile, showToast } from '../core/nav.js';
+import { getSettings } from '../core/settings.js';
 import { escapeHtml } from '../core/utils.js';
 import { getTrash } from '../core/trash.js';
 import { getInbox, _clearInboxUnreadBadge, addInboxChatMsg } from '../tabs/inbox.js';
@@ -76,7 +77,7 @@ export function getAIContext() {
 
   // === Розклад дня (з налаштувань — єдине джерело правди для ритму) ===
   try {
-    const sRaw = JSON.parse(localStorage.getItem('nm_settings') || '{}');
+    const sRaw = getSettings();
     const sc = sRaw.schedule || {};
     if (sc.wakeUp || sc.workStart || sc.workEnd || sc.bedTime) {
       parts.push(`Розклад дня (з налаштувань): прокидається о ${sc.wakeUp || '?'}, починає активний день о ${sc.workStart || '?'}, завершує роботу о ${sc.workEnd || '?'}, лягає спати о ${sc.bedTime || '?'}. НЕ питай цей розклад — він уже заданий. Якщо юзер хоче змінити — сам скаже.`);
