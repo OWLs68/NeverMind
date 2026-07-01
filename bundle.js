@@ -387,6 +387,25 @@
     }
   });
 
+  // src/core/settings.js
+  function getSettings() {
+    try {
+      return JSON.parse(localStorage.getItem("nm_settings") || "{}");
+    } catch {
+      return {};
+    }
+  }
+  function updateSettings(patch) {
+    const s = getSettings();
+    Object.assign(s, patch);
+    localStorage.setItem("nm_settings", JSON.stringify(s));
+    return s;
+  }
+  var init_settings = __esm({
+    "src/core/settings.js"() {
+    }
+  });
+
   // src/data/habit-classifier.js
   function inferHabitType(name) {
     const n = (name || "").toLowerCase().replace(/['’ʼ]/g, "'");
@@ -1585,25 +1604,6 @@
         openRoutineFromCalendar,
         highlightEventDays
       });
-    }
-  });
-
-  // src/core/settings.js
-  function getSettings() {
-    try {
-      return JSON.parse(localStorage.getItem("nm_settings") || "{}");
-    } catch {
-      return {};
-    }
-  }
-  function updateSettings(patch) {
-    const s = getSettings();
-    Object.assign(s, patch);
-    localStorage.setItem("nm_settings", JSON.stringify(s));
-    return s;
-  }
-  var init_settings = __esm({
-    "src/core/settings.js"() {
     }
   });
 
@@ -3086,7 +3086,7 @@ ${lines.join("\n")}`;
     }
   }
   function getSchedule() {
-    const s = JSON.parse(localStorage.getItem("nm_settings") || "{}");
+    const s = getSettings();
     const sc = s.schedule || {};
     const parseH = (str, def) => {
       if (!str) return def;
@@ -3679,7 +3679,7 @@ ${lines.join("\n")}`;
   }
   function _owlAskScheduleIfNeeded() {
     if (localStorage.getItem("nm_owl_schedule_asked")) return;
-    const s = JSON.parse(localStorage.getItem("nm_settings") || "{}");
+    const s = getSettings();
     if (s.schedule && s.schedule.wakeUp) return;
     localStorage.setItem("nm_owl_schedule_asked", "1");
     localStorage.setItem("nm_owl_schedule_pending", String(Date.now()));
@@ -3731,6 +3731,7 @@ ${lines.join("\n")}`;
   var init_inbox_board = __esm({
     "src/owl/inbox-board.js"() {
       init_nav();
+      init_settings();
       init_utils();
       init_uuid();
       init_entity_factories();
@@ -3832,8 +3833,8 @@ ${lines.join("\n")}`;
     }
   });
 
-  // src/owl/clarify-guard.js
-  function shouldClarify(text, toolCalls, tab) {
+  // src/data/clarify-decision.js
+  function decideClarify(text, toolCalls) {
     if (!Array.isArray(toolCalls)) return null;
     if (!text || typeof text !== "string") return null;
     const trimmed = text.trim();
@@ -3845,65 +3846,16 @@ ${lines.join("\n")}`;
     if (GREETING_STOPLIST.has(trimmed.toLowerCase())) return null;
     if (COMMAND_RE.test(trimmed)) return null;
     if (HAS_NUMBER_RE.test(trimmed)) return null;
-    const isBareNoun = BARE_NOUN_RE.test(trimmed);
-    if (!isBareNoun) return null;
-    const question = t("clarify.where_save_noun", '"{text}" \u2014 \u043A\u0443\u0434\u0438 \u0446\u0435 \u0437\u0430\u043F\u0438\u0441\u0430\u0442\u0438?', { text: trimmed });
+    if (!BARE_NOUN_RE.test(trimmed)) return null;
     const businessMatch = trimmed.match(BUSINESS_NOUN_RE);
-    const projectChip = businessMatch ? [{
-      label: t("clarify.chip.project", "\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u043F\u0440\u043E\u0435\u043A\u0442"),
-      action: "clarify_save",
-      target: "create_project",
-      payload: {
-        name: businessMatch[1].charAt(0).toUpperCase() + businessMatch[1].slice(1).toLowerCase(),
-        subtitle: ""
-      }
-    }] : [];
-    const chips = [
-      ...projectChip,
-      {
-        label: t("clarify.chip.note", "\u0423 \u0449\u043E\u0434\u0435\u043D\u043D\u0438\u043A"),
-        action: "clarify_save",
-        target: "save_note",
-        payload: { text: trimmed, folder: "\u041E\u0441\u043E\u0431\u0438\u0441\u0442\u0435" }
-      },
-      {
-        label: t("clarify.chip.moment", "\u042F\u043A \u043C\u043E\u043C\u0435\u043D\u0442"),
-        action: "clarify_save",
-        target: "save_moment",
-        payload: { text: trimmed }
-      },
-      {
-        label: t("clarify.chip.skip", "\u041D\u0435 \u0437\u0431\u0435\u0440\u0456\u0433\u0430\u0442\u0438"),
-        action: "clarify_save",
-        target: "none",
-        payload: {}
-      }
-    ];
-    return { question, chips: chips.map((c) => ({ ...c, id: generateUUID() })) };
-  }
-  function applyClarifyChoice(target, payload, tab, addMsg) {
-    if (target === "none" || !target) {
-      addMsg("agent", t("clarify.skipped", "\u041D\u0435 \u0437\u0431\u0435\u0440\u0456\u0433\u0430\u044E."));
-      return true;
-    }
-    const fakeToolCall = {
-      function: {
-        name: target,
-        arguments: JSON.stringify(payload || {})
-      }
+    return {
+      bareNoun: trimmed,
+      businessNoun: businessMatch ? businessMatch[1] : null
     };
-    const ok = dispatchChatToolCalls([fakeToolCall], addMsg, payload?.text || "");
-    if (!ok) {
-      addMsg("agent", t("clarify.failed", "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u0431\u0435\u0440\u0435\u0433\u0442\u0438."));
-    }
-    return ok;
   }
   var BARE_NOUN_RE, BUSINESS_NOUN_RE, COMMAND_RE, HAS_NUMBER_RE, GREETING_STOPLIST, SUSPICIOUS_TOOLS;
-  var init_clarify_guard = __esm({
-    "src/owl/clarify-guard.js"() {
-      init_utils();
-      init_tool_dispatcher();
-      init_uuid();
+  var init_clarify_decision = __esm({
+    "src/data/clarify-decision.js"() {
       BARE_NOUN_RE = /^[А-ЯҐЄІЇа-яґєії'’\-]{2,30}$/;
       BUSINESS_NOUN_RE = /(автомий\w*|салон\w*|сайт\w*|магазин\w*|студі\w*|курс\w*|школ\w*|кав['’]ярн\w*|майстерн\w*|бар|ресторан\w*|клуб\w*|спортзал\w*|атель\w*|пекарн\w*|хімчистк\w*|агентств\w*|компані\w*|стартап\w*|бізнес\w*|проект\w*)/i;
       COMMAND_RE = /(створи|додай|запиши|нагада|постав|зроби|куп(и|ити)|зателефонуй|видали|перенеси|зміни|поміняй|онови)/i;
@@ -3953,8 +3905,72 @@ ${lines.join("\n")}`;
         "save_finance",
         "set_reminder",
         "complete_task"
-        // add_health_history_entry + create_health_card REMOVED (EU AI Act JMQuT 17.05.2026).
+        // health tools REMOVED (EU AI Act JMQuT 17.05.2026).
       ]);
+    }
+  });
+
+  // src/owl/clarify-guard.js
+  function shouldClarify(text, toolCalls, tab) {
+    const decision = decideClarify(text, toolCalls);
+    if (!decision) return null;
+    const trimmed = decision.bareNoun;
+    const question = t("clarify.where_save_noun", '"{text}" \u2014 \u043A\u0443\u0434\u0438 \u0446\u0435 \u0437\u0430\u043F\u0438\u0441\u0430\u0442\u0438?', { text: trimmed });
+    const projectChip = decision.businessNoun ? [{
+      label: t("clarify.chip.project", "\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u043F\u0440\u043E\u0435\u043A\u0442"),
+      action: "clarify_save",
+      target: "create_project",
+      payload: {
+        name: decision.businessNoun.charAt(0).toUpperCase() + decision.businessNoun.slice(1).toLowerCase(),
+        subtitle: ""
+      }
+    }] : [];
+    const chips = [
+      ...projectChip,
+      {
+        label: t("clarify.chip.note", "\u0423 \u0449\u043E\u0434\u0435\u043D\u043D\u0438\u043A"),
+        action: "clarify_save",
+        target: "save_note",
+        payload: { text: trimmed, folder: "\u041E\u0441\u043E\u0431\u0438\u0441\u0442\u0435" }
+      },
+      {
+        label: t("clarify.chip.moment", "\u042F\u043A \u043C\u043E\u043C\u0435\u043D\u0442"),
+        action: "clarify_save",
+        target: "save_moment",
+        payload: { text: trimmed }
+      },
+      {
+        label: t("clarify.chip.skip", "\u041D\u0435 \u0437\u0431\u0435\u0440\u0456\u0433\u0430\u0442\u0438"),
+        action: "clarify_save",
+        target: "none",
+        payload: {}
+      }
+    ];
+    return { question, chips: chips.map((c) => ({ ...c, id: generateUUID() })) };
+  }
+  function applyClarifyChoice(target, payload, tab, addMsg) {
+    if (target === "none" || !target) {
+      addMsg("agent", t("clarify.skipped", "\u041D\u0435 \u0437\u0431\u0435\u0440\u0456\u0433\u0430\u044E."));
+      return true;
+    }
+    const fakeToolCall = {
+      function: {
+        name: target,
+        arguments: JSON.stringify(payload || {})
+      }
+    };
+    const ok = dispatchChatToolCalls([fakeToolCall], addMsg, payload?.text || "");
+    if (!ok) {
+      addMsg("agent", t("clarify.failed", "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u0431\u0435\u0440\u0435\u0433\u0442\u0438."));
+    }
+    return ok;
+  }
+  var init_clarify_guard = __esm({
+    "src/owl/clarify-guard.js"() {
+      init_utils();
+      init_tool_dispatcher();
+      init_uuid();
+      init_clarify_decision();
     }
   });
 
@@ -4461,15 +4477,11 @@ ${lines.join("\n")}`;
 \u041A\u043E\u0440\u043E\u0442\u043A\u043E, \u043F\u043E-\u043B\u044E\u0434\u0441\u044C\u043A\u0438, \u0431\u0435\u0437 \u0437\u0430\u0439\u0432\u0438\u0445 \u0441\u043B\u0456\u0432. \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u0422\u0456\u043B\u044C\u043A\u0438 \u0442\u0435\u043A\u0441\u0442, \u0431\u0435\u0437 JSON.
 ${aiContext ? "\n\n" + aiContext : ""}`;
     try {
-      const res = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}` },
-        body: JSON.stringify({
-          model: "gpt-4o-mini",
-          messages: [{ role: "system", content: systemPrompt }],
-          max_tokens: 100,
-          temperature: 0.75
-        })
+      const res = await openaiFetch("chat/completions", {
+        model: "gpt-4o-mini",
+        messages: [{ role: "system", content: systemPrompt }],
+        max_tokens: 100,
+        temperature: 0.75
       });
       const data = await res.json();
       if (data?.usage) logUsage("projects-ai", data.usage, data.model);
@@ -4983,15 +4995,11 @@ ${lines.join("\n\n")}`;
     if (!key) return;
     if (text.length <= 60) return;
     try {
-      const res = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}` },
-        body: JSON.stringify({
-          model: "gpt-4o-mini",
-          messages: [{ role: "user", content: `\u0421\u0442\u0438\u0441\u043D\u0438 \u0446\u0435\u0439 \u043C\u043E\u043C\u0435\u043D\u0442 \u0434\u043D\u044F \u0434\u043E 1 \u043A\u043E\u0440\u043E\u0442\u043A\u043E\u0457 \u0444\u0440\u0430\u0437\u0438 (\u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C 7 \u0441\u043B\u0456\u0432, \u0431\u0435\u0437 \u043A\u0440\u0430\u043F\u043A\u0438 \u0432 \u043A\u0456\u043D\u0446\u0456, \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E): "${text}"` }],
-          max_tokens: 30,
-          temperature: 0.5
-        })
+      const res = await openaiFetch("chat/completions", {
+        model: "gpt-4o-mini",
+        messages: [{ role: "user", content: `\u0421\u0442\u0438\u0441\u043D\u0438 \u0446\u0435\u0439 \u043C\u043E\u043C\u0435\u043D\u0442 \u0434\u043D\u044F \u0434\u043E 1 \u043A\u043E\u0440\u043E\u0442\u043A\u043E\u0457 \u0444\u0440\u0430\u0437\u0438 (\u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C 7 \u0441\u043B\u0456\u0432, \u0431\u0435\u0437 \u043A\u0440\u0430\u043F\u043A\u0438 \u0432 \u043A\u0456\u043D\u0446\u0456, \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E): "${text}"` }],
+        max_tokens: 30,
+        temperature: 0.5
       });
       const data = await res.json();
       if (data?.usage) logUsage("evening-summary", data.usage, data.model);
@@ -5106,6 +5114,7 @@ ${lines.join("\n\n")}`;
       init_entity_factories();
       init_utils();
       init_usage_meter();
+      init_core();
       init_tasks();
       init_habits();
       init_notes();
@@ -5843,21 +5852,16 @@ ${CHIP_PROMPT_RULES}
 ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
 - \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E.`;
       try {
-        const res = await fetch("https://api.openai.com/v1/chat/completions", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}` },
-          signal: abortSignal,
-          body: JSON.stringify({
-            model: "gpt-4o-mini",
-            messages: [
-              { role: "system", content: systemPrompt },
-              { role: "user", content: `\u0414\u0430\u043D\u0456: ${context}` }
-            ],
-            max_tokens: 150,
-            temperature: 0.8,
-            response_format: { type: "json_object" }
-          })
-        });
+        const res = await openaiFetch("chat/completions", {
+          model: "gpt-4o-mini",
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: `\u0414\u0430\u043D\u0456: ${context}` }
+          ],
+          max_tokens: 150,
+          temperature: 0.8,
+          response_format: { type: "json_object" }
+        }, { signal: abortSignal });
         if (!res.ok) {
           const errDetail = `HTTP ${res.status} ${res.statusText}`;
           console.warn("[OWL board] API error:", errDetail);
@@ -5946,7 +5950,7 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
     const msgs = getOwlBoardMessages();
     const visibleTs = msgs[0]?.ts || 0;
     if (visibleTs > 0 && Date.now() - visibleTs < 30 * 60 * 1e3) return;
-    const mode = JSON.parse(localStorage.getItem("nm_settings") || "{}").owl_mode || "partner";
+    const mode = getSettings().owl_mode || "partner";
     let text = "";
     const chips = [];
     const _pl = (n, one, few, many) => {
@@ -6122,6 +6126,7 @@ ${getChipStatsForPrompt() ? "- " + getChipStatsForPrompt() : ""}
   var init_proactive = __esm({
     "src/owl/proactive.js"() {
       init_core();
+      init_settings();
       init_memory();
       init_utils();
       init_nav();
@@ -6535,11 +6540,7 @@ ${topCats.map(([c, a]) => `- ${c}: ${formatMoney(a)}`).join("\n") || "- \u043D\u
 ${budget.total > 0 ? `\u0411\u044E\u0434\u0436\u0435\u0442 \u043C\u0456\u0441\u044F\u0446\u044F: ${formatMoney(budget.total)} (\u0432\u0438\u0442\u0440\u0430\u0447\u0435\u043D\u043E ${Math.round(totalExp / budget.total * 100)}%)` : ""}
 ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)} (\u0437\u0430\u043E\u0449\u0430\u0434\u0436\u0435\u043D\u043E ${Math.round((totalInc - totalExp) / totalInc * 100)}%)` : ""}`;
     try {
-      const res = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}` },
-        body: JSON.stringify({ model: "gpt-4o-mini", messages: [{ role: "user", content: prompt2 }], max_tokens: 120, temperature: 0.3 })
-      });
+      const res = await openaiFetch("chat/completions", { model: "gpt-4o-mini", messages: [{ role: "user", content: prompt2 }], max_tokens: 120, temperature: 0.3 });
       const data = await res.json();
       if (data?.usage) logUsage("finance-insight", data.usage, data.model);
       const text = data.choices?.[0]?.message?.content?.trim();
@@ -6878,7 +6879,7 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
     renderFinance();
   }
   function getCurrency() {
-    const s = JSON.parse(localStorage.getItem("nm_settings") || "{}");
+    const s = getSettings();
     return s.currency || "\u20B4";
   }
   function setCurrency(symbol) {
@@ -7372,6 +7373,7 @@ ${totalInc > 0 ? `\u0414\u043E\u0445\u043E\u0434\u0438: ${formatMoney(totalInc)}
   var init_finance = __esm({
     "src/tabs/finance.js"() {
       init_nav();
+      init_settings();
       init_uuid();
       init_entity_factories();
       init_utils();
@@ -9849,19 +9851,15 @@ ${currentText}
 \u041D\u0415 \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 JSON \u044F\u043A\u0449\u043E \u0442\u0456\u043B\u044C\u043A\u0438 \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u044E\u0454\u0448 \u0430\u0431\u043E \u043F\u043E\u044F\u0441\u043D\u044E\u0454\u0448.
 ${aiContext ? "\n\n" + aiContext : ""}`;
     try {
-      const res = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}` },
-        body: JSON.stringify({
-          model: "gpt-4o-mini",
-          messages: [
-            { role: "system", content: systemPrompt },
-            ...noteChatHistory.slice(-10),
-            { role: "user", content: text }
-          ],
-          max_tokens: 800,
-          temperature: 0.7
-        })
+      const res = await openaiFetch("chat/completions", {
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "system", content: systemPrompt },
+          ...noteChatHistory.slice(-10),
+          { role: "user", content: text }
+        ],
+        max_tokens: 800,
+        temperature: 0.7
       });
       const data = await res.json();
       if (data?.usage) logUsage("notes-ai", data.usage, data.model);
@@ -13198,7 +13196,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
     }
   }
   function getOWLPersonality() {
-    const settings = JSON.parse(localStorage.getItem("nm_settings") || "{}");
+    const settings = getSettings();
     const mode = settings.owl_mode || "partner";
     const name = settings.name ? settings.name : "";
     const nameStr = name ? `, \u0437\u0432\u0435\u0440\u0442\u0430\u0439\u0441\u044F \u0434\u043E \u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447\u0430 \u043D\u0430 \u0456\u043C\u02BC\u044F "${name}"` : "";
@@ -13592,6 +13590,7 @@ ${signalLines}
   var init_prompts = __esm({
     "src/ai/prompts.js"() {
       init_chips();
+      init_settings();
       init_ui_tools();
       _DEPRESSIVE_MARKERS = /(втомив|немає сил|виснажен|болить|стрес|сумно|тривог|погано|зле|дістало|не можу|здатися|самотн|депрес)/i;
       _STATE_STYLES = {
@@ -14098,23 +14097,19 @@ ${CHIP_PROMPT_RULES}`;
       addInboxChatMsg("agent", t("habits.quit.msg.hard_day_offline", '\u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0432\u0430\u0436\u043A\u0438\u0439 \u0434\u0435\u043D\u044C \u0437 "{name}".{fdText} \u0417\u0430\u0432\u0442\u0440\u0430 \u043D\u043E\u0432\u0438\u0439 \u0448\u0430\u043D\u0441.', { name, fdText }));
       return;
     }
-    const settings = JSON.parse(localStorage.getItem("nm_settings") || "{}");
+    const settings = getSettings();
     const owlMode = settings.owl_mode || "balanced";
     const tone = owlMode === "brutal" ? "\u0440\u0456\u0437\u043A\u0438\u0439, \u0447\u0435\u0441\u043D\u0438\u0439, \u0431\u0435\u0437 \u0437\u0430\u0439\u0432\u043E\u0433\u043E \u0436\u0430\u043B\u044E" : owlMode === "soft" ? "\u043C'\u044F\u043A\u0438\u0439, \u043F\u0456\u0434\u0442\u0440\u0438\u043C\u0443\u044E\u0447\u0438\u0439, \u0441\u043F\u0456\u0432\u0447\u0443\u0442\u043B\u0438\u0432\u0438\u0439" : "\u0437\u0431\u0430\u043B\u0430\u043D\u0441\u043E\u0432\u0430\u043D\u0438\u0439, \u0447\u0435\u0441\u043D\u0438\u0439 \u0430\u043B\u0435 \u043F\u0456\u0434\u0442\u0440\u0438\u043C\u0443\u044E\u0447\u0438\u0439";
-    fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}` },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        max_tokens: 80,
-        messages: [{
-          role: "system",
-          content: `\u0422\u0438 OWL \u2014 \u043F\u0435\u0440\u0441\u043E\u043D\u0430\u043B\u044C\u043D\u0438\u0439 \u0430\u0433\u0435\u043D\u0442. \u0422\u043E\u043D: ${tone}. \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0422\u0406\u041B\u042C\u041A\u0418 \u043E\u0434\u043D\u0438\u043C \u0440\u0435\u0447\u0435\u043D\u043D\u044F\u043C \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u041D\u0435 \u0437\u0433\u0430\u0434\u0443\u0439 "\u0441\u0442\u0440\u0456\u043A \u043E\u0431\u043D\u0443\u043B\u0435\u043D\u043E". \u041F\u0456\u0434\u043A\u0440\u0435\u0441\u043B\u0438 \u0449\u043E ${freedomDays} \u0432\u0456\u043B\u044C\u043D\u0438\u0445 \u0434\u043D\u0456\u0432 \u043D\u0456\u043A\u0443\u0434\u0438 \u043D\u0435 \u0434\u0456\u043B\u0438\u0441\u044C.`
-        }, {
-          role: "user",
-          content: `\u041A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447 \u0437\u0456\u0440\u0432\u0430\u0432\u0441\u044F \u0437 "${name}". \u0421\u0435\u0440\u0456\u044F \u0431\u0443\u043B\u0430 ${prevStreak} ${_dayWord(prevStreak)}, \u0430\u043B\u0435 \u0437\u0430\u0433\u0430\u043B\u043E\u043C ${freedomDays} \u0432\u0456\u043B\u044C\u043D\u0438\u0445 ${_dayWord(freedomDays)} \u2014 \u0432\u043E\u043D\u0438 \u0437\u0430\u043B\u0438\u0448\u0430\u044E\u0442\u044C\u0441\u044F. \u0421\u043A\u0430\u0436\u0438 \u0449\u043E\u0441\u044C \u043A\u043E\u0440\u043E\u0442\u043A\u0435 \u0442\u0430 \u043F\u0456\u0434\u0442\u0440\u0438\u043C\u0443\u044E\u0447\u0435.`
-        }]
-      })
+    openaiFetch("chat/completions", {
+      model: "gpt-4o-mini",
+      max_tokens: 80,
+      messages: [{
+        role: "system",
+        content: `\u0422\u0438 OWL \u2014 \u043F\u0435\u0440\u0441\u043E\u043D\u0430\u043B\u044C\u043D\u0438\u0439 \u0430\u0433\u0435\u043D\u0442. \u0422\u043E\u043D: ${tone}. \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0422\u0406\u041B\u042C\u041A\u0418 \u043E\u0434\u043D\u0438\u043C \u0440\u0435\u0447\u0435\u043D\u043D\u044F\u043C \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u041D\u0435 \u0437\u0433\u0430\u0434\u0443\u0439 "\u0441\u0442\u0440\u0456\u043A \u043E\u0431\u043D\u0443\u043B\u0435\u043D\u043E". \u041F\u0456\u0434\u043A\u0440\u0435\u0441\u043B\u0438 \u0449\u043E ${freedomDays} \u0432\u0456\u043B\u044C\u043D\u0438\u0445 \u0434\u043D\u0456\u0432 \u043D\u0456\u043A\u0443\u0434\u0438 \u043D\u0435 \u0434\u0456\u043B\u0438\u0441\u044C.`
+      }, {
+        role: "user",
+        content: `\u041A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447 \u0437\u0456\u0440\u0432\u0430\u0432\u0441\u044F \u0437 "${name}". \u0421\u0435\u0440\u0456\u044F \u0431\u0443\u043B\u0430 ${prevStreak} ${_dayWord(prevStreak)}, \u0430\u043B\u0435 \u0437\u0430\u0433\u0430\u043B\u043E\u043C ${freedomDays} \u0432\u0456\u043B\u044C\u043D\u0438\u0445 ${_dayWord(freedomDays)} \u2014 \u0432\u043E\u043D\u0438 \u0437\u0430\u043B\u0438\u0448\u0430\u044E\u0442\u044C\u0441\u044F. \u0421\u043A\u0430\u0436\u0438 \u0449\u043E\u0441\u044C \u043A\u043E\u0440\u043E\u0442\u043A\u0435 \u0442\u0430 \u043F\u0456\u0434\u0442\u0440\u0438\u043C\u0443\u044E\u0447\u0435.`
+      }]
     }).then((r) => r.json()).then((d) => {
       if (d?.usage) logUsage("habits-ai", d.usage, d.model);
       const reply = d.choices?.[0]?.message?.content;
@@ -15721,6 +15716,7 @@ ${CHIP_PROMPT_RULES}`;
   var init_habits = __esm({
     "src/tabs/habits.js"() {
       init_nav();
+      init_settings();
       init_utils();
       init_usage_meter();
       init_uuid();
@@ -15884,7 +15880,7 @@ ${CHIP_PROMPT_RULES}`;
     parts.push(`\u0417\u0430\u0440\u0430\u0437: ${dateStr}`);
     if (profile) parts.push(`\u041F\u0440\u043E\u0444\u0456\u043B\u044C (\u0437 \u0430\u043D\u043A\u0435\u0442\u0438 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u044C \u2014 \u0442\u0438 \u0432\u0436\u0435 \u0446\u0435 \u0437\u043D\u0430\u0454\u0448, \u041D\u0415 \u043F\u0435\u0440\u0435\u043F\u0438\u0442\u0443\u0439): ${profile}`);
     try {
-      const sRaw = JSON.parse(localStorage.getItem("nm_settings") || "{}");
+      const sRaw = getSettings();
       const sc = sRaw.schedule || {};
       if (sc.wakeUp || sc.workStart || sc.workEnd || sc.bedTime) {
         parts.push(`\u0420\u043E\u0437\u043A\u043B\u0430\u0434 \u0434\u043D\u044F (\u0437 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u044C): \u043F\u0440\u043E\u043A\u0438\u0434\u0430\u0454\u0442\u044C\u0441\u044F \u043E ${sc.wakeUp || "?"}, \u043F\u043E\u0447\u0438\u043D\u0430\u0454 \u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0439 \u0434\u0435\u043D\u044C \u043E ${sc.workStart || "?"}, \u0437\u0430\u0432\u0435\u0440\u0448\u0443\u0454 \u0440\u043E\u0431\u043E\u0442\u0443 \u043E ${sc.workEnd || "?"}, \u043B\u044F\u0433\u0430\u0454 \u0441\u043F\u0430\u0442\u0438 \u043E ${sc.bedTime || "?"}. \u041D\u0415 \u043F\u0438\u0442\u0430\u0439 \u0446\u0435\u0439 \u0440\u043E\u0437\u043A\u043B\u0430\u0434 \u2014 \u0432\u0456\u043D \u0443\u0436\u0435 \u0437\u0430\u0434\u0430\u043D\u0438\u0439. \u042F\u043A\u0449\u043E \u044E\u0437\u0435\u0440 \u0445\u043E\u0447\u0435 \u0437\u043C\u0456\u043D\u0438\u0442\u0438 \u2014 \u0441\u0430\u043C \u0441\u043A\u0430\u0436\u0435.`);
@@ -16198,6 +16194,15 @@ ${routineParts.join("\n")}${nextHint}
       addMsg("agent", "\u0429\u043E\u0441\u044C \u043F\u0456\u0448\u043B\u043E \u043D\u0435 \u0442\u0430\u043A. \u0421\u043F\u0440\u043E\u0431\u0443\u0439 \u0449\u0435 \u0440\u0430\u0437.");
     }
   }
+  function openaiFetch(path, body, { signal } = {}) {
+    const key = localStorage.getItem("nm_gemini_key");
+    return fetch("https://api.openai.com/v1/" + path, {
+      method: "POST",
+      signal,
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}` },
+      body: JSON.stringify(body)
+    });
+  }
   async function _fetchAI(messages, signal, tools, temperature = 0.7, module = "unknown") {
     const key = localStorage.getItem("nm_gemini_key");
     if (!key) {
@@ -16210,12 +16215,7 @@ ${routineParts.join("\n")}${nextHint}
     }
     const body = { model: "gpt-4o-mini", messages, max_tokens: 400, temperature };
     if (tools && tools.length > 0) body.tools = tools;
-    const res = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      signal,
-      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}` },
-      body: JSON.stringify(body)
-    });
+    const res = await openaiFetch("chat/completions", body, { signal });
     if (!res.ok) {
       const data2 = await res.json().catch(() => ({}));
       showToast("\u274C " + (data2?.error?.message || `\u041F\u043E\u043C\u0438\u043B\u043A\u0430 ${res.status}`), 4e3);
@@ -16605,6 +16605,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
   var init_core = __esm({
     "src/ai/core.js"() {
       init_nav();
+      init_settings();
       init_utils();
       init_trash();
       init_inbox();
@@ -17061,15 +17062,11 @@ ${JSON.stringify(contextData, null, 2)}` : "";
 \u0417\u0410\u0414\u0410\u0427\u0410 = \u0434\u0456\u044F \u044F\u043A\u0443 \u0422\u0418 \u043C\u0430\u0454\u0448 \u0417\u0420\u041E\u0411\u0418\u0422\u0418 (\u043A\u0443\u043F\u0438\u0442\u0438, \u043F\u043E\u0434\u0437\u0432\u043E\u043D\u0438\u0442\u0438). \u041F\u041E\u0414\u0406\u042F = \u0444\u0430\u043A\u0442 \u0449\u043E \u0421\u0422\u0410\u041D\u0415\u0422\u042C\u0421\u042F (\u043F\u0440\u0438\u0457\u0437\u0434, \u0437\u0443\u0441\u0442\u0440\u0456\u0447, \u0434\u0435\u043D\u044C \u043D\u0430\u0440\u043E\u0434\u0436\u0435\u043D\u043D\u044F). "\u041C\u0430\u043C\u0430 \u043F\u0440\u0438\u0457\u0436\u0430\u0454 20\u0433\u043E" = create_event \u041D\u0415 task! "\u041F\u0435\u0440\u0435\u043D\u0435\u0441\u0438 \u043C\u0430\u043C\u0438\u043D \u043F\u0440\u0438\u0457\u0437\u0434 \u043D\u0430 24" = edit_event.
 \u0406\u043D\u0430\u043A\u0448\u0435 \u2014 \u0437\u0432\u0438\u0447\u0430\u0439\u043D\u0438\u0439 \u0442\u0435\u043A\u0441\u0442 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E.${aiContext ? "\n\n" + aiContext : ""}`;
     try {
-      const res = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}` },
-        body: JSON.stringify({
-          model: "gpt-4o-mini",
-          messages: [{ role: "system", content: systemPrompt }, ...taskChatHistory.slice(-12)],
-          max_tokens: 300,
-          temperature: 0.75
-        })
+      const res = await openaiFetch("chat/completions", {
+        model: "gpt-4o-mini",
+        messages: [{ role: "system", content: systemPrompt }, ...taskChatHistory.slice(-12)],
+        max_tokens: 300,
+        temperature: 0.75
       });
       const data = await res.json();
       if (data?.usage) logUsage("tasks-ai", data.usage, data.model);
@@ -17134,12 +17131,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 25e3);
     try {
-      const res = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        signal: controller.signal,
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}` },
-        body: JSON.stringify({ model: "gpt-4o-mini", messages: [{ role: "system", content: systemPrompt }, { role: "user", content: title }], max_tokens: 150, temperature: 0.3 })
-      });
+      const res = await openaiFetch("chat/completions", { model: "gpt-4o-mini", messages: [{ role: "system", content: systemPrompt }, { role: "user", content: title }], max_tokens: 150, temperature: 0.3 }, { signal: controller.signal });
       clearTimeout(timeout);
       const data = await res.json();
       if (data?.usage) logUsage("tasks-ai", data.usage, data.model);
@@ -17635,7 +17627,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
       localStorage.setItem("nm_guide_step", SURVEY_QUESTIONS.length.toString());
       return;
     }
-    const settings = JSON.parse(localStorage.getItem("nm_settings") || "{}");
+    const settings = getSettings();
     const name = settings.name || "\u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447";
     const scheduleAnswer = (surveyAnswers[5] || {}).a || "";
     const parseScheduleTime = (text, patterns, def) => {
@@ -17668,11 +17660,7 @@ ${answersText}
 \u0424\u043E\u0440\u043C\u0430\u0442 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456 \u2014 \u0422\u0406\u041B\u042C\u041A\u0418 \u0432\u0430\u043B\u0456\u0434\u043D\u0438\u0439 JSON:
 {"memory": "\u0442\u0435\u043A\u0441\u0442 \u0434\u043B\u044F \u043F\u0430\u043C\u02BC\u044F\u0442\u0456", "advice": "\u043F\u0435\u0440\u0441\u043E\u043D\u0430\u043B\u044C\u043D\u0456 \u043F\u043E\u0440\u0430\u0434\u0438 2-3 \u0440\u0435\u0447\u0435\u043D\u043D\u044F"}`;
     try {
-      const res = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}` },
-        body: JSON.stringify({ model: "gpt-4o-mini", messages: [{ role: "user", content: prompt2 }], max_tokens: 500, temperature: 0.7 })
-      });
+      const res = await openaiFetch("chat/completions", { model: "gpt-4o-mini", messages: [{ role: "user", content: prompt2 }], max_tokens: 500, temperature: 0.7 });
       const data = await res.json();
       if (data?.usage) logUsage("onboarding", data.usage, data.model);
       const reply = data.choices?.[0]?.message?.content?.trim();
@@ -17788,15 +17776,11 @@ ${priorQA}
 \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0420\u0406\u0412\u041D\u041E \u0441\u043B\u043E\u0432\u043E\u043C ENOUGH (\u0456 \u043D\u0456\u0447\u0438\u043C \u0431\u0456\u043B\u044C\u0448\u0435) \u041B\u0418\u0428\u0415 \u043A\u043E\u043B\u0438 \u043F\u043E\u043A\u0440\u0438\u0442\u043E \u0449\u043E\u043D\u0430\u0439\u043C\u0435\u043D\u0448\u0435 \u0432\u0438\u043C\u0456\u0440\u0438 1+2+3 \u0456 \u0449\u0435 \u0445\u043E\u0447\u0430 \u0431 \u0434\u0432\u0430 \u0437 4-7 \u2014 \u0442\u043E\u0431\u0442\u043E \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0443 \u0440\u0435\u0430\u043B\u044C\u043D\u043E \u0434\u043E\u0441\u0442\u0430\u0442\u043D\u044C\u043E \u0434\u043B\u044F \u043F\u043B\u0430\u043D\u0443. \u042F\u043A\u0449\u043E \u0449\u0435 \u043D\u0456 \u2014 \u0441\u0442\u0430\u0432 \u043F\u0438\u0442\u0430\u043D\u043D\u044F.
 \u0422\u0456\u043B\u044C\u043A\u0438 \u0442\u0435\u043A\u0441\u0442 \u043F\u0438\u0442\u0430\u043D\u043D\u044F \u0410\u0411\u041E ENOUGH.`;
     try {
-      const res = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}` },
-        body: JSON.stringify({
-          model: "gpt-4o-mini",
-          messages: [{ role: "system", content: systemPrompt }],
-          max_tokens: 80,
-          temperature: 0.7
-        })
+      const res = await openaiFetch("chat/completions", {
+        model: "gpt-4o-mini",
+        messages: [{ role: "system", content: systemPrompt }],
+        max_tokens: 80,
+        temperature: 0.7
       });
       const data = await res.json();
       if (data?.usage) logUsage("onboarding", data.usage, data.model);
@@ -17843,24 +17827,20 @@ ${priorQA}
 }
 \u041D\u0435 \u0432\u0438\u0433\u0430\u0434\u0443\u0439 \u0442\u0435 \u0447\u043E\u0433\u043E \u044E\u0437\u0435\u0440 \u043D\u0435 \u043A\u0430\u0437\u0430\u0432 \u2014 \u043F\u043E\u0440\u043E\u0436\u043D\u0454 \u043F\u043E\u043B\u0435 \u043A\u0440\u0430\u0449\u0435 \u043D\u0456\u0436 \u0432\u0438\u0433\u0430\u0434\u043A\u0430.`;
     try {
-      const res = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}` },
-        body: JSON.stringify({
-          model: "gpt-4o-mini",
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: `\u041F\u0440\u043E\u0435\u043A\u0442: ${projectName}
+      const res = await openaiFetch("chat/completions", {
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: `\u041F\u0440\u043E\u0435\u043A\u0442: ${projectName}
 
 \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456 \u044E\u0437\u0435\u0440\u0430:
 ${interviewBlock}
 
 \u041A\u043E\u043D\u0442\u0435\u043A\u0441\u0442:
 ${aiContext}` }
-          ],
-          max_tokens: 400,
-          temperature: 0.6
-        })
+        ],
+        max_tokens: 400,
+        temperature: 0.6
       });
       const data = await res.json();
       if (data?.usage) logUsage("onboarding", data.usage, data.model);
@@ -17922,21 +17902,17 @@ ${t("projects.iv.saved_note", "\u041A\u0440\u043E\u043A\u0438, \u0442\u0435\u043
     const topicData = OWL_GUIDE_TOPICS.find((t2) => t2.key === waitingTopic);
     if (!topicData) return;
     try {
-      const res = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}` },
-        body: JSON.stringify({
-          model: "gpt-4o-mini",
-          messages: [{ role: "user", content: `\u0406\u0441\u043D\u0443\u044E\u0447\u0430 \u043F\u0430\u043C\u02BC\u044F\u0442\u044C \u043F\u0440\u043E \u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447\u0430:
+      const res = await openaiFetch("chat/completions", {
+        model: "gpt-4o-mini",
+        messages: [{ role: "user", content: `\u0406\u0441\u043D\u0443\u044E\u0447\u0430 \u043F\u0430\u043C\u02BC\u044F\u0442\u044C \u043F\u0440\u043E \u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447\u0430:
 ${currentMemory}
 
 \u041D\u043E\u0432\u0430 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C \u043D\u0430 \u043F\u0438\u0442\u0430\u043D\u043D\u044F "${topicData.q}":
 ${userText}
 
 \u0414\u043E\u043F\u043E\u0432 \u043D\u043E\u0432\u0443 \u0456\u043D\u0444\u043E\u0440\u043C\u0430\u0446\u0456\u044E \u0434\u043E \u043F\u0430\u043C\u02BC\u044F\u0442\u0456. \u041F\u043E\u0432\u0435\u0440\u043D\u044C \u0422\u0406\u041B\u042C\u041A\u0418 \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u0439 \u0442\u0435\u043A\u0441\u0442 \u043F\u0430\u043C\u02BC\u044F\u0442\u0456 (\u0431\u0435\u0437 JSON, \u0431\u0435\u0437 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440\u0456\u0432), \u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C 8 \u0440\u0435\u0447\u0435\u043D\u044C.` }],
-          max_tokens: 300,
-          temperature: 0.5
-        })
+        max_tokens: 300,
+        temperature: 0.5
       });
       const data = await res.json();
       if (data?.usage) logUsage("onboarding", data.usage, data.model);
@@ -19964,6 +19940,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
   var init_utils = __esm({
     "src/core/utils.js"() {
       init_inbox();
+      init_settings();
       init_uuid();
       _RE_DQUOTE = new RegExp(String.fromCharCode(34), "g");
       _RE_SQUOTE = new RegExp(String.fromCharCode(39), "g");
@@ -24727,7 +24704,7 @@ ${logLines}
     } catch (e) {
     }
     const key = localStorage.getItem("nm_gemini_key") || "";
-    const settings = JSON.parse(localStorage.getItem("nm_settings") || "{}");
+    const settings = getSettings();
     const memory = localStorage.getItem("nm_memory") || "";
     const memoryTs = localStorage.getItem("nm_memory_ts");
     const setVal = (id, val) => {
@@ -25045,7 +25022,7 @@ ${logLines}
     showToast(t("nav.toast.finance_cleared", "\u{1F5D1}\uFE0F \u0424\u0456\u043D\u0430\u043D\u0441\u043E\u0432\u0456 \u0434\u0430\u043D\u0456 \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E"));
   }
   function getProfile() {
-    const s = JSON.parse(localStorage.getItem("nm_settings") || "{}");
+    const s = getSettings();
     const parts = [];
     if (s.name) parts.push(`\u0406\u043C\u02BC\u044F: ${s.name}`);
     if (s.age) parts.push(`\u0412\u0456\u043A: ${s.age}`);
@@ -26089,6 +26066,7 @@ ${legacy}`;
   init_utils();
   init_usage_meter();
   init_prompts();
+  init_core();
   var TAB_INPUT = {
     inbox: "inbox-input",
     tasks: "tasks-chat-input",
@@ -26141,21 +26119,17 @@ ${legacy}`;
   }
   async function _visionDescribe(dataUrl, key) {
     const sys = getChatVisionPrompt();
-    const res = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}` },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [
-          { role: "system", content: sys },
-          { role: "user", content: [
-            { type: "text", text: "Photo" },
-            { type: "image_url", image_url: { url: dataUrl } }
-          ] }
-        ],
-        max_tokens: 300,
-        temperature: 0.4
-      })
+    const res = await openaiFetch("chat/completions", {
+      model: "gpt-4o-mini",
+      messages: [
+        { role: "system", content: sys },
+        { role: "user", content: [
+          { type: "text", text: "Photo" },
+          { type: "image_url", image_url: { url: dataUrl } }
+        ] }
+      ],
+      max_tokens: 300,
+      temperature: 0.4
     });
     const data = await res.json();
     if (data?.usage) logUsage("chat-vision", data.usage, data.model);
