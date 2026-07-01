@@ -52,6 +52,7 @@ jobs:
           node scripts/check-cyrillic-boundary.js
           node scripts/check-tool-filter.js
           node scripts/check-list-detector.js
+          node scripts/check-clarify-decision.js
 
       - name: Build bundle
         run: npm run build
