@@ -27,6 +27,14 @@
 | D1 | **habits.js 1988 → ~1155:** винести рядки **963-1797** (835 рядків: `_fuzzyFindFolder` 965-982 + `_levenshtein` 984-991 + `processUniversalAction` 998-1797 з інлайн `_splitReply`) у **`src/core/execute-action.js`**. МАПА ГОТОВА (розвідник 28.06) ↓. | 🟢 | ⬜ | — |
 | D2 | **inbox.js 1459:** винести цільний блок (кандидат: стрічка-рендер `renderInbox`+картки+свайп у `src/tabs/inbox-feed.js` АБО chat-flow) — за фактичною зв'язністю, /refactor-large. | 🟢 | ⬜ | — |
 
+| D3 | **boot.js 1450:** винести 18 boot-міграцій у `src/core/migrations.js` (чистий блок, план каже вони лишаються лише для one-time імпорту). | 🟢 | ⬜ | — |
+| D4 | **notes.js 1408:** винести цільний блок (кандидат: folder-логіка/рендер) — за зв'язністю. | 🟢 | ⬜ | — |
+| E | **Pre-flight** (усі сторожі + node --check) + bump CACHE + реліз-нотатки + /finish UPDATE. | 🟢 | ⬜ | — |
+
+> **D-правила («розбий ПРАВИЛЬНО», мандат Романа):** /refactor-large скіл · різати по ЗВ'ЯЗНОСТІ (цілісний блок з мінімумом перехресних імпортів), не по рядках · re-export для зворотної сумісності де треба · нуль зміни поведінки · E2E після кожного файлу · ~1 файл = 1 деплой-батч (самокорекція CI між ними). D-батчі великі — handoff у нові чати через цей файл очікуваний і нормальний.
+
+> **Маркери:** 🟢 GO — все автономне. Правила: кожен батч = чистий рефактор БЕЗ зміни поведінки (параметри/промпти/temperature 1:1); node --check + сторожі після кожного кроку; checkpoint-коміт після кожної фази; E2E після пушу.
+
 **📋 МАПА D1 (розвідник Sonnet 28.06 — різати ЗА нею, без повторної розвідки):**
 - **Блок:** habits.js рядки 963-1797 → `src/core/execute-action.js`. Коментар «384 рядки» на 996 — застарілий, ігнорувати.
 - **Використані залежності** (переносити імпорти): makeEvent/makeTask/makeList (entity-factories), makeHabit (habit-classifier), getLists/saveLists (lists), addToTrash/showUndoToast (trash), resolveDateFromText/parseUaTimeOfDay (ua-time-parser), getMoments/saveMoments (evening), getEvents/saveEvents/addEventDedup/getRoutine/saveRoutine (calendar), getInbox/saveInbox/renderInbox/_detectEventFromTask (inbox), getTasks/saveTasks/renderTasks/toggleTaskStatus (tasks), getNotes/saveNotes/renderNotes/addNoteFromInbox/setCurrentNotesFolder/getDirectChildren (notes), getFinance/saveFinance/renderFinance/processFinanceAction (finance), deleteHealthCardProgrammatic/deleteAllergy/deleteMedicationFromCard (health), monthGenitive (months), t/levenshtein/getReminders/saveReminders (utils), generateUUID (uuid), currentTab (nav) + з habits.js: getHabits/saveHabits/getHabitLog/saveHabitLog/renderHabits/renderProdHabits (уже export?- перевірити).
@@ -35,13 +43,7 @@
 - **window-exports НЕ зачеплені** (1978-1985 — інші функції).
 - **Після D1 habits ≈1155 (<1200)** — опційний другий різ: `sendTasksBarMessage` 1800-1974 → tasks.js (→~980) або quit-блок 39-142 → habits-quit.js.
 - **DRY-борг помічено:** локальний `_levenshtein` дублює `levenshtein` з utils — НЕ блокер, окремо.
-| D3 | **boot.js 1450:** винести 18 boot-міграцій у `src/core/migrations.js` (чистий блок, план каже вони лишаються лише для one-time імпорту). | 🟢 | ⬜ | — |
-| D4 | **notes.js 1408:** винести цільний блок (кандидат: folder-логіка/рендер) — за зв'язністю. | 🟢 | ⬜ | — |
-| E | **Pre-flight** (усі сторожі + node --check) + bump CACHE + реліз-нотатки + /finish UPDATE. | 🟢 | ⬜ | — |
 
-> **D-правила («розбий ПРАВИЛЬНО», мандат Романа):** /refactor-large скіл · різати по ЗВ'ЯЗНОСТІ (цілісний блок з мінімумом перехресних імпортів), не по рядках · re-export для зворотної сумісності де треба · нуль зміни поведінки · E2E після кожного файлу · ~1 файл = 1 деплой-батч (самокорекція CI між ними). D-батчі великі — handoff у нові чати через цей файл очікуваний і нормальний.
-
-> **Маркери:** 🟢 GO — все автономне. Правила: кожен батч = чистий рефактор БЕЗ зміни поведінки (параметри/промпти/temperature 1:1); node --check + сторожі після кожного кроку; checkpoint-коміт після кожної фази; E2E після пушу.
 
 ---
 
@@ -83,5 +85,5 @@
 
 ## Де зупинились
 
-**Поточний крок:** A ✅ B ✅ C ✅ → брама деплою батчу A+B+C. D (розбиття habits/inbox/boot/notes) — НАСТУПНИЙ ЧАТ (свіжий контекст на 2000-рядкові файли).
-**Наступна дія:** після «деплой» — push + E2E-петля. Потім новий чат: `/byyou` → D1 (habits.js → execute-action.js).
+**Поточний крок:** A ✅ B ✅ C ✅ ЗАДЕПЛОЄНО (E2E #38 зелений). Далі — D1.
+**Наступна дія:** НОВИЙ ЧАТ → `/byyou` → D1: різати habits.js 963-1797 → src/core/execute-action.js ЗА ГОТОВОЮ МАПОЮ (секція «МАПА D1» вище). Потім D2 (inbox), D3 (boot→migrations), D4 (notes). Кожен файл = окремий деплой-батч.
