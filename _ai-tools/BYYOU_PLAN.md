@@ -20,13 +20,10 @@
 
 | # | Крок | Маркер | Статус | Коміт |
 |---|------|--------|--------|-------|
-| A1 | **bareNoun-логіка → src/data/** (борг): винести чисте рішення `shouldClarify` (bareNoun-гілка + GREETING_STOPLIST + COMMAND_RE) у `src/data/clarify-decision.js` (pure), `clarify-guard.js` імпортує. Поведінка 1:1. | 🟢 | ⬜ | — |
-| A2 | **Сторож `check-clarify-decision.js`** (реальний node-тест замість емуляції: Хімчистка→чіпи, Дякую→ні, tool-режим suspicious) + у CI e2e.yml. | 🟢 | ⬜ | — |
-| B1 | **callLLM-кордон (план §8):** інвентаризувати 12 місць що дзвонять `api.openai.com` напряму в обхід `_fetchAI` (proactive/evening/projects/notes/tasks×2/habits/finance-insight/onboarding×3) — читання + мапа. | 🟢 | ⬜ | — |
-| B2-B4 | **Звести обхідні виклики через єдиний кордон** (експорт тонкої `callLLM()` з core.js; батчами по 3-4 файли, коміт після кожного; поведінка/параметри 1:1 — лише транспорт централізується). OpenAI→Mastra потім = зміна 1 файлу. | 🟢 | ⬜ | — |
-| B5 | **Сторож `check-llm-boundary.js`:** grep-контракт «api.openai.com зустрічається лише у core.js» + CI. Замок від рецидиву. | 🟢 | ⬜ | — |
-| C1 | **nm_settings read-path:** 11 прямих `JSON.parse(localStorage.getItem('nm_settings'))` → `getSettings()` (звірка v3pexs; при Supabase міняти 1 точку, не 11). Поведінка 1:1. | 🟢 | ⬜ | — |
-| C2 | **Розширити сторож** (check-entity або новий): «nm_settings читається лише у settings.js» + CI. | 🟢 | ⬜ | — |
+| A1 | **bareNoun-логіка → src/data/clarify-decision.js** (pure, guard = презентація). Поведінка 1:1. | 🟢 | ✅ | 0b4fed7 |
+| A2 | **Сторож check-clarify-decision** — 28/28 реальних node-тестів + CI. Борг закрито. | 🟢 | ✅ | 0a96ac2 |
+| B | **LLM-кордон openaiFetch:** 15 викликів (14 chat + 1 TTS) в 11 файлах → 1 функція у core.js (сирий Response, обробка у споживачів = 1:1). Зловлено+повернуто втрачений signal у autoGenerateTaskSteps. Сторож check-llm-boundary + CI. | 🟢 | ✅ | 0869719 |
+| C | **nm_settings read-path:** 12 прямих читань у 9 файлах → getSettings() + сторож check-settings-boundary + CI. | 🟢 | ✅ | 09ad7c5 |
 | D1 | **habits.js 1988 (аудит + план §7):** винести `processUniversalAction` + handlers у `src/core/execute-action.js` (= Architecture Refactor Сесія 4). Через `/refactor-large`. | 🟢 | ⬜ | — |
 | D2 | **inbox.js 1459:** винести цільний блок (кандидат: стрічка-рендер `renderInbox`+картки+свайп у `src/tabs/inbox-feed.js` АБО chat-flow) — за фактичною зв'язністю, /refactor-large. | 🟢 | ⬜ | — |
 | D3 | **boot.js 1450:** винести 18 boot-міграцій у `src/core/migrations.js` (чистий блок, план каже вони лишаються лише для one-time імпорту). | 🟢 | ⬜ | — |
@@ -58,7 +55,24 @@
 
 ---
 
+## Реліз-нотатки батчу A+B+C (перед «деплой»)
+
+**ЩО ЗМІНИЛОСЬ (усе — невидимі рефактори, поведінка 1:1):**
+- Логіка bareNoun-чіпів тепер під справжнім тестом (28/28) — регрес у 7 чатах більше не пройде тихо.
+- УСI звернення до OpenAI (15 місць в 11 файлах) зведено через одну функцію — заміна OpenAI→Mastra/Edge стане зміною 1 файлу (план §8).
+- Читання налаштувань — через одну точку (12 → 1) — Supabase-міграція налаштувань = 1 файл.
+- +3 нові сторожі у pre-push/CI (разом 13) — замки від рецидивів.
+
+**ЩО МОЖЕ ЗЛАМАТИСЬ (pre-mortem):**
+- Механічна заміна fetch → кордон: body байт-у-байт, звірено очима + один втрачений signal зловлено і повернуто. E2E покриє.
+- getSettings() додає try/catch якого у 2-3 місцях не було — це лише БЕЗПЕЧНІШЕ (повертає {} замість крешу).
+- TTS (voice-output) тепер бере ключ сам — параметр key у _genOpenAI став неактивним (сигнатура не мінялась).
+
+**СМОУК (мінімальний, без Романа — E2E у CI):** чат відповідає · табло генерується · фінанс-інсайт · онбординг-опитник. Усе покрито E2E/mockAI.
+
+---
+
 ## Де зупинились
 
-**Поточний крок:** A1 — старт.
-**Наступна дія:** мітка byyou-start-autonomy → A1.
+**Поточний крок:** A ✅ B ✅ C ✅ → брама деплою батчу A+B+C. D (розбиття habits/inbox/boot/notes) — НАСТУПНИЙ ЧАТ (свіжий контекст на 2000-рядкові файли).
+**Наступна дія:** після «деплой» — push + E2E-петля. Потім новий чат: `/byyou` → D1 (habits.js → execute-action.js).
