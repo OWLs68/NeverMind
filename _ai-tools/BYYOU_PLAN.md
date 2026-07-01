@@ -24,8 +24,17 @@
 | A2 | **Сторож check-clarify-decision** — 28/28 реальних node-тестів + CI. Борг закрито. | 🟢 | ✅ | 0a96ac2 |
 | B | **LLM-кордон openaiFetch:** 15 викликів (14 chat + 1 TTS) в 11 файлах → 1 функція у core.js (сирий Response, обробка у споживачів = 1:1). Зловлено+повернуто втрачений signal у autoGenerateTaskSteps. Сторож check-llm-boundary + CI. | 🟢 | ✅ | 0869719 |
 | C | **nm_settings read-path:** 12 прямих читань у 9 файлах → getSettings() + сторож check-settings-boundary + CI. | 🟢 | ✅ | 09ad7c5 |
-| D1 | **habits.js 1988 (аудит + план §7):** винести `processUniversalAction` + handlers у `src/core/execute-action.js` (= Architecture Refactor Сесія 4). Через `/refactor-large`. | 🟢 | ⬜ | — |
+| D1 | **habits.js 1988 → ~1155:** винести рядки **963-1797** (835 рядків: `_fuzzyFindFolder` 965-982 + `_levenshtein` 984-991 + `processUniversalAction` 998-1797 з інлайн `_splitReply`) у **`src/core/execute-action.js`**. МАПА ГОТОВА (розвідник 28.06) ↓. | 🟢 | ⬜ | — |
 | D2 | **inbox.js 1459:** винести цільний блок (кандидат: стрічка-рендер `renderInbox`+картки+свайп у `src/tabs/inbox-feed.js` АБО chat-flow) — за фактичною зв'язністю, /refactor-large. | 🟢 | ⬜ | — |
+
+**📋 МАПА D1 (розвідник Sonnet 28.06 — різати ЗА нею, без повторної розвідки):**
+- **Блок:** habits.js рядки 963-1797 → `src/core/execute-action.js`. Коментар «384 рядки» на 996 — застарілий, ігнорувати.
+- **Використані залежності** (переносити імпорти): makeEvent/makeTask/makeList (entity-factories), makeHabit (habit-classifier), getLists/saveLists (lists), addToTrash/showUndoToast (trash), resolveDateFromText/parseUaTimeOfDay (ua-time-parser), getMoments/saveMoments (evening), getEvents/saveEvents/addEventDedup/getRoutine/saveRoutine (calendar), getInbox/saveInbox/renderInbox/_detectEventFromTask (inbox), getTasks/saveTasks/renderTasks/toggleTaskStatus (tasks), getNotes/saveNotes/renderNotes/addNoteFromInbox/setCurrentNotesFolder/getDirectChildren (notes), getFinance/saveFinance/renderFinance/processFinanceAction (finance), deleteHealthCardProgrammatic/deleteAllergy/deleteMedicationFromCard (health), monthGenitive (months), t/levenshtein/getReminders/saveReminders (utils), generateUUID (uuid), currentTab (nav) + з habits.js: getHabits/saveHabits/getHabitLog/saveHabitLog/renderHabits/renderProdHabits (уже export?- перевірити).
+- **7 імпортерів оновити:** tool-dispatcher.js:31, inbox.js:26, tasks.js:16, notes.js:20, finance.js:23, me.js:25, habits.js сам (1878). evening-chat — лише коментар (перевірити).
+- **Шар безпечний:** core→tabs прецеденти є (utils/boot/trash/nav), циркулярність habits↔inbox/tasks/notes вже існує і працює (виклики не top-level). esbuild hoisting resolve — після різу `node build.js` перевірити.
+- **window-exports НЕ зачеплені** (1978-1985 — інші функції).
+- **Після D1 habits ≈1155 (<1200)** — опційний другий різ: `sendTasksBarMessage` 1800-1974 → tasks.js (→~980) або quit-блок 39-142 → habits-quit.js.
+- **DRY-борг помічено:** локальний `_levenshtein` дублює `levenshtein` з utils — НЕ блокер, окремо.
 | D3 | **boot.js 1450:** винести 18 boot-міграцій у `src/core/migrations.js` (чистий блок, план каже вони лишаються лише для one-time імпорту). | 🟢 | ⬜ | — |
 | D4 | **notes.js 1408:** винести цільний блок (кандидат: folder-логіка/рендер) — за зв'язністю. | 🟢 | ⬜ | — |
 | E | **Pre-flight** (усі сторожі + node --check) + bump CACHE + реліз-нотатки + /finish UPDATE. | 🟢 | ⬜ | — |
