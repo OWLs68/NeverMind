@@ -1,4 +1,4 @@
-import { getAIContext, getOWLPersonality, restoreChatUI, loadChatMsgs, _isNetworkError, getRecentChatsAcrossTabs } from '../ai/core.js';
+import { getAIContext, getOWLPersonality, restoreChatUI, loadChatMsgs, _isNetworkError, getRecentChatsAcrossTabs, openaiFetch } from '../ai/core.js';
 import { formatFactsForBoard } from '../ai/memory.js';
 import { getRecentActions, getReminders, saveReminders } from '../core/utils.js';
 import { currentTab } from '../core/nav.js';
@@ -836,11 +836,7 @@ ${getChipStatsForPrompt() ? '- ' + getChipStatsForPrompt() : ''}
 - Відповідай українською.`;
 
   try {
-    const res = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-      signal: abortSignal,
-      body: JSON.stringify({
+    const res = await openaiFetch('chat/completions', {
         model: 'gpt-4o-mini',
         messages: [
           { role: 'system', content: systemPrompt },
@@ -849,8 +845,7 @@ ${getChipStatsForPrompt() ? '- ' + getChipStatsForPrompt() : ''}
         max_tokens: 150,
         temperature: 0.8,
         response_format: { type: "json_object" }
-      })
-    });
+    }, { signal: abortSignal });
     if (!res.ok) {
       const errDetail = `HTTP ${res.status} ${res.statusText}`;
       console.warn('[OWL board] API error:', errDetail);

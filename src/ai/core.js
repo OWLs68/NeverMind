@@ -462,18 +462,30 @@ export function handleChatError(addMsg) {
   }
 }
 
+// === ЄДИНИЙ ТРАНСПОРТНИЙ КОРДОН ДО LLM (план Supabase §8, v3pexs 28.06) ===
+// ВСI звернення до OpenAI у застосунку йдуть ЧЕРЕЗ ЦЮ функцію — раніше 14 місць
+// у 10 файлах дзвонили fetch(api.openai.com) напряму, тож OpenAI→Mastra/Edge
+// означало б 14 переписувань. Тепер = зміна 1 функції. Сторож
+// check-llm-boundary.js стереже що "api.openai.com" не зʼявляється поза core.js.
+// НАВМИСНО тонкий: повертає сирий Response — обробка помилок/UX лишається у
+// споживачів (поведінка 1:1 при рефакторі). path: 'chat/completions' | 'audio/speech'.
+export function openaiFetch(path, body, { signal } = {}) {
+  const key = localStorage.getItem('nm_gemini_key');
+  return fetch('https://api.openai.com/v1/' + path, {
+    method: 'POST',
+    signal,
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+    body: JSON.stringify(body)
+  });
+}
+
 async function _fetchAI(messages, signal, tools, temperature = 0.7, module = 'unknown') {
   const key = localStorage.getItem('nm_gemini_key');
   if (!key) { showToast('⚙️ Введіть OpenAI API ключ у налаштуваннях', 3000); return null; }
   if (location.protocol === 'file:') { showToast('⚠️ Відкрий файл через сервер, не file://', 5000); return null; }
   const body = { model: 'gpt-4o-mini', messages, max_tokens: 400, temperature };
   if (tools && tools.length > 0) body.tools = tools;
-  const res = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    signal,
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-    body: JSON.stringify(body)
-  });
+  const res = await openaiFetch('chat/completions', body, { signal });
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
     showToast('❌ ' + (data?.error?.message || `Помилка ${res.status}`), 4000);

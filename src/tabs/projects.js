@@ -9,7 +9,7 @@ import { makeProject } from '../data/entity-factories.js';
 import { assessProjectCompleteness, PROJECT_DIM_LABELS, PROJECT_GAP_PROMPTS } from '../data/project-completeness.js';
 import { escapeHtml, safeHref, parseContentChips, t } from '../core/utils.js';
 import { logUsage } from '../core/usage-meter.js';
-import { callAIWithTools, getAIContext, getOWLPersonality, openChatBar, safeAgentReply, saveChatMsg, INBOX_TOOLS, handleChatError } from '../ai/core.js';
+import { callAIWithTools, getAIContext, getOWLPersonality, openChatBar, safeAgentReply, saveChatMsg, INBOX_TOOLS, handleChatError, openaiFetch } from '../ai/core.js';
 import { getProjectsChatSystem } from '../ai/prompts.js';
 import { dispatchChatToolCalls } from '../ai/tool-dispatcher.js';
 import { shouldClarify } from '../owl/clarify-guard.js';
@@ -605,16 +605,12 @@ export async function startProjectInboxInterview(projectName, projectSubtitle, p
 ${aiContext ? '\n\n' + aiContext : ''}`;
 
   try {
-    const res = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-      body: JSON.stringify({
+    const res = await openaiFetch('chat/completions', {
         model: 'gpt-4o-mini',
         messages: [{ role: 'system', content: systemPrompt }],
         max_tokens: 100,
         temperature: 0.75
-      })
-    });
+      });
     const data = await res.json();
     if (data?.usage) logUsage('projects-ai', data.usage, data.model);
     const reply = data.choices?.[0]?.message?.content?.trim();

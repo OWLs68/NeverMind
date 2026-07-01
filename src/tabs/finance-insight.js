@@ -5,7 +5,7 @@
 // ============================================================
 
 import { escapeHtml, t } from '../core/utils.js';
-import { getOWLPersonality } from '../ai/core.js';
+import { getOWLPersonality, openaiFetch } from '../ai/core.js';
 import { logUsage } from '../core/usage-meter.js';
 import { getCurrency, formatMoney, getFinBudget } from './finance.js';
 
@@ -95,11 +95,7 @@ ${budget.total > 0 ? `Бюджет місяця: ${formatMoney(budget.total)} (�
 ${totalInc > 0 ? `Доходи: ${formatMoney(totalInc)} (заощаджено ${Math.round((totalInc - totalExp) / totalInc * 100)}%)` : ''}`;
 
   try {
-    const res = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-      body: JSON.stringify({ model: 'gpt-4o-mini', messages: [{ role: 'user', content: prompt }], max_tokens: 120, temperature: 0.3 })
-    });
+    const res = await openaiFetch('chat/completions', { model: 'gpt-4o-mini', messages: [{ role: 'user', content: prompt }], max_tokens: 120, temperature: 0.3 });
     const data = await res.json();
     if (data?.usage) logUsage('finance-insight', data.usage, data.model);
     const text = data.choices?.[0]?.message?.content?.trim();

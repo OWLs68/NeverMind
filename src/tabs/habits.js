@@ -11,7 +11,7 @@ import { makeHabit } from '../data/habit-classifier.js';
 import { makeEvent, makeTask, makeList } from '../data/entity-factories.js';
 import { getLists, saveLists } from './lists.js';
 import { addToTrash, showUndoToast } from '../core/trash.js';
-import { callAIWithTools, getAIContext, getOWLPersonality, safeAgentReply, INBOX_TOOLS, handleChatError } from '../ai/core.js';
+import { callAIWithTools, getAIContext, getOWLPersonality, safeAgentReply, INBOX_TOOLS, handleChatError, openaiFetch } from '../ai/core.js';
 import { UI_TOOLS_RULES, BASE_CHAT_RULES } from '../ai/prompts.js';
 import { dispatchChatToolCalls } from '../ai/tool-dispatcher.js';
 import { shouldClarify } from '../owl/clarify-guard.js';
@@ -117,10 +117,7 @@ function _owlQuitRelapse(habitId, prevStreak, freedomDays) {
   const settings = JSON.parse(localStorage.getItem('nm_settings') || '{}');
   const owlMode = settings.owl_mode || 'balanced';
   const tone = owlMode === 'brutal' ? 'різкий, чесний, без зайвого жалю' : owlMode === 'soft' ? 'м\'який, підтримуючий, співчутливий' : 'збалансований, чесний але підтримуючий';
-  fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-    body: JSON.stringify({
+  openaiFetch('chat/completions', {
       model: 'gpt-4o-mini',
       max_tokens: 80,
       messages: [{
@@ -130,8 +127,7 @@ function _owlQuitRelapse(habitId, prevStreak, freedomDays) {
         role: 'user',
         content: `Користувач зірвався з "${name}". Серія була ${prevStreak} ${_dayWord(prevStreak)}, але загалом ${freedomDays} вільних ${_dayWord(freedomDays)} — вони залишаються. Скажи щось коротке та підтримуюче.`
       }]
-    })
-  }).then(r => r.json()).then(d => {
+    }).then(r => r.json()).then(d => {
     if (d?.usage) logUsage('habits-ai', d.usage, d.model);
     const reply = d.choices?.[0]?.message?.content;
     if (reply) addInboxChatMsg('agent', reply);

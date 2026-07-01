@@ -28,7 +28,7 @@ import { t } from '../core/utils.js';
 import { showToast, currentTab } from '../core/nav.js';
 import { logTtsUsage } from '../core/usage-meter.js';
 import { getSettings, updateSettings } from '../core/settings.js';
-import { openChatBar } from '../ai/core.js';
+import { openChatBar, openaiFetch } from '../ai/core.js';
 
 // Живий діалог працює ЛИШЕ коли відкритий чат (Роман) — бо є куди говорити.
 function _chatOpen() { try { return !!document.querySelector('.ai-bar-chat-window.open'); } catch (e) { return false; } }
@@ -109,11 +109,7 @@ function _addTtsChars(n) {
 // Генерує аудіо-шматок (Blob) через OpenAI tts-1 — НЕ грає (цим керує
 // _runSequential). tts-1 надійна + низьколатентна, приймає вибраний голос.
 async function _genOpenAI(text, key) {
-  const res = await fetch('https://api.openai.com/v1/audio/speech', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-    body: JSON.stringify({ model: 'tts-1', voice: _openaiVoice(), input: text, response_format: 'mp3' }),
-  });
+  const res = await openaiFetch('audio/speech', { model: 'tts-1', voice: _openaiVoice(), input: text, response_format: 'mp3' });
   if (!res.ok) throw new Error('tts ' + res.status);
   return res.blob();
 }

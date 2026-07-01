@@ -10,7 +10,7 @@ import { makeNote } from '../data/entity-factories.js';
 import { escapeHtml, formatTime, parseContentChips, t } from '../core/utils.js';
 import { logUsage } from '../core/usage-meter.js';
 import { addToTrash, showUndoToast } from '../core/trash.js';
-import { callAI, callAIWithTools, getAIContext, getOWLPersonality, openChatBar, safeAgentReply, saveChatMsg, INBOX_TOOLS, handleChatError } from '../ai/core.js';
+import { callAI, callAIWithTools, getAIContext, getOWLPersonality, openChatBar, safeAgentReply, saveChatMsg, INBOX_TOOLS, handleChatError, openaiFetch } from '../ai/core.js';
 import { renderChips } from '../owl/chips.js';
 import { UI_TOOLS_RULES, BASE_CHAT_RULES } from '../ai/prompts.js';
 import { dispatchChatToolCalls } from '../ai/tool-dispatcher.js';
@@ -963,10 +963,7 @@ ${currentText}
 ${aiContext ? '\n\n' + aiContext : ''}`;
 
   try {
-    const res = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-      body: JSON.stringify({
+    const res = await openaiFetch('chat/completions', {
         model: 'gpt-4o-mini',
         messages: [
           { role: 'system', content: systemPrompt },
@@ -975,8 +972,7 @@ ${aiContext ? '\n\n' + aiContext : ''}`;
         ],
         max_tokens: 800,
         temperature: 0.7
-      })
-    });
+      });
     const data = await res.json();
     if (data?.usage) logUsage('notes-ai', data.usage, data.model);
     const rawReply = data.choices?.[0]?.message?.content;
