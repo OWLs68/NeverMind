@@ -14,6 +14,7 @@
 // ============================================================
 
 import { CHIP_PROMPT_RULES } from '../owl/chips.js';
+import { getSettings } from '../core/settings.js';
 import { UI_TOOLS } from './ui-tools.js';
 
 // ===== 1. getOWLPersonality — особистість OWL =====
@@ -136,7 +137,7 @@ const _STATE_STYLES = {
 };
 
 export function getOWLPersonality() {
-  const settings = JSON.parse(localStorage.getItem('nm_settings') || '{}');
+  const settings = getSettings();
   const mode = settings.owl_mode || 'partner';
   const name = settings.name ? settings.name : '';
   const nameStr = name ? `, звертайся до користувача на імʼя "${name}"` : '';

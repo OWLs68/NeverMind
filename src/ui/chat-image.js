@@ -11,6 +11,7 @@ import { showToast } from '../core/nav.js';
 import { t } from '../core/utils.js';
 import { logUsage } from '../core/usage-meter.js';
 import { getChatVisionPrompt } from '../ai/prompts.js';
+import { openaiFetch } from '../ai/core.js';
 
 // Таб → (поле вводу, функція надсилання). Один мозок: далі все йде звичайним
 // потоком кожного бару (той самий dispatcher і tools).
@@ -63,10 +64,7 @@ function _downscale(file, maxDim) {
 // як звичайне повідомлення юзера).
 async function _visionDescribe(dataUrl, key) {
   const sys = getChatVisionPrompt();
-  const res = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-    body: JSON.stringify({
+  const res = await openaiFetch('chat/completions', {
       model: 'gpt-4o-mini',
       messages: [
         { role: 'system', content: sys },
@@ -77,7 +75,6 @@ async function _visionDescribe(dataUrl, key) {
       ],
       max_tokens: 300,
       temperature: 0.4,
-    }),
   });
   const data = await res.json();
   if (data?.usage) logUsage('chat-vision', data.usage, data.model);

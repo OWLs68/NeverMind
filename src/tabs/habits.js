@@ -4,6 +4,7 @@
 // ============================================================
 
 import { currentTab, showToast } from '../core/nav.js';
+import { getSettings } from '../core/settings.js';
 import { escapeHtml, logRecentAction, extractJsonBlocks, parseContentChips, levenshtein, t, getReminders, saveReminders } from '../core/utils.js';
 import { logUsage } from '../core/usage-meter.js';
 import { generateUUID } from '../core/uuid.js';
@@ -11,7 +12,7 @@ import { makeHabit } from '../data/habit-classifier.js';
 import { makeEvent, makeTask, makeList } from '../data/entity-factories.js';
 import { getLists, saveLists } from './lists.js';
 import { addToTrash, showUndoToast } from '../core/trash.js';
-import { callAIWithTools, getAIContext, getOWLPersonality, safeAgentReply, INBOX_TOOLS, handleChatError } from '../ai/core.js';
+import { callAIWithTools, getAIContext, getOWLPersonality, safeAgentReply, INBOX_TOOLS, handleChatError, openaiFetch } from '../ai/core.js';
 import { UI_TOOLS_RULES, BASE_CHAT_RULES } from '../ai/prompts.js';
 import { dispatchChatToolCalls } from '../ai/tool-dispatcher.js';
 import { shouldClarify } from '../owl/clarify-guard.js';
@@ -114,13 +115,10 @@ function _owlQuitRelapse(habitId, prevStreak, freedomDays) {
     addInboxChatMsg('agent', t('habits.quit.msg.hard_day_offline', 'Сьогодні важкий день з "{name}".{fdText} Завтра новий шанс.', { name, fdText }));
     return;
   }
-  const settings = JSON.parse(localStorage.getItem('nm_settings') || '{}');
+  const settings = getSettings();
   const owlMode = settings.owl_mode || 'balanced';
   const tone = owlMode === 'brutal' ? 'різкий, чесний, без зайвого жалю' : owlMode === 'soft' ? 'м\'який, підтримуючий, співчутливий' : 'збалансований, чесний але підтримуючий';
-  fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-    body: JSON.stringify({
+  openaiFetch('chat/completions', {
       model: 'gpt-4o-mini',
       max_tokens: 80,
       messages: [{
@@ -130,8 +128,7 @@ function _owlQuitRelapse(habitId, prevStreak, freedomDays) {
         role: 'user',
         content: `Користувач зірвався з "${name}". Серія була ${prevStreak} ${_dayWord(prevStreak)}, але загалом ${freedomDays} вільних ${_dayWord(freedomDays)} — вони залишаються. Скажи щось коротке та підтримуюче.`
       }]
-    })
-  }).then(r => r.json()).then(d => {
+    }).then(r => r.json()).then(d => {
     if (d?.usage) logUsage('habits-ai', d.usage, d.model);
     const reply = d.choices?.[0]?.message?.content;
     if (reply) addInboxChatMsg('agent', reply);

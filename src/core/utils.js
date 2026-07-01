@@ -1,4 +1,5 @@
 import { getInbox, saveInbox, renderInbox } from '../tabs/inbox.js';
+import { getSettings } from './settings.js';
 import { generateUUID } from './uuid.js';
 
 export function autoResizeTextarea(el) {
@@ -249,7 +250,7 @@ export function getRecentActions() {
 // майбутнього словника i18n. Зараз дефолт 'uk'; коли додамо англійську —
 // nm_settings.lang='en' і все (TTS + переклади) перемкнеться автоматично.
 export function getLang() {
-  try { return (JSON.parse(localStorage.getItem('nm_settings') || '{}').lang) || 'uk'; }
+  try { return (getSettings().lang) || 'uk'; }
   catch (e) { return 'uk'; }
 }
 

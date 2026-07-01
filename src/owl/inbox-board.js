@@ -4,6 +4,7 @@
 // ============================================================
 
 import { currentTab, switchTab, showToast } from '../core/nav.js';
+import { getSettings } from '../core/settings.js';
 import { escapeHtml, parseContentChips, getReminders, saveReminders } from '../core/utils.js';
 import { generateUUID } from '../core/uuid.js';
 import { makeTask, makeFinance } from '../data/entity-factories.js';
@@ -346,7 +347,7 @@ export function clearStaleBoards() {
 
 // === РОЗКЛАД ДНЯ ===
 export function getSchedule() {
-  const s = JSON.parse(localStorage.getItem('nm_settings') || '{}');
+  const s = getSettings();
   const sc = s.schedule || {};
   const parseH = (str, def) => {
     if (!str) return def;
@@ -1215,7 +1216,7 @@ export function tryOwlBoardUpdate() {
 // Одноразово запитує розклад якщо не заповнено
 function _owlAskScheduleIfNeeded() {
   if (localStorage.getItem('nm_owl_schedule_asked')) return;
-  const s = JSON.parse(localStorage.getItem('nm_settings') || '{}');
+  const s = getSettings();
   if (s.schedule && s.schedule.wakeUp) return; // вже заповнено
   localStorage.setItem('nm_owl_schedule_asked', '1');
   localStorage.setItem('nm_owl_schedule_pending', String(Date.now()));

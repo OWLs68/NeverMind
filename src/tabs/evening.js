@@ -11,6 +11,7 @@ import { generateUUID } from '../core/uuid.js';
 import { makeMoment } from '../data/entity-factories.js';
 import { escapeHtml, logRecentAction, t } from '../core/utils.js';
 import { logUsage } from '../core/usage-meter.js';
+import { openaiFetch } from '../ai/core.js';
 import { getTasks, saveTasks, setupModalSwipeClose } from './tasks.js';
 import { getHabits, getHabitLog, getQuitStatus } from './habits.js';
 import { getNotes, addNoteFromInbox, findOrCreateDailyFolder } from './notes.js';
@@ -363,14 +364,10 @@ export async function generateMomentSummary(momentId, text) {
   // Не генеруємо для коротких текстів — вони вже короткі
   if (text.length <= 60) return;
   try {
-    const res = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-      body: JSON.stringify({
+    const res = await openaiFetch('chat/completions', {
         model: 'gpt-4o-mini',
         messages: [{ role: 'user', content: `Стисни цей момент дня до 1 короткої фрази (максимум 7 слів, без крапки в кінці, українською): "${text}"` }],
         max_tokens: 30, temperature: 0.5
-      })
     });
     const data = await res.json();
     if (data?.usage) logUsage('evening-summary', data.usage, data.model);

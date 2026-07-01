@@ -4,7 +4,7 @@
 // ============================================================
 
 import { currentTab, showToast, switchTab, updateKeyStatus } from '../core/nav.js';
-import { getAIContext, getOWLPersonality, safeAgentReply } from '../ai/core.js';
+import { getAIContext, getOWLPersonality, safeAgentReply, openaiFetch } from '../ai/core.js';
 import { logUsage } from '../core/usage-meter.js';
 import { getSettings, updateSettings } from '../core/settings.js';
 import { saveMemory } from '../ai/memory.js';
@@ -686,7 +686,7 @@ async function finishSurvey() {
     localStorage.setItem('nm_guide_step', SURVEY_QUESTIONS.length.toString());
     return;
   }
-  const settings = JSON.parse(localStorage.getItem('nm_settings') || '{}');
+  const settings = getSettings();
   const name = settings.name || 'користувач';
 
   // Парсимо розклад з відповіді на питання #6 (індекс 5)
@@ -713,11 +713,7 @@ async function finishSurvey() {
   const prompt = `Ти — OWL, агент NeverMind. Користувач ${name} тільки що відповів на питання онбордингу:\n\n${answersText}\n\nЗроби дві речі:\n1. Збережи ключові факти про користувача у форматі короткого резюме (4-6 речень) — це піде в памʼять агента.\n2. Дай 2-3 конкретні практичні поради як використовувати NeverMind саме для цієї людини. Порекомендуй конкретні вкладки або функції.\n\nФормат відповіді — ТІЛЬКИ валідний JSON:\n{"memory": "текст для памʼяті", "advice": "персональні поради 2-3 речення"}`;
 
   try {
-    const res = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-      body: JSON.stringify({ model: 'gpt-4o-mini', messages: [{ role: 'user', content: prompt }], max_tokens: 500, temperature: 0.7 })
-    });
+    const res = await openaiFetch('chat/completions', { model: 'gpt-4o-mini', messages: [{ role: 'user', content: prompt }], max_tokens: 500, temperature: 0.7 });
     const data = await res.json();
     if (data?.usage) logUsage('onboarding', data.usage, data.model);
     const reply = data.choices?.[0]?.message?.content?.trim();
@@ -889,16 +885,12 @@ ${priorQA}
 Відповідай РІВНО словом ENOUGH (і нічим більше) ЛИШЕ коли покрито щонайменше виміри 1+2+3 і ще хоча б два з 4-7 — тобто контексту реально достатньо для плану. Якщо ще ні — став питання.
 Тільки текст питання АБО ENOUGH.`;
   try {
-    const res = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-      body: JSON.stringify({
+    const res = await openaiFetch('chat/completions', {
         model: 'gpt-4o-mini',
         messages: [{ role: 'system', content: systemPrompt }],
         max_tokens: 80,
         temperature: 0.7
-      })
-    });
+      });
     const data = await res.json();
     if (data?.usage) logUsage('onboarding', data.usage, data.model);
     const reply = (data.choices?.[0]?.message?.content || '').trim();
@@ -941,10 +933,7 @@ async function generateProjectFirstSteps(projectName) {
 }
 Не вигадуй те чого юзер не казав — порожнє поле краще ніж вигадка.`;
   try {
-    const res = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-      body: JSON.stringify({
+    const res = await openaiFetch('chat/completions', {
         model: 'gpt-4o-mini',
         messages: [
           { role: 'system', content: systemPrompt },
@@ -952,8 +941,7 @@ async function generateProjectFirstSteps(projectName) {
         ],
         max_tokens: 400,
         temperature: 0.6
-      })
-    });
+      });
     const data = await res.json();
     if (data?.usage) logUsage('onboarding', data.usage, data.model);
     const reply = data.choices?.[0]?.message?.content?.trim();
@@ -1020,16 +1008,12 @@ export async function saveGuideTopicAnswer(userText) {
   if (!topicData) return;
 
   try {
-    const res = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-      body: JSON.stringify({
+    const res = await openaiFetch('chat/completions', {
         model: 'gpt-4o-mini',
         messages: [{ role: 'user', content: `Існуюча памʼять про користувача:\n${currentMemory}\n\nНова відповідь на питання "${topicData.q}":\n${userText}\n\nДопов нову інформацію до памʼяті. Повернь ТІЛЬКИ оновлений текст памʼяті (без JSON, без коментарів), максимум 8 речень.` }],
         max_tokens: 300,
         temperature: 0.5
-      })
-    });
+      });
     const data = await res.json();
     if (data?.usage) logUsage('onboarding', data.usage, data.model);
     const updated = data.choices?.[0]?.message?.content?.trim();
@@ -1102,7 +1086,7 @@ function selectOwlMode(mode) {
 }
 
 function obShowWelcome() {
-  const settings = JSON.parse(localStorage.getItem('nm_settings') || '{}');
+  const settings = getSettings();
   document.getElementById('ob-welcome-text').textContent = t('onb.welcome', 'Привіт, {name}! 👋', { name: settings.name || t('onb.welcome.fallback_name', 'друже') });
   document.getElementById('ob-step-2').style.display = 'none';
   document.getElementById('ob-step-3').style.display = 'block';

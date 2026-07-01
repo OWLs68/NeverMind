@@ -9,7 +9,7 @@ import { logUsage } from '../core/usage-meter.js';
 import { generateUUID } from '../core/uuid.js';
 import { makeTask } from '../data/entity-factories.js';
 import { addToTrash, showUndoToast } from '../core/trash.js';
-import { callAI, getAIContext, getOWLPersonality, openChatBar, saveChatMsg, handleChatError } from '../ai/core.js';
+import { callAI, getAIContext, getOWLPersonality, openChatBar, saveChatMsg, handleChatError, openaiFetch } from '../ai/core.js';
 import { renderChips } from '../owl/chips.js';
 import { attachSwipeDelete } from '../ui/swipe-delete.js';
 import { renderChecklist } from '../ui/checklist.js';
@@ -464,16 +464,12 @@ async function sendTaskChatMessage() {
 Інакше — звичайний текст українською.${aiContext ? '\n\n' + aiContext : ''}`;
 
   try {
-    const res = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-      body: JSON.stringify({
+    const res = await openaiFetch('chat/completions', {
         model: 'gpt-4o-mini',
         messages: [{ role: 'system', content: systemPrompt }, ...taskChatHistory.slice(-12)],
         max_tokens: 300,
         temperature: 0.75
-      })
-    });
+      });
     const data = await res.json();
     if (data?.usage) logUsage('tasks-ai', data.usage, data.model);
     const rawReply = data.choices?.[0]?.message?.content;
@@ -575,12 +571,7 @@ export async function autoGenerateTaskSteps(taskId, title) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 25000);
   try {
-    const res = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      signal: controller.signal,
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-      body: JSON.stringify({ model: 'gpt-4o-mini', messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: title }], max_tokens: 150, temperature: 0.3 })
-    });
+    const res = await openaiFetch('chat/completions', { model: 'gpt-4o-mini', messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: title }], max_tokens: 150, temperature: 0.3 }, { signal: controller.signal });
     clearTimeout(timeout);
     const data = await res.json();
     if (data?.usage) logUsage('tasks-ai', data.usage, data.model);

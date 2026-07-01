@@ -1,4 +1,5 @@
-import { getAIContext, getOWLPersonality, restoreChatUI, loadChatMsgs, _isNetworkError, getRecentChatsAcrossTabs } from '../ai/core.js';
+import { getAIContext, getOWLPersonality, restoreChatUI, loadChatMsgs, _isNetworkError, getRecentChatsAcrossTabs, openaiFetch } from '../ai/core.js';
+import { getSettings } from '../core/settings.js';
 import { formatFactsForBoard } from '../ai/memory.js';
 import { getRecentActions, getReminders, saveReminders } from '../core/utils.js';
 import { currentTab } from '../core/nav.js';
@@ -836,11 +837,7 @@ ${getChipStatsForPrompt() ? '- ' + getChipStatsForPrompt() : ''}
 - Відповідай українською.`;
 
   try {
-    const res = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-      signal: abortSignal,
-      body: JSON.stringify({
+    const res = await openaiFetch('chat/completions', {
         model: 'gpt-4o-mini',
         messages: [
           { role: 'system', content: systemPrompt },
@@ -849,8 +846,7 @@ ${getChipStatsForPrompt() ? '- ' + getChipStatsForPrompt() : ''}
         max_tokens: 150,
         temperature: 0.8,
         response_format: { type: "json_object" }
-      })
-    });
+    }, { signal: abortSignal });
     if (!res.ok) {
       const errDetail = `HTTP ${res.status} ${res.statusText}`;
       console.warn('[OWL board] API error:', errDetail);
@@ -970,7 +966,7 @@ function _tryLocalFallback(tab) {
   // Блокуємо тільки якщо є свіже повідомлення (менше 30 хв).
   if (visibleTs > 0 && Date.now() - visibleTs < 30 * 60 * 1000) return;
 
-  const mode = (JSON.parse(localStorage.getItem('nm_settings') || '{}').owl_mode) || 'partner';
+  const mode = (getSettings().owl_mode) || 'partner';
   let text = '';
   const chips = [];
   // Відмінювання: 1 задача, 2 задачі, 5 задач
