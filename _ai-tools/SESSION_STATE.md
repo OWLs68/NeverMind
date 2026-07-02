@@ -28,6 +28,14 @@
 - **bareNoun-тест:** node-тест нездійсненний (browser-імпорти через `tool-dispatcher`) → покрито емуляцією логіки 8/8 + смоук. Борг: винести чисту логіку рішення як зробили з tool-filter.
 - **Правило організації потоку OWL — ЗАКРИТО (`5873656`):** `FLOW_ORGANIZE_RULE` у `BASE_CHAT_RULES`. 3+ різних пунктів → групи + фільтр ✅/⚠️/❌ + дієвий підсумок (plain-text). Чекає iPhone-смоук Романа (AI-поведінка, не автотест).
 
+**8. 🤖 АВТОНОМНИЙ БЛОК Fable 5 (28.06-02.07, мандат «без моєї участі», E2E #38+#40):**
+- **A:** bareNoun-логіка → `src/data/clarify-decision.js` (pure) + сторож 28/28 (борг тесту закрито).
+- **B:** LLM-кордон `openaiFetch` — 15 викликів OpenAI в 11 файлах → 1 функція у core.js (OpenAI→Mastra = 1 файл, план §8) + сторож check-llm-boundary.
+- **C:** nm_settings read-path 12→1 (getSettings) + сторож check-settings-boundary. Разом 15 сторожів у CI.
+- **D (розбиття «правильно», всі 4):** habits 1985→1157 (`core/execute-action.js`) · boot 1450→616 (`core/migrations.js`) · inbox 1459→1150 (`tabs/inbox-feed.js`) · notes 1408→1109 (`tabs/notes-view.js`). Механічні різи за мапами розвідників, strangler (імпортери без змін). ЖОДЕН файл >1200.
+- **Самокорекція:** E2E #39 червоний → відтворено ЛОКАЛЬНИМ chromium (симлінк /opt/pw-browsers) → корінь: getFolderColor відрізаний від своїх констант (ReferenceError у renderNotes; дані цілі) → повернуто до констант + getter activeNoteViewId → 11/11 локально → #40 зелений. Мапи агентів ловлять функції, НЕ константи — урок для наступних різів.
+- **Модель:** settings.json `"model": "claude-fable-5"` до 07.07 (крок 0.3 у /byyou, авто-відкат після).
+
 **7. 🗂 ФIЧА «Списки в Inbox» — ЗАКРИТО (`38aa5e0`→`09550ca`, /byyou 10 кроків, E2E #29):** окрема сутність `nm_lists` (варіант A, рішення Романа). «склади список покупок: молоко, хліб» → **картка-чекліст у стрічці Inbox** (квадратики + прогрес N/M), нуль слідів у Задачах. Системно: новий `src/data/list-detector.js` (детермінований парсер, правило 12) + guard `dropTaskOnList` (бекстоп save_task→save_list) + спільний `src/ui/checklist.js` `renderChecklist()` (DRY, реюз з задачами) + AI tools `save_list`/`delete_list` + категорія `list` у tool-filter + новий `src/tabs/lists.js`. Council 5 поглядів (Sonnet) — знайшли 2 міни (prompts §СПИСОК вчив «список→задача»; autoGenerateTaskSteps), обидві знешкоджено. Чекає iPhone-смоук (тап-тогл headless не ловить).
 
 ### Метрики

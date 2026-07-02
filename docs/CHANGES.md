@@ -3402,3 +3402,7 @@ E2E-тестер переведено з Hetzner-сервера на **Playwrigh
 
 **Коміти:** `7a72423` токен-фікс · `a2d165b` фінанси-дати · `dadfab0` момент-локація · `6a53105`+`94b748a` bareNoun-чіпи · `5873656` OWL-правило · `38aa5e0`→`09550ca` Списки (10 кроків)
 **Метрики:** ~30 комітів (`04a3285`→`09550ca`), CACHE_NAME `nm-20260627-1533`, деплой v1082, E2E #27+#29 зелені. Нові файли: `src/tabs/lists.js`, `src/data/list-detector.js`, `src/ui/checklist.js`, ключ `nm_lists`
+
+**Продовження (28.06-02.07, автономний блок Fable 5 + звірка Supabase):** звірку плану Supabase виправлено (політика видалення tombstone+30д — рішення Романа; Ворота1 закрито/В2=30 точок/чіпи 0/8), Notes-конверт (7-ма сутність, makeNote), OWL-правило FLOW_ORGANIZE_RULE, налаштування моделі Fable 5 до 07.07. Автономний блок: A bareNoun-тест 28/28 · B LLM-кордон openaiFetch (15→1, план §8) · C settings read-path 12→1 · D розбиття 4 великих файлів (habits/boot/inbox/notes → execute-action/migrations/inbox-feed/notes-view, всі <1200, механічні різи за мапами агентів + strangler). Самокорекція E2E #39: getFolderColor відрізаний від констант → локальна репродукція chromium → фікс → #40 зелений. Сторожів у CI: 15.
+**Коміти (блок):** `0b4fed7`/`0a96ac2` A · `0869719` B · `09ad7c5` C · `6c63b83` D1 · `c339e7a` D3 · `5351150` D4 · `8323813` D2 · `4e7b09a` фікс E2E
+**Метрики (блок):** ~20 комітів, E2E #38+#40 зелені, нові src/data/clarify-decision.js + src/core/{execute-action,migrations}.js + src/tabs/{inbox-feed,notes-view}.js + 3 сторожі
