@@ -9099,17 +9099,14 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
   });
 
   // src/tabs/notes-view.js
-  function getFolderColor(folder) {
-    if (!folder) return DEFAULT_NOTE_FOLDER;
-    const cat = findCategoryByFolder(folder);
-    if (cat && cat.dot) return { bg: FOLDER_BG, border: FOLDER_BORDER, dot: cat.dot };
-    return DEFAULT_NOTE_FOLDER;
+  function getActiveNoteViewId() {
+    return activeNoteViewId;
   }
   function openNoteView(id) {
     const notes = getNotes();
     const n = notes.find((x) => x.id === id);
     if (!n) return;
-    activeNoteViewId2 = id;
+    activeNoteViewId = id;
     noteChatHistory = [];
     noteChatLoading = false;
     const fc = getFolderColor(n.folder);
@@ -9137,11 +9134,11 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
     });
   }
   function closeNoteView() {
-    if (activeNoteViewId2) {
+    if (activeNoteViewId) {
       const textEl = document.getElementById("note-view-text");
       if (textEl) {
         const notes = getNotes();
-        const idx = notes.findIndex((x) => x.id === activeNoteViewId2);
+        const idx = notes.findIndex((x) => x.id === activeNoteViewId);
         if (idx !== -1 && textEl.textContent !== notes[idx].text) {
           notes[idx].text = textEl.textContent;
           notes[idx].updatedAt = Date.now();
@@ -9151,17 +9148,17 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
       }
     }
     document.getElementById("note-view-modal").style.display = "none";
-    activeNoteViewId2 = null;
+    activeNoteViewId = null;
     noteChatHistory = [];
   }
   function autoSaveNoteView() {
-    if (!activeNoteViewId2) return;
+    if (!activeNoteViewId) return;
     if (_autoSaveNoteTimer) clearTimeout(_autoSaveNoteTimer);
     _autoSaveNoteTimer = setTimeout(() => {
       const textEl = document.getElementById("note-view-text");
       if (!textEl) return;
       const notes = getNotes();
-      const idx = notes.findIndex((x) => x.id === activeNoteViewId2);
+      const idx = notes.findIndex((x) => x.id === activeNoteViewId);
       if (idx !== -1) {
         notes[idx].text = textEl.textContent;
         notes[idx].updatedAt = Date.now();
@@ -9173,11 +9170,11 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
     }, 800);
   }
   function openNoteViewMenu() {
-    if (!activeNoteViewId2) return;
+    if (!activeNoteViewId) return;
     const notes = getNotes();
-    const n = notes.find((x) => x.id === activeNoteViewId2);
+    const n = notes.find((x) => x.id === activeNoteViewId);
     if (!n) return;
-    setActiveNoteMenuId(activeNoteViewId2);
+    setActiveNoteMenuId(activeNoteViewId);
     document.getElementById("note-menu").style.display = "flex";
   }
   function switchNoteViewTab(tab) {
@@ -9205,7 +9202,7 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
       tabChat.style.borderBottomColor = "#c2620a";
       if (noteChatHistory.length === 0) {
         const notes = getNotes();
-        const n = notes.find((x) => x.id === activeNoteViewId2);
+        const n = notes.find((x) => x.id === activeNoteViewId);
         if (n) initNoteChatGreeting(n);
       }
     }
@@ -9262,7 +9259,7 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
     const btn = document.getElementById("note-chat-send");
     btn.disabled = true;
     const notes = getNotes();
-    const n = notes.find((x) => x.id === activeNoteViewId2);
+    const n = notes.find((x) => x.id === activeNoteViewId);
     const aiContext = getAIContext();
     const currentText = n?.text || "";
     const systemPrompt = `${getOWLPersonality()} \u0422\u0438 \u0430\u0441\u0438\u0441\u0442\u0435\u043D\u0442 \u0434\u043B\u044F \u0440\u043E\u0431\u043E\u0442\u0438 \u0437 \u043D\u043E\u0442\u0430\u0442\u043A\u043E\u044E \u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447\u0430.
@@ -9305,7 +9302,7 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
           const parsed = JSON.parse(clean);
           if (parsed.action === "update_note" && parsed.text) {
             const allNotes = getNotes();
-            const idx = allNotes.findIndex((x) => x.id === activeNoteViewId2);
+            const idx = allNotes.findIndex((x) => x.id === activeNoteViewId);
             if (idx !== -1) {
               allNotes[idx].text = parsed.text;
               allNotes[idx].updatedAt = Date.now();
@@ -9352,7 +9349,7 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
   }
   function saveAgentResponseAsNote(text) {
     const notes = getNotes();
-    const originalNote = notes.find((x) => x.id === activeNoteViewId2);
+    const originalNote = notes.find((x) => x.id === activeNoteViewId);
     const folder = originalNote?.folder || t("notes.default_folder", "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435");
     notes.unshift(makeNote({ text, folder, source: "ai" }));
     saveNotes(notes);
@@ -9360,7 +9357,7 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
     document.getElementById("note-chat-save-btn")?.remove();
     _pendingAgentNote = "";
   }
-  var activeNoteViewId2, noteChatHistory, noteChatLoading, _autoSaveNoteTimer, _pendingAgentNote;
+  var activeNoteViewId, noteChatHistory, noteChatLoading, _autoSaveNoteTimer, _pendingAgentNote;
   var init_notes_view = __esm({
     "src/tabs/notes-view.js"() {
       init_utils();
@@ -9371,7 +9368,7 @@ ${aiContext ? "\n\n" + aiContext : ""}`;
       init_entity_factories();
       init_notes_categories();
       init_notes();
-      activeNoteViewId2 = null;
+      activeNoteViewId = null;
       noteChatHistory = [];
       noteChatLoading = false;
       _autoSaveNoteTimer = null;
@@ -9652,6 +9649,12 @@ ${recent}`;
     }
     return cur;
   }
+  function getFolderColor(folder) {
+    if (!folder) return DEFAULT_NOTE_FOLDER;
+    const cat = findCategoryByFolder(folder);
+    if (cat && cat.dot) return { bg: FOLDER_BG, border: FOLDER_BORDER, dot: cat.dot };
+    return DEFAULT_NOTE_FOLDER;
+  }
   function renderNotes(searchQuery = "") {
     let notes = getNotes();
     const content = document.getElementById("notes-content");
@@ -9898,7 +9901,7 @@ ${recent}`;
   function noteMenuEdit() {
     const id = activeNoteMenuId;
     closeNoteMenu();
-    if (activeNoteViewId !== id) openNoteView(id);
+    if (getActiveNoteViewId() !== id) openNoteView(id);
     setTimeout(() => {
       const textEl = document.getElementById("note-view-text");
       if (textEl) {
@@ -9914,7 +9917,7 @@ ${recent}`;
   }
   function noteMenuDelete() {
     const id = activeNoteMenuId;
-    const fromView = activeNoteViewId === id;
+    const fromView = getActiveNoteViewId() === id;
     closeNoteMenu();
     if (fromView) closeNoteView();
     deleteNote(id);
@@ -10259,7 +10262,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
     }
     notesBarLoading = false;
   }
-  var editingNoteId, currentNotesFolder, ICON_SVG, FOLDER_ICON_DEFAULT, ALL_FOLDER_ICONS, activeNoteMenuId, _editingFolder, _selectedIconKey, _selectedColorKey, FOLDER_COLOR_PALETTE, _notesTypingEl, notesBarHistory, notesBarLoading;
+  var editingNoteId, currentNotesFolder, ICON_SVG, FOLDER_ICON_DEFAULT, ALL_FOLDER_ICONS, FOLDER_BG, FOLDER_BORDER, DEFAULT_NOTE_FOLDER, activeNoteMenuId, _editingFolder, _selectedIconKey, _selectedColorKey, FOLDER_COLOR_PALETTE, _notesTypingEl, notesBarHistory, notesBarLoading;
   var init_notes = __esm({
     "src/tabs/notes.js"() {
       init_nav();
@@ -10316,6 +10319,9 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
       };
       FOLDER_ICON_DEFAULT = ICON_SVG.note;
       ALL_FOLDER_ICONS = Object.keys(ICON_SVG);
+      FOLDER_BG = "linear-gradient(135deg,#f5ede0,#ede0cc)";
+      FOLDER_BORDER = "rgba(255,255,255,0.4)";
+      DEFAULT_NOTE_FOLDER = { bg: FOLDER_BG, border: FOLDER_BORDER, dot: "\u{1F4DD}" };
       activeNoteMenuId = null;
       _editingFolder = null;
       _selectedIconKey = "folder";
