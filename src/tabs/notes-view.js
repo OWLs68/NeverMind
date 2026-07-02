@@ -17,7 +17,7 @@ import { logUsage } from '../core/usage-meter.js';
 import { renderChips } from '../owl/chips.js';
 import { makeNote } from '../data/entity-factories.js';
 import { findCategoryByFolder } from '../data/notes-categories.js';
-import { getNotes, saveNotes, renderNotes, openEditNote, setActiveNoteMenuId } from './notes.js';
+import { getNotes, saveNotes, renderNotes, openEditNote, setActiveNoteMenuId, getFolderColor } from './notes.js';
 
 
 // === NOTE VIEW MODAL (F2) ===
@@ -25,12 +25,13 @@ let activeNoteViewId = null;
 let noteChatHistory = [];
 let noteChatLoading = false;
 
-export function getFolderColor(folder) {
-  if (!folder) return DEFAULT_NOTE_FOLDER;
-  const cat = findCategoryByFolder(folder);
-  if (cat && cat.dot) return { bg: FOLDER_BG, border: FOLDER_BORDER, dot: cat.dot };
-  return DEFAULT_NOTE_FOLDER;
-}
+// getFolderColor ПОВЕРНУТО у notes.js (фікс E2E #39): залежить від констант
+// FOLDER_BG/FOLDER_BORDER/DEFAULT_NOTE_FOLDER що живуть там — esbuild лишав
+// їх вільними ідентифікаторами → ReferenceError → нотатки не рендерились.
+
+// Getter для notes.js (noteMenuEdit/Delete читають який view відкритий;
+// пряме читання чужої module-var після різу = звернення до неіснуючого глобала).
+export function getActiveNoteViewId() { return activeNoteViewId; }
 
 export function openNoteView(id) {
   const notes = getNotes();
