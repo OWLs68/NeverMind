@@ -392,6 +392,13 @@ function resolveRootFolder(folderName) {
 const FOLDER_BG = 'linear-gradient(135deg,#f5ede0,#ede0cc)';
 const FOLDER_BORDER = 'rgba(255,255,255,0.4)';
 const DEFAULT_NOTE_FOLDER = { bg: FOLDER_BG, border: FOLDER_BORDER, dot: '📝' };
+// Повернуто з notes-view.js (фікс E2E #39) — функція належить константам вище.
+export function getFolderColor(folder) {
+  if (!folder) return DEFAULT_NOTE_FOLDER;
+  const cat = findCategoryByFolder(folder);
+  if (cat && cat.dot) return { bg: FOLDER_BG, border: FOLDER_BORDER, dot: cat.dot };
+  return DEFAULT_NOTE_FOLDER;
+}
 
 export function renderNotes(searchQuery = '') {
   let notes = getNotes();
@@ -684,7 +691,7 @@ function noteMenuEdit() {
   const id = activeNoteMenuId;
   closeNoteMenu();
   // Відкриваємо нотатку і фокусуємо текст для редагування
-  if (activeNoteViewId !== id) openNoteView(id);
+  if (getActiveNoteViewId() !== id) openNoteView(id);
   setTimeout(() => {
     const textEl = document.getElementById('note-view-text');
     if (textEl) {
@@ -701,7 +708,7 @@ function noteMenuEdit() {
 }
 function noteMenuDelete() {
   const id = activeNoteMenuId;
-  const fromView = activeNoteViewId === id;
+  const fromView = getActiveNoteViewId() === id;
   closeNoteMenu();
   if (fromView) closeNoteView();
   deleteNote(id);
@@ -750,8 +757,8 @@ function noteMenuMove() {
 // === NOTE VIEW MODAL — ПЕРЕНЕСЕНО (v3pexs 28.06, D4) ===
 // openNoteView/closeNoteView/чат нотатки (302 рядки) → src/tabs/notes-view.js.
 // Ре-експорт (strangler): health.js/tasks.js/delegation працюють без змін.
-import { openNoteView, closeNoteView, switchNoteViewTab, openNoteViewMenu, sendNoteChatMessage, autoSaveNoteView, getFolderColor } from './notes-view.js';
-export { openNoteView, closeNoteView, switchNoteViewTab, openNoteViewMenu, sendNoteChatMessage, autoSaveNoteView, getFolderColor } from './notes-view.js';
+import { openNoteView, closeNoteView, switchNoteViewTab, openNoteViewMenu, sendNoteChatMessage, autoSaveNoteView, getActiveNoteViewId } from './notes-view.js';
+export { openNoteView, closeNoteView, switchNoteViewTab, openNoteViewMenu, sendNoteChatMessage, autoSaveNoteView } from './notes-view.js';
 
 
 // === FOLDER UTILITIES ===
