@@ -7975,7 +7975,7 @@ ${UI_TOOLS_RULES}${context ? "\n\n" + context : ""}${stats ? "\n\n" + stats : ""
     if (reply) {
       const blocks = extractJsonBlocks(reply);
       for (const parsed of blocks) {
-        if (parsed.action && processUniversalAction(parsed, text, (r, t2) => addMeChatMsg(r, t2))) {
+        if (parsed.action && processUniversalAction2(parsed, text, (r, t2) => addMeChatMsg(r, t2))) {
           handled = true;
         }
       }
@@ -8944,7 +8944,7 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
         if (q === "last") {
           const lastAction = typeFilter ? null : readLastReversible();
           if (lastAction) {
-            const ok = executeReverse(lastAction.reverse, processUniversalAction);
+            const ok = executeReverse(lastAction.reverse, processUniversalAction2);
             if (ok) {
               markReversed(lastAction.id);
               addMsg("agent", `\u2705 \u0412\u0456\u0434\u043C\u0456\u043D\u0438\u0432: ${lastAction.summary}`);
@@ -8994,7 +8994,7 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
       const acts = toolCallToAction(name, args);
       let universalHandled = false;
       for (const a of acts) {
-        if (processUniversalAction(a, originalText, addMsg)) {
+        if (processUniversalAction2(a, originalText, addMsg)) {
           any = true;
           universalHandled = true;
         }
@@ -9095,6 +9095,287 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
         { id: "coffee", icon: "coffee" },
         { id: "photo", icon: "camera" }
       ];
+    }
+  });
+
+  // src/tabs/notes-view.js
+  function getFolderColor(folder) {
+    if (!folder) return DEFAULT_NOTE_FOLDER;
+    const cat = findCategoryByFolder(folder);
+    if (cat && cat.dot) return { bg: FOLDER_BG, border: FOLDER_BORDER, dot: cat.dot };
+    return DEFAULT_NOTE_FOLDER;
+  }
+  function openNoteView(id) {
+    const notes = getNotes();
+    const n = notes.find((x) => x.id === id);
+    if (!n) return;
+    activeNoteViewId2 = id;
+    noteChatHistory = [];
+    noteChatLoading = false;
+    const fc = getFolderColor(n.folder);
+    const modal = document.getElementById("note-view-modal");
+    if (modal) modal.style.background = fc.bg;
+    document.getElementById("note-view-folder").textContent = n.folder || t("notes.default_folder", "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435");
+    const preview = n.text.length > 50 ? n.text.substring(0, 50) + "\u2026" : n.text;
+    document.getElementById("note-view-preview").textContent = preview;
+    const textEl = document.getElementById("note-view-text");
+    if (textEl) textEl.textContent = n.text;
+    document.getElementById("note-chat-messages").innerHTML = "";
+    const allNotes = getNotes();
+    const idx = allNotes.findIndex((x) => x.id === id);
+    if (idx !== -1) {
+      allNotes[idx].lastViewed = Date.now();
+      saveNotes(allNotes);
+    }
+    switchNoteViewTab("note");
+    modal.style.display = "flex";
+    requestAnimationFrame(() => {
+      const panel = document.getElementById("note-view-panel-note");
+      if (panel) panel.scrollTop = 0;
+      const textEl2 = document.getElementById("note-view-text");
+      if (textEl2) textEl2.scrollTop = 0;
+    });
+  }
+  function closeNoteView() {
+    if (activeNoteViewId2) {
+      const textEl = document.getElementById("note-view-text");
+      if (textEl) {
+        const notes = getNotes();
+        const idx = notes.findIndex((x) => x.id === activeNoteViewId2);
+        if (idx !== -1 && textEl.textContent !== notes[idx].text) {
+          notes[idx].text = textEl.textContent;
+          notes[idx].updatedAt = Date.now();
+          saveNotes(notes);
+          if (currentTab === "notes") renderNotes();
+        }
+      }
+    }
+    document.getElementById("note-view-modal").style.display = "none";
+    activeNoteViewId2 = null;
+    noteChatHistory = [];
+  }
+  function autoSaveNoteView() {
+    if (!activeNoteViewId2) return;
+    if (_autoSaveNoteTimer) clearTimeout(_autoSaveNoteTimer);
+    _autoSaveNoteTimer = setTimeout(() => {
+      const textEl = document.getElementById("note-view-text");
+      if (!textEl) return;
+      const notes = getNotes();
+      const idx = notes.findIndex((x) => x.id === activeNoteViewId2);
+      if (idx !== -1) {
+        notes[idx].text = textEl.textContent;
+        notes[idx].updatedAt = Date.now();
+        saveNotes(notes);
+        const preview = notes[idx].text.length > 50 ? notes[idx].text.substring(0, 50) + "\u2026" : notes[idx].text;
+        const prevEl = document.getElementById("note-view-preview");
+        if (prevEl) prevEl.textContent = preview;
+      }
+    }, 800);
+  }
+  function openNoteViewMenu() {
+    if (!activeNoteViewId2) return;
+    const notes = getNotes();
+    const n = notes.find((x) => x.id === activeNoteViewId2);
+    if (!n) return;
+    setActiveNoteMenuId(activeNoteViewId2);
+    document.getElementById("note-menu").style.display = "flex";
+  }
+  function switchNoteViewTab(tab) {
+    const notePanel = document.getElementById("note-view-panel-note");
+    const chatPanel = document.getElementById("note-view-panel-chat");
+    const inputArea = document.getElementById("note-chat-input-area");
+    const tabNote = document.getElementById("note-view-tab-note");
+    const tabChat = document.getElementById("note-view-tab-chat");
+    if (tab === "note") {
+      notePanel.style.display = "block";
+      chatPanel.style.display = "none";
+      inputArea.style.display = "none";
+      tabNote.style.color = "#c2620a";
+      tabNote.style.borderBottomColor = "#c2620a";
+      tabChat.style.color = "rgba(30,16,64,0.4)";
+      tabChat.style.borderBottomColor = "transparent";
+    } else {
+      notePanel.style.display = "none";
+      chatPanel.style.display = "flex";
+      chatPanel.style.flexDirection = "column";
+      inputArea.style.display = "flex";
+      tabNote.style.color = "rgba(30,16,64,0.4)";
+      tabNote.style.borderBottomColor = "transparent";
+      tabChat.style.color = "#c2620a";
+      tabChat.style.borderBottomColor = "#c2620a";
+      if (noteChatHistory.length === 0) {
+        const notes = getNotes();
+        const n = notes.find((x) => x.id === activeNoteViewId2);
+        if (n) initNoteChatGreeting(n);
+      }
+    }
+  }
+  async function initNoteChatGreeting(note) {
+    const key = localStorage.getItem("nm_gemini_key");
+    if (!key) {
+      addNoteChatMsg("agent", t("notes.chat.no_key_greeting", "\u0412\u0432\u0435\u0434\u0438 OpenAI \u043A\u043B\u044E\u0447 \u0432 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445 \u0449\u043E\u0431 \u0441\u043F\u0456\u043B\u043A\u0443\u0432\u0430\u0442\u0438\u0441\u044C \u0437 \u0430\u0433\u0435\u043D\u0442\u043E\u043C."));
+      return;
+    }
+    const aiContext = getAIContext();
+    const systemPrompt = `${getOWLPersonality()} \u0422\u0435\u0431\u0435 \u043F\u043E\u043F\u0440\u043E\u0441\u0438\u043B\u0438 \u043F\u043E\u0433\u043E\u0432\u043E\u0440\u0438\u0442\u0438 \u043F\u0440\u043E \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0443 \u043D\u043E\u0442\u0430\u0442\u043A\u0443. \u041F\u0440\u043E\u0447\u0438\u0442\u0430\u0439 \u0457\u0457 \u0456 \u0441\u043A\u0430\u0436\u0438 \u043A\u043E\u0440\u043E\u0442\u043A\u043E (1-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F): \u0449\u043E \u0446\u0435 \u0437\u0430 \u043D\u043E\u0442\u0430\u0442\u043A\u0430 \u0456 \u044F\u043A \u0442\u0438 \u043C\u043E\u0436\u0435\u0448 \u0434\u043E\u043F\u043E\u043C\u043E\u0433\u0442\u0438 \u0437 \u043D\u0435\u044E. \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E.${aiContext ? "\n\n" + aiContext : ""}`;
+    const greeting = await callAI(systemPrompt, `\u041D\u043E\u0442\u0430\u0442\u043A\u0430: ${note.text}`, {}, "notes-greeting");
+    if (greeting) addNoteChatMsg("agent", greeting);
+  }
+  function addNoteChatMsg(role, text, chips = null) {
+    if (role === "agent" && (!chips || chips.length === 0) && text) {
+      const _p = parseContentChips(text);
+      if (_p.chips) {
+        text = _p.text;
+        chips = _p.chips;
+      }
+    }
+    const el = document.getElementById("note-chat-messages");
+    const isAgent = role === "agent";
+    if (isAgent) el.querySelectorAll(".chat-chips-row").forEach((n) => n.remove());
+    const div = document.createElement("div");
+    div.style.cssText = `display:flex;${isAgent ? "" : "justify-content:flex-end"}`;
+    div.innerHTML = `<div style="max-width:82%;background:${isAgent ? "rgba(255,255,255,0.9)" : "#4f46e5"};color:${isAgent ? "#1e1040" : "white"};border-radius:${isAgent ? "4px 14px 14px 14px" : "14px 4px 14px 14px"};padding:12px 16px;font-size:18px;line-height:1.7;font-weight:${isAgent ? "400" : "500"}">${escapeHtml(text).replace(/\n/g, "<br>")}</div>`;
+    el.appendChild(div);
+    if (isAgent && Array.isArray(chips) && chips.length > 0) {
+      const chipsRow = document.createElement("div");
+      chipsRow.className = "chat-chips-row";
+      renderChips(chipsRow, chips, "notes");
+      el.appendChild(chipsRow);
+    }
+    el.scrollTop = el.scrollHeight;
+    if (role !== "agent") noteChatHistory.push({ role: "user", content: text });
+  }
+  async function sendNoteChatMessage() {
+    if (noteChatLoading) return;
+    const input = document.getElementById("note-chat-input");
+    const text = input.value.trim();
+    if (!text) return;
+    const key = localStorage.getItem("nm_gemini_key");
+    if (!key) {
+      addNoteChatMsg("agent", t("notes.chat.no_key", "\u0412\u0432\u0435\u0434\u0438 OpenAI \u043A\u043B\u044E\u0447 \u0432 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445."));
+      return;
+    }
+    input.value = "";
+    input.style.height = "auto";
+    addNoteChatMsg("user", text);
+    noteChatLoading = true;
+    const btn = document.getElementById("note-chat-send");
+    btn.disabled = true;
+    const notes = getNotes();
+    const n = notes.find((x) => x.id === activeNoteViewId2);
+    const aiContext = getAIContext();
+    const currentText = n?.text || "";
+    const systemPrompt = `${getOWLPersonality()} \u0422\u0438 \u0430\u0441\u0438\u0441\u0442\u0435\u043D\u0442 \u0434\u043B\u044F \u0440\u043E\u0431\u043E\u0442\u0438 \u0437 \u043D\u043E\u0442\u0430\u0442\u043A\u043E\u044E \u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447\u0430.
+
+\u041F\u043E\u0442\u043E\u0447\u043D\u0438\u0439 \u0442\u0435\u043A\u0441\u0442 \u043D\u043E\u0442\u0430\u0442\u043A\u0438:
+---
+${currentText}
+---
+
+\u0422\u0438 \u043C\u043E\u0436\u0435\u0448:
+1. \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0442\u0438 \u043D\u0430 \u043F\u0438\u0442\u0430\u043D\u043D\u044F \u043F\u0440\u043E \u043D\u043E\u0442\u0430\u0442\u043A\u0443 \u2014 \u0437\u0432\u0438\u0447\u0430\u0439\u043D\u0438\u0439 \u0442\u0435\u043A\u0441\u0442
+2. \u041E\u043D\u043E\u0432\u043B\u044E\u0432\u0430\u0442\u0438 \u043D\u043E\u0442\u0430\u0442\u043A\u0443 \u2014 \u044F\u043A\u0449\u043E \u043F\u0440\u043E\u0441\u044F\u0442\u044C \u043D\u0430\u043F\u0438\u0441\u0430\u0442\u0438, \u0434\u043E\u043F\u043E\u0432\u043D\u0438\u0442\u0438, \u0437\u043C\u0456\u043D\u0438\u0442\u0438, \u0441\u0442\u0440\u0443\u043A\u0442\u0443\u0440\u0443\u0432\u0430\u0442\u0438, \u0434\u043E\u0434\u0430\u0442\u0438 \u0441\u043F\u0438\u0441\u043E\u043A \u0442\u043E\u0449\u043E
+
+\u042F\u043A\u0449\u043E \u043F\u043E\u0442\u0440\u0456\u0431\u043D\u043E \u041E\u041D\u041E\u0412\u0418\u0422\u0418 \u043D\u043E\u0442\u0430\u0442\u043A\u0443 \u2014 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0422\u0406\u041B\u042C\u041A\u0418 JSON:
+{"action":"update_note","text":"\u043F\u043E\u0432\u043D\u0438\u0439 \u043D\u043E\u0432\u0438\u0439 \u0442\u0435\u043A\u0441\u0442 \u043D\u043E\u0442\u0430\u0442\u043A\u0438"}
+
+\u042F\u043A\u0449\u043E \u043F\u0440\u043E\u0441\u0442\u043E \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0454\u0448 \u2014 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0437\u0432\u0438\u0447\u0430\u0439\u043D\u0438\u043C \u0442\u0435\u043A\u0441\u0442\u043E\u043C (2-4 \u0440\u0435\u0447\u0435\u043D\u043D\u044F).
+\u041D\u0415 \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 JSON \u044F\u043A\u0449\u043E \u0442\u0456\u043B\u044C\u043A\u0438 \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u044E\u0454\u0448 \u0430\u0431\u043E \u043F\u043E\u044F\u0441\u043D\u044E\u0454\u0448.
+${aiContext ? "\n\n" + aiContext : ""}`;
+    try {
+      const res = await openaiFetch("chat/completions", {
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "system", content: systemPrompt },
+          ...noteChatHistory.slice(-10),
+          { role: "user", content: text }
+        ],
+        max_tokens: 800,
+        temperature: 0.7
+      });
+      const data = await res.json();
+      if (data?.usage) logUsage("notes-ai", data.usage, data.model);
+      const rawReply = data.choices?.[0]?.message?.content;
+      const { text: reply, chips: extractedChips } = parseContentChips(rawReply || "");
+      if (reply) {
+        noteChatHistory.push({ role: "user", content: text });
+        noteChatHistory.push({ role: "assistant", content: reply });
+        try {
+          const clean = reply.replace(/^```json\s*|```\s*$/g, "").trim();
+          const parsed = JSON.parse(clean);
+          if (parsed.action === "update_note" && parsed.text) {
+            const allNotes = getNotes();
+            const idx = allNotes.findIndex((x) => x.id === activeNoteViewId2);
+            if (idx !== -1) {
+              allNotes[idx].text = parsed.text;
+              allNotes[idx].updatedAt = Date.now();
+              saveNotes(allNotes);
+              const textEl = document.getElementById("note-view-text");
+              if (textEl) textEl.textContent = parsed.text;
+              renderNotes();
+              addNoteChatMsg("agent", t("notes.chat.updated", "\u2713 \u041D\u043E\u0442\u0430\u0442\u043A\u0443 \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043E."));
+            } else {
+              addNoteChatMsg("agent", t("notes.chat.not_found", "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u043D\u0430\u0439\u0442\u0438 \u043D\u043E\u0442\u0430\u0442\u043A\u0443."));
+            }
+          } else {
+            addNoteChatMsg("agent", reply, extractedChips);
+            showSaveAsNoteBtn(reply);
+          }
+        } catch {
+          addNoteChatMsg("agent", reply, extractedChips);
+          showSaveAsNoteBtn(reply);
+        }
+      } else {
+        handleChatError(addNoteChatMsg);
+      }
+    } catch {
+      addNoteChatMsg("agent", t("common.network_error", "\u041C\u0435\u0440\u0435\u0436\u0435\u0432\u0430 \u043F\u043E\u043C\u0438\u043B\u043A\u0430."));
+    }
+    noteChatLoading = false;
+    btn.disabled = false;
+  }
+  function showSaveAsNoteBtn(replyText) {
+    const el = document.getElementById("note-chat-messages");
+    const old = document.getElementById("note-chat-save-btn");
+    if (old) old.remove();
+    _pendingAgentNote = replyText;
+    const btn = document.createElement("div");
+    btn.id = "note-chat-save-btn";
+    btn.style.cssText = "display:flex;justify-content:flex-end;margin-top:-4px";
+    const button = document.createElement("button");
+    button.textContent = t("notes.chat.save_as_note", "+ \u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u044F\u043A \u043D\u043E\u0442\u0430\u0442\u043A\u0443");
+    button.style.cssText = "background:rgba(79,70,229,0.1);border:1px solid rgba(79,70,229,0.2);border-radius:8px;padding:5px 12px;font-size:13px;font-weight:700;color:#4f46e5;cursor:pointer";
+    button.addEventListener("click", () => saveAgentResponseAsNote(_pendingAgentNote));
+    btn.appendChild(button);
+    el.appendChild(btn);
+    el.scrollTop = el.scrollHeight;
+  }
+  function saveAgentResponseAsNote(text) {
+    const notes = getNotes();
+    const originalNote = notes.find((x) => x.id === activeNoteViewId2);
+    const folder = originalNote?.folder || t("notes.default_folder", "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435");
+    notes.unshift(makeNote({ text, folder, source: "ai" }));
+    saveNotes(notes);
+    renderNotes();
+    document.getElementById("note-chat-save-btn")?.remove();
+    _pendingAgentNote = "";
+  }
+  var activeNoteViewId2, noteChatHistory, noteChatLoading, _autoSaveNoteTimer, _pendingAgentNote;
+  var init_notes_view = __esm({
+    "src/tabs/notes-view.js"() {
+      init_utils();
+      init_nav();
+      init_core();
+      init_usage_meter();
+      init_chips();
+      init_entity_factories();
+      init_notes_categories();
+      init_notes();
+      activeNoteViewId2 = null;
+      noteChatHistory = [];
+      noteChatLoading = false;
+      _autoSaveNoteTimer = null;
+      _pendingAgentNote = "";
     }
   });
 
@@ -9603,6 +9884,9 @@ ${recent}`;
       });
     });
   }
+  function setActiveNoteMenuId(id) {
+    activeNoteMenuId = id;
+  }
   function openNoteMenu(id) {
     activeNoteMenuId = id;
     document.getElementById("note-menu").style.display = "flex";
@@ -9666,267 +9950,6 @@ ${recent}`;
       saveNotes(notes);
       renderNotes();
     }
-  }
-  function getFolderColor(folder) {
-    if (!folder) return DEFAULT_NOTE_FOLDER;
-    const cat = findCategoryByFolder(folder);
-    if (cat && cat.dot) return { bg: FOLDER_BG, border: FOLDER_BORDER, dot: cat.dot };
-    return DEFAULT_NOTE_FOLDER;
-  }
-  function openNoteView(id) {
-    const notes = getNotes();
-    const n = notes.find((x) => x.id === id);
-    if (!n) return;
-    activeNoteViewId = id;
-    noteChatHistory = [];
-    noteChatLoading = false;
-    const fc = getFolderColor(n.folder);
-    const modal = document.getElementById("note-view-modal");
-    if (modal) modal.style.background = fc.bg;
-    document.getElementById("note-view-folder").textContent = n.folder || t("notes.default_folder", "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435");
-    const preview = n.text.length > 50 ? n.text.substring(0, 50) + "\u2026" : n.text;
-    document.getElementById("note-view-preview").textContent = preview;
-    const textEl = document.getElementById("note-view-text");
-    if (textEl) textEl.textContent = n.text;
-    document.getElementById("note-chat-messages").innerHTML = "";
-    const allNotes = getNotes();
-    const idx = allNotes.findIndex((x) => x.id === id);
-    if (idx !== -1) {
-      allNotes[idx].lastViewed = Date.now();
-      saveNotes(allNotes);
-    }
-    switchNoteViewTab("note");
-    modal.style.display = "flex";
-    requestAnimationFrame(() => {
-      const panel = document.getElementById("note-view-panel-note");
-      if (panel) panel.scrollTop = 0;
-      const textEl2 = document.getElementById("note-view-text");
-      if (textEl2) textEl2.scrollTop = 0;
-    });
-  }
-  function closeNoteView() {
-    if (activeNoteViewId) {
-      const textEl = document.getElementById("note-view-text");
-      if (textEl) {
-        const notes = getNotes();
-        const idx = notes.findIndex((x) => x.id === activeNoteViewId);
-        if (idx !== -1 && textEl.textContent !== notes[idx].text) {
-          notes[idx].text = textEl.textContent;
-          notes[idx].updatedAt = Date.now();
-          saveNotes(notes);
-          if (currentTab === "notes") renderNotes();
-        }
-      }
-    }
-    document.getElementById("note-view-modal").style.display = "none";
-    activeNoteViewId = null;
-    noteChatHistory = [];
-  }
-  function autoSaveNoteView() {
-    if (!activeNoteViewId) return;
-    if (_autoSaveNoteTimer) clearTimeout(_autoSaveNoteTimer);
-    _autoSaveNoteTimer = setTimeout(() => {
-      const textEl = document.getElementById("note-view-text");
-      if (!textEl) return;
-      const notes = getNotes();
-      const idx = notes.findIndex((x) => x.id === activeNoteViewId);
-      if (idx !== -1) {
-        notes[idx].text = textEl.textContent;
-        notes[idx].updatedAt = Date.now();
-        saveNotes(notes);
-        const preview = notes[idx].text.length > 50 ? notes[idx].text.substring(0, 50) + "\u2026" : notes[idx].text;
-        const prevEl = document.getElementById("note-view-preview");
-        if (prevEl) prevEl.textContent = preview;
-      }
-    }, 800);
-  }
-  function openNoteViewMenu() {
-    if (!activeNoteViewId) return;
-    const notes = getNotes();
-    const n = notes.find((x) => x.id === activeNoteViewId);
-    if (!n) return;
-    activeNoteMenuId = activeNoteViewId;
-    document.getElementById("note-menu").style.display = "flex";
-  }
-  function switchNoteViewTab(tab) {
-    const notePanel = document.getElementById("note-view-panel-note");
-    const chatPanel = document.getElementById("note-view-panel-chat");
-    const inputArea = document.getElementById("note-chat-input-area");
-    const tabNote = document.getElementById("note-view-tab-note");
-    const tabChat = document.getElementById("note-view-tab-chat");
-    if (tab === "note") {
-      notePanel.style.display = "block";
-      chatPanel.style.display = "none";
-      inputArea.style.display = "none";
-      tabNote.style.color = "#c2620a";
-      tabNote.style.borderBottomColor = "#c2620a";
-      tabChat.style.color = "rgba(30,16,64,0.4)";
-      tabChat.style.borderBottomColor = "transparent";
-    } else {
-      notePanel.style.display = "none";
-      chatPanel.style.display = "flex";
-      chatPanel.style.flexDirection = "column";
-      inputArea.style.display = "flex";
-      tabNote.style.color = "rgba(30,16,64,0.4)";
-      tabNote.style.borderBottomColor = "transparent";
-      tabChat.style.color = "#c2620a";
-      tabChat.style.borderBottomColor = "#c2620a";
-      if (noteChatHistory.length === 0) {
-        const notes = getNotes();
-        const n = notes.find((x) => x.id === activeNoteViewId);
-        if (n) initNoteChatGreeting(n);
-      }
-    }
-  }
-  async function initNoteChatGreeting(note) {
-    const key = localStorage.getItem("nm_gemini_key");
-    if (!key) {
-      addNoteChatMsg("agent", t("notes.chat.no_key_greeting", "\u0412\u0432\u0435\u0434\u0438 OpenAI \u043A\u043B\u044E\u0447 \u0432 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445 \u0449\u043E\u0431 \u0441\u043F\u0456\u043B\u043A\u0443\u0432\u0430\u0442\u0438\u0441\u044C \u0437 \u0430\u0433\u0435\u043D\u0442\u043E\u043C."));
-      return;
-    }
-    const aiContext = getAIContext();
-    const systemPrompt = `${getOWLPersonality()} \u0422\u0435\u0431\u0435 \u043F\u043E\u043F\u0440\u043E\u0441\u0438\u043B\u0438 \u043F\u043E\u0433\u043E\u0432\u043E\u0440\u0438\u0442\u0438 \u043F\u0440\u043E \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0443 \u043D\u043E\u0442\u0430\u0442\u043A\u0443. \u041F\u0440\u043E\u0447\u0438\u0442\u0430\u0439 \u0457\u0457 \u0456 \u0441\u043A\u0430\u0436\u0438 \u043A\u043E\u0440\u043E\u0442\u043A\u043E (1-2 \u0440\u0435\u0447\u0435\u043D\u043D\u044F): \u0449\u043E \u0446\u0435 \u0437\u0430 \u043D\u043E\u0442\u0430\u0442\u043A\u0430 \u0456 \u044F\u043A \u0442\u0438 \u043C\u043E\u0436\u0435\u0448 \u0434\u043E\u043F\u043E\u043C\u043E\u0433\u0442\u0438 \u0437 \u043D\u0435\u044E. \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E.${aiContext ? "\n\n" + aiContext : ""}`;
-    const greeting = await callAI(systemPrompt, `\u041D\u043E\u0442\u0430\u0442\u043A\u0430: ${note.text}`, {}, "notes-greeting");
-    if (greeting) addNoteChatMsg("agent", greeting);
-  }
-  function addNoteChatMsg(role, text, chips = null) {
-    if (role === "agent" && (!chips || chips.length === 0) && text) {
-      const _p = parseContentChips(text);
-      if (_p.chips) {
-        text = _p.text;
-        chips = _p.chips;
-      }
-    }
-    const el = document.getElementById("note-chat-messages");
-    const isAgent = role === "agent";
-    if (isAgent) el.querySelectorAll(".chat-chips-row").forEach((n) => n.remove());
-    const div = document.createElement("div");
-    div.style.cssText = `display:flex;${isAgent ? "" : "justify-content:flex-end"}`;
-    div.innerHTML = `<div style="max-width:82%;background:${isAgent ? "rgba(255,255,255,0.9)" : "#4f46e5"};color:${isAgent ? "#1e1040" : "white"};border-radius:${isAgent ? "4px 14px 14px 14px" : "14px 4px 14px 14px"};padding:12px 16px;font-size:18px;line-height:1.7;font-weight:${isAgent ? "400" : "500"}">${escapeHtml(text).replace(/\n/g, "<br>")}</div>`;
-    el.appendChild(div);
-    if (isAgent && Array.isArray(chips) && chips.length > 0) {
-      const chipsRow = document.createElement("div");
-      chipsRow.className = "chat-chips-row";
-      renderChips(chipsRow, chips, "notes");
-      el.appendChild(chipsRow);
-    }
-    el.scrollTop = el.scrollHeight;
-    if (role !== "agent") noteChatHistory.push({ role: "user", content: text });
-  }
-  async function sendNoteChatMessage() {
-    if (noteChatLoading) return;
-    const input = document.getElementById("note-chat-input");
-    const text = input.value.trim();
-    if (!text) return;
-    const key = localStorage.getItem("nm_gemini_key");
-    if (!key) {
-      addNoteChatMsg("agent", t("notes.chat.no_key", "\u0412\u0432\u0435\u0434\u0438 OpenAI \u043A\u043B\u044E\u0447 \u0432 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445."));
-      return;
-    }
-    input.value = "";
-    input.style.height = "auto";
-    addNoteChatMsg("user", text);
-    noteChatLoading = true;
-    const btn = document.getElementById("note-chat-send");
-    btn.disabled = true;
-    const notes = getNotes();
-    const n = notes.find((x) => x.id === activeNoteViewId);
-    const aiContext = getAIContext();
-    const currentText = n?.text || "";
-    const systemPrompt = `${getOWLPersonality()} \u0422\u0438 \u0430\u0441\u0438\u0441\u0442\u0435\u043D\u0442 \u0434\u043B\u044F \u0440\u043E\u0431\u043E\u0442\u0438 \u0437 \u043D\u043E\u0442\u0430\u0442\u043A\u043E\u044E \u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447\u0430.
-
-\u041F\u043E\u0442\u043E\u0447\u043D\u0438\u0439 \u0442\u0435\u043A\u0441\u0442 \u043D\u043E\u0442\u0430\u0442\u043A\u0438:
----
-${currentText}
----
-
-\u0422\u0438 \u043C\u043E\u0436\u0435\u0448:
-1. \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0442\u0438 \u043D\u0430 \u043F\u0438\u0442\u0430\u043D\u043D\u044F \u043F\u0440\u043E \u043D\u043E\u0442\u0430\u0442\u043A\u0443 \u2014 \u0437\u0432\u0438\u0447\u0430\u0439\u043D\u0438\u0439 \u0442\u0435\u043A\u0441\u0442
-2. \u041E\u043D\u043E\u0432\u043B\u044E\u0432\u0430\u0442\u0438 \u043D\u043E\u0442\u0430\u0442\u043A\u0443 \u2014 \u044F\u043A\u0449\u043E \u043F\u0440\u043E\u0441\u044F\u0442\u044C \u043D\u0430\u043F\u0438\u0441\u0430\u0442\u0438, \u0434\u043E\u043F\u043E\u0432\u043D\u0438\u0442\u0438, \u0437\u043C\u0456\u043D\u0438\u0442\u0438, \u0441\u0442\u0440\u0443\u043A\u0442\u0443\u0440\u0443\u0432\u0430\u0442\u0438, \u0434\u043E\u0434\u0430\u0442\u0438 \u0441\u043F\u0438\u0441\u043E\u043A \u0442\u043E\u0449\u043E
-
-\u042F\u043A\u0449\u043E \u043F\u043E\u0442\u0440\u0456\u0431\u043D\u043E \u041E\u041D\u041E\u0412\u0418\u0422\u0418 \u043D\u043E\u0442\u0430\u0442\u043A\u0443 \u2014 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0422\u0406\u041B\u042C\u041A\u0418 JSON:
-{"action":"update_note","text":"\u043F\u043E\u0432\u043D\u0438\u0439 \u043D\u043E\u0432\u0438\u0439 \u0442\u0435\u043A\u0441\u0442 \u043D\u043E\u0442\u0430\u0442\u043A\u0438"}
-
-\u042F\u043A\u0449\u043E \u043F\u0440\u043E\u0441\u0442\u043E \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0454\u0448 \u2014 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0437\u0432\u0438\u0447\u0430\u0439\u043D\u0438\u043C \u0442\u0435\u043A\u0441\u0442\u043E\u043C (2-4 \u0440\u0435\u0447\u0435\u043D\u043D\u044F).
-\u041D\u0415 \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 JSON \u044F\u043A\u0449\u043E \u0442\u0456\u043B\u044C\u043A\u0438 \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u044E\u0454\u0448 \u0430\u0431\u043E \u043F\u043E\u044F\u0441\u043D\u044E\u0454\u0448.
-${aiContext ? "\n\n" + aiContext : ""}`;
-    try {
-      const res = await openaiFetch("chat/completions", {
-        model: "gpt-4o-mini",
-        messages: [
-          { role: "system", content: systemPrompt },
-          ...noteChatHistory.slice(-10),
-          { role: "user", content: text }
-        ],
-        max_tokens: 800,
-        temperature: 0.7
-      });
-      const data = await res.json();
-      if (data?.usage) logUsage("notes-ai", data.usage, data.model);
-      const rawReply = data.choices?.[0]?.message?.content;
-      const { text: reply, chips: extractedChips } = parseContentChips(rawReply || "");
-      if (reply) {
-        noteChatHistory.push({ role: "user", content: text });
-        noteChatHistory.push({ role: "assistant", content: reply });
-        try {
-          const clean = reply.replace(/^```json\s*|```\s*$/g, "").trim();
-          const parsed = JSON.parse(clean);
-          if (parsed.action === "update_note" && parsed.text) {
-            const allNotes = getNotes();
-            const idx = allNotes.findIndex((x) => x.id === activeNoteViewId);
-            if (idx !== -1) {
-              allNotes[idx].text = parsed.text;
-              allNotes[idx].updatedAt = Date.now();
-              saveNotes(allNotes);
-              const textEl = document.getElementById("note-view-text");
-              if (textEl) textEl.textContent = parsed.text;
-              renderNotes();
-              addNoteChatMsg("agent", t("notes.chat.updated", "\u2713 \u041D\u043E\u0442\u0430\u0442\u043A\u0443 \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043E."));
-            } else {
-              addNoteChatMsg("agent", t("notes.chat.not_found", "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u043D\u0430\u0439\u0442\u0438 \u043D\u043E\u0442\u0430\u0442\u043A\u0443."));
-            }
-          } else {
-            addNoteChatMsg("agent", reply, extractedChips);
-            showSaveAsNoteBtn(reply);
-          }
-        } catch {
-          addNoteChatMsg("agent", reply, extractedChips);
-          showSaveAsNoteBtn(reply);
-        }
-      } else {
-        handleChatError(addNoteChatMsg);
-      }
-    } catch {
-      addNoteChatMsg("agent", t("common.network_error", "\u041C\u0435\u0440\u0435\u0436\u0435\u0432\u0430 \u043F\u043E\u043C\u0438\u043B\u043A\u0430."));
-    }
-    noteChatLoading = false;
-    btn.disabled = false;
-  }
-  function showSaveAsNoteBtn(replyText) {
-    const el = document.getElementById("note-chat-messages");
-    const old = document.getElementById("note-chat-save-btn");
-    if (old) old.remove();
-    _pendingAgentNote = replyText;
-    const btn = document.createElement("div");
-    btn.id = "note-chat-save-btn";
-    btn.style.cssText = "display:flex;justify-content:flex-end;margin-top:-4px";
-    const button = document.createElement("button");
-    button.textContent = t("notes.chat.save_as_note", "+ \u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u044F\u043A \u043D\u043E\u0442\u0430\u0442\u043A\u0443");
-    button.style.cssText = "background:rgba(79,70,229,0.1);border:1px solid rgba(79,70,229,0.2);border-radius:8px;padding:5px 12px;font-size:13px;font-weight:700;color:#4f46e5;cursor:pointer";
-    button.addEventListener("click", () => saveAgentResponseAsNote(_pendingAgentNote));
-    btn.appendChild(button);
-    el.appendChild(btn);
-    el.scrollTop = el.scrollHeight;
-  }
-  function saveAgentResponseAsNote(text) {
-    const notes = getNotes();
-    const originalNote = notes.find((x) => x.id === activeNoteViewId);
-    const folder = originalNote?.folder || t("notes.default_folder", "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0435");
-    notes.unshift(makeNote({ text, folder, source: "ai" }));
-    saveNotes(notes);
-    renderNotes();
-    document.getElementById("note-chat-save-btn")?.remove();
-    _pendingAgentNote = "";
   }
   function openFolderEditModal(folder) {
     _editingFolder = folder;
@@ -10209,7 +10232,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
           notesBarLoading = false;
           return;
         }
-        if (!processUniversalAction(parsed, text, addNotesChatMsg)) {
+        if (!processUniversalAction2(parsed, text, addNotesChatMsg)) {
           const looksLikeJson = reply.startsWith("{") && reply.endsWith("}") || reply.startsWith("[") && reply.endsWith("]");
           if (looksLikeJson) {
             try {
@@ -10236,7 +10259,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
     }
     notesBarLoading = false;
   }
-  var editingNoteId, currentNotesFolder, ICON_SVG, FOLDER_ICON_DEFAULT, ALL_FOLDER_ICONS, FOLDER_BG, FOLDER_BORDER, DEFAULT_NOTE_FOLDER, activeNoteMenuId, activeNoteViewId, noteChatHistory, noteChatLoading, _autoSaveNoteTimer, _pendingAgentNote, _editingFolder, _selectedIconKey, _selectedColorKey, FOLDER_COLOR_PALETTE, _notesTypingEl, notesBarHistory, notesBarLoading;
+  var editingNoteId, currentNotesFolder, ICON_SVG, FOLDER_ICON_DEFAULT, ALL_FOLDER_ICONS, activeNoteMenuId, _editingFolder, _selectedIconKey, _selectedColorKey, FOLDER_COLOR_PALETTE, _notesTypingEl, notesBarHistory, notesBarLoading;
   var init_notes = __esm({
     "src/tabs/notes.js"() {
       init_nav();
@@ -10253,6 +10276,8 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
       init_swipe_delete();
       init_notes_categories();
       init_habits();
+      init_notes_view();
+      init_notes_view();
       editingNoteId = null;
       _migrateFoldersApostrophes();
       currentNotesFolder = null;
@@ -10291,15 +10316,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
       };
       FOLDER_ICON_DEFAULT = ICON_SVG.note;
       ALL_FOLDER_ICONS = Object.keys(ICON_SVG);
-      FOLDER_BG = "linear-gradient(135deg,#f5ede0,#ede0cc)";
-      FOLDER_BORDER = "rgba(255,255,255,0.4)";
-      DEFAULT_NOTE_FOLDER = { bg: FOLDER_BG, border: FOLDER_BORDER, dot: "\u{1F4DD}" };
       activeNoteMenuId = null;
-      activeNoteViewId = null;
-      noteChatHistory = [];
-      noteChatLoading = false;
-      _autoSaveNoteTimer = null;
-      _pendingAgentNote = "";
       _editingFolder = null;
       _selectedIconKey = "folder";
       _selectedColorKey = "default";
@@ -14002,739 +14019,7 @@ ${CHIP_PROMPT_RULES}`;
     }
   });
 
-  // src/tabs/habits.js
-  function getHabits() {
-    try {
-      return JSON.parse(localStorage.getItem("nm_habits2") || "[]");
-    } catch {
-      return [];
-    }
-  }
-  function saveHabits(arr) {
-    localStorage.setItem("nm_habits2", JSON.stringify(arr));
-    window.dispatchEvent(new CustomEvent("nm-data-changed", { detail: "habits" }));
-  }
-  function getHabitLog() {
-    try {
-      return JSON.parse(localStorage.getItem("nm_habit_log2") || "{}");
-    } catch {
-      return {};
-    }
-  }
-  function saveHabitLog(obj) {
-    localStorage.setItem("nm_habit_log2", JSON.stringify(obj));
-    window.dispatchEvent(new CustomEvent("nm-data-changed", { detail: "habits" }));
-  }
-  function getQuitLog() {
-    try {
-      return JSON.parse(localStorage.getItem("nm_quit_log") || "{}");
-    } catch {
-      return {};
-    }
-  }
-  function saveQuitLog(obj) {
-    localStorage.setItem("nm_quit_log", JSON.stringify(obj));
-    window.dispatchEvent(new CustomEvent("nm-data-changed", { detail: "habits" }));
-  }
-  function getQuitStatus(habitId) {
-    const log = getQuitLog();
-    return log[habitId] || { streak: 0, longestStreak: 0, relapses: [], lastHeld: null, freedomDays: 0 };
-  }
-  function holdQuitHabit(habitId) {
-    const today = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
-    const log = getQuitLog();
-    if (!log[habitId]) log[habitId] = { streak: 0, longestStreak: 0, relapses: [], lastHeld: null, freedomDays: 0 };
-    const s = log[habitId];
-    if (s.lastHeld === today) return;
-    s.freedomDays = (s.freedomDays || 0) + 1;
-    const yesterday = new Date(Date.now() - 864e5).toISOString().slice(0, 10);
-    if (s.lastHeld === yesterday || s.lastHeld === null) {
-      s.streak = (s.streak || 0) + 1;
-    } else {
-      s.streak = 1;
-    }
-    s.longestStreak = Math.max(s.streak, s.longestStreak || 0);
-    s.lastHeld = today;
-    log[habitId] = s;
-    saveQuitLog(log);
-    renderProdHabits();
-    const fd = s.freedomDays;
-    showToast(t("habits.quit.toast.held", "\u{1F4AA} +1 \u0432\u0456\u043B\u044C\u043D\u0438\u0439 \u0434\u0435\u043D\u044C! \u0412\u0441\u044C\u043E\u0433\u043E: {fd} {dayWord}", { fd, dayWord: _dayWord(fd) }));
-  }
-  function relapseQuitHabit(habitId) {
-    const today = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
-    const log = getQuitLog();
-    if (!log[habitId]) log[habitId] = { streak: 0, longestStreak: 0, relapses: [], lastHeld: null, freedomDays: 0 };
-    const s = log[habitId];
-    if (!s.relapses) s.relapses = [];
-    if (s.relapses[s.relapses.length - 1] === today) {
-      showToast(t("habits.quit.toast.relapse_dup", "\u0417\u0440\u0438\u0432 \u0432\u0436\u0435 \u0432\u0456\u0434\u043C\u0456\u0447\u0435\u043D\u043E \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456"));
-      return;
-    }
-    s.relapses.push(today);
-    const cutoff = new Date(Date.now() - 90 * 864e5).toISOString().slice(0, 10);
-    s.relapses = s.relapses.filter((d) => d >= cutoff);
-    const prevStreak = s.streak;
-    s.streak = 0;
-    s.lastHeld = null;
-    log[habitId] = s;
-    saveQuitLog(log);
-    renderProdHabits();
-    _owlQuitRelapse(habitId, prevStreak, s.freedomDays || 0);
-  }
-  function _dayWord(n) {
-    if (n % 10 === 1 && n % 100 !== 11) return t("habits.day.one", "\u0434\u0435\u043D\u044C");
-    if ([2, 3, 4].includes(n % 10) && ![12, 13, 14].includes(n % 100)) return t("habits.day.few", "\u0434\u043D\u0456");
-    return t("habits.day.many", "\u0434\u043D\u0456\u0432");
-  }
-  function _owlQuitRelapse(habitId, prevStreak, freedomDays) {
-    const habits = getHabits();
-    const h = habits.find((x) => x.id === habitId);
-    const name = h ? h.name : t("habits.quit.fallback_name", "\u0437\u0432\u0438\u0447\u043A\u0443");
-    const fdText = freedomDays > 0 ? t("habits.quit.freedom_kept", " \u0422\u0432\u043E\u0457 {fd} \u0432\u0456\u043B\u044C\u043D\u0438\u0445 {dayWord} \u2014 \u043D\u0430\u0437\u0430\u0432\u0436\u0434\u0438 \u0442\u0432\u043E\u0457.", { fd: freedomDays, dayWord: _dayWord(freedomDays) }) : "";
-    const key = localStorage.getItem("nm_gemini_key");
-    if (!key) {
-      addInboxChatMsg("agent", t("habits.quit.msg.hard_day_offline", '\u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0432\u0430\u0436\u043A\u0438\u0439 \u0434\u0435\u043D\u044C \u0437 "{name}".{fdText} \u0417\u0430\u0432\u0442\u0440\u0430 \u043D\u043E\u0432\u0438\u0439 \u0448\u0430\u043D\u0441.', { name, fdText }));
-      return;
-    }
-    const settings = getSettings();
-    const owlMode = settings.owl_mode || "balanced";
-    const tone = owlMode === "brutal" ? "\u0440\u0456\u0437\u043A\u0438\u0439, \u0447\u0435\u0441\u043D\u0438\u0439, \u0431\u0435\u0437 \u0437\u0430\u0439\u0432\u043E\u0433\u043E \u0436\u0430\u043B\u044E" : owlMode === "soft" ? "\u043C'\u044F\u043A\u0438\u0439, \u043F\u0456\u0434\u0442\u0440\u0438\u043C\u0443\u044E\u0447\u0438\u0439, \u0441\u043F\u0456\u0432\u0447\u0443\u0442\u043B\u0438\u0432\u0438\u0439" : "\u0437\u0431\u0430\u043B\u0430\u043D\u0441\u043E\u0432\u0430\u043D\u0438\u0439, \u0447\u0435\u0441\u043D\u0438\u0439 \u0430\u043B\u0435 \u043F\u0456\u0434\u0442\u0440\u0438\u043C\u0443\u044E\u0447\u0438\u0439";
-    openaiFetch("chat/completions", {
-      model: "gpt-4o-mini",
-      max_tokens: 80,
-      messages: [{
-        role: "system",
-        content: `\u0422\u0438 OWL \u2014 \u043F\u0435\u0440\u0441\u043E\u043D\u0430\u043B\u044C\u043D\u0438\u0439 \u0430\u0433\u0435\u043D\u0442. \u0422\u043E\u043D: ${tone}. \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0422\u0406\u041B\u042C\u041A\u0418 \u043E\u0434\u043D\u0438\u043C \u0440\u0435\u0447\u0435\u043D\u043D\u044F\u043C \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u041D\u0435 \u0437\u0433\u0430\u0434\u0443\u0439 "\u0441\u0442\u0440\u0456\u043A \u043E\u0431\u043D\u0443\u043B\u0435\u043D\u043E". \u041F\u0456\u0434\u043A\u0440\u0435\u0441\u043B\u0438 \u0449\u043E ${freedomDays} \u0432\u0456\u043B\u044C\u043D\u0438\u0445 \u0434\u043D\u0456\u0432 \u043D\u0456\u043A\u0443\u0434\u0438 \u043D\u0435 \u0434\u0456\u043B\u0438\u0441\u044C.`
-      }, {
-        role: "user",
-        content: `\u041A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447 \u0437\u0456\u0440\u0432\u0430\u0432\u0441\u044F \u0437 "${name}". \u0421\u0435\u0440\u0456\u044F \u0431\u0443\u043B\u0430 ${prevStreak} ${_dayWord(prevStreak)}, \u0430\u043B\u0435 \u0437\u0430\u0433\u0430\u043B\u043E\u043C ${freedomDays} \u0432\u0456\u043B\u044C\u043D\u0438\u0445 ${_dayWord(freedomDays)} \u2014 \u0432\u043E\u043D\u0438 \u0437\u0430\u043B\u0438\u0448\u0430\u044E\u0442\u044C\u0441\u044F. \u0421\u043A\u0430\u0436\u0438 \u0449\u043E\u0441\u044C \u043A\u043E\u0440\u043E\u0442\u043A\u0435 \u0442\u0430 \u043F\u0456\u0434\u0442\u0440\u0438\u043C\u0443\u044E\u0447\u0435.`
-      }]
-    }).then((r) => r.json()).then((d) => {
-      if (d?.usage) logUsage("habits-ai", d.usage, d.model);
-      const reply = d.choices?.[0]?.message?.content;
-      if (reply) addInboxChatMsg("agent", reply);
-    }).catch(() => {
-      addInboxChatMsg("agent", t("habits.quit.msg.hard_day_fallback", '\u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0432\u0430\u0436\u043A\u0438\u0439 \u0434\u0435\u043D\u044C \u0437 "{name}".{fdText} \u0417\u0430\u0432\u0442\u0440\u0430 \u2014 \u043D\u043E\u0432\u0438\u0439 \u0448\u0430\u043D\u0441.', { name, fdText }));
-    });
-  }
-  function setHabitModalType(type) {
-    _habitModalType = type;
-    const buildBtn = document.getElementById("habit-type-build");
-    const quitBtn = document.getElementById("habit-type-quit");
-    const countSection = document.getElementById("habit-count-section");
-    if (type === "build") {
-      buildBtn.style.background = "white";
-      buildBtn.style.color = "#16a34a";
-      buildBtn.style.boxShadow = "0 2px 8px rgba(0,0,0,0.08)";
-      quitBtn.style.background = "transparent";
-      quitBtn.style.color = "rgba(30,16,64,0.4)";
-      quitBtn.style.boxShadow = "none";
-      if (countSection) countSection.style.display = "flex";
-    } else {
-      quitBtn.style.background = "white";
-      quitBtn.style.color = "#c2410c";
-      quitBtn.style.boxShadow = "0 2px 8px rgba(0,0,0,0.08)";
-      buildBtn.style.background = "transparent";
-      buildBtn.style.color = "rgba(30,16,64,0.4)";
-      buildBtn.style.boxShadow = "none";
-      if (countSection) countSection.style.display = "none";
-    }
-  }
-  function adjustHabitCount(delta) {
-    const inp = document.getElementById("habit-input-count");
-    const disp = document.getElementById("habit-count-display");
-    if (!inp || !disp) return;
-    let val = Math.max(1, Math.min(20, parseInt(inp.value || 1) + delta));
-    inp.value = val;
-    disp.textContent = val;
-  }
-  function openEditHabit(id) {
-    const habits = getHabits();
-    const h = habits.find((x) => x.id === id);
-    if (!h) return;
-    editingHabitId = id;
-    document.getElementById("habit-modal-title").textContent = t("habits.modal.title_edit", "\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0437\u0432\u0438\u0447\u043A\u0443");
-    document.getElementById("habit-input-name").value = h.name;
-    let details = h.details || "";
-    if (!details && h.name) {
-      const parts = h.name.split(/[,]\s*/);
-      if (parts.length > 1) details = parts.slice(1).join(", ").trim();
-    }
-    document.getElementById("habit-input-details").value = details;
-    document.getElementById("habit-input-emoji").value = h.emoji || "";
-    const cnt = h.targetCount || 1;
-    document.getElementById("habit-input-count").value = cnt;
-    document.getElementById("habit-count-display").textContent = cnt;
-    let days = h.days || [0, 1, 2, 3, 4];
-    const nameAndDetails = (h.name + " " + details).toLowerCase();
-    const hasSpecificDays = /понеділ|вівтор|серед|четвер|п.ятниц|субот|неділ/.test(nameAndDetails);
-    if (hasSpecificDays && days.length === 7) {
-      days = [];
-      if (/понеділ|пн/.test(nameAndDetails)) days.push(0);
-      if (/вівтор|вт/.test(nameAndDetails)) days.push(1);
-      if (/серед|ср/.test(nameAndDetails)) days.push(2);
-      if (/четвер|чт/.test(nameAndDetails)) days.push(3);
-      if (/п.ятниц|пт/.test(nameAndDetails)) days.push(4);
-      if (/субот|сб/.test(nameAndDetails)) days.push(5);
-      if (/неділ|нд/.test(nameAndDetails)) days.push(6);
-      if (days.length === 0) days = [0, 1, 2, 3, 4];
-    }
-    document.querySelectorAll(".habit-day-btn").forEach((b) => {
-      b.classList.toggle("active", days.includes(parseInt(b.dataset.day)));
-    });
-    setHabitModalType(h.type === "quit" ? "quit" : "build");
-    document.getElementById("habit-modal").style.display = "flex";
-    document.getElementById("habit-delete-btn").style.display = "inline-block";
-    setupModalSwipeClose(document.querySelector("#habit-modal > div:last-child"), closeHabitModal);
-  }
-  function openAddHabit() {
-    editingHabitId = null;
-    document.getElementById("habit-modal-title").textContent = t("habits.modal.title_new", "\u041D\u043E\u0432\u0430 \u0437\u0432\u0438\u0447\u043A\u0430");
-    document.getElementById("habit-input-name").value = "";
-    document.getElementById("habit-input-details").value = "";
-    document.getElementById("habit-input-emoji").value = "";
-    document.getElementById("habit-input-count").value = "1";
-    document.getElementById("habit-count-display").textContent = "1";
-    document.getElementById("habit-delete-btn").style.display = "none";
-    setHabitModalType("build");
-    document.querySelectorAll(".habit-day-btn").forEach((b) => {
-      b.classList.toggle("active", [0, 1, 2, 3, 4].includes(parseInt(b.dataset.day)));
-    });
-    document.getElementById("habit-modal").style.display = "flex";
-    setupModalSwipeClose(document.querySelector("#habit-modal > div:last-child"), closeHabitModal);
-  }
-  function closeHabitModal() {
-    document.getElementById("habit-modal").style.display = "none";
-  }
-  function saveHabit() {
-    const name = document.getElementById("habit-input-name").value.trim();
-    if (!name) {
-      showToast(t("habits.modal.err.empty_name", "\u0412\u0432\u0435\u0434\u0438 \u043D\u0430\u0437\u0432\u0443 \u0437\u0432\u0438\u0447\u043A\u0438"));
-      return;
-    }
-    const details = document.getElementById("habit-input-details").value.trim();
-    const emoji = document.getElementById("habit-input-emoji").value.trim() || (_habitModalType === "quit" ? "\u{1F6AB}" : "\u2B55");
-    const days = [...document.querySelectorAll(".habit-day-btn.active")].map((b) => parseInt(b.dataset.day));
-    const targetCount = _habitModalType === "quit" ? 1 : parseInt(document.getElementById("habit-input-count").value || 1) || 1;
-    const type = _habitModalType;
-    const habits = getHabits();
-    if (editingHabitId) {
-      const idx = habits.findIndex((x) => x.id === editingHabitId);
-      if (idx !== -1) habits[idx] = { ...habits[idx], name, details, emoji, days, targetCount, type };
-    } else {
-      habits.push(makeHabit({ name, details, emoji, days, targetCount, type }));
-    }
-    saveHabits(habits);
-    closeHabitModal();
-    renderHabits();
-    renderProdHabits();
-    showToast(editingHabitId ? t("habits.toast.updated", "\u2713 \u0417\u0432\u0438\u0447\u043A\u0443 \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043E") : type === "quit" ? t("habits.toast.quit_created", "\u{1F6AB} \u0427\u0435\u043B\u0435\u043D\u0434\u0436 \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E") : t("habits.toast.added", "\u2713 \u0417\u0432\u0438\u0447\u043A\u0443 \u0434\u043E\u0434\u0430\u043D\u043E"));
-  }
-  function deleteHabitFromModal() {
-    if (!editingHabitId) return;
-    const id = editingHabitId;
-    const item = getHabits().find((h) => h.id === id);
-    saveHabits(getHabits().filter((h) => h.id !== id));
-    renderHabits();
-    renderProdHabits();
-    closeHabitModal();
-    if (item) showUndoToast(t("habits.toast.deleted", "\u0417\u0432\u0438\u0447\u043A\u0443 \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E"), () => {
-      const habits = getHabits();
-      habits.push(item);
-      saveHabits(habits);
-      renderHabits();
-      renderProdHabits();
-    });
-  }
-  function _habitDone(h, logDay) {
-    const target = h.targetCount || 1;
-    const val = logDay?.[h.id];
-    const cur = typeof val === "boolean" ? val ? 1 : 0 : val || 0;
-    return cur >= target;
-  }
-  function toggleHabitToday(id) {
-    const today = (/* @__PURE__ */ new Date()).toDateString();
-    const log = getHabitLog();
-    if (!log[today]) log[today] = {};
-    const habits = getHabits();
-    const h = habits.find((x) => x.id === id);
-    const target = h?.targetCount || 1;
-    const rawVal = log[today][id];
-    const cur = typeof rawVal === "boolean" ? rawVal ? 1 : 0 : rawVal || 0;
-    const newVal = target === 1 ? cur === 0 ? 1 : cur === 1 ? 2 : 0 : cur + 1;
-    log[today][id] = newVal;
-    saveHabitLog(log);
-    if (h) logRecentAction("complete_habit", h.name, "habits");
-    renderHabits();
-  }
-  function getHabitStreak(id) {
-    const log = getHabitLog();
-    const habits = getHabits();
-    const h = habits.find((x) => x.id === id);
-    if (!h) return 0;
-    let streak = 0;
-    const d = /* @__PURE__ */ new Date();
-    for (let i = 0; i < 60; i++) {
-      const ds = d.toDateString();
-      const dow = (d.getDay() + 6) % 7;
-      if ((h.days || [0, 1, 2, 3, 4]).includes(dow)) {
-        if (_habitDone(h, log[ds])) streak++;
-        else if (i > 0) break;
-      }
-      d.setDate(d.getDate() - 1);
-    }
-    return streak;
-  }
-  function getHabitPct(id) {
-    const log = getHabitLog();
-    const habits = getHabits();
-    const h = habits.find((x) => x.id === id);
-    if (!h) return 0;
-    const plannedDays = h.days || [0, 1, 2, 3, 4];
-    const d = /* @__PURE__ */ new Date();
-    let total = 0, done = 0;
-    for (let i = 0; i < 30; i++) {
-      const ds = d.toDateString();
-      const dow = (d.getDay() + 6) % 7;
-      if (plannedDays.includes(dow)) {
-        total++;
-        if (_habitDone(h, log[ds])) done++;
-      } else if (_habitDone(h, log[ds])) {
-        done++;
-      }
-      d.setDate(d.getDate() - 1);
-    }
-    return total > 0 ? Math.round(done / total * 100) : 0;
-  }
-  function getHabitWeekDays(id, target) {
-    const log = getHabitLog();
-    const done = [];
-    const today = /* @__PURE__ */ new Date();
-    const todayDow = (today.getDay() + 6) % 7;
-    const weekStart = new Date(today);
-    weekStart.setDate(today.getDate() - todayDow);
-    weekStart.setHours(0, 0, 0, 0);
-    for (let i = 0; i < 7; i++) {
-      const d = new Date(weekStart);
-      d.setDate(weekStart.getDate() + i);
-      const ds = d.toDateString();
-      const val = log[ds]?.[id];
-      const cur = typeof val === "boolean" ? val ? 1 : 0 : val || 0;
-      if (cur >= target) done.push({ i, bonus: cur > target });
-    }
-    return done;
-  }
-  function makeHabitDayDots(h, weekState, todayDow) {
-    const labels = [t("day.mon", "\u041F\u043D"), t("day.tue", "\u0412\u0442"), t("day.wed", "\u0421\u0440"), t("day.thu", "\u0427\u0442"), t("day.fri", "\u041F\u0442"), t("day.sat", "\u0421\u0431"), t("day.sun", "\u041D\u0434")];
-    return labels.map(function(label, i) {
-      const isPlanned = (h.days || [0, 1, 2, 3, 4]).includes(i);
-      const entry = weekState.find((x) => x.i === i);
-      const isDone = !!entry;
-      const isBonus = !!(entry && entry.bonus);
-      const isToday = i === todayDow;
-      let bg, border, color;
-      if (isDone) {
-        if (isBonus) {
-          bg = "linear-gradient(135deg,#fbbf24,#f59e0b)";
-          border = "transparent";
-        } else {
-          bg = "#16a34a";
-          border = "#16a34a";
-        }
-        color = "white";
-      } else if (isPlanned) {
-        bg = "transparent";
-        border = "rgba(30,16,64,0.2)";
-        color = "rgba(30,16,64,0.4)";
-      } else {
-        bg = "transparent";
-        border = "rgba(30,16,64,0.08)";
-        color = "rgba(30,16,64,0.15)";
-      }
-      const shadow = isToday ? "box-shadow:0 0 0 2px rgba(22,163,74,0.3);" : "";
-      const text = isDone ? "\u2713" : label.charAt(0);
-      return '<div style="width:24px;height:24px;border-radius:50%;background:' + bg + ";border:1.5px solid " + border + ";display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:" + color + ";" + shadow + '">' + text + "</div>";
-    }).join("");
-  }
-  function renderHabits() {
-    const habits = getHabits();
-    const el = document.getElementById("me-habits-stats-list");
-    const block = document.getElementById("me-habits-stats");
-    if (!el) return;
-    const log = getHabitLog();
-    const today = (/* @__PURE__ */ new Date()).toDateString();
-    const todayDow = ((/* @__PURE__ */ new Date()).getDay() + 6) % 7;
-    if (habits.length === 0) {
-      el.innerHTML = '<div style="text-align:center;padding:20px 0;color:rgba(30,16,64,0.3);font-size:15px">' + t("habits.empty.me_list", "\u0414\u043E\u0434\u0430\u0439 \u043F\u0435\u0440\u0448\u0443 \u0437\u0432\u0438\u0447\u043A\u0443") + "</div>";
-      return;
-    }
-    el.innerHTML = habits.map(function(h) {
-      const target = h.targetCount || 1;
-      const rawVal = log[today]?.[h.id];
-      const cur = typeof rawVal === "boolean" ? rawVal ? 1 : 0 : rawVal || 0;
-      const pct100 = Math.min(cur / target, 1);
-      const isOver = cur > target;
-      const isScheduledToday = (h.days || [0, 1, 2, 3, 4]).includes(todayDow);
-      const streak = getHabitStreak(h.id);
-      const pct = getHabitPct(h.id);
-      const weekDone = getHabitWeekDays(h.id, target);
-      const shortName = h.name.split(" ").slice(0, 4).join(" ");
-      const dayDots = makeHabitDayDots(h, weekDone, todayDow);
-      const pctColor = pct > 0 ? "#16a34a" : "rgba(30,16,64,0.3)";
-      const streakHtml = streak >= 2 ? '<span style="font-size:12px;font-weight:700;color:#f59e0b">\u{1F525}' + streak + "</span>" : "";
-      let checkBg, checkStroke;
-      if (cur === 0) {
-        checkBg = "background:rgba(30,16,64,0.03);border:2px solid rgba(30,16,64,0.15)";
-        checkStroke = "rgba(30,16,64,0.25)";
-      } else if (isOver) {
-        checkBg = "background:linear-gradient(135deg,#fbbf24,#f59e0b);border:none";
-        checkStroke = "white";
-      } else if (pct100 >= 1) {
-        checkBg = "background:#16a34a;border:none";
-        checkStroke = "white";
-      } else {
-        const fillH = Math.round(pct100 * 36);
-        checkBg = `background:linear-gradient(to top,#16a34a ${fillH}px,rgba(30,16,64,0.05) ${fillH}px);border:2px solid rgba(22,163,74,0.4)`;
-        checkStroke = pct100 > 0.5 ? "white" : "rgba(30,16,64,0.4)";
-      }
-      let squaresHtml = "";
-      if (target > 1) {
-        const showCount = Math.min(Math.max(target, cur), 20);
-        squaresHtml = '<div style="display:flex;gap:3px;flex-wrap:wrap;padding-left:46px;margin-top:5px">';
-        for (let i = 0; i < showCount; i++) {
-          const filled = i < cur;
-          const isBonus = i >= target;
-          const bg = filled ? isBonus ? "#fbbf24" : "#16a34a" : "rgba(30,16,64,0.08)";
-          const border = filled ? "none" : "1.5px solid rgba(30,16,64,0.12)";
-          squaresHtml += `<div data-action="tap-habit-square" data-entity="habit" data-id="${h.id}" data-idx="${i}" style="width:13px;height:13px;border-radius:3px;background:${bg};border:${border};cursor:pointer;transition:all 0.15s;display:flex;align-items:center;justify-content:center">`;
-          if (filled) squaresHtml += `<svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg>`;
-          squaresHtml += "</div>";
-        }
-        if (cur < 20) squaresHtml += `<div data-action="toggle-entity-done" data-entity="habit" data-id="${h.id}" style="width:13px;height:13px;border-radius:3px;background:rgba(30,16,64,0.04);border:1.5px dashed rgba(30,16,64,0.15);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:9px;color:rgba(30,16,64,0.3)">+</div>`;
-        squaresHtml += "</div>";
-      }
-      const countLabel = target > 1 ? `<span style="font-size:11px;font-weight:700;color:${cur >= target ? "#16a34a" : "rgba(30,16,64,0.4)"};margin-left:4px">${cur}/${target}</span>` : "";
-      return '<div class="habit-me-item-wrap" data-id="' + h.id + '" style="position:relative;overflow:hidden;border-radius:14px;margin-bottom:6px"><div id="habit-me-item-' + h.id + '" class="inbox-item" data-action="open-edit-habit" data-id="' + h.id + '" style="padding:10px 12px;cursor:pointer;width:100%;box-sizing:border-box;-webkit-tap-highlight-color:transparent"><div style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><div data-action="toggle-entity-done" data-entity="habit" data-id="' + h.id + '" data-habit-check="1" style="width:36px;height:36px;border-radius:50%;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.25s;-webkit-tap-highlight-color:transparent;' + checkBg + `"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${checkStroke}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></div><div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:6px"><span style="font-size:15px;font-weight:700;color:#1e1040">` + escapeHtml(shortName) + "</span>" + countLabel + streakHtml + '</div><div style="font-size:11px;font-weight:600;color:' + pctColor + ';margin-top:1px">' + t("habits.stat.pct_30d", "{pct}% \u0437\u0430 30 \u0434\u043D\u0456\u0432", { pct }) + "</div></div></div>" + squaresHtml + '<div style="display:flex;gap:4px;padding-left:46px">' + dayDots + "</div></div></div>";
-    }).join("");
-    _attachHabitsSwipeDelete();
-  }
-  function updateProdTabCounters() {
-    const taskCount = getTasks().filter((task) => task.status !== "done").length;
-    const taskCountEl = document.getElementById("prod-tab-tasks-count");
-    const taskSubEl = document.getElementById("prod-tab-tasks-sub");
-    if (taskCountEl) taskCountEl.textContent = taskCount;
-    if (taskSubEl) taskSubEl.textContent = taskCount === 1 ? t("tasks.counter.active_one", "\u0430\u043A\u0442\u0438\u0432\u043D\u0430") : t("tasks.counter.active_many", "\u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0445");
-    const habits = getHabits();
-    const buildHabitsAll = habits.filter((h) => h.type !== "quit");
-    const quitHabitsAll = habits.filter((h) => h.type === "quit");
-    const habitCountEl = document.getElementById("prod-tab-habits-count");
-    const habitSubEl = document.getElementById("prod-tab-habits-sub");
-    const totalHabits = buildHabitsAll.length + quitHabitsAll.length;
-    if (habitCountEl) habitCountEl.textContent = totalHabits;
-    if (habitSubEl) habitSubEl.textContent = totalHabits === 1 ? t("habits.counter.one", "\u0437\u0432\u0438\u0447\u043A\u0430") : t("habits.counter.many", "\u0437\u0432\u0438\u0447\u043E\u043A");
-    _attachProdTabSwipe();
-  }
-  function switchProdTab(tab) {
-    currentProdTab = tab;
-    const isHabits = tab === "habits";
-    const indicator = document.getElementById("prod-tab-indicator");
-    if (indicator) {
-      indicator.style.transform = isHabits ? "translateX(100%)" : "translateX(0)";
-      indicator.style.borderColor = isHabits ? "rgba(22,163,74,0.6)" : "rgba(234,88,12,0.6)";
-    }
-    const tabTasks = document.getElementById("prod-tab-tasks");
-    const tasksTitle = tabTasks ? tabTasks.querySelector("div > div:first-child") : null;
-    const tasksCount = document.getElementById("prod-tab-tasks-count");
-    const tasksSub = document.getElementById("prod-tab-tasks-sub");
-    if (tasksTitle) tasksTitle.style.color = !isHabits ? "#ea580c" : "rgba(30,16,64,0.3)";
-    if (tasksCount) tasksCount.style.color = !isHabits ? "#ea580c" : "rgba(30,16,64,0.3)";
-    if (tasksSub) tasksSub.style.color = !isHabits ? "rgba(30,16,64,0.35)" : "rgba(30,16,64,0.3)";
-    const tabHabits = document.getElementById("prod-tab-habits");
-    const habitsTitle = tabHabits ? tabHabits.querySelector("div > div:first-child") : null;
-    const habitsCount = document.getElementById("prod-tab-habits-count");
-    const habitsSub = document.getElementById("prod-tab-habits-sub");
-    if (habitsTitle) habitsTitle.style.color = isHabits ? "#16a34a" : "rgba(30,16,64,0.3)";
-    if (habitsCount) habitsCount.style.color = isHabits ? "#16a34a" : "rgba(30,16,64,0.3)";
-    if (habitsSub) habitsSub.style.color = isHabits ? "rgba(30,16,64,0.35)" : "rgba(30,16,64,0.3)";
-    document.getElementById("prod-page-tasks").style.display = isHabits ? "none" : "block";
-    document.getElementById("prod-page-habits").style.display = isHabits ? "block" : "none";
-    const addBtn = document.getElementById("prod-add-btn");
-    if (addBtn) addBtn.dataset.fn = isHabits ? "openAddHabit" : "openAddTask";
-    updateProdTabCounters();
-    if (isHabits) renderProdHabits();
-    _attachProdTabSwipe();
-  }
-  function _attachProdTabSwipe() {
-    if (_prodSwipeAttached) return;
-    const toggle = document.getElementById("prod-tab-toggle");
-    const indicator = document.getElementById("prod-tab-indicator");
-    if (!toggle || !indicator) return;
-    _prodSwipeAttached = true;
-    let startX = 0, startY = 0;
-    let startTranslateX = 0;
-    let indicatorWidth = 0;
-    let dragging = false;
-    let lockedDir = null;
-    toggle.addEventListener("touchstart", (e) => {
-      if (e.touches.length !== 1) return;
-      startX = e.touches[0].clientX;
-      startY = e.touches[0].clientY;
-      indicatorWidth = indicator.offsetWidth;
-      startTranslateX = currentProdTab === "habits" ? indicatorWidth : 0;
-      dragging = true;
-      lockedDir = null;
-      indicator.style.transition = "border-color 0.3s ease";
-    }, { passive: true });
-    toggle.addEventListener("touchmove", (e) => {
-      if (!dragging) return;
-      const dx = e.touches[0].clientX - startX;
-      const dy = e.touches[0].clientY - startY;
-      if (!lockedDir && Math.abs(dx) + Math.abs(dy) > 8) {
-        lockedDir = Math.abs(dx) > Math.abs(dy) ? "h" : "v";
-        if (lockedDir === "v") {
-          dragging = false;
-          indicator.style.transition = "";
-          indicator.style.transform = currentProdTab === "habits" ? "translateX(100%)" : "translateX(0)";
-          return;
-        }
-      }
-      if (lockedDir !== "h") return;
-      let pos = startTranslateX + dx;
-      pos = Math.max(0, Math.min(pos, indicatorWidth));
-      indicator.style.transform = `translateX(${pos}px)`;
-    }, { passive: true });
-    toggle.addEventListener("touchend", (e) => {
-      if (!dragging) return;
-      dragging = false;
-      indicator.style.transition = "";
-      if (lockedDir !== "h") {
-        indicator.style.transform = currentProdTab === "habits" ? "translateX(100%)" : "translateX(0)";
-        return;
-      }
-      const endX = e.changedTouches[0]?.clientX ?? startX;
-      const finalPos = startTranslateX + (endX - startX);
-      const target = finalPos > indicatorWidth / 2 ? "habits" : "tasks";
-      switchProdTab(target);
-    }, { passive: true });
-  }
-  function toggleProdHabitToday(id) {
-    const today = (/* @__PURE__ */ new Date()).toDateString();
-    const log = getHabitLog();
-    if (!log[today]) log[today] = {};
-    const habits = getHabits();
-    const h = habits.find((x) => x.id === id);
-    const target = h?.targetCount || 1;
-    const rawVal = log[today][id];
-    const cur = typeof rawVal === "boolean" ? rawVal ? 1 : 0 : rawVal || 0;
-    const newVal = target === 1 ? cur === 0 ? 1 : cur === 1 ? 2 : 0 : cur + 1;
-    log[today][id] = newVal;
-    saveHabitLog(log);
-    if (newVal === target) _habitConfetti(id);
-    renderProdHabits();
-  }
-  function tapHabitSquare(id, idx) {
-    const today = (/* @__PURE__ */ new Date()).toDateString();
-    const log = getHabitLog();
-    if (!log[today]) log[today] = {};
-    const rawVal = log[today][id];
-    const cur = typeof rawVal === "boolean" ? rawVal ? 1 : 0 : rawVal || 0;
-    if (cur > 0 && idx === cur - 1) {
-      log[today][id] = cur - 1;
-      saveHabitLog(log);
-      renderProdHabits();
-    } else if (idx >= cur) {
-      toggleProdHabitToday(id);
-    }
-  }
-  function tapHabitSquareMe(id, idx) {
-    const today = (/* @__PURE__ */ new Date()).toDateString();
-    const log = getHabitLog();
-    if (!log[today]) log[today] = {};
-    const rawVal = log[today][id];
-    const cur = typeof rawVal === "boolean" ? rawVal ? 1 : 0 : rawVal || 0;
-    if (cur > 0 && idx === cur - 1) {
-      log[today][id] = cur - 1;
-      saveHabitLog(log);
-      renderHabits();
-    } else if (idx >= cur) {
-      toggleHabitToday(id);
-    }
-  }
-  function _habitConfetti(habitId) {
-    const btn = document.querySelector(`#prod-habit-item-${habitId} [data-habit-check]`);
-    if (!btn) return;
-    const rect = btn.getBoundingClientRect();
-    const cx = rect.left + rect.width / 2;
-    const cy = rect.top + rect.height / 2;
-    const colors = ["#16a34a", "#4ade80", "#fbbf24", "#f97316", "#60a5fa", "#a78bfa"];
-    for (let i = 0; i < 20; i++) {
-      const el = document.createElement("div");
-      const angle = Math.random() * 360 * Math.PI / 180;
-      const dist = 40 + Math.random() * 70;
-      el.style.cssText = `position:fixed;left:${cx}px;top:${cy}px;width:7px;height:7px;border-radius:${Math.random() > 0.5 ? "50%" : "2px"};background:${colors[Math.floor(Math.random() * colors.length)]};pointer-events:none;z-index:9999;transition:transform 0.6s ease-out,opacity 0.6s ease-out`;
-      document.body.appendChild(el);
-      requestAnimationFrame(() => {
-        el.style.transform = `translate(${Math.cos(angle) * dist}px,${Math.sin(angle) * dist - 20}px) rotate(${Math.random() * 360}deg)`;
-        el.style.opacity = "0";
-      });
-      setTimeout(() => el.remove(), 660);
-    }
-  }
-  function renderProdHabits() {
-    updateProdTabCounters();
-    const habits = getHabits();
-    const el = document.getElementById("prod-habits-list");
-    if (!el) return;
-    const log = getHabitLog();
-    const today = (/* @__PURE__ */ new Date()).toDateString();
-    const todayDow = ((/* @__PURE__ */ new Date()).getDay() + 6) % 7;
-    const _isDone = (h) => {
-      const target = h.targetCount || 1;
-      const rawVal = log[today]?.[h.id];
-      const cur = typeof rawVal === "boolean" ? rawVal ? 1 : 0 : rawVal || 0;
-      return cur >= target;
-    };
-    const buildHabitsForBar = habits.filter((h) => h.type !== "quit");
-    const todayHabits = buildHabitsForBar;
-    const doneTodayCount = todayHabits.filter(_isDone).length;
-    const countEl = document.getElementById("habits-today-count");
-    const barEl = document.getElementById("habits-today-bar");
-    if (countEl) countEl.textContent = `${doneTodayCount} / ${todayHabits.length}`;
-    if (barEl) barEl.style.width = todayHabits.length > 0 ? `${Math.round(doneTodayCount / todayHabits.length * 100)}%` : "0%";
-    if (habits.length === 0) {
-      el.innerHTML = '<div style="text-align:center;padding:40px 20px;color:rgba(30,16,64,0.3);font-size:15px">' + t("habits.empty.prod_list", "\u0429\u0435 \u043D\u0435\u043C\u0430\u0454 \u0437\u0432\u0438\u0447\u043E\u043A<br>\u041D\u0430\u0442\u0438\u0441\u043D\u0438 + \u0449\u043E\u0431 \u0434\u043E\u0434\u0430\u0442\u0438") + "</div>";
-      return;
-    }
-    const buildHabits = habits.filter((h) => h.type !== "quit");
-    const quitHabits = habits.filter((h) => h.type === "quit");
-    let html = "";
-    html += buildHabits.map((h) => {
-      const target = h.targetCount || 1;
-      const rawVal = log[today]?.[h.id];
-      const cur = typeof rawVal === "boolean" ? rawVal ? 1 : 0 : rawVal || 0;
-      const pct100 = Math.min(cur / target, 1);
-      const isOver = cur > target;
-      const streak = getHabitStreak(h.id);
-      const weekDone = getHabitWeekDays(h.id, target);
-      const shortName2 = h.name.split(" ").slice(0, 4).join(" ");
-      const dayDots2 = makeHabitDayDots(h, weekDone, todayDow);
-      const habitPct = getHabitPct(h.id);
-      const pctColor2 = habitPct > 0 ? "#16a34a" : "rgba(30,16,64,0.3)";
-      const streakTxt = streak >= 2 ? "\u{1F525} " + streak + " \xB7 " : "";
-      let checkBg, checkStroke;
-      if (cur === 0) {
-        checkBg = "background:rgba(30,16,64,0.03);border:1.5px solid rgba(30,16,64,0.15)";
-        checkStroke = "rgba(30,16,64,0.25)";
-      } else if (isOver) {
-        checkBg = "background:linear-gradient(135deg,#fbbf24,#f59e0b);border:none";
-        checkStroke = "white";
-      } else if (pct100 >= 1) {
-        checkBg = "background:#16a34a;border:none";
-        checkStroke = "white";
-      } else {
-        const fillH = Math.round(pct100 * 40);
-        checkBg = `background:linear-gradient(to top,#16a34a ${fillH}px,rgba(30,16,64,0.05) ${fillH}px);border:1.5px solid rgba(22,163,74,0.4)`;
-        checkStroke = pct100 > 0.5 ? "white" : "rgba(30,16,64,0.4)";
-      }
-      let squaresHtml = "";
-      if (target > 1) {
-        const showCount = Math.min(Math.max(target, cur), 20);
-        squaresHtml = '<div style="display:flex;gap:3px;flex-wrap:wrap;padding-left:52px;margin-top:6px">';
-        for (let i = 0; i < showCount; i++) {
-          const filled = i < cur;
-          const isBonus = i >= target;
-          const bg = filled ? isBonus ? "#fbbf24" : "#16a34a" : "rgba(30,16,64,0.08)";
-          const border = filled ? "none" : "1.5px solid rgba(30,16,64,0.12)";
-          squaresHtml += `<div data-action="tap-habit-square" data-entity="habit-prod" data-id="${h.id}" data-idx="${i}" style="width:14px;height:14px;border-radius:4px;background:${bg};border:${border};cursor:pointer;transition:all 0.15s;display:flex;align-items:center;justify-content:center">`;
-          if (filled) squaresHtml += `<svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg>`;
-          squaresHtml += "</div>";
-        }
-        if (cur < 20) squaresHtml += `<div data-action="toggle-entity-done" data-entity="habit-prod" data-id="${h.id}" style="width:14px;height:14px;border-radius:4px;background:rgba(30,16,64,0.04);border:1.5px dashed rgba(30,16,64,0.15);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:10px;color:rgba(30,16,64,0.3);line-height:1">+</div>`;
-        squaresHtml += "</div>";
-      }
-      const countLabel = target > 1 ? `<span style="font-size:11px;font-weight:700;color:${cur >= target ? "#16a34a" : "rgba(30,16,64,0.4)"};margin-left:4px">${cur}/${target}</span>` : "";
-      return '<div class="prod-habit-item-wrap" id="prod-habit-wrap-' + h.id + '" data-id="' + h.id + '" style="position:relative;border-radius:16px;margin-bottom:var(--card-gap);overflow:hidden"><div id="prod-habit-item-' + h.id + '" data-action="prod-habit-card-click" data-id="' + h.id + '" style="background:rgba(255,255,255,0.6);border:1.5px solid rgba(255,255,255,0.85);border-radius:16px;padding:var(--card-pad-y) var(--card-pad-x);box-shadow:var(--card-shadow);position:relative;z-index:1;will-change:transform;cursor:pointer;-webkit-tap-highlight-color:transparent"><div style="display:flex;align-items:center;gap:12px;margin-bottom:8px"><div data-action="toggle-entity-done" data-entity="habit-prod" data-id="' + h.id + '" data-habit-check="1" style="width:40px;height:40px;border-radius:12px;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.25s;-webkit-tap-highlight-color:transparent;' + checkBg + `"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${checkStroke}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></div><div style="flex:1;min-width:0"><div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px;margin-bottom:1px"><span style="font-size:16px;font-weight:700;color:#1e1040">` + escapeHtml(shortName2) + "</span>" + countLabel + '</div><div style="font-size:11px;font-weight:600;color:' + pctColor2 + '">' + streakTxt + habitPct + "% \u0437\u0430 30 \u0434\u043D\u0456\u0432</div></div></div>" + squaresHtml + '<div style="display:flex;gap:4px;padding-left:52px;margin-top:6px">' + dayDots2 + "</div></div></div>";
-    }).join("");
-    if (quitHabits.length > 0) {
-      html += '<div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.08em;margin:14px 14px 8px">' + t("habits.quit.section_title", "\u{1F6AB} \u0427\u0435\u043B\u0435\u043D\u0434\u0436\u0456") + "</div>";
-      html += quitHabits.map((h) => _renderQuitHabitCard(h)).join("");
-    }
-    el.innerHTML = html;
-    _attachHabitsSwipeDelete();
-  }
-  function _quitResilienceLamp(relapses30) {
-    if (relapses30 === 0) return { color: "#16a34a", glow: "rgba(22,163,74,0.35)", label: t("habits.quit.lamp.steady", "\u0421\u0442\u0456\u0439\u043A\u0438\u0439") };
-    if (relapses30 <= 2) return { color: "#ca8a04", glow: "rgba(202,138,4,0.35)", label: t("habits.quit.lamp.holding", "\u0422\u0440\u0438\u043C\u0430\u0454\u0442\u044C\u0441\u044F") };
-    if (relapses30 <= 5) return { color: "#ea580c", glow: "rgba(234,88,12,0.35)", label: t("habits.quit.lamp.recovering", "\u0412\u0456\u0434\u043D\u043E\u0432\u043B\u044E\u0454\u0442\u044C\u0441\u044F") };
-    return { color: "#dc2626", glow: "rgba(220,38,38,0.4)", label: t("habits.quit.lamp.danger", "\u041D\u0435\u0431\u0435\u0437\u043F\u0435\u043A\u0430!") };
-  }
-  function _quitTrend(relapses) {
-    const now = Date.now();
-    const d14 = new Date(now - 14 * 864e5).toISOString().slice(0, 10);
-    const d28 = new Date(now - 28 * 864e5).toISOString().slice(0, 10);
-    const arr = relapses || [];
-    const recent = arr.filter((d) => d >= d14).length;
-    const prev = arr.filter((d) => d >= d28 && d < d14).length;
-    if (recent < prev) return { arrow: "\u2193", color: "#16a34a", text: t("habits.quit.trend.less", "\u0437\u0440\u0438\u0432\u0456\u0432 \u043C\u0435\u043D\u0448\u0435") };
-    if (recent > prev) return { arrow: "\u2191", color: "#dc2626", text: t("habits.quit.trend.more", "\u0437\u0440\u0438\u0432\u0456\u0432 \u0431\u0456\u043B\u044C\u0448\u0435") };
-    return { arrow: "\u2192", color: "rgba(30,16,64,0.4)", text: t("habits.quit.trend.same", "\u0431\u0435\u0437 \u0437\u043C\u0456\u043D") };
-  }
-  function _renderQuitHabitCard(h) {
-    const s = getQuitStatus(h.id);
-    const today = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
-    const heldToday = s.lastHeld === today;
-    const relapses30 = (s.relapses || []).filter((d) => {
-      const cutoff = new Date(Date.now() - 30 * 864e5).toISOString().slice(0, 10);
-      return d >= cutoff;
-    }).length;
-    const streak = s.streak || 0;
-    const longest = s.longestStreak || 0;
-    const freedomDays = s.freedomDays || 0;
-    const shortName = h.name.split(" ").slice(0, 4).join(" ");
-    const lamp = _quitResilienceLamp(relapses30);
-    const trend = _quitTrend(s.relapses);
-    const cardBg = relapses30 === 0 && streak > 0 ? "background:rgba(232,240,232,0.8);border-color:rgba(22,163,74,0.2)" : relapses30 >= 6 ? "background:rgba(255,235,235,0.85);border-color:rgba(220,38,38,0.2)" : "background:rgba(255,248,240,0.85);border-color:rgba(234,88,12,0.15)";
-    const streakColor = streak > 0 ? "#16a34a" : "rgba(30,16,64,0.3)";
-    const lampHtml = '<div style="flex-shrink:0;width:14px;height:14px;border-radius:50%;background:' + lamp.color + ";box-shadow:0 0 8px 3px " + lamp.glow + ';margin-top:3px"></div>';
-    return '<div class="prod-habit-item-wrap" id="quit-wrap-' + h.id + '" data-id="' + h.id + '" style="position:relative;border-radius:16px;margin-bottom:var(--card-gap);overflow:hidden"><div id="prod-habit-item-' + h.id + '" data-action="open-edit-habit" data-id="' + h.id + '" style="' + cardBg + ';border:1.5px solid;border-radius:16px;padding:var(--card-pad-y) var(--card-pad-x);position:relative;z-index:1;cursor:pointer;-webkit-tap-highlight-color:transparent"><div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px">' + lampHtml + '<div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:700;color:#1e1040;line-height:1.2">' + escapeHtml(shortName) + '</div><div style="font-size:11px;color:' + lamp.color + ';font-weight:600;margin-top:1px">' + lamp.label + '</div></div><div style="text-align:right;flex-shrink:0"><div style="font-size:16px;font-weight:700;color:' + trend.color + ';line-height:1">' + trend.arrow + '</div><div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:500">' + trend.text + '</div></div></div><div style="display:flex;align-items:baseline;gap:10px;margin-bottom:8px"><div><span style="font-size:26px;font-weight:800;color:#1e1040;line-height:1">' + freedomDays + '</span><span style="font-size:12px;font-weight:600;color:rgba(30,16,64,0.5);margin-left:4px">' + t("habits.quit.label.free_days", "\u0432\u0456\u043B\u044C\u043D\u0438\u0445 {word}", { word: _dayWord(freedomDays) }) + "</span></div>" + (streak > 0 ? '<div style="font-size:11px;font-weight:600;color:' + streakColor + ';margin-left:auto">' + t("habits.quit.label.streak", "\u{1F525} \u0441\u0435\u0440\u0456\u044F {n} {word}", { n: streak, word: _dayWord(streak) }) + (longest > streak ? t("habits.quit.label.record_inline", " \xB7 \u0440\u0435\u043A\u043E\u0440\u0434 {n}", { n: longest }) : "") + "</div>" : longest > 0 ? '<div style="font-size:11px;font-weight:500;color:rgba(30,16,64,0.35);margin-left:auto">' + t("habits.quit.label.record", "\u0440\u0435\u043A\u043E\u0440\u0434 {n} {word}", { n: longest, word: _dayWord(longest) }) + "</div>" : "") + '</div><div style="display:flex;gap:8px"><button data-action="hold-quit-habit" data-id="' + h.id + '" style="flex:2;padding:10px;border-radius:12px;border:none;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;touch-action:manipulation;' + (heldToday ? "background:rgba(22,163,74,0.15);color:#16a34a" : "background:rgba(22,163,74,0.1);color:#16a34a") + '">' + (heldToday ? t("habits.quit.btn.held_today", "\u2705 \u0422\u0440\u0438\u043C\u0430\u044E\u0441\u044C \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456") : t("habits.quit.btn.hold", "\u2713 \u0422\u0440\u0438\u043C\u0430\u044E\u0441\u044C")) + '</button><button data-action="confirm-quit-relapse" data-id="' + h.id + '" style="flex:1;padding:10px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.1);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;background:rgba(30,16,64,0.03);color:rgba(30,16,64,0.35);touch-action:manipulation">' + t("habits.quit.btn.relapse", "\u0417\u0456\u0440\u0432\u0430\u0432\u0441\u044F") + "</button></div></div></div>";
-  }
-  function confirmQuitRelapse(habitId) {
-    const s = getQuitStatus(habitId);
-    const fd = s.freedomDays || 0;
-    const fdText = fd > 0 ? "\n" + t("habits.quit.confirm.kept", "{n} \u0432\u0456\u043B\u044C\u043D\u0438\u0445 {word} \u0437\u0430\u043B\u0438\u0448\u0430\u0442\u044C\u0441\u044F \u0442\u0432\u043E\u0457\u043C\u0438.", { n: fd, word: _dayWord(fd) }) : "";
-    if (window.confirm(t("habits.quit.confirm.relapse", "\u0412\u0430\u0436\u043A\u0438\u0439 \u0434\u0435\u043D\u044C? \u0412\u0456\u0434\u043C\u0456\u0442\u0438\u0442\u0438 \u0437\u0440\u0438\u0432?") + fdText)) {
-      relapseQuitHabit(habitId);
-    }
-  }
-  function _attachHabitsSwipeDelete() {
-    const bind = (wrap, card) => {
-      if (!card) return;
-      const id = wrap.dataset.id;
-      attachSwipeDelete(wrap, card, () => {
-        const allHabits = getHabits();
-        const habitOrigIdx = allHabits.findIndex((h) => String(h.id) === id);
-        const item = allHabits.find((h) => String(h.id) === id);
-        if (item) addToTrash("habit", item);
-        saveHabits(allHabits.filter((h) => String(h.id) !== id));
-        renderHabits();
-        renderProdHabits();
-        if (item) showUndoToast(t("habits.toast.deleted", "\u0417\u0432\u0438\u0447\u043A\u0443 \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E"), () => {
-          const habits = getHabits();
-          const idx = Math.min(habitOrigIdx, habits.length);
-          habits.splice(idx, 0, item);
-          saveHabits(habits);
-          renderHabits();
-          renderProdHabits();
-        });
-      });
-    };
-    document.querySelectorAll(".habit-me-item-wrap").forEach((w) => bind(w, w.querySelector('[id^="habit-me-item-"]')));
-    document.querySelectorAll(".prod-habit-item-wrap").forEach((w) => bind(w, w.querySelector('[id^="prod-habit-item-"]')));
-  }
-  function prodHabitCardClick(id, _event) {
-    openEditHabit(id);
-  }
+  // src/core/execute-action.js
   function _fuzzyFindFolder(query, folders) {
     if (!query || !folders.length) return null;
     const q = query.toLowerCase().replace(/[ʼ']/g, "");
@@ -14760,7 +14045,7 @@ ${CHIP_PROMPT_RULES}`;
         dp[i][j] = a[i - 1] === b[j - 1] ? dp[i - 1][j - 1] : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
     return dp[m][n];
   }
-  function processUniversalAction(parsed, originalText, addMsg) {
+  function processUniversalAction2(parsed, originalText, addMsg) {
     const action = parsed.action;
     const _splitReply = (thinking, doWork) => {
       addMsg("agent", thinking);
@@ -15525,6 +14810,761 @@ ${CHIP_PROMPT_RULES}`;
     }
     return false;
   }
+  var init_execute_action = __esm({
+    "src/core/execute-action.js"() {
+      init_nav();
+      init_utils();
+      init_uuid();
+      init_trash();
+      init_entity_factories();
+      init_habit_classifier();
+      init_ua_time_parser();
+      init_months();
+      init_lists();
+      init_evening();
+      init_calendar();
+      init_inbox();
+      init_tasks();
+      init_notes();
+      init_finance();
+      init_health();
+      init_habits();
+    }
+  });
+
+  // src/tabs/habits.js
+  function getHabits() {
+    try {
+      return JSON.parse(localStorage.getItem("nm_habits2") || "[]");
+    } catch {
+      return [];
+    }
+  }
+  function saveHabits(arr) {
+    localStorage.setItem("nm_habits2", JSON.stringify(arr));
+    window.dispatchEvent(new CustomEvent("nm-data-changed", { detail: "habits" }));
+  }
+  function getHabitLog() {
+    try {
+      return JSON.parse(localStorage.getItem("nm_habit_log2") || "{}");
+    } catch {
+      return {};
+    }
+  }
+  function saveHabitLog(obj) {
+    localStorage.setItem("nm_habit_log2", JSON.stringify(obj));
+    window.dispatchEvent(new CustomEvent("nm-data-changed", { detail: "habits" }));
+  }
+  function getQuitLog() {
+    try {
+      return JSON.parse(localStorage.getItem("nm_quit_log") || "{}");
+    } catch {
+      return {};
+    }
+  }
+  function saveQuitLog(obj) {
+    localStorage.setItem("nm_quit_log", JSON.stringify(obj));
+    window.dispatchEvent(new CustomEvent("nm-data-changed", { detail: "habits" }));
+  }
+  function getQuitStatus(habitId) {
+    const log = getQuitLog();
+    return log[habitId] || { streak: 0, longestStreak: 0, relapses: [], lastHeld: null, freedomDays: 0 };
+  }
+  function holdQuitHabit(habitId) {
+    const today = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+    const log = getQuitLog();
+    if (!log[habitId]) log[habitId] = { streak: 0, longestStreak: 0, relapses: [], lastHeld: null, freedomDays: 0 };
+    const s = log[habitId];
+    if (s.lastHeld === today) return;
+    s.freedomDays = (s.freedomDays || 0) + 1;
+    const yesterday = new Date(Date.now() - 864e5).toISOString().slice(0, 10);
+    if (s.lastHeld === yesterday || s.lastHeld === null) {
+      s.streak = (s.streak || 0) + 1;
+    } else {
+      s.streak = 1;
+    }
+    s.longestStreak = Math.max(s.streak, s.longestStreak || 0);
+    s.lastHeld = today;
+    log[habitId] = s;
+    saveQuitLog(log);
+    renderProdHabits();
+    const fd = s.freedomDays;
+    showToast(t("habits.quit.toast.held", "\u{1F4AA} +1 \u0432\u0456\u043B\u044C\u043D\u0438\u0439 \u0434\u0435\u043D\u044C! \u0412\u0441\u044C\u043E\u0433\u043E: {fd} {dayWord}", { fd, dayWord: _dayWord(fd) }));
+  }
+  function relapseQuitHabit(habitId) {
+    const today = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+    const log = getQuitLog();
+    if (!log[habitId]) log[habitId] = { streak: 0, longestStreak: 0, relapses: [], lastHeld: null, freedomDays: 0 };
+    const s = log[habitId];
+    if (!s.relapses) s.relapses = [];
+    if (s.relapses[s.relapses.length - 1] === today) {
+      showToast(t("habits.quit.toast.relapse_dup", "\u0417\u0440\u0438\u0432 \u0432\u0436\u0435 \u0432\u0456\u0434\u043C\u0456\u0447\u0435\u043D\u043E \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456"));
+      return;
+    }
+    s.relapses.push(today);
+    const cutoff = new Date(Date.now() - 90 * 864e5).toISOString().slice(0, 10);
+    s.relapses = s.relapses.filter((d) => d >= cutoff);
+    const prevStreak = s.streak;
+    s.streak = 0;
+    s.lastHeld = null;
+    log[habitId] = s;
+    saveQuitLog(log);
+    renderProdHabits();
+    _owlQuitRelapse(habitId, prevStreak, s.freedomDays || 0);
+  }
+  function _dayWord(n) {
+    if (n % 10 === 1 && n % 100 !== 11) return t("habits.day.one", "\u0434\u0435\u043D\u044C");
+    if ([2, 3, 4].includes(n % 10) && ![12, 13, 14].includes(n % 100)) return t("habits.day.few", "\u0434\u043D\u0456");
+    return t("habits.day.many", "\u0434\u043D\u0456\u0432");
+  }
+  function _owlQuitRelapse(habitId, prevStreak, freedomDays) {
+    const habits = getHabits();
+    const h = habits.find((x) => x.id === habitId);
+    const name = h ? h.name : t("habits.quit.fallback_name", "\u0437\u0432\u0438\u0447\u043A\u0443");
+    const fdText = freedomDays > 0 ? t("habits.quit.freedom_kept", " \u0422\u0432\u043E\u0457 {fd} \u0432\u0456\u043B\u044C\u043D\u0438\u0445 {dayWord} \u2014 \u043D\u0430\u0437\u0430\u0432\u0436\u0434\u0438 \u0442\u0432\u043E\u0457.", { fd: freedomDays, dayWord: _dayWord(freedomDays) }) : "";
+    const key = localStorage.getItem("nm_gemini_key");
+    if (!key) {
+      addInboxChatMsg("agent", t("habits.quit.msg.hard_day_offline", '\u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0432\u0430\u0436\u043A\u0438\u0439 \u0434\u0435\u043D\u044C \u0437 "{name}".{fdText} \u0417\u0430\u0432\u0442\u0440\u0430 \u043D\u043E\u0432\u0438\u0439 \u0448\u0430\u043D\u0441.', { name, fdText }));
+      return;
+    }
+    const settings = getSettings();
+    const owlMode = settings.owl_mode || "balanced";
+    const tone = owlMode === "brutal" ? "\u0440\u0456\u0437\u043A\u0438\u0439, \u0447\u0435\u0441\u043D\u0438\u0439, \u0431\u0435\u0437 \u0437\u0430\u0439\u0432\u043E\u0433\u043E \u0436\u0430\u043B\u044E" : owlMode === "soft" ? "\u043C'\u044F\u043A\u0438\u0439, \u043F\u0456\u0434\u0442\u0440\u0438\u043C\u0443\u044E\u0447\u0438\u0439, \u0441\u043F\u0456\u0432\u0447\u0443\u0442\u043B\u0438\u0432\u0438\u0439" : "\u0437\u0431\u0430\u043B\u0430\u043D\u0441\u043E\u0432\u0430\u043D\u0438\u0439, \u0447\u0435\u0441\u043D\u0438\u0439 \u0430\u043B\u0435 \u043F\u0456\u0434\u0442\u0440\u0438\u043C\u0443\u044E\u0447\u0438\u0439";
+    openaiFetch("chat/completions", {
+      model: "gpt-4o-mini",
+      max_tokens: 80,
+      messages: [{
+        role: "system",
+        content: `\u0422\u0438 OWL \u2014 \u043F\u0435\u0440\u0441\u043E\u043D\u0430\u043B\u044C\u043D\u0438\u0439 \u0430\u0433\u0435\u043D\u0442. \u0422\u043E\u043D: ${tone}. \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0439 \u0422\u0406\u041B\u042C\u041A\u0418 \u043E\u0434\u043D\u0438\u043C \u0440\u0435\u0447\u0435\u043D\u043D\u044F\u043C \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u043E\u044E. \u041D\u0435 \u0437\u0433\u0430\u0434\u0443\u0439 "\u0441\u0442\u0440\u0456\u043A \u043E\u0431\u043D\u0443\u043B\u0435\u043D\u043E". \u041F\u0456\u0434\u043A\u0440\u0435\u0441\u043B\u0438 \u0449\u043E ${freedomDays} \u0432\u0456\u043B\u044C\u043D\u0438\u0445 \u0434\u043D\u0456\u0432 \u043D\u0456\u043A\u0443\u0434\u0438 \u043D\u0435 \u0434\u0456\u043B\u0438\u0441\u044C.`
+      }, {
+        role: "user",
+        content: `\u041A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447 \u0437\u0456\u0440\u0432\u0430\u0432\u0441\u044F \u0437 "${name}". \u0421\u0435\u0440\u0456\u044F \u0431\u0443\u043B\u0430 ${prevStreak} ${_dayWord(prevStreak)}, \u0430\u043B\u0435 \u0437\u0430\u0433\u0430\u043B\u043E\u043C ${freedomDays} \u0432\u0456\u043B\u044C\u043D\u0438\u0445 ${_dayWord(freedomDays)} \u2014 \u0432\u043E\u043D\u0438 \u0437\u0430\u043B\u0438\u0448\u0430\u044E\u0442\u044C\u0441\u044F. \u0421\u043A\u0430\u0436\u0438 \u0449\u043E\u0441\u044C \u043A\u043E\u0440\u043E\u0442\u043A\u0435 \u0442\u0430 \u043F\u0456\u0434\u0442\u0440\u0438\u043C\u0443\u044E\u0447\u0435.`
+      }]
+    }).then((r) => r.json()).then((d) => {
+      if (d?.usage) logUsage("habits-ai", d.usage, d.model);
+      const reply = d.choices?.[0]?.message?.content;
+      if (reply) addInboxChatMsg("agent", reply);
+    }).catch(() => {
+      addInboxChatMsg("agent", t("habits.quit.msg.hard_day_fallback", '\u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0432\u0430\u0436\u043A\u0438\u0439 \u0434\u0435\u043D\u044C \u0437 "{name}".{fdText} \u0417\u0430\u0432\u0442\u0440\u0430 \u2014 \u043D\u043E\u0432\u0438\u0439 \u0448\u0430\u043D\u0441.', { name, fdText }));
+    });
+  }
+  function setHabitModalType(type) {
+    _habitModalType = type;
+    const buildBtn = document.getElementById("habit-type-build");
+    const quitBtn = document.getElementById("habit-type-quit");
+    const countSection = document.getElementById("habit-count-section");
+    if (type === "build") {
+      buildBtn.style.background = "white";
+      buildBtn.style.color = "#16a34a";
+      buildBtn.style.boxShadow = "0 2px 8px rgba(0,0,0,0.08)";
+      quitBtn.style.background = "transparent";
+      quitBtn.style.color = "rgba(30,16,64,0.4)";
+      quitBtn.style.boxShadow = "none";
+      if (countSection) countSection.style.display = "flex";
+    } else {
+      quitBtn.style.background = "white";
+      quitBtn.style.color = "#c2410c";
+      quitBtn.style.boxShadow = "0 2px 8px rgba(0,0,0,0.08)";
+      buildBtn.style.background = "transparent";
+      buildBtn.style.color = "rgba(30,16,64,0.4)";
+      buildBtn.style.boxShadow = "none";
+      if (countSection) countSection.style.display = "none";
+    }
+  }
+  function adjustHabitCount(delta) {
+    const inp = document.getElementById("habit-input-count");
+    const disp = document.getElementById("habit-count-display");
+    if (!inp || !disp) return;
+    let val = Math.max(1, Math.min(20, parseInt(inp.value || 1) + delta));
+    inp.value = val;
+    disp.textContent = val;
+  }
+  function openEditHabit(id) {
+    const habits = getHabits();
+    const h = habits.find((x) => x.id === id);
+    if (!h) return;
+    editingHabitId = id;
+    document.getElementById("habit-modal-title").textContent = t("habits.modal.title_edit", "\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0437\u0432\u0438\u0447\u043A\u0443");
+    document.getElementById("habit-input-name").value = h.name;
+    let details = h.details || "";
+    if (!details && h.name) {
+      const parts = h.name.split(/[,]\s*/);
+      if (parts.length > 1) details = parts.slice(1).join(", ").trim();
+    }
+    document.getElementById("habit-input-details").value = details;
+    document.getElementById("habit-input-emoji").value = h.emoji || "";
+    const cnt = h.targetCount || 1;
+    document.getElementById("habit-input-count").value = cnt;
+    document.getElementById("habit-count-display").textContent = cnt;
+    let days = h.days || [0, 1, 2, 3, 4];
+    const nameAndDetails = (h.name + " " + details).toLowerCase();
+    const hasSpecificDays = /понеділ|вівтор|серед|четвер|п.ятниц|субот|неділ/.test(nameAndDetails);
+    if (hasSpecificDays && days.length === 7) {
+      days = [];
+      if (/понеділ|пн/.test(nameAndDetails)) days.push(0);
+      if (/вівтор|вт/.test(nameAndDetails)) days.push(1);
+      if (/серед|ср/.test(nameAndDetails)) days.push(2);
+      if (/четвер|чт/.test(nameAndDetails)) days.push(3);
+      if (/п.ятниц|пт/.test(nameAndDetails)) days.push(4);
+      if (/субот|сб/.test(nameAndDetails)) days.push(5);
+      if (/неділ|нд/.test(nameAndDetails)) days.push(6);
+      if (days.length === 0) days = [0, 1, 2, 3, 4];
+    }
+    document.querySelectorAll(".habit-day-btn").forEach((b) => {
+      b.classList.toggle("active", days.includes(parseInt(b.dataset.day)));
+    });
+    setHabitModalType(h.type === "quit" ? "quit" : "build");
+    document.getElementById("habit-modal").style.display = "flex";
+    document.getElementById("habit-delete-btn").style.display = "inline-block";
+    setupModalSwipeClose(document.querySelector("#habit-modal > div:last-child"), closeHabitModal);
+  }
+  function openAddHabit() {
+    editingHabitId = null;
+    document.getElementById("habit-modal-title").textContent = t("habits.modal.title_new", "\u041D\u043E\u0432\u0430 \u0437\u0432\u0438\u0447\u043A\u0430");
+    document.getElementById("habit-input-name").value = "";
+    document.getElementById("habit-input-details").value = "";
+    document.getElementById("habit-input-emoji").value = "";
+    document.getElementById("habit-input-count").value = "1";
+    document.getElementById("habit-count-display").textContent = "1";
+    document.getElementById("habit-delete-btn").style.display = "none";
+    setHabitModalType("build");
+    document.querySelectorAll(".habit-day-btn").forEach((b) => {
+      b.classList.toggle("active", [0, 1, 2, 3, 4].includes(parseInt(b.dataset.day)));
+    });
+    document.getElementById("habit-modal").style.display = "flex";
+    setupModalSwipeClose(document.querySelector("#habit-modal > div:last-child"), closeHabitModal);
+  }
+  function closeHabitModal() {
+    document.getElementById("habit-modal").style.display = "none";
+  }
+  function saveHabit() {
+    const name = document.getElementById("habit-input-name").value.trim();
+    if (!name) {
+      showToast(t("habits.modal.err.empty_name", "\u0412\u0432\u0435\u0434\u0438 \u043D\u0430\u0437\u0432\u0443 \u0437\u0432\u0438\u0447\u043A\u0438"));
+      return;
+    }
+    const details = document.getElementById("habit-input-details").value.trim();
+    const emoji = document.getElementById("habit-input-emoji").value.trim() || (_habitModalType === "quit" ? "\u{1F6AB}" : "\u2B55");
+    const days = [...document.querySelectorAll(".habit-day-btn.active")].map((b) => parseInt(b.dataset.day));
+    const targetCount = _habitModalType === "quit" ? 1 : parseInt(document.getElementById("habit-input-count").value || 1) || 1;
+    const type = _habitModalType;
+    const habits = getHabits();
+    if (editingHabitId) {
+      const idx = habits.findIndex((x) => x.id === editingHabitId);
+      if (idx !== -1) habits[idx] = { ...habits[idx], name, details, emoji, days, targetCount, type };
+    } else {
+      habits.push(makeHabit({ name, details, emoji, days, targetCount, type }));
+    }
+    saveHabits(habits);
+    closeHabitModal();
+    renderHabits();
+    renderProdHabits();
+    showToast(editingHabitId ? t("habits.toast.updated", "\u2713 \u0417\u0432\u0438\u0447\u043A\u0443 \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043E") : type === "quit" ? t("habits.toast.quit_created", "\u{1F6AB} \u0427\u0435\u043B\u0435\u043D\u0434\u0436 \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E") : t("habits.toast.added", "\u2713 \u0417\u0432\u0438\u0447\u043A\u0443 \u0434\u043E\u0434\u0430\u043D\u043E"));
+  }
+  function deleteHabitFromModal() {
+    if (!editingHabitId) return;
+    const id = editingHabitId;
+    const item = getHabits().find((h) => h.id === id);
+    saveHabits(getHabits().filter((h) => h.id !== id));
+    renderHabits();
+    renderProdHabits();
+    closeHabitModal();
+    if (item) showUndoToast(t("habits.toast.deleted", "\u0417\u0432\u0438\u0447\u043A\u0443 \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E"), () => {
+      const habits = getHabits();
+      habits.push(item);
+      saveHabits(habits);
+      renderHabits();
+      renderProdHabits();
+    });
+  }
+  function _habitDone(h, logDay) {
+    const target = h.targetCount || 1;
+    const val = logDay?.[h.id];
+    const cur = typeof val === "boolean" ? val ? 1 : 0 : val || 0;
+    return cur >= target;
+  }
+  function toggleHabitToday(id) {
+    const today = (/* @__PURE__ */ new Date()).toDateString();
+    const log = getHabitLog();
+    if (!log[today]) log[today] = {};
+    const habits = getHabits();
+    const h = habits.find((x) => x.id === id);
+    const target = h?.targetCount || 1;
+    const rawVal = log[today][id];
+    const cur = typeof rawVal === "boolean" ? rawVal ? 1 : 0 : rawVal || 0;
+    const newVal = target === 1 ? cur === 0 ? 1 : cur === 1 ? 2 : 0 : cur + 1;
+    log[today][id] = newVal;
+    saveHabitLog(log);
+    if (h) logRecentAction("complete_habit", h.name, "habits");
+    renderHabits();
+  }
+  function getHabitStreak(id) {
+    const log = getHabitLog();
+    const habits = getHabits();
+    const h = habits.find((x) => x.id === id);
+    if (!h) return 0;
+    let streak = 0;
+    const d = /* @__PURE__ */ new Date();
+    for (let i = 0; i < 60; i++) {
+      const ds = d.toDateString();
+      const dow = (d.getDay() + 6) % 7;
+      if ((h.days || [0, 1, 2, 3, 4]).includes(dow)) {
+        if (_habitDone(h, log[ds])) streak++;
+        else if (i > 0) break;
+      }
+      d.setDate(d.getDate() - 1);
+    }
+    return streak;
+  }
+  function getHabitPct(id) {
+    const log = getHabitLog();
+    const habits = getHabits();
+    const h = habits.find((x) => x.id === id);
+    if (!h) return 0;
+    const plannedDays = h.days || [0, 1, 2, 3, 4];
+    const d = /* @__PURE__ */ new Date();
+    let total = 0, done = 0;
+    for (let i = 0; i < 30; i++) {
+      const ds = d.toDateString();
+      const dow = (d.getDay() + 6) % 7;
+      if (plannedDays.includes(dow)) {
+        total++;
+        if (_habitDone(h, log[ds])) done++;
+      } else if (_habitDone(h, log[ds])) {
+        done++;
+      }
+      d.setDate(d.getDate() - 1);
+    }
+    return total > 0 ? Math.round(done / total * 100) : 0;
+  }
+  function getHabitWeekDays(id, target) {
+    const log = getHabitLog();
+    const done = [];
+    const today = /* @__PURE__ */ new Date();
+    const todayDow = (today.getDay() + 6) % 7;
+    const weekStart = new Date(today);
+    weekStart.setDate(today.getDate() - todayDow);
+    weekStart.setHours(0, 0, 0, 0);
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(weekStart);
+      d.setDate(weekStart.getDate() + i);
+      const ds = d.toDateString();
+      const val = log[ds]?.[id];
+      const cur = typeof val === "boolean" ? val ? 1 : 0 : val || 0;
+      if (cur >= target) done.push({ i, bonus: cur > target });
+    }
+    return done;
+  }
+  function makeHabitDayDots(h, weekState, todayDow) {
+    const labels = [t("day.mon", "\u041F\u043D"), t("day.tue", "\u0412\u0442"), t("day.wed", "\u0421\u0440"), t("day.thu", "\u0427\u0442"), t("day.fri", "\u041F\u0442"), t("day.sat", "\u0421\u0431"), t("day.sun", "\u041D\u0434")];
+    return labels.map(function(label, i) {
+      const isPlanned = (h.days || [0, 1, 2, 3, 4]).includes(i);
+      const entry = weekState.find((x) => x.i === i);
+      const isDone = !!entry;
+      const isBonus = !!(entry && entry.bonus);
+      const isToday = i === todayDow;
+      let bg, border, color;
+      if (isDone) {
+        if (isBonus) {
+          bg = "linear-gradient(135deg,#fbbf24,#f59e0b)";
+          border = "transparent";
+        } else {
+          bg = "#16a34a";
+          border = "#16a34a";
+        }
+        color = "white";
+      } else if (isPlanned) {
+        bg = "transparent";
+        border = "rgba(30,16,64,0.2)";
+        color = "rgba(30,16,64,0.4)";
+      } else {
+        bg = "transparent";
+        border = "rgba(30,16,64,0.08)";
+        color = "rgba(30,16,64,0.15)";
+      }
+      const shadow = isToday ? "box-shadow:0 0 0 2px rgba(22,163,74,0.3);" : "";
+      const text = isDone ? "\u2713" : label.charAt(0);
+      return '<div style="width:24px;height:24px;border-radius:50%;background:' + bg + ";border:1.5px solid " + border + ";display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:" + color + ";" + shadow + '">' + text + "</div>";
+    }).join("");
+  }
+  function renderHabits() {
+    const habits = getHabits();
+    const el = document.getElementById("me-habits-stats-list");
+    const block = document.getElementById("me-habits-stats");
+    if (!el) return;
+    const log = getHabitLog();
+    const today = (/* @__PURE__ */ new Date()).toDateString();
+    const todayDow = ((/* @__PURE__ */ new Date()).getDay() + 6) % 7;
+    if (habits.length === 0) {
+      el.innerHTML = '<div style="text-align:center;padding:20px 0;color:rgba(30,16,64,0.3);font-size:15px">' + t("habits.empty.me_list", "\u0414\u043E\u0434\u0430\u0439 \u043F\u0435\u0440\u0448\u0443 \u0437\u0432\u0438\u0447\u043A\u0443") + "</div>";
+      return;
+    }
+    el.innerHTML = habits.map(function(h) {
+      const target = h.targetCount || 1;
+      const rawVal = log[today]?.[h.id];
+      const cur = typeof rawVal === "boolean" ? rawVal ? 1 : 0 : rawVal || 0;
+      const pct100 = Math.min(cur / target, 1);
+      const isOver = cur > target;
+      const isScheduledToday = (h.days || [0, 1, 2, 3, 4]).includes(todayDow);
+      const streak = getHabitStreak(h.id);
+      const pct = getHabitPct(h.id);
+      const weekDone = getHabitWeekDays(h.id, target);
+      const shortName = h.name.split(" ").slice(0, 4).join(" ");
+      const dayDots = makeHabitDayDots(h, weekDone, todayDow);
+      const pctColor = pct > 0 ? "#16a34a" : "rgba(30,16,64,0.3)";
+      const streakHtml = streak >= 2 ? '<span style="font-size:12px;font-weight:700;color:#f59e0b">\u{1F525}' + streak + "</span>" : "";
+      let checkBg, checkStroke;
+      if (cur === 0) {
+        checkBg = "background:rgba(30,16,64,0.03);border:2px solid rgba(30,16,64,0.15)";
+        checkStroke = "rgba(30,16,64,0.25)";
+      } else if (isOver) {
+        checkBg = "background:linear-gradient(135deg,#fbbf24,#f59e0b);border:none";
+        checkStroke = "white";
+      } else if (pct100 >= 1) {
+        checkBg = "background:#16a34a;border:none";
+        checkStroke = "white";
+      } else {
+        const fillH = Math.round(pct100 * 36);
+        checkBg = `background:linear-gradient(to top,#16a34a ${fillH}px,rgba(30,16,64,0.05) ${fillH}px);border:2px solid rgba(22,163,74,0.4)`;
+        checkStroke = pct100 > 0.5 ? "white" : "rgba(30,16,64,0.4)";
+      }
+      let squaresHtml = "";
+      if (target > 1) {
+        const showCount = Math.min(Math.max(target, cur), 20);
+        squaresHtml = '<div style="display:flex;gap:3px;flex-wrap:wrap;padding-left:46px;margin-top:5px">';
+        for (let i = 0; i < showCount; i++) {
+          const filled = i < cur;
+          const isBonus = i >= target;
+          const bg = filled ? isBonus ? "#fbbf24" : "#16a34a" : "rgba(30,16,64,0.08)";
+          const border = filled ? "none" : "1.5px solid rgba(30,16,64,0.12)";
+          squaresHtml += `<div data-action="tap-habit-square" data-entity="habit" data-id="${h.id}" data-idx="${i}" style="width:13px;height:13px;border-radius:3px;background:${bg};border:${border};cursor:pointer;transition:all 0.15s;display:flex;align-items:center;justify-content:center">`;
+          if (filled) squaresHtml += `<svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg>`;
+          squaresHtml += "</div>";
+        }
+        if (cur < 20) squaresHtml += `<div data-action="toggle-entity-done" data-entity="habit" data-id="${h.id}" style="width:13px;height:13px;border-radius:3px;background:rgba(30,16,64,0.04);border:1.5px dashed rgba(30,16,64,0.15);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:9px;color:rgba(30,16,64,0.3)">+</div>`;
+        squaresHtml += "</div>";
+      }
+      const countLabel = target > 1 ? `<span style="font-size:11px;font-weight:700;color:${cur >= target ? "#16a34a" : "rgba(30,16,64,0.4)"};margin-left:4px">${cur}/${target}</span>` : "";
+      return '<div class="habit-me-item-wrap" data-id="' + h.id + '" style="position:relative;overflow:hidden;border-radius:14px;margin-bottom:6px"><div id="habit-me-item-' + h.id + '" class="inbox-item" data-action="open-edit-habit" data-id="' + h.id + '" style="padding:10px 12px;cursor:pointer;width:100%;box-sizing:border-box;-webkit-tap-highlight-color:transparent"><div style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><div data-action="toggle-entity-done" data-entity="habit" data-id="' + h.id + '" data-habit-check="1" style="width:36px;height:36px;border-radius:50%;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.25s;-webkit-tap-highlight-color:transparent;' + checkBg + `"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${checkStroke}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></div><div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:6px"><span style="font-size:15px;font-weight:700;color:#1e1040">` + escapeHtml(shortName) + "</span>" + countLabel + streakHtml + '</div><div style="font-size:11px;font-weight:600;color:' + pctColor + ';margin-top:1px">' + t("habits.stat.pct_30d", "{pct}% \u0437\u0430 30 \u0434\u043D\u0456\u0432", { pct }) + "</div></div></div>" + squaresHtml + '<div style="display:flex;gap:4px;padding-left:46px">' + dayDots + "</div></div></div>";
+    }).join("");
+    _attachHabitsSwipeDelete();
+  }
+  function updateProdTabCounters() {
+    const taskCount = getTasks().filter((task) => task.status !== "done").length;
+    const taskCountEl = document.getElementById("prod-tab-tasks-count");
+    const taskSubEl = document.getElementById("prod-tab-tasks-sub");
+    if (taskCountEl) taskCountEl.textContent = taskCount;
+    if (taskSubEl) taskSubEl.textContent = taskCount === 1 ? t("tasks.counter.active_one", "\u0430\u043A\u0442\u0438\u0432\u043D\u0430") : t("tasks.counter.active_many", "\u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0445");
+    const habits = getHabits();
+    const buildHabitsAll = habits.filter((h) => h.type !== "quit");
+    const quitHabitsAll = habits.filter((h) => h.type === "quit");
+    const habitCountEl = document.getElementById("prod-tab-habits-count");
+    const habitSubEl = document.getElementById("prod-tab-habits-sub");
+    const totalHabits = buildHabitsAll.length + quitHabitsAll.length;
+    if (habitCountEl) habitCountEl.textContent = totalHabits;
+    if (habitSubEl) habitSubEl.textContent = totalHabits === 1 ? t("habits.counter.one", "\u0437\u0432\u0438\u0447\u043A\u0430") : t("habits.counter.many", "\u0437\u0432\u0438\u0447\u043E\u043A");
+    _attachProdTabSwipe();
+  }
+  function switchProdTab(tab) {
+    currentProdTab = tab;
+    const isHabits = tab === "habits";
+    const indicator = document.getElementById("prod-tab-indicator");
+    if (indicator) {
+      indicator.style.transform = isHabits ? "translateX(100%)" : "translateX(0)";
+      indicator.style.borderColor = isHabits ? "rgba(22,163,74,0.6)" : "rgba(234,88,12,0.6)";
+    }
+    const tabTasks = document.getElementById("prod-tab-tasks");
+    const tasksTitle = tabTasks ? tabTasks.querySelector("div > div:first-child") : null;
+    const tasksCount = document.getElementById("prod-tab-tasks-count");
+    const tasksSub = document.getElementById("prod-tab-tasks-sub");
+    if (tasksTitle) tasksTitle.style.color = !isHabits ? "#ea580c" : "rgba(30,16,64,0.3)";
+    if (tasksCount) tasksCount.style.color = !isHabits ? "#ea580c" : "rgba(30,16,64,0.3)";
+    if (tasksSub) tasksSub.style.color = !isHabits ? "rgba(30,16,64,0.35)" : "rgba(30,16,64,0.3)";
+    const tabHabits = document.getElementById("prod-tab-habits");
+    const habitsTitle = tabHabits ? tabHabits.querySelector("div > div:first-child") : null;
+    const habitsCount = document.getElementById("prod-tab-habits-count");
+    const habitsSub = document.getElementById("prod-tab-habits-sub");
+    if (habitsTitle) habitsTitle.style.color = isHabits ? "#16a34a" : "rgba(30,16,64,0.3)";
+    if (habitsCount) habitsCount.style.color = isHabits ? "#16a34a" : "rgba(30,16,64,0.3)";
+    if (habitsSub) habitsSub.style.color = isHabits ? "rgba(30,16,64,0.35)" : "rgba(30,16,64,0.3)";
+    document.getElementById("prod-page-tasks").style.display = isHabits ? "none" : "block";
+    document.getElementById("prod-page-habits").style.display = isHabits ? "block" : "none";
+    const addBtn = document.getElementById("prod-add-btn");
+    if (addBtn) addBtn.dataset.fn = isHabits ? "openAddHabit" : "openAddTask";
+    updateProdTabCounters();
+    if (isHabits) renderProdHabits();
+    _attachProdTabSwipe();
+  }
+  function _attachProdTabSwipe() {
+    if (_prodSwipeAttached) return;
+    const toggle = document.getElementById("prod-tab-toggle");
+    const indicator = document.getElementById("prod-tab-indicator");
+    if (!toggle || !indicator) return;
+    _prodSwipeAttached = true;
+    let startX = 0, startY = 0;
+    let startTranslateX = 0;
+    let indicatorWidth = 0;
+    let dragging = false;
+    let lockedDir = null;
+    toggle.addEventListener("touchstart", (e) => {
+      if (e.touches.length !== 1) return;
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+      indicatorWidth = indicator.offsetWidth;
+      startTranslateX = currentProdTab === "habits" ? indicatorWidth : 0;
+      dragging = true;
+      lockedDir = null;
+      indicator.style.transition = "border-color 0.3s ease";
+    }, { passive: true });
+    toggle.addEventListener("touchmove", (e) => {
+      if (!dragging) return;
+      const dx = e.touches[0].clientX - startX;
+      const dy = e.touches[0].clientY - startY;
+      if (!lockedDir && Math.abs(dx) + Math.abs(dy) > 8) {
+        lockedDir = Math.abs(dx) > Math.abs(dy) ? "h" : "v";
+        if (lockedDir === "v") {
+          dragging = false;
+          indicator.style.transition = "";
+          indicator.style.transform = currentProdTab === "habits" ? "translateX(100%)" : "translateX(0)";
+          return;
+        }
+      }
+      if (lockedDir !== "h") return;
+      let pos = startTranslateX + dx;
+      pos = Math.max(0, Math.min(pos, indicatorWidth));
+      indicator.style.transform = `translateX(${pos}px)`;
+    }, { passive: true });
+    toggle.addEventListener("touchend", (e) => {
+      if (!dragging) return;
+      dragging = false;
+      indicator.style.transition = "";
+      if (lockedDir !== "h") {
+        indicator.style.transform = currentProdTab === "habits" ? "translateX(100%)" : "translateX(0)";
+        return;
+      }
+      const endX = e.changedTouches[0]?.clientX ?? startX;
+      const finalPos = startTranslateX + (endX - startX);
+      const target = finalPos > indicatorWidth / 2 ? "habits" : "tasks";
+      switchProdTab(target);
+    }, { passive: true });
+  }
+  function toggleProdHabitToday(id) {
+    const today = (/* @__PURE__ */ new Date()).toDateString();
+    const log = getHabitLog();
+    if (!log[today]) log[today] = {};
+    const habits = getHabits();
+    const h = habits.find((x) => x.id === id);
+    const target = h?.targetCount || 1;
+    const rawVal = log[today][id];
+    const cur = typeof rawVal === "boolean" ? rawVal ? 1 : 0 : rawVal || 0;
+    const newVal = target === 1 ? cur === 0 ? 1 : cur === 1 ? 2 : 0 : cur + 1;
+    log[today][id] = newVal;
+    saveHabitLog(log);
+    if (newVal === target) _habitConfetti(id);
+    renderProdHabits();
+  }
+  function tapHabitSquare(id, idx) {
+    const today = (/* @__PURE__ */ new Date()).toDateString();
+    const log = getHabitLog();
+    if (!log[today]) log[today] = {};
+    const rawVal = log[today][id];
+    const cur = typeof rawVal === "boolean" ? rawVal ? 1 : 0 : rawVal || 0;
+    if (cur > 0 && idx === cur - 1) {
+      log[today][id] = cur - 1;
+      saveHabitLog(log);
+      renderProdHabits();
+    } else if (idx >= cur) {
+      toggleProdHabitToday(id);
+    }
+  }
+  function tapHabitSquareMe(id, idx) {
+    const today = (/* @__PURE__ */ new Date()).toDateString();
+    const log = getHabitLog();
+    if (!log[today]) log[today] = {};
+    const rawVal = log[today][id];
+    const cur = typeof rawVal === "boolean" ? rawVal ? 1 : 0 : rawVal || 0;
+    if (cur > 0 && idx === cur - 1) {
+      log[today][id] = cur - 1;
+      saveHabitLog(log);
+      renderHabits();
+    } else if (idx >= cur) {
+      toggleHabitToday(id);
+    }
+  }
+  function _habitConfetti(habitId) {
+    const btn = document.querySelector(`#prod-habit-item-${habitId} [data-habit-check]`);
+    if (!btn) return;
+    const rect = btn.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const colors = ["#16a34a", "#4ade80", "#fbbf24", "#f97316", "#60a5fa", "#a78bfa"];
+    for (let i = 0; i < 20; i++) {
+      const el = document.createElement("div");
+      const angle = Math.random() * 360 * Math.PI / 180;
+      const dist = 40 + Math.random() * 70;
+      el.style.cssText = `position:fixed;left:${cx}px;top:${cy}px;width:7px;height:7px;border-radius:${Math.random() > 0.5 ? "50%" : "2px"};background:${colors[Math.floor(Math.random() * colors.length)]};pointer-events:none;z-index:9999;transition:transform 0.6s ease-out,opacity 0.6s ease-out`;
+      document.body.appendChild(el);
+      requestAnimationFrame(() => {
+        el.style.transform = `translate(${Math.cos(angle) * dist}px,${Math.sin(angle) * dist - 20}px) rotate(${Math.random() * 360}deg)`;
+        el.style.opacity = "0";
+      });
+      setTimeout(() => el.remove(), 660);
+    }
+  }
+  function renderProdHabits() {
+    updateProdTabCounters();
+    const habits = getHabits();
+    const el = document.getElementById("prod-habits-list");
+    if (!el) return;
+    const log = getHabitLog();
+    const today = (/* @__PURE__ */ new Date()).toDateString();
+    const todayDow = ((/* @__PURE__ */ new Date()).getDay() + 6) % 7;
+    const _isDone = (h) => {
+      const target = h.targetCount || 1;
+      const rawVal = log[today]?.[h.id];
+      const cur = typeof rawVal === "boolean" ? rawVal ? 1 : 0 : rawVal || 0;
+      return cur >= target;
+    };
+    const buildHabitsForBar = habits.filter((h) => h.type !== "quit");
+    const todayHabits = buildHabitsForBar;
+    const doneTodayCount = todayHabits.filter(_isDone).length;
+    const countEl = document.getElementById("habits-today-count");
+    const barEl = document.getElementById("habits-today-bar");
+    if (countEl) countEl.textContent = `${doneTodayCount} / ${todayHabits.length}`;
+    if (barEl) barEl.style.width = todayHabits.length > 0 ? `${Math.round(doneTodayCount / todayHabits.length * 100)}%` : "0%";
+    if (habits.length === 0) {
+      el.innerHTML = '<div style="text-align:center;padding:40px 20px;color:rgba(30,16,64,0.3);font-size:15px">' + t("habits.empty.prod_list", "\u0429\u0435 \u043D\u0435\u043C\u0430\u0454 \u0437\u0432\u0438\u0447\u043E\u043A<br>\u041D\u0430\u0442\u0438\u0441\u043D\u0438 + \u0449\u043E\u0431 \u0434\u043E\u0434\u0430\u0442\u0438") + "</div>";
+      return;
+    }
+    const buildHabits = habits.filter((h) => h.type !== "quit");
+    const quitHabits = habits.filter((h) => h.type === "quit");
+    let html = "";
+    html += buildHabits.map((h) => {
+      const target = h.targetCount || 1;
+      const rawVal = log[today]?.[h.id];
+      const cur = typeof rawVal === "boolean" ? rawVal ? 1 : 0 : rawVal || 0;
+      const pct100 = Math.min(cur / target, 1);
+      const isOver = cur > target;
+      const streak = getHabitStreak(h.id);
+      const weekDone = getHabitWeekDays(h.id, target);
+      const shortName2 = h.name.split(" ").slice(0, 4).join(" ");
+      const dayDots2 = makeHabitDayDots(h, weekDone, todayDow);
+      const habitPct = getHabitPct(h.id);
+      const pctColor2 = habitPct > 0 ? "#16a34a" : "rgba(30,16,64,0.3)";
+      const streakTxt = streak >= 2 ? "\u{1F525} " + streak + " \xB7 " : "";
+      let checkBg, checkStroke;
+      if (cur === 0) {
+        checkBg = "background:rgba(30,16,64,0.03);border:1.5px solid rgba(30,16,64,0.15)";
+        checkStroke = "rgba(30,16,64,0.25)";
+      } else if (isOver) {
+        checkBg = "background:linear-gradient(135deg,#fbbf24,#f59e0b);border:none";
+        checkStroke = "white";
+      } else if (pct100 >= 1) {
+        checkBg = "background:#16a34a;border:none";
+        checkStroke = "white";
+      } else {
+        const fillH = Math.round(pct100 * 40);
+        checkBg = `background:linear-gradient(to top,#16a34a ${fillH}px,rgba(30,16,64,0.05) ${fillH}px);border:1.5px solid rgba(22,163,74,0.4)`;
+        checkStroke = pct100 > 0.5 ? "white" : "rgba(30,16,64,0.4)";
+      }
+      let squaresHtml = "";
+      if (target > 1) {
+        const showCount = Math.min(Math.max(target, cur), 20);
+        squaresHtml = '<div style="display:flex;gap:3px;flex-wrap:wrap;padding-left:52px;margin-top:6px">';
+        for (let i = 0; i < showCount; i++) {
+          const filled = i < cur;
+          const isBonus = i >= target;
+          const bg = filled ? isBonus ? "#fbbf24" : "#16a34a" : "rgba(30,16,64,0.08)";
+          const border = filled ? "none" : "1.5px solid rgba(30,16,64,0.12)";
+          squaresHtml += `<div data-action="tap-habit-square" data-entity="habit-prod" data-id="${h.id}" data-idx="${i}" style="width:14px;height:14px;border-radius:4px;background:${bg};border:${border};cursor:pointer;transition:all 0.15s;display:flex;align-items:center;justify-content:center">`;
+          if (filled) squaresHtml += `<svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg>`;
+          squaresHtml += "</div>";
+        }
+        if (cur < 20) squaresHtml += `<div data-action="toggle-entity-done" data-entity="habit-prod" data-id="${h.id}" style="width:14px;height:14px;border-radius:4px;background:rgba(30,16,64,0.04);border:1.5px dashed rgba(30,16,64,0.15);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:10px;color:rgba(30,16,64,0.3);line-height:1">+</div>`;
+        squaresHtml += "</div>";
+      }
+      const countLabel = target > 1 ? `<span style="font-size:11px;font-weight:700;color:${cur >= target ? "#16a34a" : "rgba(30,16,64,0.4)"};margin-left:4px">${cur}/${target}</span>` : "";
+      return '<div class="prod-habit-item-wrap" id="prod-habit-wrap-' + h.id + '" data-id="' + h.id + '" style="position:relative;border-radius:16px;margin-bottom:var(--card-gap);overflow:hidden"><div id="prod-habit-item-' + h.id + '" data-action="prod-habit-card-click" data-id="' + h.id + '" style="background:rgba(255,255,255,0.6);border:1.5px solid rgba(255,255,255,0.85);border-radius:16px;padding:var(--card-pad-y) var(--card-pad-x);box-shadow:var(--card-shadow);position:relative;z-index:1;will-change:transform;cursor:pointer;-webkit-tap-highlight-color:transparent"><div style="display:flex;align-items:center;gap:12px;margin-bottom:8px"><div data-action="toggle-entity-done" data-entity="habit-prod" data-id="' + h.id + '" data-habit-check="1" style="width:40px;height:40px;border-radius:12px;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.25s;-webkit-tap-highlight-color:transparent;' + checkBg + `"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${checkStroke}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></div><div style="flex:1;min-width:0"><div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px;margin-bottom:1px"><span style="font-size:16px;font-weight:700;color:#1e1040">` + escapeHtml(shortName2) + "</span>" + countLabel + '</div><div style="font-size:11px;font-weight:600;color:' + pctColor2 + '">' + streakTxt + habitPct + "% \u0437\u0430 30 \u0434\u043D\u0456\u0432</div></div></div>" + squaresHtml + '<div style="display:flex;gap:4px;padding-left:52px;margin-top:6px">' + dayDots2 + "</div></div></div>";
+    }).join("");
+    if (quitHabits.length > 0) {
+      html += '<div style="font-size:11px;font-weight:800;color:rgba(30,16,64,0.35);text-transform:uppercase;letter-spacing:0.08em;margin:14px 14px 8px">' + t("habits.quit.section_title", "\u{1F6AB} \u0427\u0435\u043B\u0435\u043D\u0434\u0436\u0456") + "</div>";
+      html += quitHabits.map((h) => _renderQuitHabitCard(h)).join("");
+    }
+    el.innerHTML = html;
+    _attachHabitsSwipeDelete();
+  }
+  function _quitResilienceLamp(relapses30) {
+    if (relapses30 === 0) return { color: "#16a34a", glow: "rgba(22,163,74,0.35)", label: t("habits.quit.lamp.steady", "\u0421\u0442\u0456\u0439\u043A\u0438\u0439") };
+    if (relapses30 <= 2) return { color: "#ca8a04", glow: "rgba(202,138,4,0.35)", label: t("habits.quit.lamp.holding", "\u0422\u0440\u0438\u043C\u0430\u0454\u0442\u044C\u0441\u044F") };
+    if (relapses30 <= 5) return { color: "#ea580c", glow: "rgba(234,88,12,0.35)", label: t("habits.quit.lamp.recovering", "\u0412\u0456\u0434\u043D\u043E\u0432\u043B\u044E\u0454\u0442\u044C\u0441\u044F") };
+    return { color: "#dc2626", glow: "rgba(220,38,38,0.4)", label: t("habits.quit.lamp.danger", "\u041D\u0435\u0431\u0435\u0437\u043F\u0435\u043A\u0430!") };
+  }
+  function _quitTrend(relapses) {
+    const now = Date.now();
+    const d14 = new Date(now - 14 * 864e5).toISOString().slice(0, 10);
+    const d28 = new Date(now - 28 * 864e5).toISOString().slice(0, 10);
+    const arr = relapses || [];
+    const recent = arr.filter((d) => d >= d14).length;
+    const prev = arr.filter((d) => d >= d28 && d < d14).length;
+    if (recent < prev) return { arrow: "\u2193", color: "#16a34a", text: t("habits.quit.trend.less", "\u0437\u0440\u0438\u0432\u0456\u0432 \u043C\u0435\u043D\u0448\u0435") };
+    if (recent > prev) return { arrow: "\u2191", color: "#dc2626", text: t("habits.quit.trend.more", "\u0437\u0440\u0438\u0432\u0456\u0432 \u0431\u0456\u043B\u044C\u0448\u0435") };
+    return { arrow: "\u2192", color: "rgba(30,16,64,0.4)", text: t("habits.quit.trend.same", "\u0431\u0435\u0437 \u0437\u043C\u0456\u043D") };
+  }
+  function _renderQuitHabitCard(h) {
+    const s = getQuitStatus(h.id);
+    const today = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+    const heldToday = s.lastHeld === today;
+    const relapses30 = (s.relapses || []).filter((d) => {
+      const cutoff = new Date(Date.now() - 30 * 864e5).toISOString().slice(0, 10);
+      return d >= cutoff;
+    }).length;
+    const streak = s.streak || 0;
+    const longest = s.longestStreak || 0;
+    const freedomDays = s.freedomDays || 0;
+    const shortName = h.name.split(" ").slice(0, 4).join(" ");
+    const lamp = _quitResilienceLamp(relapses30);
+    const trend = _quitTrend(s.relapses);
+    const cardBg = relapses30 === 0 && streak > 0 ? "background:rgba(232,240,232,0.8);border-color:rgba(22,163,74,0.2)" : relapses30 >= 6 ? "background:rgba(255,235,235,0.85);border-color:rgba(220,38,38,0.2)" : "background:rgba(255,248,240,0.85);border-color:rgba(234,88,12,0.15)";
+    const streakColor = streak > 0 ? "#16a34a" : "rgba(30,16,64,0.3)";
+    const lampHtml = '<div style="flex-shrink:0;width:14px;height:14px;border-radius:50%;background:' + lamp.color + ";box-shadow:0 0 8px 3px " + lamp.glow + ';margin-top:3px"></div>';
+    return '<div class="prod-habit-item-wrap" id="quit-wrap-' + h.id + '" data-id="' + h.id + '" style="position:relative;border-radius:16px;margin-bottom:var(--card-gap);overflow:hidden"><div id="prod-habit-item-' + h.id + '" data-action="open-edit-habit" data-id="' + h.id + '" style="' + cardBg + ';border:1.5px solid;border-radius:16px;padding:var(--card-pad-y) var(--card-pad-x);position:relative;z-index:1;cursor:pointer;-webkit-tap-highlight-color:transparent"><div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px">' + lampHtml + '<div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:700;color:#1e1040;line-height:1.2">' + escapeHtml(shortName) + '</div><div style="font-size:11px;color:' + lamp.color + ';font-weight:600;margin-top:1px">' + lamp.label + '</div></div><div style="text-align:right;flex-shrink:0"><div style="font-size:16px;font-weight:700;color:' + trend.color + ';line-height:1">' + trend.arrow + '</div><div style="font-size:10px;color:rgba(30,16,64,0.4);font-weight:500">' + trend.text + '</div></div></div><div style="display:flex;align-items:baseline;gap:10px;margin-bottom:8px"><div><span style="font-size:26px;font-weight:800;color:#1e1040;line-height:1">' + freedomDays + '</span><span style="font-size:12px;font-weight:600;color:rgba(30,16,64,0.5);margin-left:4px">' + t("habits.quit.label.free_days", "\u0432\u0456\u043B\u044C\u043D\u0438\u0445 {word}", { word: _dayWord(freedomDays) }) + "</span></div>" + (streak > 0 ? '<div style="font-size:11px;font-weight:600;color:' + streakColor + ';margin-left:auto">' + t("habits.quit.label.streak", "\u{1F525} \u0441\u0435\u0440\u0456\u044F {n} {word}", { n: streak, word: _dayWord(streak) }) + (longest > streak ? t("habits.quit.label.record_inline", " \xB7 \u0440\u0435\u043A\u043E\u0440\u0434 {n}", { n: longest }) : "") + "</div>" : longest > 0 ? '<div style="font-size:11px;font-weight:500;color:rgba(30,16,64,0.35);margin-left:auto">' + t("habits.quit.label.record", "\u0440\u0435\u043A\u043E\u0440\u0434 {n} {word}", { n: longest, word: _dayWord(longest) }) + "</div>" : "") + '</div><div style="display:flex;gap:8px"><button data-action="hold-quit-habit" data-id="' + h.id + '" style="flex:2;padding:10px;border-radius:12px;border:none;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;touch-action:manipulation;' + (heldToday ? "background:rgba(22,163,74,0.15);color:#16a34a" : "background:rgba(22,163,74,0.1);color:#16a34a") + '">' + (heldToday ? t("habits.quit.btn.held_today", "\u2705 \u0422\u0440\u0438\u043C\u0430\u044E\u0441\u044C \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456") : t("habits.quit.btn.hold", "\u2713 \u0422\u0440\u0438\u043C\u0430\u044E\u0441\u044C")) + '</button><button data-action="confirm-quit-relapse" data-id="' + h.id + '" style="flex:1;padding:10px;border-radius:12px;border:1.5px solid rgba(30,16,64,0.1);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;background:rgba(30,16,64,0.03);color:rgba(30,16,64,0.35);touch-action:manipulation">' + t("habits.quit.btn.relapse", "\u0417\u0456\u0440\u0432\u0430\u0432\u0441\u044F") + "</button></div></div></div>";
+  }
+  function confirmQuitRelapse(habitId) {
+    const s = getQuitStatus(habitId);
+    const fd = s.freedomDays || 0;
+    const fdText = fd > 0 ? "\n" + t("habits.quit.confirm.kept", "{n} \u0432\u0456\u043B\u044C\u043D\u0438\u0445 {word} \u0437\u0430\u043B\u0438\u0448\u0430\u0442\u044C\u0441\u044F \u0442\u0432\u043E\u0457\u043C\u0438.", { n: fd, word: _dayWord(fd) }) : "";
+    if (window.confirm(t("habits.quit.confirm.relapse", "\u0412\u0430\u0436\u043A\u0438\u0439 \u0434\u0435\u043D\u044C? \u0412\u0456\u0434\u043C\u0456\u0442\u0438\u0442\u0438 \u0437\u0440\u0438\u0432?") + fdText)) {
+      relapseQuitHabit(habitId);
+    }
+  }
+  function _attachHabitsSwipeDelete() {
+    const bind = (wrap, card) => {
+      if (!card) return;
+      const id = wrap.dataset.id;
+      attachSwipeDelete(wrap, card, () => {
+        const allHabits = getHabits();
+        const habitOrigIdx = allHabits.findIndex((h) => String(h.id) === id);
+        const item = allHabits.find((h) => String(h.id) === id);
+        if (item) addToTrash("habit", item);
+        saveHabits(allHabits.filter((h) => String(h.id) !== id));
+        renderHabits();
+        renderProdHabits();
+        if (item) showUndoToast(t("habits.toast.deleted", "\u0417\u0432\u0438\u0447\u043A\u0443 \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E"), () => {
+          const habits = getHabits();
+          const idx = Math.min(habitOrigIdx, habits.length);
+          habits.splice(idx, 0, item);
+          saveHabits(habits);
+          renderHabits();
+          renderProdHabits();
+        });
+      });
+    };
+    document.querySelectorAll(".habit-me-item-wrap").forEach((w) => bind(w, w.querySelector('[id^="habit-me-item-"]')));
+    document.querySelectorAll(".prod-habit-item-wrap").forEach((w) => bind(w, w.querySelector('[id^="prod-habit-item-"]')));
+  }
+  function prodHabitCardClick(id, _event) {
+    openEditHabit(id);
+  }
   async function sendTasksBarMessage() {
     if (taskBarLoading) return;
     const input = document.getElementById("tasks-chat-input");
@@ -15739,6 +15779,7 @@ ${CHIP_PROMPT_RULES}`;
       init_ua_time_parser();
       init_evening();
       init_calendar();
+      init_execute_action();
       editingHabitId = null;
       _habitModalType = "build";
       document.addEventListener("click", (e) => {
@@ -17086,7 +17127,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
               addTaskChatMsg("agent", t("tasks.steps_added", "\u2705 \u0414\u043E\u0434\u0430\u0432 {n} \u043A\u0440\u043E\u043A\u0456\u0432 \u0434\u043E \u0437\u0430\u0434\u0430\u0447\u0456. \u041F\u0435\u0440\u0435\u0432\u0456\u0440 \u043A\u0430\u0440\u0442\u043A\u0443.", { n: parsed.steps.length }));
             }
           } else if (parsed.action) {
-            if (!processUniversalAction(parsed, text, addTaskChatMsg)) {
+            if (!processUniversalAction2(parsed, text, addTaskChatMsg)) {
               addTaskChatMsg("agent", reply, "", extractedChips);
             }
           } else {
@@ -17107,7 +17148,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
                 addTaskChatMsg("agent", t("tasks.steps_added", "\u2705 \u0414\u043E\u0434\u0430\u0432 {n} \u043A\u0440\u043E\u043A\u0456\u0432 \u0434\u043E \u0437\u0430\u0434\u0430\u0447\u0456. \u041F\u0435\u0440\u0435\u0432\u0456\u0440 \u043A\u0430\u0440\u0442\u043A\u0443.", { n: p.steps.length }));
                 handled = true;
               }
-            } else if (p.action && processUniversalAction(p, text, addTaskChatMsg)) {
+            } else if (p.action && processUniversalAction2(p, text, addTaskChatMsg)) {
               handled = true;
             }
           }
@@ -18463,75 +18504,7 @@ ${userText}
     }
   });
 
-  // src/tabs/inbox.js
-  function addInboxChatMsg(role, text, chips = null) {
-    const el = document.getElementById("inbox-chat-messages");
-    if (!el) return;
-    if (role === "agent" && (!chips || chips.length === 0) && text) {
-      const _p = parseContentChips(text);
-      if (_p.chips) {
-        text = _p.text;
-        chips = _p.chips;
-      }
-    }
-    if (_inboxTypingEl) {
-      _inboxTypingEl.remove();
-      _inboxTypingEl = null;
-    }
-    if (role === "agent") el.querySelectorAll(".chat-chips-row").forEach((n) => n.remove());
-    if (role === "typing") {
-      const div2 = document.createElement("div");
-      div2.style.cssText = "display:flex";
-      div2.innerHTML = `<div style="background:rgba(255,255,255,0.12);border-radius:4px 14px 14px 14px;padding:5px 10px"><div class="ai-typing"><span></span><span></span><span></span></div></div>`;
-      el.appendChild(div2);
-      _inboxTypingEl = div2;
-      el.scrollTop = el.scrollHeight;
-      return;
-    }
-    if (role === "user") {
-      const now = Date.now();
-      const gap = now - _lastUserMsgTs;
-      if (_lastUserMsgTs > 0 && gap > 5 * 60 * 1e3) {
-        const mins = Math.round(gap / 6e4);
-        const label = mins < 60 ? t("inbox.time.mins_ago", "{n} \u0445\u0432 \u0442\u043E\u043C\u0443", { n: mins }) : mins < 1440 ? t("inbox.time.hours_ago", "{n} \u0433\u043E\u0434 \u0442\u043E\u043C\u0443", { n: Math.round(mins / 60) }) : t("inbox.time.earlier", "\u0440\u0430\u043D\u0456\u0448\u0435");
-        const sep = document.createElement("div");
-        sep.style.cssText = "display:flex;align-items:center;gap:8px;margin:6px 0;opacity:0.45";
-        sep.innerHTML = `<div style="flex:1;height:1px;background:rgba(255,255,255,0.2)"></div><div style="font-size:11px;color:rgba(255,255,255,0.6);white-space:nowrap;font-weight:500">${label}</div><div style="flex:1;height:1px;background:rgba(255,255,255,0.2)"></div>`;
-        el.appendChild(sep);
-      }
-      _lastUserMsgTs = now;
-    }
-    const isAgent = role === "agent";
-    const div = document.createElement("div");
-    div.style.cssText = `display:flex;${isAgent ? "gap:8px;align-items:flex-start" : "justify-content:flex-end"}`;
-    if (isAgent) {
-      div.innerHTML = `<div style="background:rgba(255,255,255,0.12);color:white;border-radius:4px 14px 14px 14px;padding:8px 12px;font-size:15px;font-weight:500;line-height:1.5;max-width:85%">${escapeHtml(text).replace(/\n/g, "<br>")}</div>`;
-    } else {
-      div.innerHTML = `<div style="background:rgba(255,255,255,0.88);color:#1e1040;border-radius:14px 4px 14px 14px;padding:8px 12px;font-size:15px;font-weight:500;line-height:1.5;max-width:85%">${escapeHtml(text).replace(/\n/g, "<br>")}</div>`;
-    }
-    el.appendChild(div);
-    if (isAgent && Array.isArray(chips) && chips.length > 0) {
-      const chipsRow = document.createElement("div");
-      chipsRow.className = "chat-chips-row";
-      renderChips(chipsRow, chips, "inbox");
-      el.appendChild(chipsRow);
-      requestAnimationFrame(() => chipsRow.scrollIntoView({ block: "end", inline: "nearest" }));
-    }
-    el.scrollTop = el.scrollHeight;
-    requestAnimationFrame(() => {
-      el.scrollTop = el.scrollHeight;
-    });
-    saveChatMsg("inbox", role, text, chips);
-    if (role === "agent") {
-      const bar = document.getElementById("inbox-ai-bar");
-      const chatWin = bar ? bar.querySelector(".ai-bar-chat-window") : null;
-      const isOpen = chatWin && chatWin.classList.contains("open");
-      if (!isOpen) showUnreadBadge("inbox", "ai-send-btn");
-    }
-  }
-  function _clearInboxUnreadBadge() {
-    clearUnreadBadge("inbox");
-  }
+  // src/tabs/inbox-feed.js
   function getInbox() {
     return JSON.parse(localStorage.getItem("nm_inbox") || "[]");
   }
@@ -18747,6 +18720,133 @@ ${userText}
         });
       });
     });
+  }
+  var CAT_DOT_SOLID, CAT_TAG_STYLE, CAT_META, INBOX_NAV_MAP;
+  var init_inbox_feed = __esm({
+    "src/tabs/inbox-feed.js"() {
+      init_nav();
+      init_utils();
+      init_trash();
+      init_swipe_delete();
+      init_checklist();
+      init_touch_detect();
+      init_lists();
+      init_tasks();
+      init_calendar();
+      init_months();
+      CAT_DOT_SOLID = {
+        task: "background:#2fd0f9",
+        idea: "background:#c4b820",
+        note: "background:#a07850",
+        habit: "background:#16a34a",
+        event: "background:#3b82f6",
+        finance: "background:#c2410c",
+        reminder: "background:#c2790a",
+        list: "background:#ea580c"
+      };
+      CAT_TAG_STYLE = {
+        task: "background:rgba(47,208,249,0.2);color:#0a7a97",
+        idea: "background:rgba(245,240,168,0.5);color:#7a6c00",
+        note: "background:rgba(180,140,90,0.2);color:#6a4a1a",
+        habit: "background:rgba(22,163,74,0.15);color:#14532d",
+        event: "background:rgba(59,130,246,0.15);color:#1d4ed8",
+        finance: "background:rgba(194,65,12,0.15);color:#7c2d12",
+        reminder: "background:rgba(194,121,10,0.18);color:#7a4e05",
+        list: "background:rgba(234,88,12,0.15);color:#9a3412"
+      };
+      CAT_META = {
+        idea: { icon: "\u{1F4A1}", label: t("inbox.cat.idea", "\u0406\u0434\u0435\u044F"), dotClass: "cat-dot-idea", tagClass: "cat-idea" },
+        task: { icon: "\u{1F4CC}", label: t("inbox.cat.task", "\u0417\u0430\u0434\u0430\u0447\u0430"), dotClass: "cat-dot-task", tagClass: "cat-task" },
+        habit: { icon: "\u{1F331}", label: t("inbox.cat.habit", "\u0417\u0432\u0438\u0447\u043A\u0430"), dotClass: "cat-dot-habit", tagClass: "cat-habit" },
+        note: { icon: "\u{1F4DD}", label: t("inbox.cat.note", "\u041D\u043E\u0442\u0430\u0442\u043A\u0430"), dotClass: "cat-dot-note", tagClass: "cat-note" },
+        event: { icon: "\u{1F4C5}", label: t("inbox.cat.event", "\u041F\u043E\u0434\u0456\u044F"), dotClass: "cat-dot-event", tagClass: "cat-event" },
+        finance: { icon: "\u20B4", label: t("inbox.cat.finance", "\u0424\u0456\u043D\u0430\u043D\u0441\u0438"), dotClass: "cat-dot-finance", tagClass: "cat-finance" },
+        reminder: { icon: "\u23F0", label: t("inbox.cat.reminder", "\u041D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F"), dotClass: "cat-dot-reminder", tagClass: "cat-reminder" },
+        list: { icon: "\u2611\uFE0F", label: t("inbox.cat.list", "\u0421\u043F\u0438\u0441\u043E\u043A"), dotClass: "cat-dot-list", tagClass: "cat-list" }
+      };
+      regTouch("toggle-list-item", (data) => {
+        if (!data.listId || !data.itemId) return;
+        toggleListItem(data.listId, data.itemId);
+      });
+      INBOX_NAV_MAP = {
+        task: "tasks",
+        habit: "tasks",
+        // habit — підвкладка всередині tasks; switchProdTab('habits') викликається у navigateInboxItem
+        note: "notes",
+        idea: "notes",
+        finance: "finance"
+      };
+    }
+  });
+
+  // src/tabs/inbox.js
+  function addInboxChatMsg(role, text, chips = null) {
+    const el = document.getElementById("inbox-chat-messages");
+    if (!el) return;
+    if (role === "agent" && (!chips || chips.length === 0) && text) {
+      const _p = parseContentChips(text);
+      if (_p.chips) {
+        text = _p.text;
+        chips = _p.chips;
+      }
+    }
+    if (_inboxTypingEl) {
+      _inboxTypingEl.remove();
+      _inboxTypingEl = null;
+    }
+    if (role === "agent") el.querySelectorAll(".chat-chips-row").forEach((n) => n.remove());
+    if (role === "typing") {
+      const div2 = document.createElement("div");
+      div2.style.cssText = "display:flex";
+      div2.innerHTML = `<div style="background:rgba(255,255,255,0.12);border-radius:4px 14px 14px 14px;padding:5px 10px"><div class="ai-typing"><span></span><span></span><span></span></div></div>`;
+      el.appendChild(div2);
+      _inboxTypingEl = div2;
+      el.scrollTop = el.scrollHeight;
+      return;
+    }
+    if (role === "user") {
+      const now = Date.now();
+      const gap = now - _lastUserMsgTs;
+      if (_lastUserMsgTs > 0 && gap > 5 * 60 * 1e3) {
+        const mins = Math.round(gap / 6e4);
+        const label = mins < 60 ? t("inbox.time.mins_ago", "{n} \u0445\u0432 \u0442\u043E\u043C\u0443", { n: mins }) : mins < 1440 ? t("inbox.time.hours_ago", "{n} \u0433\u043E\u0434 \u0442\u043E\u043C\u0443", { n: Math.round(mins / 60) }) : t("inbox.time.earlier", "\u0440\u0430\u043D\u0456\u0448\u0435");
+        const sep = document.createElement("div");
+        sep.style.cssText = "display:flex;align-items:center;gap:8px;margin:6px 0;opacity:0.45";
+        sep.innerHTML = `<div style="flex:1;height:1px;background:rgba(255,255,255,0.2)"></div><div style="font-size:11px;color:rgba(255,255,255,0.6);white-space:nowrap;font-weight:500">${label}</div><div style="flex:1;height:1px;background:rgba(255,255,255,0.2)"></div>`;
+        el.appendChild(sep);
+      }
+      _lastUserMsgTs = now;
+    }
+    const isAgent = role === "agent";
+    const div = document.createElement("div");
+    div.style.cssText = `display:flex;${isAgent ? "gap:8px;align-items:flex-start" : "justify-content:flex-end"}`;
+    if (isAgent) {
+      div.innerHTML = `<div style="background:rgba(255,255,255,0.12);color:white;border-radius:4px 14px 14px 14px;padding:8px 12px;font-size:15px;font-weight:500;line-height:1.5;max-width:85%">${escapeHtml(text).replace(/\n/g, "<br>")}</div>`;
+    } else {
+      div.innerHTML = `<div style="background:rgba(255,255,255,0.88);color:#1e1040;border-radius:14px 4px 14px 14px;padding:8px 12px;font-size:15px;font-weight:500;line-height:1.5;max-width:85%">${escapeHtml(text).replace(/\n/g, "<br>")}</div>`;
+    }
+    el.appendChild(div);
+    if (isAgent && Array.isArray(chips) && chips.length > 0) {
+      const chipsRow = document.createElement("div");
+      chipsRow.className = "chat-chips-row";
+      renderChips(chipsRow, chips, "inbox");
+      el.appendChild(chipsRow);
+      requestAnimationFrame(() => chipsRow.scrollIntoView({ block: "end", inline: "nearest" }));
+    }
+    el.scrollTop = el.scrollHeight;
+    requestAnimationFrame(() => {
+      el.scrollTop = el.scrollHeight;
+    });
+    saveChatMsg("inbox", role, text, chips);
+    if (role === "agent") {
+      const bar = document.getElementById("inbox-ai-bar");
+      const chatWin = bar ? bar.querySelector(".ai-bar-chat-window") : null;
+      const isOpen = chatWin && chatWin.classList.contains("open");
+      if (!isOpen) showUnreadBadge("inbox", "ai-send-btn");
+    }
+  }
+  function _clearInboxUnreadBadge() {
+    clearUnreadBadge("inbox");
   }
   function _toolCallToAction(name, args) {
     switch (name) {
@@ -19079,7 +19179,7 @@ ${aiContext}`;
             } else if (q === "last") {
               const lastAction = typeFilter ? null : readLastReversible();
               if (lastAction) {
-                const ok = executeReverse(lastAction.reverse, processUniversalAction);
+                const ok = executeReverse(lastAction.reverse, processUniversalAction2);
                 if (ok) {
                   markReversed(lastAction.id);
                   addInboxChatMsg("agent", t("inbox.chat.undo_ok", "\u2705 \u0412\u0456\u0434\u043C\u0456\u043D\u0438\u0432: {summary}", { summary: lastAction.summary }));
@@ -19221,7 +19321,7 @@ ${aiContext}`;
               if (currentTab === "finance") renderFinance();
               addInboxChatMsg("agent", t("inbox.fin.subcat_added", '\u2713 \u0414\u043E\u0434\u0430\u0432 "{sub}" \u0443 "{cat}". {comment}', { sub: action.subcategory, cat: action.category_name, comment: action.comment || "" }));
             }
-          } else if (processUniversalAction(action, text, addInboxChatMsg)) {
+          } else if (processUniversalAction2(action, text, addInboxChatMsg)) {
           } else {
             const replyText = action.comment || args?.comment || "";
             if (replyText) addInboxChatMsg("agent", replyText);
@@ -19337,7 +19437,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
               } else if (action.action === "complete_task") {
                 processCompleteTask(action, combinedMsg);
                 primaryHandled = true;
-              } else if (processUniversalAction(action, combinedMsg, addInboxChatMsg)) {
+              } else if (processUniversalAction2(action, combinedMsg, addInboxChatMsg)) {
                 primaryHandled = true;
               } else if (action.comment) {
                 addInboxChatMsg("agent", action.comment);
@@ -19627,7 +19727,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
     const tb = document.getElementById("tab-bar");
     return tb ? tb.offsetHeight : 83;
   }
-  var _inboxTypingEl, _parseContentChips2, CAT_DOT_SOLID, CAT_TAG_STYLE, CAT_META, INBOX_NAV_MAP, aiLoading, inboxChatHistory, _lastUserMsgTs, SEND_SVG, clarifyParsed, clarifyOriginalText;
+  var _inboxTypingEl, _parseContentChips2, aiLoading, inboxChatHistory, _lastUserMsgTs, SEND_SVG, clarifyParsed, clarifyOriginalText;
   var init_inbox = __esm({
     "src/tabs/inbox.js"() {
       init_nav();
@@ -19661,50 +19761,10 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
       init_health();
       init_months();
       init_unread_badge();
+      init_inbox_feed();
+      init_inbox_feed();
       _inboxTypingEl = null;
       _parseContentChips2 = parseContentChips;
-      CAT_DOT_SOLID = {
-        task: "background:#2fd0f9",
-        idea: "background:#c4b820",
-        note: "background:#a07850",
-        habit: "background:#16a34a",
-        event: "background:#3b82f6",
-        finance: "background:#c2410c",
-        reminder: "background:#c2790a",
-        list: "background:#ea580c"
-      };
-      CAT_TAG_STYLE = {
-        task: "background:rgba(47,208,249,0.2);color:#0a7a97",
-        idea: "background:rgba(245,240,168,0.5);color:#7a6c00",
-        note: "background:rgba(180,140,90,0.2);color:#6a4a1a",
-        habit: "background:rgba(22,163,74,0.15);color:#14532d",
-        event: "background:rgba(59,130,246,0.15);color:#1d4ed8",
-        finance: "background:rgba(194,65,12,0.15);color:#7c2d12",
-        reminder: "background:rgba(194,121,10,0.18);color:#7a4e05",
-        list: "background:rgba(234,88,12,0.15);color:#9a3412"
-      };
-      CAT_META = {
-        idea: { icon: "\u{1F4A1}", label: t("inbox.cat.idea", "\u0406\u0434\u0435\u044F"), dotClass: "cat-dot-idea", tagClass: "cat-idea" },
-        task: { icon: "\u{1F4CC}", label: t("inbox.cat.task", "\u0417\u0430\u0434\u0430\u0447\u0430"), dotClass: "cat-dot-task", tagClass: "cat-task" },
-        habit: { icon: "\u{1F331}", label: t("inbox.cat.habit", "\u0417\u0432\u0438\u0447\u043A\u0430"), dotClass: "cat-dot-habit", tagClass: "cat-habit" },
-        note: { icon: "\u{1F4DD}", label: t("inbox.cat.note", "\u041D\u043E\u0442\u0430\u0442\u043A\u0430"), dotClass: "cat-dot-note", tagClass: "cat-note" },
-        event: { icon: "\u{1F4C5}", label: t("inbox.cat.event", "\u041F\u043E\u0434\u0456\u044F"), dotClass: "cat-dot-event", tagClass: "cat-event" },
-        finance: { icon: "\u20B4", label: t("inbox.cat.finance", "\u0424\u0456\u043D\u0430\u043D\u0441\u0438"), dotClass: "cat-dot-finance", tagClass: "cat-finance" },
-        reminder: { icon: "\u23F0", label: t("inbox.cat.reminder", "\u041D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F"), dotClass: "cat-dot-reminder", tagClass: "cat-reminder" },
-        list: { icon: "\u2611\uFE0F", label: t("inbox.cat.list", "\u0421\u043F\u0438\u0441\u043E\u043A"), dotClass: "cat-dot-list", tagClass: "cat-list" }
-      };
-      regTouch("toggle-list-item", (data) => {
-        if (!data.listId || !data.itemId) return;
-        toggleListItem(data.listId, data.itemId);
-      });
-      INBOX_NAV_MAP = {
-        task: "tasks",
-        habit: "tasks",
-        // habit — підвкладка всередині tasks; switchProdTab('habits') викликається у navigateInboxItem
-        note: "notes",
-        idea: "notes",
-        finance: "finance"
-      };
       aiLoading = false;
       inboxChatHistory = [];
       _lastUserMsgTs = 0;
@@ -21027,6 +21087,825 @@ ${logLines}
         // v16 cross-ref: allergies[].id
       };
       QUOTA_BUDGET_BYTES = 4 * 1024 * 1024;
+    }
+  });
+
+  // src/core/migrations.js
+  function runMigrations() {
+    const tasks = JSON.parse(localStorage.getItem("nm_tasks") || "[]");
+    let changed = false;
+    tasks.forEach((t2) => {
+      if (t2.dueDate === void 0) {
+        t2.dueDate = null;
+        changed = true;
+      }
+      if (t2.priority === void 0) {
+        t2.priority = "normal";
+        changed = true;
+      }
+    });
+    if (changed) localStorage.setItem("nm_tasks", JSON.stringify(tasks));
+    ["nm_fin_coach_week", "nm_fin_coach_month", "nm_fin_coach_3months"].forEach((k) => {
+      localStorage.removeItem(k);
+    });
+    if (!localStorage.getItem("nm_owl_cache_cleared_v3")) {
+      [
+        "nm_owl_board",
+        "nm_owl_tab_finance",
+        "nm_owl_tab_tasks",
+        "nm_owl_tab_notes",
+        "nm_owl_tab_health",
+        "nm_owl_tab_projects",
+        "nm_owl_tab_evening",
+        "nm_owl_tab_me",
+        "nm_owl_board_ts",
+        // Скидаємо Auto-silence щоб OWL заговорив одразу після очищення кешу
+        "nm_owl_silence_until",
+        "nm_owl_ignored_msgs",
+        "nm_owl_last_board_ts",
+        "nm_owl_last_chip_click_ts"
+      ].forEach((k) => localStorage.removeItem(k));
+      localStorage.setItem("nm_owl_cache_cleared_v3", "1");
+    }
+    ["nm_fin_insight_week_0", "nm_fin_insight_month_0", "nm_fin_insight_3months_0"].forEach((k) => localStorage.removeItem(k));
+    if (!localStorage.getItem("nm_owl_silence_reset_v5")) {
+      ["nm_owl_silence_until", "nm_owl_ignored_msgs", "nm_owl_last_board_ts", "nm_owl_last_chip_click_ts"].forEach((k) => localStorage.removeItem(k));
+      localStorage.setItem("nm_owl_silence_reset_v5", "1");
+    }
+    if (!localStorage.getItem("nm_health_log_cleared_v6")) {
+      localStorage.removeItem("nm_health_log");
+      localStorage.setItem("nm_health_log_cleared_v6", "1");
+    }
+    if (!localStorage.getItem("nm_pruning_wipe_v1_done")) {
+      [
+        "nm_owl_board_unified",
+        "nm_owl_board_unified_ts",
+        "nm_owl_board",
+        "nm_owl_board_ts",
+        // Тригерні TS-ключі вкладок — щоб Judge Layer не вирішив що
+        // «тільки що генерували, мовчимо ще 30 хв»
+        "nm_owl_tab_ts_inbox",
+        "nm_owl_tab_ts_tasks",
+        "nm_owl_tab_ts_notes",
+        "nm_owl_tab_ts_me",
+        "nm_owl_tab_ts_evening",
+        "nm_owl_tab_ts_finance",
+        "nm_owl_tab_ts_health",
+        "nm_owl_tab_ts_projects"
+      ].forEach((k) => localStorage.removeItem(k));
+      localStorage.setItem("nm_pruning_wipe_v1_done", "1");
+      console.log("[boot] Pruning Engine v1: wiped legacy board history (no entityRefs)");
+    }
+    if (!localStorage.getItem("nm_board_clean_pji7l_done")) {
+      [
+        "nm_owl_board_unified",
+        "nm_owl_board_unified_ts",
+        "nm_owl_board_migrated_v2",
+        // інакше _migrateOnce думає що міграція вже виконана і не перезаповнює
+        "nm_owl_board",
+        "nm_owl_board_ts",
+        "nm_owl_board_seen",
+        "nm_chip_payloads",
+        "nm_owl_tab_ts_inbox",
+        "nm_owl_tab_ts_notes",
+        "nm_owl_tab_ts_me",
+        "nm_owl_tab_ts_evening",
+        "nm_owl_tab_ts_finance",
+        "nm_owl_tab_ts_health",
+        "nm_owl_tab_ts_projects",
+        "nm_owl_tab_ts_tasks"
+      ].forEach((k) => localStorage.removeItem(k));
+      localStorage.setItem("nm_board_clean_pji7l_done", "1");
+      console.log("[boot] PJi7l: cleared board cache + ts + migration flag for fresh AI generation");
+    }
+    if (!localStorage.getItem("nm_board_clean_pji7l_v2_done")) {
+      [
+        "nm_owl_board_unified",
+        "nm_owl_board_unified_ts",
+        "nm_owl_board_migrated_v2",
+        "nm_owl_board",
+        "nm_owl_board_ts",
+        "nm_owl_tab_ts_inbox",
+        "nm_owl_tab_ts_notes",
+        "nm_owl_tab_ts_me",
+        "nm_owl_tab_ts_evening",
+        "nm_owl_tab_ts_finance",
+        "nm_owl_tab_ts_health",
+        "nm_owl_tab_ts_projects",
+        "nm_owl_tab_ts_tasks"
+      ].forEach((k) => localStorage.removeItem(k));
+      localStorage.setItem("nm_board_clean_pji7l_v2_done", "1");
+      console.log("[boot] PJi7l-v2: re-cleared board for fresh empty-state-aware generation");
+    }
+    if (!localStorage.getItem("nm_tasks_uuid_migrated_v8")) {
+      try {
+        const tasksRaw = localStorage.getItem("nm_tasks");
+        if (tasksRaw) {
+          localStorage.setItem("nm_tasks_backup_v7", tasksRaw);
+          const tasks2 = JSON.parse(tasksRaw);
+          if (Array.isArray(tasks2)) {
+            let migrated = 0;
+            tasks2.forEach((t2) => {
+              if (typeof t2.id === "number") {
+                t2.legacy_id = t2.id;
+                t2.id = generateUUID();
+                migrated++;
+              }
+            });
+            if (migrated > 0) {
+              localStorage.setItem("nm_tasks", JSON.stringify(tasks2));
+              console.log(`[boot] v8 migration: ${migrated} tasks migrated to UUID`);
+            }
+          }
+        }
+        localStorage.setItem("nm_tasks_uuid_migrated_v8", "1");
+      } catch (e) {
+        console.error("[boot] v8 migration failed:", e);
+        const backup = localStorage.getItem("nm_tasks_backup_v7");
+        if (backup) {
+          try {
+            localStorage.setItem("nm_tasks", backup);
+          } catch (_) {
+          }
+        }
+      }
+    }
+    if (!localStorage.getItem("nm_habits_uuid_migrated_v9")) {
+      try {
+        const habitsRaw = localStorage.getItem("nm_habits2");
+        const logRaw = localStorage.getItem("nm_habit_log2");
+        if (habitsRaw) {
+          const backupKey = createSelectiveBackup(["nm_habits2", "nm_habit_log2"], "pre-habit-uuid-v9");
+          if (backupKey) console.log("[boot] v9 habits backup:", backupKey);
+          const habits = JSON.parse(habitsRaw);
+          if (Array.isArray(habits)) {
+            const idMap = {};
+            let migrated = 0;
+            habits.forEach((h) => {
+              if (h && typeof h.id === "number") {
+                const oldId = String(h.id);
+                const newId = generateUUID();
+                h.legacy_id = h.id;
+                h.id = newId;
+                idMap[oldId] = newId;
+                migrated++;
+              }
+            });
+            if (migrated > 0) {
+              if (logRaw) {
+                try {
+                  const log = JSON.parse(logRaw);
+                  if (log && typeof log === "object") {
+                    let logChanged = false;
+                    Object.keys(log).forEach((dateKey) => {
+                      const dayMap = log[dateKey];
+                      if (!dayMap || typeof dayMap !== "object") return;
+                      const newDayMap = {};
+                      Object.keys(dayMap).forEach((habitIdKey) => {
+                        const newKey = idMap[habitIdKey] || habitIdKey;
+                        newDayMap[newKey] = dayMap[habitIdKey];
+                        if (newKey !== habitIdKey) logChanged = true;
+                      });
+                      log[dateKey] = newDayMap;
+                    });
+                    if (logChanged) {
+                      localStorage.setItem("nm_habit_log2", JSON.stringify(log));
+                    }
+                  }
+                } catch (logErr) {
+                  console.error("[boot] v9 habit_log2 migration failed:", logErr);
+                }
+              }
+              localStorage.setItem("nm_habits2", JSON.stringify(habits));
+              console.log(`[boot] v9 migration: ${migrated} habits migrated to UUID, log keys updated`);
+            }
+          }
+        }
+        localStorage.setItem("nm_habits_uuid_migrated_v9", "1");
+      } catch (e) {
+        console.error("[boot] v9 habits migration failed:", e);
+      }
+    }
+    if (!localStorage.getItem("nm_events_uuid_migrated_v10")) {
+      try {
+        const eventsRaw = localStorage.getItem("nm_events");
+        const inboxRaw = localStorage.getItem("nm_inbox");
+        if (eventsRaw) {
+          const backupKey = createSelectiveBackup(["nm_events", "nm_inbox"], "pre-event-uuid-v10");
+          if (backupKey) console.log("[boot] v10 events backup:", backupKey);
+          const events = JSON.parse(eventsRaw);
+          if (Array.isArray(events)) {
+            const idMap = {};
+            let migrated = 0;
+            events.forEach((ev) => {
+              if (ev && typeof ev.id === "number") {
+                const oldId = String(ev.id);
+                const newId = generateUUID();
+                ev.legacy_id = ev.id;
+                ev.id = newId;
+                idMap[oldId] = newId;
+                migrated++;
+              }
+            });
+            if (migrated > 0) {
+              if (inboxRaw) {
+                try {
+                  const inbox = JSON.parse(inboxRaw);
+                  if (Array.isArray(inbox)) {
+                    let updated = 0;
+                    inbox.forEach((it) => {
+                      if (it && it.eventId != null) {
+                        const k = String(it.eventId);
+                        if (idMap[k]) {
+                          it.eventId = idMap[k];
+                          updated++;
+                        }
+                      }
+                    });
+                    if (updated > 0) {
+                      localStorage.setItem("nm_inbox", JSON.stringify(inbox));
+                      console.log(`[boot] v10 inbox.eventId updated: ${updated} refs`);
+                    }
+                  }
+                } catch (ibErr) {
+                  console.error("[boot] v10 inbox eventId update failed:", ibErr);
+                }
+              }
+              localStorage.setItem("nm_events", JSON.stringify(events));
+              console.log(`[boot] v10 migration: ${migrated} events migrated to UUID`);
+            }
+          }
+        }
+        localStorage.setItem("nm_events_uuid_migrated_v10", "1");
+      } catch (e) {
+        console.error("[boot] v10 events migration failed:", e);
+      }
+    }
+    if (!localStorage.getItem("nm_notes_uuid_migrated_v11")) {
+      try {
+        const notesRaw = localStorage.getItem("nm_notes");
+        if (notesRaw) {
+          const backupKey = createSelectiveBackup(["nm_notes"], "pre-note-uuid-v11");
+          if (backupKey) console.log("[boot] v11 notes backup:", backupKey);
+          const notes = JSON.parse(notesRaw);
+          if (Array.isArray(notes)) {
+            let migrated = 0;
+            notes.forEach((n) => {
+              if (n && typeof n.id === "number") {
+                n.legacy_id = n.id;
+                n.id = generateUUID();
+                migrated++;
+              }
+            });
+            if (migrated > 0) {
+              localStorage.setItem("nm_notes", JSON.stringify(notes));
+              console.log(`[boot] v11 migration: ${migrated} notes migrated to UUID`);
+            }
+          }
+        }
+        localStorage.setItem("nm_notes_uuid_migrated_v11", "1");
+      } catch (e) {
+        console.error("[boot] v11 notes migration failed:", e);
+      }
+    }
+    if (!localStorage.getItem("nm_moments_uuid_migrated_v12")) {
+      try {
+        const momentsRaw = localStorage.getItem("nm_moments");
+        if (momentsRaw) {
+          const backupKey = createSelectiveBackup(["nm_moments"], "pre-moment-uuid-v12");
+          if (backupKey) console.log("[boot] v12 moments backup:", backupKey);
+          const moments = JSON.parse(momentsRaw);
+          if (Array.isArray(moments)) {
+            let migrated = 0;
+            moments.forEach((m) => {
+              if (m && typeof m.id === "number") {
+                m.legacy_id = m.id;
+                m.id = generateUUID();
+                migrated++;
+              }
+            });
+            if (migrated > 0) {
+              localStorage.setItem("nm_moments", JSON.stringify(moments));
+              console.log(`[boot] v12 migration: ${migrated} moments \u2192 UUID`);
+            }
+          }
+        }
+        localStorage.setItem("nm_moments_uuid_migrated_v12", "1");
+      } catch (e) {
+        console.error("[boot] v12 moments migration failed:", e);
+      }
+    }
+    if (!localStorage.getItem("nm_finance_uuid_migrated_v13")) {
+      try {
+        const finRaw = localStorage.getItem("nm_finance");
+        if (finRaw) {
+          const backupKey = createSelectiveBackup(["nm_finance"], "pre-finance-uuid-v13");
+          if (backupKey) console.log("[boot] v13 finance backup:", backupKey);
+          const txs = JSON.parse(finRaw);
+          if (Array.isArray(txs)) {
+            let migrated = 0;
+            txs.forEach((t2) => {
+              if (t2 && typeof t2.id === "number") {
+                t2.legacy_id = t2.id;
+                t2.id = generateUUID();
+                migrated++;
+              }
+            });
+            if (migrated > 0) {
+              localStorage.setItem("nm_finance", JSON.stringify(txs));
+              console.log(`[boot] v13 migration: ${migrated} transactions \u2192 UUID`);
+            }
+          }
+        }
+        localStorage.setItem("nm_finance_uuid_migrated_v13", "1");
+      } catch (e) {
+        console.error("[boot] v13 finance migration failed:", e);
+      }
+    }
+    if (!localStorage.getItem("nm_projects_uuid_migrated_v14")) {
+      try {
+        const projRaw = localStorage.getItem("nm_projects");
+        if (projRaw) {
+          const backupKey = createSelectiveBackup(["nm_projects"], "pre-project-uuid-v14");
+          if (backupKey) console.log("[boot] v14 projects backup:", backupKey);
+          const projects = JSON.parse(projRaw);
+          if (Array.isArray(projects)) {
+            let migrated = 0;
+            projects.forEach((p) => {
+              if (p && typeof p.id === "number") {
+                p.legacy_id = p.id;
+                p.id = generateUUID();
+                migrated++;
+              }
+            });
+            if (migrated > 0) {
+              localStorage.setItem("nm_projects", JSON.stringify(projects));
+              console.log(`[boot] v14 migration: ${migrated} projects \u2192 UUID`);
+            }
+          }
+        }
+        localStorage.setItem("nm_projects_uuid_migrated_v14", "1");
+      } catch (e) {
+        console.error("[boot] v14 projects migration failed:", e);
+      }
+    }
+    if (!localStorage.getItem("nm_inbox_uuid_migrated_v15")) {
+      try {
+        const inboxRaw = localStorage.getItem("nm_inbox");
+        if (inboxRaw) {
+          const backupKey = createSelectiveBackup(["nm_inbox"], "pre-inbox-uuid-v15");
+          if (backupKey) console.log("[boot] v15 inbox backup:", backupKey);
+          const items = JSON.parse(inboxRaw);
+          if (Array.isArray(items)) {
+            let migrated = 0;
+            items.forEach((it) => {
+              if (it && typeof it.id === "number") {
+                it.legacy_id = it.id;
+                it.id = generateUUID();
+                migrated++;
+              }
+            });
+            if (migrated > 0) {
+              localStorage.setItem("nm_inbox", JSON.stringify(items));
+              console.log(`[boot] v15 migration: ${migrated} inbox cards \u2192 UUID`);
+            }
+          }
+        }
+        localStorage.setItem("nm_inbox_uuid_migrated_v15", "1");
+      } catch (e) {
+        console.error("[boot] v15 inbox migration failed:", e);
+      }
+    }
+    if (!localStorage.getItem("nm_health_uuid_migrated_v16")) {
+      try {
+        const cardsRaw = localStorage.getItem("nm_health_cards");
+        const allergiesRaw = localStorage.getItem("nm_allergies");
+        const eventsRaw = localStorage.getItem("nm_events");
+        const tasksRaw = localStorage.getItem("nm_tasks");
+        if (cardsRaw || allergiesRaw) {
+          const backupKey = createSelectiveBackup(
+            ["nm_health_cards", "nm_allergies", "nm_events", "nm_tasks"],
+            "pre-health-uuid-v16"
+          );
+          if (backupKey) console.log("[boot] v16 health backup:", backupKey);
+          const cardIdMap = {};
+          const medIdMap = {};
+          let events = null;
+          if (eventsRaw) {
+            try {
+              events = JSON.parse(eventsRaw);
+            } catch {
+              events = null;
+            }
+          }
+          if (cardsRaw) {
+            const cards = JSON.parse(cardsRaw);
+            if (Array.isArray(cards)) {
+              let migratedCards = 0;
+              let migratedMeds = 0;
+              cards.forEach((card) => {
+                if (card && typeof card.id === "number") {
+                  const oldId = String(card.id);
+                  const newId = generateUUID();
+                  card.legacy_id = card.id;
+                  card.id = newId;
+                  cardIdMap[oldId] = newId;
+                  migratedCards++;
+                }
+                if (Array.isArray(card.medications)) {
+                  card.medications.forEach((med) => {
+                    if (med && typeof med.id === "number") {
+                      const oldMedId = String(med.id);
+                      const newMedId = generateUUID();
+                      med.legacy_id = med.id;
+                      med.id = newMedId;
+                      medIdMap[oldMedId] = newMedId;
+                      migratedMeds++;
+                    }
+                  });
+                }
+              });
+              if (Array.isArray(events)) {
+                let crossEtap1 = 0, crossEtap2 = 0, crossOrphan = 0;
+                cards.forEach((card) => {
+                  const appt = card.nextAppointment;
+                  if (!appt || typeof appt.eventId !== "number") return;
+                  const oldEventId = appt.eventId;
+                  const legacyStr = String(oldEventId);
+                  const byLegacy = events.find((e) => e.legacy_id != null && String(e.legacy_id) === legacyStr);
+                  if (byLegacy) {
+                    appt.eventId = byLegacy.id;
+                    crossEtap1++;
+                    return;
+                  }
+                  const byCurrentId = events.find((e) => e.id === oldEventId);
+                  if (byCurrentId) {
+                    const newEventId = generateUUID();
+                    byCurrentId.legacy_id = byCurrentId.id;
+                    byCurrentId.id = newEventId;
+                    appt.eventId = newEventId;
+                    crossEtap2++;
+                    return;
+                  }
+                  crossOrphan++;
+                });
+                if (crossEtap1 + crossEtap2 + crossOrphan > 0) {
+                  console.log(`[boot] v16 cross-ref forward: ${crossEtap1} via legacy + ${crossEtap2} new-migrated + ${crossOrphan} orphans`);
+                }
+              }
+              if (Array.isArray(events)) {
+                let reverseUpdated = 0;
+                events.forEach((ev) => {
+                  if (ev && typeof ev.sourceCardId === "number") {
+                    const oldStr = String(ev.sourceCardId);
+                    if (cardIdMap[oldStr]) {
+                      ev.sourceCardId = cardIdMap[oldStr];
+                      reverseUpdated++;
+                    }
+                  }
+                });
+                if (reverseUpdated > 0) {
+                  console.log(`[boot] v16 cross-ref reverse: ${reverseUpdated} event.sourceCardId updated`);
+                }
+                localStorage.setItem("nm_events", JSON.stringify(events));
+              }
+              localStorage.setItem("nm_health_cards", JSON.stringify(cards));
+              console.log(`[boot] v16 migration: ${migratedCards} cards, ${migratedMeds} medications \u2192 UUID`);
+            }
+          }
+          if (tasksRaw && Object.keys(medIdMap).length > 0) {
+            try {
+              const tasks2 = JSON.parse(tasksRaw);
+              if (Array.isArray(tasks2)) {
+                let tasksUpdated = 0;
+                tasks2.forEach((task) => {
+                  if (task && typeof task.sourceMedId === "number") {
+                    const oldStr = String(task.sourceMedId);
+                    if (medIdMap[oldStr]) {
+                      task.sourceMedId = medIdMap[oldStr];
+                      tasksUpdated++;
+                    }
+                  }
+                });
+                if (tasksUpdated > 0) {
+                  localStorage.setItem("nm_tasks", JSON.stringify(tasks2));
+                  console.log(`[boot] v16 tasks cross-ref: ${tasksUpdated} task.sourceMedId updated`);
+                }
+              }
+            } catch (taskErr) {
+              console.error("[boot] v16 tasks cross-ref failed:", taskErr);
+            }
+          }
+          if (allergiesRaw) {
+            const allergies = JSON.parse(allergiesRaw);
+            if (Array.isArray(allergies)) {
+              let migratedAllergies = 0;
+              allergies.forEach((a) => {
+                if (a && typeof a.id === "number") {
+                  a.legacy_id = a.id;
+                  a.id = generateUUID();
+                  migratedAllergies++;
+                }
+              });
+              if (migratedAllergies > 0) {
+                localStorage.setItem("nm_allergies", JSON.stringify(allergies));
+                console.log(`[boot] v16 migration: ${migratedAllergies} allergies \u2192 UUID`);
+              }
+            }
+          }
+        }
+        localStorage.setItem("nm_health_uuid_migrated_v16", "1");
+      } catch (e) {
+        console.error("[boot] v16 health migration failed:", e);
+      }
+    }
+    if (!localStorage.getItem("nm_steps_uuid_migrated_v17")) {
+      try {
+        const tasksRaw = localStorage.getItem("nm_tasks");
+        const projectsRaw = localStorage.getItem("nm_projects");
+        if (tasksRaw || projectsRaw) {
+          const backupKey = createSelectiveBackup(
+            ["nm_tasks", "nm_projects"],
+            "pre-steps-uuid-v17"
+          );
+          if (backupKey) console.log("[boot] v17 steps backup:", backupKey);
+          if (tasksRaw) {
+            const tasks2 = JSON.parse(tasksRaw);
+            if (Array.isArray(tasks2)) {
+              let migratedSteps = 0;
+              tasks2.forEach((task) => {
+                if (Array.isArray(task.steps)) {
+                  task.steps.forEach((step) => {
+                    if (step && typeof step.id === "number") {
+                      step.legacy_id = step.id;
+                      step.id = generateUUID();
+                      migratedSteps++;
+                    }
+                  });
+                }
+              });
+              if (migratedSteps > 0) {
+                localStorage.setItem("nm_tasks", JSON.stringify(tasks2));
+                console.log(`[boot] v17 migration: ${migratedSteps} task.steps \u2192 UUID`);
+              }
+            }
+          }
+          if (projectsRaw) {
+            const projects = JSON.parse(projectsRaw);
+            if (Array.isArray(projects)) {
+              let migratedProjSteps = 0;
+              projects.forEach((project) => {
+                if (Array.isArray(project.steps)) {
+                  project.steps.forEach((step) => {
+                    if (step && typeof step.id === "number") {
+                      step.legacy_id = step.id;
+                      step.id = generateUUID();
+                      migratedProjSteps++;
+                    }
+                  });
+                }
+              });
+              if (migratedProjSteps > 0) {
+                localStorage.setItem("nm_projects", JSON.stringify(projects));
+                console.log(`[boot] v17 migration: ${migratedProjSteps} project.steps \u2192 UUID`);
+              }
+            }
+          }
+        }
+        localStorage.setItem("nm_steps_uuid_migrated_v17", "1");
+      } catch (e) {
+        console.error("[boot] v17 steps migration failed:", e);
+      }
+    }
+    if (!localStorage.getItem("nm_health_ai_isolation_v18")) {
+      try {
+        let cleaned = 0;
+        if (localStorage.getItem("nm_chat_health") !== null) {
+          localStorage.removeItem("nm_chat_health");
+          cleaned++;
+        }
+        if (localStorage.getItem("nm_health_interview_pending") !== null) {
+          localStorage.removeItem("nm_health_interview_pending");
+          cleaned++;
+        }
+        const factsRaw = localStorage.getItem("nm_facts");
+        if (factsRaw) {
+          const facts = JSON.parse(factsRaw);
+          if (Array.isArray(facts)) {
+            const filtered = facts.filter((f) => f && f.category !== "health");
+            if (filtered.length < facts.length) {
+              localStorage.setItem("nm_facts", JSON.stringify(filtered));
+              cleaned += facts.length - filtered.length;
+            }
+          }
+        }
+        const HEALTH_TOOL_NAMES = /* @__PURE__ */ new Set([
+          "create_health_card",
+          "edit_health_card",
+          "delete_health_card",
+          "update_health_card_status",
+          "add_medication",
+          "edit_medication",
+          "delete_medication",
+          "log_medication_dose",
+          "add_allergy",
+          "delete_allergy",
+          "add_health_history_entry",
+          "export_health_card"
+        ]);
+        const CHAT_KEYS_TO_FILTER = [
+          "nm_chat_inbox",
+          "nm_chat_tasks",
+          "nm_chat_notes",
+          "nm_chat_me",
+          "nm_chat_evening",
+          "nm_chat_finance",
+          "nm_chat_projects",
+          "nm_owl_chat"
+        ];
+        for (const k of CHAT_KEYS_TO_FILTER) {
+          const raw = localStorage.getItem(k);
+          if (!raw) continue;
+          try {
+            const msgs = JSON.parse(raw);
+            if (!Array.isArray(msgs)) continue;
+            const filtered = msgs.filter((m) => {
+              if (!m) return false;
+              if (m.role === "tool" && m.name && HEALTH_TOOL_NAMES.has(m.name)) return false;
+              if (Array.isArray(m.tool_calls) && m.tool_calls.some((tc) => HEALTH_TOOL_NAMES.has(tc?.function?.name))) {
+                return false;
+              }
+              return true;
+            });
+            if (filtered.length < msgs.length) {
+              localStorage.setItem(k, JSON.stringify(filtered));
+              cleaned += msgs.length - filtered.length;
+            }
+          } catch {
+          }
+        }
+        localStorage.setItem("nm_health_ai_isolation_v18", "1");
+        if (cleaned > 0) console.log(`[boot] v18 EU AI Act: \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E ${cleaned} health-AI \u043A\u043B\u044E\u0447\u0456\u0432/\u0444\u0430\u043A\u0442\u0456\u0432/tool_calls`);
+      } catch (e) {
+        console.error("[boot] v18 health AI isolation failed:", e);
+      }
+    }
+    if (!localStorage.getItem("nm_health_status_v2_done")) {
+      try {
+        const raw = localStorage.getItem("nm_health_cards");
+        if (raw) {
+          const cards = JSON.parse(raw);
+          if (Array.isArray(cards)) {
+            const map = { active: "treatment", controlled: "remission", done: "done" };
+            let migrated = 0;
+            cards.forEach((c) => {
+              if (map[c.status]) {
+                c.status = map[c.status];
+                migrated++;
+              }
+            });
+            if (migrated > 0) {
+              localStorage.setItem("nm_health_cards", JSON.stringify(cards));
+              console.log(`[boot] v9 migration: ${migrated} health cards migrated to 6-status scale`);
+            }
+          }
+        }
+        localStorage.setItem("nm_health_status_v2_done", "1");
+      } catch (e) {
+        console.error("[boot] v9 migration failed:", e);
+      }
+    }
+    if (!localStorage.getItem("nm_chips_v10_done")) {
+      try {
+        const CHAT_KEYS = [
+          "nm_chat_inbox",
+          "nm_chat_tasks",
+          "nm_chat_notes",
+          "nm_chat_me",
+          "nm_chat_evening",
+          "nm_chat_finance",
+          "nm_chat_health",
+          "nm_chat_projects"
+        ];
+        let backupOk = true;
+        CHAT_KEYS.forEach((k) => {
+          const raw = localStorage.getItem(k);
+          if (raw) {
+            try {
+              localStorage.setItem(k + "_backup_v10", raw);
+            } catch (e) {
+              backupOk = false;
+            }
+          }
+        });
+        const payloadsMap = JSON.parse(localStorage.getItem("nm_chip_payloads") || "{}");
+        let chipsTouched = 0, payloadsExtracted = 0, completionsRewired = 0;
+        CHAT_KEYS.forEach((k) => {
+          const raw = localStorage.getItem(k);
+          if (!raw) return;
+          let msgs;
+          try {
+            msgs = JSON.parse(raw);
+          } catch {
+            return;
+          }
+          if (!Array.isArray(msgs)) return;
+          let dirty = false;
+          msgs.forEach((m) => {
+            if (!Array.isArray(m.chips) || m.chips.length === 0) return;
+            m.chips.forEach((c) => {
+              if (typeof c !== "object" || !c) return;
+              if (!c.id) {
+                c.id = generateUUID();
+                dirty = true;
+                chipsTouched++;
+              }
+              if (c.payload && typeof c.payload === "object") {
+                payloadsMap[c.id] = c.payload;
+                c.payloadId = c.id;
+                delete c.payload;
+                payloadsExtracted++;
+                dirty = true;
+              }
+              if (c.action === "chat" && typeof c.label === "string" && c.label.includes("\u2714\uFE0F")) {
+                c.action = "complete";
+                completionsRewired++;
+                dirty = true;
+              }
+            });
+          });
+          if (dirty) {
+            try {
+              localStorage.setItem(k, JSON.stringify(msgs));
+            } catch (e) {
+              console.warn("[boot] v10: " + k + " write failed", e);
+            }
+          }
+        });
+        try {
+          localStorage.setItem("nm_chip_payloads", JSON.stringify(payloadsMap));
+        } catch (e) {
+          console.error("[boot] v10: nm_chip_payloads write failed", e);
+        }
+        localStorage.setItem("nm_chips_v10_done", "1");
+        localStorage.setItem("nm_chips_v10_done_ts", String(Date.now()));
+        console.log(`[boot] v10 migration: chips=${chipsTouched}, payloads=${payloadsExtracted}, completions=${completionsRewired}, backupOk=${backupOk}`);
+      } catch (e) {
+        console.error("[boot] v10 migration failed:", e);
+        [
+          "nm_chat_inbox",
+          "nm_chat_tasks",
+          "nm_chat_notes",
+          "nm_chat_me",
+          "nm_chat_evening",
+          "nm_chat_finance",
+          "nm_chat_health",
+          "nm_chat_projects"
+        ].forEach((k) => {
+          const b = localStorage.getItem(k + "_backup_v10");
+          if (b) {
+            try {
+              localStorage.setItem(k, b);
+            } catch {
+            }
+          }
+        });
+      }
+    }
+    const v10Done = localStorage.getItem("nm_chips_v10_done");
+    let v10DoneTs = +(localStorage.getItem("nm_chips_v10_done_ts") || 0);
+    if (v10Done === "1" && v10DoneTs === 0) {
+      v10DoneTs = Date.now();
+      try {
+        localStorage.setItem("nm_chips_v10_done_ts", String(v10DoneTs));
+      } catch {
+      }
+    }
+    if (v10Done === "1" && v10DoneTs > 0 && Date.now() - v10DoneTs > 7 * 24 * 60 * 60 * 1e3) {
+      try {
+        [
+          "nm_chat_inbox",
+          "nm_chat_tasks",
+          "nm_chat_notes",
+          "nm_chat_me",
+          "nm_chat_evening",
+          "nm_chat_finance",
+          "nm_chat_health",
+          "nm_chat_projects"
+        ].forEach((k) => {
+          localStorage.removeItem(k + "_backup_v10");
+        });
+        localStorage.removeItem("nm_chips_v10_done_ts");
+        console.log("[boot] v10 backups cleanup: 8 \u043A\u043B\u044E\u0447\u0456\u0432 \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E (>7 \u0434\u043D\u0456\u0432 \u0441\u0442\u0430\u0440\u0456)");
+      } catch (e) {
+        console.warn("[boot] v10 backups cleanup failed", e);
+      }
+    }
+  }
+  var init_migrations = __esm({
+    "src/core/migrations.js"() {
+      init_uuid();
+      init_backup();
     }
   });
 
@@ -22872,817 +23751,6 @@ ${logLines}
     } catch (e) {
     }
   }
-  function runMigrations() {
-    const tasks = JSON.parse(localStorage.getItem("nm_tasks") || "[]");
-    let changed = false;
-    tasks.forEach((t2) => {
-      if (t2.dueDate === void 0) {
-        t2.dueDate = null;
-        changed = true;
-      }
-      if (t2.priority === void 0) {
-        t2.priority = "normal";
-        changed = true;
-      }
-    });
-    if (changed) localStorage.setItem("nm_tasks", JSON.stringify(tasks));
-    ["nm_fin_coach_week", "nm_fin_coach_month", "nm_fin_coach_3months"].forEach((k) => {
-      localStorage.removeItem(k);
-    });
-    if (!localStorage.getItem("nm_owl_cache_cleared_v3")) {
-      [
-        "nm_owl_board",
-        "nm_owl_tab_finance",
-        "nm_owl_tab_tasks",
-        "nm_owl_tab_notes",
-        "nm_owl_tab_health",
-        "nm_owl_tab_projects",
-        "nm_owl_tab_evening",
-        "nm_owl_tab_me",
-        "nm_owl_board_ts",
-        // Скидаємо Auto-silence щоб OWL заговорив одразу після очищення кешу
-        "nm_owl_silence_until",
-        "nm_owl_ignored_msgs",
-        "nm_owl_last_board_ts",
-        "nm_owl_last_chip_click_ts"
-      ].forEach((k) => localStorage.removeItem(k));
-      localStorage.setItem("nm_owl_cache_cleared_v3", "1");
-    }
-    ["nm_fin_insight_week_0", "nm_fin_insight_month_0", "nm_fin_insight_3months_0"].forEach((k) => localStorage.removeItem(k));
-    if (!localStorage.getItem("nm_owl_silence_reset_v5")) {
-      ["nm_owl_silence_until", "nm_owl_ignored_msgs", "nm_owl_last_board_ts", "nm_owl_last_chip_click_ts"].forEach((k) => localStorage.removeItem(k));
-      localStorage.setItem("nm_owl_silence_reset_v5", "1");
-    }
-    if (!localStorage.getItem("nm_health_log_cleared_v6")) {
-      localStorage.removeItem("nm_health_log");
-      localStorage.setItem("nm_health_log_cleared_v6", "1");
-    }
-    if (!localStorage.getItem("nm_pruning_wipe_v1_done")) {
-      [
-        "nm_owl_board_unified",
-        "nm_owl_board_unified_ts",
-        "nm_owl_board",
-        "nm_owl_board_ts",
-        // Тригерні TS-ключі вкладок — щоб Judge Layer не вирішив що
-        // «тільки що генерували, мовчимо ще 30 хв»
-        "nm_owl_tab_ts_inbox",
-        "nm_owl_tab_ts_tasks",
-        "nm_owl_tab_ts_notes",
-        "nm_owl_tab_ts_me",
-        "nm_owl_tab_ts_evening",
-        "nm_owl_tab_ts_finance",
-        "nm_owl_tab_ts_health",
-        "nm_owl_tab_ts_projects"
-      ].forEach((k) => localStorage.removeItem(k));
-      localStorage.setItem("nm_pruning_wipe_v1_done", "1");
-      console.log("[boot] Pruning Engine v1: wiped legacy board history (no entityRefs)");
-    }
-    if (!localStorage.getItem("nm_board_clean_pji7l_done")) {
-      [
-        "nm_owl_board_unified",
-        "nm_owl_board_unified_ts",
-        "nm_owl_board_migrated_v2",
-        // інакше _migrateOnce думає що міграція вже виконана і не перезаповнює
-        "nm_owl_board",
-        "nm_owl_board_ts",
-        "nm_owl_board_seen",
-        "nm_chip_payloads",
-        "nm_owl_tab_ts_inbox",
-        "nm_owl_tab_ts_notes",
-        "nm_owl_tab_ts_me",
-        "nm_owl_tab_ts_evening",
-        "nm_owl_tab_ts_finance",
-        "nm_owl_tab_ts_health",
-        "nm_owl_tab_ts_projects",
-        "nm_owl_tab_ts_tasks"
-      ].forEach((k) => localStorage.removeItem(k));
-      localStorage.setItem("nm_board_clean_pji7l_done", "1");
-      console.log("[boot] PJi7l: cleared board cache + ts + migration flag for fresh AI generation");
-    }
-    if (!localStorage.getItem("nm_board_clean_pji7l_v2_done")) {
-      [
-        "nm_owl_board_unified",
-        "nm_owl_board_unified_ts",
-        "nm_owl_board_migrated_v2",
-        "nm_owl_board",
-        "nm_owl_board_ts",
-        "nm_owl_tab_ts_inbox",
-        "nm_owl_tab_ts_notes",
-        "nm_owl_tab_ts_me",
-        "nm_owl_tab_ts_evening",
-        "nm_owl_tab_ts_finance",
-        "nm_owl_tab_ts_health",
-        "nm_owl_tab_ts_projects",
-        "nm_owl_tab_ts_tasks"
-      ].forEach((k) => localStorage.removeItem(k));
-      localStorage.setItem("nm_board_clean_pji7l_v2_done", "1");
-      console.log("[boot] PJi7l-v2: re-cleared board for fresh empty-state-aware generation");
-    }
-    if (!localStorage.getItem("nm_tasks_uuid_migrated_v8")) {
-      try {
-        const tasksRaw = localStorage.getItem("nm_tasks");
-        if (tasksRaw) {
-          localStorage.setItem("nm_tasks_backup_v7", tasksRaw);
-          const tasks2 = JSON.parse(tasksRaw);
-          if (Array.isArray(tasks2)) {
-            let migrated = 0;
-            tasks2.forEach((t2) => {
-              if (typeof t2.id === "number") {
-                t2.legacy_id = t2.id;
-                t2.id = generateUUID();
-                migrated++;
-              }
-            });
-            if (migrated > 0) {
-              localStorage.setItem("nm_tasks", JSON.stringify(tasks2));
-              console.log(`[boot] v8 migration: ${migrated} tasks migrated to UUID`);
-            }
-          }
-        }
-        localStorage.setItem("nm_tasks_uuid_migrated_v8", "1");
-      } catch (e) {
-        console.error("[boot] v8 migration failed:", e);
-        const backup = localStorage.getItem("nm_tasks_backup_v7");
-        if (backup) {
-          try {
-            localStorage.setItem("nm_tasks", backup);
-          } catch (_) {
-          }
-        }
-      }
-    }
-    if (!localStorage.getItem("nm_habits_uuid_migrated_v9")) {
-      try {
-        const habitsRaw = localStorage.getItem("nm_habits2");
-        const logRaw = localStorage.getItem("nm_habit_log2");
-        if (habitsRaw) {
-          const backupKey = createSelectiveBackup(["nm_habits2", "nm_habit_log2"], "pre-habit-uuid-v9");
-          if (backupKey) console.log("[boot] v9 habits backup:", backupKey);
-          const habits = JSON.parse(habitsRaw);
-          if (Array.isArray(habits)) {
-            const idMap = {};
-            let migrated = 0;
-            habits.forEach((h) => {
-              if (h && typeof h.id === "number") {
-                const oldId = String(h.id);
-                const newId = generateUUID();
-                h.legacy_id = h.id;
-                h.id = newId;
-                idMap[oldId] = newId;
-                migrated++;
-              }
-            });
-            if (migrated > 0) {
-              if (logRaw) {
-                try {
-                  const log = JSON.parse(logRaw);
-                  if (log && typeof log === "object") {
-                    let logChanged = false;
-                    Object.keys(log).forEach((dateKey) => {
-                      const dayMap = log[dateKey];
-                      if (!dayMap || typeof dayMap !== "object") return;
-                      const newDayMap = {};
-                      Object.keys(dayMap).forEach((habitIdKey) => {
-                        const newKey = idMap[habitIdKey] || habitIdKey;
-                        newDayMap[newKey] = dayMap[habitIdKey];
-                        if (newKey !== habitIdKey) logChanged = true;
-                      });
-                      log[dateKey] = newDayMap;
-                    });
-                    if (logChanged) {
-                      localStorage.setItem("nm_habit_log2", JSON.stringify(log));
-                    }
-                  }
-                } catch (logErr) {
-                  console.error("[boot] v9 habit_log2 migration failed:", logErr);
-                }
-              }
-              localStorage.setItem("nm_habits2", JSON.stringify(habits));
-              console.log(`[boot] v9 migration: ${migrated} habits migrated to UUID, log keys updated`);
-            }
-          }
-        }
-        localStorage.setItem("nm_habits_uuid_migrated_v9", "1");
-      } catch (e) {
-        console.error("[boot] v9 habits migration failed:", e);
-      }
-    }
-    if (!localStorage.getItem("nm_events_uuid_migrated_v10")) {
-      try {
-        const eventsRaw = localStorage.getItem("nm_events");
-        const inboxRaw = localStorage.getItem("nm_inbox");
-        if (eventsRaw) {
-          const backupKey = createSelectiveBackup(["nm_events", "nm_inbox"], "pre-event-uuid-v10");
-          if (backupKey) console.log("[boot] v10 events backup:", backupKey);
-          const events = JSON.parse(eventsRaw);
-          if (Array.isArray(events)) {
-            const idMap = {};
-            let migrated = 0;
-            events.forEach((ev) => {
-              if (ev && typeof ev.id === "number") {
-                const oldId = String(ev.id);
-                const newId = generateUUID();
-                ev.legacy_id = ev.id;
-                ev.id = newId;
-                idMap[oldId] = newId;
-                migrated++;
-              }
-            });
-            if (migrated > 0) {
-              if (inboxRaw) {
-                try {
-                  const inbox = JSON.parse(inboxRaw);
-                  if (Array.isArray(inbox)) {
-                    let updated = 0;
-                    inbox.forEach((it) => {
-                      if (it && it.eventId != null) {
-                        const k = String(it.eventId);
-                        if (idMap[k]) {
-                          it.eventId = idMap[k];
-                          updated++;
-                        }
-                      }
-                    });
-                    if (updated > 0) {
-                      localStorage.setItem("nm_inbox", JSON.stringify(inbox));
-                      console.log(`[boot] v10 inbox.eventId updated: ${updated} refs`);
-                    }
-                  }
-                } catch (ibErr) {
-                  console.error("[boot] v10 inbox eventId update failed:", ibErr);
-                }
-              }
-              localStorage.setItem("nm_events", JSON.stringify(events));
-              console.log(`[boot] v10 migration: ${migrated} events migrated to UUID`);
-            }
-          }
-        }
-        localStorage.setItem("nm_events_uuid_migrated_v10", "1");
-      } catch (e) {
-        console.error("[boot] v10 events migration failed:", e);
-      }
-    }
-    if (!localStorage.getItem("nm_notes_uuid_migrated_v11")) {
-      try {
-        const notesRaw = localStorage.getItem("nm_notes");
-        if (notesRaw) {
-          const backupKey = createSelectiveBackup(["nm_notes"], "pre-note-uuid-v11");
-          if (backupKey) console.log("[boot] v11 notes backup:", backupKey);
-          const notes = JSON.parse(notesRaw);
-          if (Array.isArray(notes)) {
-            let migrated = 0;
-            notes.forEach((n) => {
-              if (n && typeof n.id === "number") {
-                n.legacy_id = n.id;
-                n.id = generateUUID();
-                migrated++;
-              }
-            });
-            if (migrated > 0) {
-              localStorage.setItem("nm_notes", JSON.stringify(notes));
-              console.log(`[boot] v11 migration: ${migrated} notes migrated to UUID`);
-            }
-          }
-        }
-        localStorage.setItem("nm_notes_uuid_migrated_v11", "1");
-      } catch (e) {
-        console.error("[boot] v11 notes migration failed:", e);
-      }
-    }
-    if (!localStorage.getItem("nm_moments_uuid_migrated_v12")) {
-      try {
-        const momentsRaw = localStorage.getItem("nm_moments");
-        if (momentsRaw) {
-          const backupKey = createSelectiveBackup(["nm_moments"], "pre-moment-uuid-v12");
-          if (backupKey) console.log("[boot] v12 moments backup:", backupKey);
-          const moments = JSON.parse(momentsRaw);
-          if (Array.isArray(moments)) {
-            let migrated = 0;
-            moments.forEach((m) => {
-              if (m && typeof m.id === "number") {
-                m.legacy_id = m.id;
-                m.id = generateUUID();
-                migrated++;
-              }
-            });
-            if (migrated > 0) {
-              localStorage.setItem("nm_moments", JSON.stringify(moments));
-              console.log(`[boot] v12 migration: ${migrated} moments \u2192 UUID`);
-            }
-          }
-        }
-        localStorage.setItem("nm_moments_uuid_migrated_v12", "1");
-      } catch (e) {
-        console.error("[boot] v12 moments migration failed:", e);
-      }
-    }
-    if (!localStorage.getItem("nm_finance_uuid_migrated_v13")) {
-      try {
-        const finRaw = localStorage.getItem("nm_finance");
-        if (finRaw) {
-          const backupKey = createSelectiveBackup(["nm_finance"], "pre-finance-uuid-v13");
-          if (backupKey) console.log("[boot] v13 finance backup:", backupKey);
-          const txs = JSON.parse(finRaw);
-          if (Array.isArray(txs)) {
-            let migrated = 0;
-            txs.forEach((t2) => {
-              if (t2 && typeof t2.id === "number") {
-                t2.legacy_id = t2.id;
-                t2.id = generateUUID();
-                migrated++;
-              }
-            });
-            if (migrated > 0) {
-              localStorage.setItem("nm_finance", JSON.stringify(txs));
-              console.log(`[boot] v13 migration: ${migrated} transactions \u2192 UUID`);
-            }
-          }
-        }
-        localStorage.setItem("nm_finance_uuid_migrated_v13", "1");
-      } catch (e) {
-        console.error("[boot] v13 finance migration failed:", e);
-      }
-    }
-    if (!localStorage.getItem("nm_projects_uuid_migrated_v14")) {
-      try {
-        const projRaw = localStorage.getItem("nm_projects");
-        if (projRaw) {
-          const backupKey = createSelectiveBackup(["nm_projects"], "pre-project-uuid-v14");
-          if (backupKey) console.log("[boot] v14 projects backup:", backupKey);
-          const projects = JSON.parse(projRaw);
-          if (Array.isArray(projects)) {
-            let migrated = 0;
-            projects.forEach((p) => {
-              if (p && typeof p.id === "number") {
-                p.legacy_id = p.id;
-                p.id = generateUUID();
-                migrated++;
-              }
-            });
-            if (migrated > 0) {
-              localStorage.setItem("nm_projects", JSON.stringify(projects));
-              console.log(`[boot] v14 migration: ${migrated} projects \u2192 UUID`);
-            }
-          }
-        }
-        localStorage.setItem("nm_projects_uuid_migrated_v14", "1");
-      } catch (e) {
-        console.error("[boot] v14 projects migration failed:", e);
-      }
-    }
-    if (!localStorage.getItem("nm_inbox_uuid_migrated_v15")) {
-      try {
-        const inboxRaw = localStorage.getItem("nm_inbox");
-        if (inboxRaw) {
-          const backupKey = createSelectiveBackup(["nm_inbox"], "pre-inbox-uuid-v15");
-          if (backupKey) console.log("[boot] v15 inbox backup:", backupKey);
-          const items = JSON.parse(inboxRaw);
-          if (Array.isArray(items)) {
-            let migrated = 0;
-            items.forEach((it) => {
-              if (it && typeof it.id === "number") {
-                it.legacy_id = it.id;
-                it.id = generateUUID();
-                migrated++;
-              }
-            });
-            if (migrated > 0) {
-              localStorage.setItem("nm_inbox", JSON.stringify(items));
-              console.log(`[boot] v15 migration: ${migrated} inbox cards \u2192 UUID`);
-            }
-          }
-        }
-        localStorage.setItem("nm_inbox_uuid_migrated_v15", "1");
-      } catch (e) {
-        console.error("[boot] v15 inbox migration failed:", e);
-      }
-    }
-    if (!localStorage.getItem("nm_health_uuid_migrated_v16")) {
-      try {
-        const cardsRaw = localStorage.getItem("nm_health_cards");
-        const allergiesRaw = localStorage.getItem("nm_allergies");
-        const eventsRaw = localStorage.getItem("nm_events");
-        const tasksRaw = localStorage.getItem("nm_tasks");
-        if (cardsRaw || allergiesRaw) {
-          const backupKey = createSelectiveBackup(
-            ["nm_health_cards", "nm_allergies", "nm_events", "nm_tasks"],
-            "pre-health-uuid-v16"
-          );
-          if (backupKey) console.log("[boot] v16 health backup:", backupKey);
-          const cardIdMap = {};
-          const medIdMap = {};
-          let events = null;
-          if (eventsRaw) {
-            try {
-              events = JSON.parse(eventsRaw);
-            } catch {
-              events = null;
-            }
-          }
-          if (cardsRaw) {
-            const cards = JSON.parse(cardsRaw);
-            if (Array.isArray(cards)) {
-              let migratedCards = 0;
-              let migratedMeds = 0;
-              cards.forEach((card) => {
-                if (card && typeof card.id === "number") {
-                  const oldId = String(card.id);
-                  const newId = generateUUID();
-                  card.legacy_id = card.id;
-                  card.id = newId;
-                  cardIdMap[oldId] = newId;
-                  migratedCards++;
-                }
-                if (Array.isArray(card.medications)) {
-                  card.medications.forEach((med) => {
-                    if (med && typeof med.id === "number") {
-                      const oldMedId = String(med.id);
-                      const newMedId = generateUUID();
-                      med.legacy_id = med.id;
-                      med.id = newMedId;
-                      medIdMap[oldMedId] = newMedId;
-                      migratedMeds++;
-                    }
-                  });
-                }
-              });
-              if (Array.isArray(events)) {
-                let crossEtap1 = 0, crossEtap2 = 0, crossOrphan = 0;
-                cards.forEach((card) => {
-                  const appt = card.nextAppointment;
-                  if (!appt || typeof appt.eventId !== "number") return;
-                  const oldEventId = appt.eventId;
-                  const legacyStr = String(oldEventId);
-                  const byLegacy = events.find((e) => e.legacy_id != null && String(e.legacy_id) === legacyStr);
-                  if (byLegacy) {
-                    appt.eventId = byLegacy.id;
-                    crossEtap1++;
-                    return;
-                  }
-                  const byCurrentId = events.find((e) => e.id === oldEventId);
-                  if (byCurrentId) {
-                    const newEventId = generateUUID();
-                    byCurrentId.legacy_id = byCurrentId.id;
-                    byCurrentId.id = newEventId;
-                    appt.eventId = newEventId;
-                    crossEtap2++;
-                    return;
-                  }
-                  crossOrphan++;
-                });
-                if (crossEtap1 + crossEtap2 + crossOrphan > 0) {
-                  console.log(`[boot] v16 cross-ref forward: ${crossEtap1} via legacy + ${crossEtap2} new-migrated + ${crossOrphan} orphans`);
-                }
-              }
-              if (Array.isArray(events)) {
-                let reverseUpdated = 0;
-                events.forEach((ev) => {
-                  if (ev && typeof ev.sourceCardId === "number") {
-                    const oldStr = String(ev.sourceCardId);
-                    if (cardIdMap[oldStr]) {
-                      ev.sourceCardId = cardIdMap[oldStr];
-                      reverseUpdated++;
-                    }
-                  }
-                });
-                if (reverseUpdated > 0) {
-                  console.log(`[boot] v16 cross-ref reverse: ${reverseUpdated} event.sourceCardId updated`);
-                }
-                localStorage.setItem("nm_events", JSON.stringify(events));
-              }
-              localStorage.setItem("nm_health_cards", JSON.stringify(cards));
-              console.log(`[boot] v16 migration: ${migratedCards} cards, ${migratedMeds} medications \u2192 UUID`);
-            }
-          }
-          if (tasksRaw && Object.keys(medIdMap).length > 0) {
-            try {
-              const tasks2 = JSON.parse(tasksRaw);
-              if (Array.isArray(tasks2)) {
-                let tasksUpdated = 0;
-                tasks2.forEach((task) => {
-                  if (task && typeof task.sourceMedId === "number") {
-                    const oldStr = String(task.sourceMedId);
-                    if (medIdMap[oldStr]) {
-                      task.sourceMedId = medIdMap[oldStr];
-                      tasksUpdated++;
-                    }
-                  }
-                });
-                if (tasksUpdated > 0) {
-                  localStorage.setItem("nm_tasks", JSON.stringify(tasks2));
-                  console.log(`[boot] v16 tasks cross-ref: ${tasksUpdated} task.sourceMedId updated`);
-                }
-              }
-            } catch (taskErr) {
-              console.error("[boot] v16 tasks cross-ref failed:", taskErr);
-            }
-          }
-          if (allergiesRaw) {
-            const allergies = JSON.parse(allergiesRaw);
-            if (Array.isArray(allergies)) {
-              let migratedAllergies = 0;
-              allergies.forEach((a) => {
-                if (a && typeof a.id === "number") {
-                  a.legacy_id = a.id;
-                  a.id = generateUUID();
-                  migratedAllergies++;
-                }
-              });
-              if (migratedAllergies > 0) {
-                localStorage.setItem("nm_allergies", JSON.stringify(allergies));
-                console.log(`[boot] v16 migration: ${migratedAllergies} allergies \u2192 UUID`);
-              }
-            }
-          }
-        }
-        localStorage.setItem("nm_health_uuid_migrated_v16", "1");
-      } catch (e) {
-        console.error("[boot] v16 health migration failed:", e);
-      }
-    }
-    if (!localStorage.getItem("nm_steps_uuid_migrated_v17")) {
-      try {
-        const tasksRaw = localStorage.getItem("nm_tasks");
-        const projectsRaw = localStorage.getItem("nm_projects");
-        if (tasksRaw || projectsRaw) {
-          const backupKey = createSelectiveBackup(
-            ["nm_tasks", "nm_projects"],
-            "pre-steps-uuid-v17"
-          );
-          if (backupKey) console.log("[boot] v17 steps backup:", backupKey);
-          if (tasksRaw) {
-            const tasks2 = JSON.parse(tasksRaw);
-            if (Array.isArray(tasks2)) {
-              let migratedSteps = 0;
-              tasks2.forEach((task) => {
-                if (Array.isArray(task.steps)) {
-                  task.steps.forEach((step) => {
-                    if (step && typeof step.id === "number") {
-                      step.legacy_id = step.id;
-                      step.id = generateUUID();
-                      migratedSteps++;
-                    }
-                  });
-                }
-              });
-              if (migratedSteps > 0) {
-                localStorage.setItem("nm_tasks", JSON.stringify(tasks2));
-                console.log(`[boot] v17 migration: ${migratedSteps} task.steps \u2192 UUID`);
-              }
-            }
-          }
-          if (projectsRaw) {
-            const projects = JSON.parse(projectsRaw);
-            if (Array.isArray(projects)) {
-              let migratedProjSteps = 0;
-              projects.forEach((project) => {
-                if (Array.isArray(project.steps)) {
-                  project.steps.forEach((step) => {
-                    if (step && typeof step.id === "number") {
-                      step.legacy_id = step.id;
-                      step.id = generateUUID();
-                      migratedProjSteps++;
-                    }
-                  });
-                }
-              });
-              if (migratedProjSteps > 0) {
-                localStorage.setItem("nm_projects", JSON.stringify(projects));
-                console.log(`[boot] v17 migration: ${migratedProjSteps} project.steps \u2192 UUID`);
-              }
-            }
-          }
-        }
-        localStorage.setItem("nm_steps_uuid_migrated_v17", "1");
-      } catch (e) {
-        console.error("[boot] v17 steps migration failed:", e);
-      }
-    }
-    if (!localStorage.getItem("nm_health_ai_isolation_v18")) {
-      try {
-        let cleaned = 0;
-        if (localStorage.getItem("nm_chat_health") !== null) {
-          localStorage.removeItem("nm_chat_health");
-          cleaned++;
-        }
-        if (localStorage.getItem("nm_health_interview_pending") !== null) {
-          localStorage.removeItem("nm_health_interview_pending");
-          cleaned++;
-        }
-        const factsRaw = localStorage.getItem("nm_facts");
-        if (factsRaw) {
-          const facts = JSON.parse(factsRaw);
-          if (Array.isArray(facts)) {
-            const filtered = facts.filter((f) => f && f.category !== "health");
-            if (filtered.length < facts.length) {
-              localStorage.setItem("nm_facts", JSON.stringify(filtered));
-              cleaned += facts.length - filtered.length;
-            }
-          }
-        }
-        const HEALTH_TOOL_NAMES = /* @__PURE__ */ new Set([
-          "create_health_card",
-          "edit_health_card",
-          "delete_health_card",
-          "update_health_card_status",
-          "add_medication",
-          "edit_medication",
-          "delete_medication",
-          "log_medication_dose",
-          "add_allergy",
-          "delete_allergy",
-          "add_health_history_entry",
-          "export_health_card"
-        ]);
-        const CHAT_KEYS_TO_FILTER = [
-          "nm_chat_inbox",
-          "nm_chat_tasks",
-          "nm_chat_notes",
-          "nm_chat_me",
-          "nm_chat_evening",
-          "nm_chat_finance",
-          "nm_chat_projects",
-          "nm_owl_chat"
-        ];
-        for (const k of CHAT_KEYS_TO_FILTER) {
-          const raw = localStorage.getItem(k);
-          if (!raw) continue;
-          try {
-            const msgs = JSON.parse(raw);
-            if (!Array.isArray(msgs)) continue;
-            const filtered = msgs.filter((m) => {
-              if (!m) return false;
-              if (m.role === "tool" && m.name && HEALTH_TOOL_NAMES.has(m.name)) return false;
-              if (Array.isArray(m.tool_calls) && m.tool_calls.some((tc) => HEALTH_TOOL_NAMES.has(tc?.function?.name))) {
-                return false;
-              }
-              return true;
-            });
-            if (filtered.length < msgs.length) {
-              localStorage.setItem(k, JSON.stringify(filtered));
-              cleaned += msgs.length - filtered.length;
-            }
-          } catch {
-          }
-        }
-        localStorage.setItem("nm_health_ai_isolation_v18", "1");
-        if (cleaned > 0) console.log(`[boot] v18 EU AI Act: \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E ${cleaned} health-AI \u043A\u043B\u044E\u0447\u0456\u0432/\u0444\u0430\u043A\u0442\u0456\u0432/tool_calls`);
-      } catch (e) {
-        console.error("[boot] v18 health AI isolation failed:", e);
-      }
-    }
-    if (!localStorage.getItem("nm_health_status_v2_done")) {
-      try {
-        const raw = localStorage.getItem("nm_health_cards");
-        if (raw) {
-          const cards = JSON.parse(raw);
-          if (Array.isArray(cards)) {
-            const map = { active: "treatment", controlled: "remission", done: "done" };
-            let migrated = 0;
-            cards.forEach((c) => {
-              if (map[c.status]) {
-                c.status = map[c.status];
-                migrated++;
-              }
-            });
-            if (migrated > 0) {
-              localStorage.setItem("nm_health_cards", JSON.stringify(cards));
-              console.log(`[boot] v9 migration: ${migrated} health cards migrated to 6-status scale`);
-            }
-          }
-        }
-        localStorage.setItem("nm_health_status_v2_done", "1");
-      } catch (e) {
-        console.error("[boot] v9 migration failed:", e);
-      }
-    }
-    if (!localStorage.getItem("nm_chips_v10_done")) {
-      try {
-        const CHAT_KEYS = [
-          "nm_chat_inbox",
-          "nm_chat_tasks",
-          "nm_chat_notes",
-          "nm_chat_me",
-          "nm_chat_evening",
-          "nm_chat_finance",
-          "nm_chat_health",
-          "nm_chat_projects"
-        ];
-        let backupOk = true;
-        CHAT_KEYS.forEach((k) => {
-          const raw = localStorage.getItem(k);
-          if (raw) {
-            try {
-              localStorage.setItem(k + "_backup_v10", raw);
-            } catch (e) {
-              backupOk = false;
-            }
-          }
-        });
-        const payloadsMap = JSON.parse(localStorage.getItem("nm_chip_payloads") || "{}");
-        let chipsTouched = 0, payloadsExtracted = 0, completionsRewired = 0;
-        CHAT_KEYS.forEach((k) => {
-          const raw = localStorage.getItem(k);
-          if (!raw) return;
-          let msgs;
-          try {
-            msgs = JSON.parse(raw);
-          } catch {
-            return;
-          }
-          if (!Array.isArray(msgs)) return;
-          let dirty = false;
-          msgs.forEach((m) => {
-            if (!Array.isArray(m.chips) || m.chips.length === 0) return;
-            m.chips.forEach((c) => {
-              if (typeof c !== "object" || !c) return;
-              if (!c.id) {
-                c.id = generateUUID();
-                dirty = true;
-                chipsTouched++;
-              }
-              if (c.payload && typeof c.payload === "object") {
-                payloadsMap[c.id] = c.payload;
-                c.payloadId = c.id;
-                delete c.payload;
-                payloadsExtracted++;
-                dirty = true;
-              }
-              if (c.action === "chat" && typeof c.label === "string" && c.label.includes("\u2714\uFE0F")) {
-                c.action = "complete";
-                completionsRewired++;
-                dirty = true;
-              }
-            });
-          });
-          if (dirty) {
-            try {
-              localStorage.setItem(k, JSON.stringify(msgs));
-            } catch (e) {
-              console.warn("[boot] v10: " + k + " write failed", e);
-            }
-          }
-        });
-        try {
-          localStorage.setItem("nm_chip_payloads", JSON.stringify(payloadsMap));
-        } catch (e) {
-          console.error("[boot] v10: nm_chip_payloads write failed", e);
-        }
-        localStorage.setItem("nm_chips_v10_done", "1");
-        localStorage.setItem("nm_chips_v10_done_ts", String(Date.now()));
-        console.log(`[boot] v10 migration: chips=${chipsTouched}, payloads=${payloadsExtracted}, completions=${completionsRewired}, backupOk=${backupOk}`);
-      } catch (e) {
-        console.error("[boot] v10 migration failed:", e);
-        [
-          "nm_chat_inbox",
-          "nm_chat_tasks",
-          "nm_chat_notes",
-          "nm_chat_me",
-          "nm_chat_evening",
-          "nm_chat_finance",
-          "nm_chat_health",
-          "nm_chat_projects"
-        ].forEach((k) => {
-          const b = localStorage.getItem(k + "_backup_v10");
-          if (b) {
-            try {
-              localStorage.setItem(k, b);
-            } catch {
-            }
-          }
-        });
-      }
-    }
-    const v10Done = localStorage.getItem("nm_chips_v10_done");
-    let v10DoneTs = +(localStorage.getItem("nm_chips_v10_done_ts") || 0);
-    if (v10Done === "1" && v10DoneTs === 0) {
-      v10DoneTs = Date.now();
-      try {
-        localStorage.setItem("nm_chips_v10_done_ts", String(v10DoneTs));
-      } catch {
-      }
-    }
-    if (v10Done === "1" && v10DoneTs > 0 && Date.now() - v10DoneTs > 7 * 24 * 60 * 60 * 1e3) {
-      try {
-        [
-          "nm_chat_inbox",
-          "nm_chat_tasks",
-          "nm_chat_notes",
-          "nm_chat_me",
-          "nm_chat_evening",
-          "nm_chat_finance",
-          "nm_chat_health",
-          "nm_chat_projects"
-        ].forEach((k) => {
-          localStorage.removeItem(k + "_backup_v10");
-        });
-        localStorage.removeItem("nm_chips_v10_done_ts");
-        console.log("[boot] v10 backups cleanup: 8 \u043A\u043B\u044E\u0447\u0456\u0432 \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E (>7 \u0434\u043D\u0456\u0432 \u0441\u0442\u0430\u0440\u0456)");
-      } catch (e) {
-        console.warn("[boot] v10 backups cleanup failed", e);
-      }
-    }
-  }
   function init() {
     try {
       runMigrations();
@@ -23896,6 +23964,7 @@ ${logLines}
     "src/core/boot.js"() {
       init_nav();
       init_uuid();
+      init_migrations();
       init_backup();
       init_delegation();
       init_touch_detect();
