@@ -3,7 +3,7 @@
 //
 // PreToolUse hook (запускається ПЕРЕД git commit).
 // Перевіряє: КОЖЕН reverser у `src/data/action-reversers.js` повинен мати
-// парний `case 'TOOL'` у `processUniversalAction` (src/tabs/habits.js).
+// парний `case 'TOOL'` у `processUniversalAction` (src/core/execute-action.js).
 // Інакше юзер каже «скасуй» → AI пише «✓» але насправді нічого не скасовано.
 //
 // КОРІНЬ ЧОМУ ПОТРІБЕН (lessons.md):
@@ -15,7 +15,7 @@
 //
 // Як працює:
 //   1. Grep усіх `tool: 'TYPE'` у REVERSERS object у action-reversers.js.
-//   2. Grep `action === 'TYPE'` у processUniversalAction (src/tabs/habits.js).
+//   2. Grep `action === 'TYPE'` у processUniversalAction (src/core/execute-action.js).
 //   3. Якщо є tool без парного case → блокує коміт.
 //
 // БЕЗ bypass — silent undo fail = юзер думає що AI скасував, дані залишаються.
@@ -50,7 +50,7 @@ process.stdin.on('end', () => {
     let processCases;
     try {
       processCases = execSync(
-        `sed -n '/^export function processUniversalAction/,/^}$/p' src/tabs/habits.js | grep -oE "action === '[a-z_]+'" | awk -F"'" '{print $2}' | sort -u`,
+        `sed -n '/^export function processUniversalAction/,/^}$/p' src/core/execute-action.js | grep -oE "action === '[a-z_]+'" | awk -F"'" '{print $2}' | sort -u`,
         { cwd: repoRoot, encoding: 'utf8' }
       ).trim().split('\n').filter(Boolean);
     } catch { processCases = []; }
@@ -61,11 +61,11 @@ process.stdin.on('end', () => {
     if (missing.length === 0) process.exit(0);
 
     console.error('🚫 PRE-COMMIT-REVERSER: Коміт заблоковано — silent undo fail ризик.\n');
-    console.error('Reverser-tools що НЕ мають парного case у processUniversalAction (habits.js):');
+    console.error('Reverser-tools що НЕ мають парного case у processUniversalAction (core/execute-action.js):');
     missing.forEach(t => console.error(`   • '${t}'`));
     console.error('\n📋 Юзер каже «скасуй» → executeReverse шле сюди → return false → AI бреше «✓ Скасовано».');
     console.error('\n📋 Що робити:');
-    console.error('   1) Відкрити src/tabs/habits.js → функція processUniversalAction');
+    console.error('   1) Відкрити src/core/execute-action.js → функція processUniversalAction');
     console.error('   2) Додати `if (action === \'TYPE\')` для кожного tool зі списку вище');
     console.error('   3) Case має викликати відповідну delete-функцію + addMsg підтвердження\n');
     console.error('   Урок B-174 (db0YY 12.05) — той самий клас повторювався 3 рази підряд.');

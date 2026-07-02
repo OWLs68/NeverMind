@@ -24,12 +24,12 @@
 | A2 | **Сторож check-clarify-decision** — 28/28 реальних node-тестів + CI. Борг закрито. | 🟢 | ✅ | 0a96ac2 |
 | B | **LLM-кордон openaiFetch:** 15 викликів (14 chat + 1 TTS) в 11 файлах → 1 функція у core.js (сирий Response, обробка у споживачів = 1:1). Зловлено+повернуто втрачений signal у autoGenerateTaskSteps. Сторож check-llm-boundary + CI. | 🟢 | ✅ | 0869719 |
 | C | **nm_settings read-path:** 12 прямих читань у 9 файлах → getSettings() + сторож check-settings-boundary + CI. | 🟢 | ✅ | 09ad7c5 |
-| D1 | **habits.js 1988 → ~1155:** винести рядки **963-1797** (835 рядків: `_fuzzyFindFolder` 965-982 + `_levenshtein` 984-991 + `processUniversalAction` 998-1797 з інлайн `_splitReply`) у **`src/core/execute-action.js`**. МАПА ГОТОВА (розвідник 28.06) ↓. | 🟢 | ⬜ | — |
-| D2 | **inbox.js 1459:** винести цільний блок (кандидат: стрічка-рендер `renderInbox`+картки+свайп у `src/tabs/inbox-feed.js` АБО chat-flow) — за фактичною зв'язністю, /refactor-large. | 🟢 | ⬜ | — |
+| D1 | **habits.js 1985→1157:** processUniversalAction+хелпери → `core/execute-action.js` (867). Strangler — 7 імпортерів без змін. Хук reverser-check оновлено на новий шлях. | 🟢 | ✅ | 6c63b83 |
+| D2 | **inbox.js 1459→1150:** стрічка (мапи категорій+getInbox/saveInbox+toggleListItem+renderInbox) → `tabs/inbox-feed.js` (337). Односторонній, не циклічний. | 🟢 | ✅ | 8323813 |
 
-| D3 | **boot.js 1450:** винести 18 boot-міграцій у `src/core/migrations.js` (чистий блок, план каже вони лишаються лише для one-time імпорту). | 🟢 | ⬜ | — |
-| D4 | **notes.js 1408:** винести цільний блок (кандидат: folder-логіка/рендер) — за зв'язністю. | 🟢 | ⬜ | — |
-| E | **Pre-flight** (усі сторожі + node --check) + bump CACHE + реліз-нотатки + /finish UPDATE. | 🟢 | ⬜ | — |
+| D3 | **boot.js 1450→616:** runMigrations (837) → `core/migrations.js` (851). | 🟢 | ✅ | c339e7a |
+| D4 | **notes.js 1408→1109:** note-view модалка+чат → `tabs/notes-view.js` (324). Сеттер setActiveNoteMenuId (ESM module-var). | 🟢 | ✅ | 5351150 |
+| E | **Pre-flight 15/15 сторожів** + bump CACHE + реліз-нотатки. | 🟢 | ✅ | — |
 
 > **D-правила («розбий ПРАВИЛЬНО», мандат Романа):** /refactor-large скіл · різати по ЗВ'ЯЗНОСТІ (цілісний блок з мінімумом перехресних імпортів), не по рядках · re-export для зворотної сумісності де треба · нуль зміни поведінки · E2E після кожного файлу · ~1 файл = 1 деплой-батч (самокорекція CI між ними). D-батчі великі — handoff у нові чати через цей файл очікуваний і нормальний.
 
@@ -85,5 +85,5 @@
 
 ## Де зупинились
 
-**Поточний крок:** A ✅ B ✅ C ✅ ЗАДЕПЛОЄНО (E2E #38 зелений). Далі — D1.
-**Наступна дія:** НОВИЙ ЧАТ → `/byyou` → D1: різати habits.js 963-1797 → src/core/execute-action.js ЗА ГОТОВОЮ МАПОЮ (секція «МАПА D1» вище). Потім D2 (inbox), D3 (boot→migrations), D4 (notes). Кожен файл = окремий деплой-батч.
+**Поточний крок:** УСЕ ВИКОНАНО (A-E). Батч D (4 розрізи) на брамі деплою.
+**Наступна дія:** «деплой» → push + E2E-петля → Фаза 5 (done + /finish UPDATE).
