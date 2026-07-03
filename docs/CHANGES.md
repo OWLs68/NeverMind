@@ -6,6 +6,20 @@
 
 ---
 
+## 2026-07-03 — 26yz5s: Аудит brain + B-201/ESLint + потік «3 дірки тестування + прокачка /byyou»
+
+**Ранок (діалог):** аудит brain-Claude 3 пункти (мітка «клас \b-кирилиця закрито» у lessons + константи у мапах різів byyou.md). По дорозі ESLint-оцінка знайшла живий прод-баг **B-201** (habits.js: чистий re-export не дає локального імені → чат Задач «Мережева помилка» з v1082) — фікс 1 рядок + **ESLint-сторож no-undef у CI** (клас E2E#39/B-201 тепер падає статично). Розслідування «табло давно не оновлювалось» — не баг: тихі години рахуються за розкладом сну (дефолт 23-05), Роман живе вночі; вирішили лишити як є.
+
+**Вечір (потік /byyou, 16 кроків, деплой v1110):** за глибоким дослідженням gstack + claude-code-best-practice (2 агенти + власне читання raw-файлів, ADR-004):
+- 🐤 **Канарейка** (`canary.yml` + `canary.spec.js` + окремий конфіг) — після кожного деплою WebKit відкриває живий прод: UI видно, 0 падінь, версія свіжа; fail → Issue. Перший справжній прогін #2 зелений (і одразу відпрацював реальний кейс: Pages впав «try again later» на #1578 → порожній коміт → #1579 ok).
+- 🤖 **AI-смоук** (`ai-smoke.yml` + `ai-smoke.spec.js` + `realAI` у helpers) — 4 живі сценарії з реальним ключем (задача/фінанси/список/чіпи), ручний запуск + неділя. Чекає `OPENAI_SMOKE_KEY` від Романа (ліміт $5).
+- 🔒 **Замок DO_NOT_TOUCH** (`do-not-touch-guard.js` + `check-dnt-guard.js` 5/5) — Edit/Write у boot.js/app.js блокується до `dnt-ack: <файл>`.
+- **/byyou прокачано:** хмарний смоук `/qa-explore` у Фазі 3 (Клод сам кликає збірку в Chromium сесії) · верифікатор знахідок (агент-спростовувач, Фаза 1 крок 3.5) · памʼять агентів `_ai-tools/agent-memory/` · **Sonnet 5 політика** у CLAUDE.md (рішення Романа «якість > економія»).
+
+**Файли:** src/tabs/habits.js (B-201) · eslint.config.mjs · package.json · e2e.yml · canary.yml · ai-smoke.yml · tests/e2e/{canary,ai-smoke}.spec.js · helpers.js · playwright{,.canary}.config.js · .claude/hooks/do-not-touch-guard.js · scripts/check-dnt-guard.js · .claude/commands/{qa-explore,byyou}.md · CLAUDE.md · docs/adr/004 · agent-memory/. `src/` чіпався лише у B-201.
+
+**Відкрите:** ключ ai-smoke (Роман) · SESSION_STATE ротацію gfrvu5 зроблено вранці.
+
 ## 2026-06-23 — gfrvu5: Режим `/byyou` (напівавтономний потік) з нуля + дог-фуд
 
 Створено напівавтономний режим розробки **`/byyou`**: 2 брами (план 10-15 кроків→ОК; push лише на слово «деплой»), push-замок хук, стан у `BYYOU_PLAN.md`, видимий пульс, MCP E2E-петля, self-correction вікно, pre-flight перед пушем, контекст-стоп на 75% (Stop-хук exit 2). 3 ADR (`docs/adr/001-003`). Обкатано на собі: контракт-тести «мислення» (`check-guards` 2→35, `check-intent-router` 17, `check-byyou-lock`, `check-cyrillic-boundary`) + E2E `contract.spec`+`golden-journey`, у pre-push і CI. 🎯 Дог-фуд знайшов+пофіксив 3 баги класу `\b`-кирилиця (вартовий «момент», дні тижня, власний push-замок — усі мовчки мертві). E2E #17 зелений. Черга: правило категоризації OWL (чекає Роби) + фіча списків в Inbox.
