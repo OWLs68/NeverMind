@@ -9,7 +9,7 @@
   },
   "devDependencies": {
     "esbuild": "^0.28.1",
-    "@playwright/test": "^1.49.0",
+    "@playwright/test": "^1.61.1",
     "eslint": "^10.6.0",
     "globals": "^17.7.0"
   }
