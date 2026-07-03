@@ -7975,7 +7975,7 @@ ${UI_TOOLS_RULES}${context ? "\n\n" + context : ""}${stats ? "\n\n" + stats : ""
     if (reply) {
       const blocks = extractJsonBlocks(reply);
       for (const parsed of blocks) {
-        if (parsed.action && processUniversalAction2(parsed, text, (r, t2) => addMeChatMsg(r, t2))) {
+        if (parsed.action && processUniversalAction(parsed, text, (r, t2) => addMeChatMsg(r, t2))) {
           handled = true;
         }
       }
@@ -8944,7 +8944,7 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
         if (q === "last") {
           const lastAction = typeFilter ? null : readLastReversible();
           if (lastAction) {
-            const ok = executeReverse(lastAction.reverse, processUniversalAction2);
+            const ok = executeReverse(lastAction.reverse, processUniversalAction);
             if (ok) {
               markReversed(lastAction.id);
               addMsg("agent", `\u2705 \u0412\u0456\u0434\u043C\u0456\u043D\u0438\u0432: ${lastAction.summary}`);
@@ -8994,7 +8994,7 @@ ${windowCtx}${aiCtx ? "\n\n" + aiCtx : ""}${stats ? "\n\n" + stats : ""}`;
       const acts = toolCallToAction(name, args);
       let universalHandled = false;
       for (const a of acts) {
-        if (processUniversalAction2(a, originalText, addMsg)) {
+        if (processUniversalAction(a, originalText, addMsg)) {
           any = true;
           universalHandled = true;
         }
@@ -10235,7 +10235,7 @@ ${UI_TOOLS_RULES}` + (aiContext ? "\n\n" + aiContext : "");
           notesBarLoading = false;
           return;
         }
-        if (!processUniversalAction2(parsed, text, addNotesChatMsg)) {
+        if (!processUniversalAction(parsed, text, addNotesChatMsg)) {
           const looksLikeJson = reply.startsWith("{") && reply.endsWith("}") || reply.startsWith("[") && reply.endsWith("]");
           if (looksLikeJson) {
             try {
@@ -14051,7 +14051,7 @@ ${CHIP_PROMPT_RULES}`;
         dp[i][j] = a[i - 1] === b[j - 1] ? dp[i - 1][j - 1] : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
     return dp[m][n];
   }
-  function processUniversalAction2(parsed, originalText, addMsg) {
+  function processUniversalAction(parsed, originalText, addMsg) {
     const action = parsed.action;
     const _splitReply = (thinking, doWork) => {
       addMsg("agent", thinking);
@@ -17133,7 +17133,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
               addTaskChatMsg("agent", t("tasks.steps_added", "\u2705 \u0414\u043E\u0434\u0430\u0432 {n} \u043A\u0440\u043E\u043A\u0456\u0432 \u0434\u043E \u0437\u0430\u0434\u0430\u0447\u0456. \u041F\u0435\u0440\u0435\u0432\u0456\u0440 \u043A\u0430\u0440\u0442\u043A\u0443.", { n: parsed.steps.length }));
             }
           } else if (parsed.action) {
-            if (!processUniversalAction2(parsed, text, addTaskChatMsg)) {
+            if (!processUniversalAction(parsed, text, addTaskChatMsg)) {
               addTaskChatMsg("agent", reply, "", extractedChips);
             }
           } else {
@@ -17154,7 +17154,7 @@ ${JSON.stringify(contextData, null, 2)}` : "";
                 addTaskChatMsg("agent", t("tasks.steps_added", "\u2705 \u0414\u043E\u0434\u0430\u0432 {n} \u043A\u0440\u043E\u043A\u0456\u0432 \u0434\u043E \u0437\u0430\u0434\u0430\u0447\u0456. \u041F\u0435\u0440\u0435\u0432\u0456\u0440 \u043A\u0430\u0440\u0442\u043A\u0443.", { n: p.steps.length }));
                 handled = true;
               }
-            } else if (p.action && processUniversalAction2(p, text, addTaskChatMsg)) {
+            } else if (p.action && processUniversalAction(p, text, addTaskChatMsg)) {
               handled = true;
             }
           }
@@ -19185,7 +19185,7 @@ ${aiContext}`;
             } else if (q === "last") {
               const lastAction = typeFilter ? null : readLastReversible();
               if (lastAction) {
-                const ok = executeReverse(lastAction.reverse, processUniversalAction2);
+                const ok = executeReverse(lastAction.reverse, processUniversalAction);
                 if (ok) {
                   markReversed(lastAction.id);
                   addInboxChatMsg("agent", t("inbox.chat.undo_ok", "\u2705 \u0412\u0456\u0434\u043C\u0456\u043D\u0438\u0432: {summary}", { summary: lastAction.summary }));
@@ -19327,7 +19327,7 @@ ${aiContext}`;
               if (currentTab === "finance") renderFinance();
               addInboxChatMsg("agent", t("inbox.fin.subcat_added", '\u2713 \u0414\u043E\u0434\u0430\u0432 "{sub}" \u0443 "{cat}". {comment}', { sub: action.subcategory, cat: action.category_name, comment: action.comment || "" }));
             }
-          } else if (processUniversalAction2(action, text, addInboxChatMsg)) {
+          } else if (processUniversalAction(action, text, addInboxChatMsg)) {
           } else {
             const replyText = action.comment || args?.comment || "";
             if (replyText) addInboxChatMsg("agent", replyText);
@@ -19443,7 +19443,7 @@ ${getAIContext()}` : INBOX_SYSTEM_PROMPT;
               } else if (action.action === "complete_task") {
                 processCompleteTask(action, combinedMsg);
                 primaryHandled = true;
-              } else if (processUniversalAction2(action, combinedMsg, addInboxChatMsg)) {
+              } else if (processUniversalAction(action, combinedMsg, addInboxChatMsg)) {
                 primaryHandled = true;
               } else if (action.comment) {
                 addInboxChatMsg("agent", action.comment);
