@@ -4,10 +4,13 @@
   "private": true,
   "scripts": {
     "build": "node build.js",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "lint": "eslint src"
   },
   "devDependencies": {
     "esbuild": "^0.28.1",
-    "@playwright/test": "^1.49.0"
+    "@playwright/test": "^1.49.0",
+    "eslint": "^10.6.0",
+    "globals": "^17.7.0"
   }
 }

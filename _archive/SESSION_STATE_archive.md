@@ -1,3 +1,39 @@
+## 🔧 Сесія gfrvu5 — Режим `/byyou` (напівавтономний потік) + дог-фуд (20-23.06.2026)
+
+### Зроблено (усе запушено, E2E #17 зелений)
+
+**1. Режим `/byyou` з нуля** (`.claude/commands/byyou.md` + ADR-001/002/003):
+- 2 брами: Старт (план 10-15 кроків→ОК Романа), Деплой (push лише на слово «деплой»).
+- **Push-замок** `byyou-push-lock.js` (Stop... PreToolUse): поки `BYYOU_PLAN.md` active — push заблоковано без «деплой». Логіка у `lib/byyou-release.js` (хук+тест ділять код).
+- Стан у `_ai-tools/BYYOU_PLAN.md` (переживає обрив чату, `/byyou` без аргументу продовжує). Рішення «чому» → `docs/adr/`.
+- Видимий пульс `[/byyou N/M]` щокроку, GO/ТВІЙ ХІД/СТОП маркери, стоп-слова.
+- **Self-correction вікно** (маркер `.claude/.byyou-release`): «деплой» дозволяє авто-перепуш ремонтів блоку без повторного слова.
+- **Pre-flight** перед пушем (усі node-сторожі + cyrillic-boundary).
+- **Контекст-стоп 75%** — Stop-хук `byyou-context-guard.sh` exit 2 (блокує тихе згортання, «context anxiety») + handoff через BYYOU_PLAN.
+
+**2. Дог-фуд (перший потік /byyou): контракт-тести + Golden Journey.**
+- `check-guards` 2→35 (усі 7 вартових + applyAllGuards), новий `check-intent-router` 17, новий `check-byyou-lock` 10, новий `check-cyrillic-boundary` (pre-flight проти класу баґа). Усі у pre-push + CI (`e2e.yml` крок «Contract tests»).
+- E2E `contract.spec` (текст→save_task→Tasks+persist) + `golden-journey` (наскрізний задача+нотатка+reload).
+
+**3. 🎯 Знайдено+пофікшено 3 баги одного класу (`\b`-кирилиця, JS \b не матчить кирилицю):**
+- `dispatcher-guards.js` вартовий «момент» (`/\bмомент/`) — мертвий у проді → `/момент/i`.
+- `inbox.js` дні тижня `\bпн\b`… — мертві → кирилично-безпечна межа.
+- власний push-замок `\bдеплой\b` — не пускав «Деплой» (іронія) → `/деплой/i`.
+- `check-cyrillic-boundary` тепер стереже весь `src/` від рецидиву.
+
+**4. E2E-фікс:** update-тур (`#slides-tour`) перехоплював кліки на чистому тест-профілі → глушиться прапором `__NM_TEST_SEED__` (onboarding.js + helpers boot).
+
+### Відкрите / далі
+- ~~**Правило категоризації потоку** OWL~~ ✅ ЗАКРИТО v3pexs 27.06 (`5873656`) — `FLOW_ORGANIZE_RULE`.
+- **Фіча списків в Inbox** (картка з квадратиками замість Задачі + чіп «Задача/Список») — /byyou-розмір, не почато.
+- Supabase Фаза 1 хвости (Ворота 2 + структуровані чіпи) — без змін.
+
+### Метрики
+- Гілка `claude/new-session-gfrvu5`. Коміти `3b35e9f`→`04a0970` (~16). CACHE `nm-20260621-1821`. Деплой ~v1078.
+- Council: prompt-engineer-auditor + map-агент (Sonnet) + 4 веб-пошуки. E2E #17 зелений (16 тестів). 201+ контракт-перевірок.
+
+---
+
 
 
 ## 🔧 Сесія foyz2r — E2E-тестер (Playwright) + архів Хетзнера + UUID v7 (16-18.06.2026)
