@@ -1,0 +1,91 @@
+# 🐤 Канарейка — перевірка ЖИВОГО прод-сайту після кожного деплою.
+#
+# Дірка яку закриває (дослідження gstack, 26yz5s 03.07.2026, ADR-004): E2E бігають
+# ДО злиття у main, а ПІСЛЯ публікації на GitHub Pages живий сайт не перевіряє ніхто —
+# зламаний деплой першим знаходив Роман телефоном.
+#
+# Механіка: тригер — завершення Auto-merge (він і є деплой). Чекаємо поки Pages
+# віддасть свіжу версію (бейдж vN з deploy-counter.txt), тоді Playwright (WebKit)
+# відкриває прод: UI видно, 0 JS-падінь, версія свіжа. Fail → GitHub Issue Роману.
+
+name: Canary (prod check)
+
+on:
+  workflow_run:
+    workflows: ["Auto-merge claude branches to main"]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: canary
+  cancel-in-progress: true
+
+jobs:
+  canary:
+    # Після auto-merge — тільки якщо той успішний. Ручний запуск — завжди.
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      CANARY_URL: https://owls68.github.io/NeverMind/
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main   # канарейка міряє те що зʼїхало у main, не гілку
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+
+      - name: Install deps
+        run: npm install
+
+      - name: Wait for Pages to serve fresh version
+        # deploy-counter.txt у main = номер щойно задеплоєної версії. Pages інколи
+        # доїжджає 1-3 хв — поллимо бейдж до збігу (макс ~5 хв), потім тестуємо.
+        run: |
+          EXPECTED=$(cat deploy-counter.txt)
+          echo "EXPECTED_VERSION=$EXPECTED" >> "$GITHUB_ENV"
+          echo "Чекаю v$EXPECTED на $CANARY_URL ..."
+          for i in $(seq 1 30); do
+            LIVE=$(curl -sL --max-time 15 "$CANARY_URL" | grep -o '>v[0-9]*' | head -1 | tr -dc '0-9' || true)
+            echo "  спроба $i: прод віддає v${LIVE:-?}"
+            if [ -n "$LIVE" ] && [ "$LIVE" -ge "$EXPECTED" ]; then
+              echo "Свіжа версія доїхала (v$LIVE)."
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "::warning::Pages за 5 хв не віддав v$EXPECTED — тестуємо що є (перевірка версії у спеці впаде і скаже це явно)."
+
+      - name: Install Playwright WebKit
+        run: npx playwright install --with-deps webkit
+
+      - name: Run canary against prod
+        run: npx playwright test -c playwright.canary.config.js
+
+      - name: Open issue on failure
+        if: failure()
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const v = process.env.EXPECTED_VERSION || '?';
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `🐤 Канарейка: прод зламаний (v${v})`,
+              body: [
+                `Канарейка впала після деплою v${v}.`,
+                `Живий сайт: ${process.env.CANARY_URL}`,
+                `Лог прогону: ${runUrl}`,
+                '',
+                'Що це значить: сторінка не вантажиться / є JS-падіння / Pages віддає стару версію.',
+                'NM-Claude у наступній сесії: прочитай лог, знайди корінь, полагодь.',
+              ].join('\n'),
+              labels: ['canary'],
+            });
