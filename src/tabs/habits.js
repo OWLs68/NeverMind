@@ -962,10 +962,13 @@ function prodHabitCardClick(id, _event) {
 
 // === UNIVERSAL ACTION PROCESSOR — ПЕРЕНЕСЕНО (v3pexs 28.06, D1) ===
 // processUniversalAction + _fuzzyFindFolder + _levenshtein (835 рядків) тепер у
-// src/core/execute-action.js (Architecture Refactor Сесія 4). Ре-експорт нижче —
-// strangler: 7 наявних імпортерів (tool-dispatcher/inbox/tasks/notes/finance/me)
-// працюють без змін. Нові споживачі — імпортуйте одразу з core/execute-action.js.
-export { processUniversalAction } from '../core/execute-action.js';
+// src/core/execute-action.js (Architecture Refactor Сесія 4). Import+export (НЕ
+// `export ... from`) — B-201: чистий re-export не створює локального імені, а
+// _processOne нижче викликає функцію і в цьому файлі. Strangler: 7 наявних
+// імпортерів (tool-dispatcher/inbox/tasks/notes/finance/me) працюють без змін.
+// Нові споживачі — імпортуйте одразу з core/execute-action.js.
+import { processUniversalAction } from '../core/execute-action.js';
+export { processUniversalAction };
 
 
 export async function sendTasksBarMessage() {
