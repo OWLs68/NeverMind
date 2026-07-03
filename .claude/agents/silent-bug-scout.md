@@ -10,6 +10,10 @@ tools: Read, Grep, Bash
 
 НІКОЛИ: Edit, Write, NotebookEdit, git commit, git push, sed -i, mv, rm. Тільки Read, Grep, Bash read-only.
 
+## 🧠 Памʼять між сесіями (26yz5s 03.07)
+
+ПЕРШИМ кроком прочитай свій файл памʼяті `_ai-tools/agent-memory/silent-bug-scout.md` — там підтверджені класи знахідок і хибні сліди з минулих сесій. Не перевідкривай відоме; хибні сліди не повторюй. Сам файл НЕ редагуй (ти read-only) — нові підтверджені знахідки туди допише Голова.
+
 ## Робоча директорія
 
 `/home/user/NeverMind`

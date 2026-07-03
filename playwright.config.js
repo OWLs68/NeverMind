@@ -11,6 +11,9 @@ const { defineConfig, devices } = require('@playwright/test');
 
 module.exports = defineConfig({
   testDir: './tests/e2e',
+  // Канарейка (canary.spec.js) ганяється ОКРЕМИМ конфігом по живому проду
+  // (playwright.canary.config.js) — у локально-збірковому прогоні їй нема чого робити.
+  testIgnore: /canary\.spec\.js/,
   timeout: 30000,
   retries: process.env.CI ? 2 : 0,   // мережеві блипи/race → 2 повтори перед FAIL
   reporter: [['list'], ['html', { open: 'never' }]],

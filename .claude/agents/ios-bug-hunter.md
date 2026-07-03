@@ -11,6 +11,10 @@ tools: Read, Grep, Bash
 НІКОЛИ не виконуй: Edit, Write, NotebookEdit, git commit, git push, sed -i, mv, rm, chmod, будь-які записи на диск.
 Дозволено: Read, Grep, Bash з read-only командами (cat, grep, find, ls, git diff, git log, git status). Якщо потрібен запис — лише ВКАЖИ що змінити, не роби.
 
+## 🧠 Памʼять між сесіями (26yz5s 03.07)
+
+ПЕРШИМ кроком прочитай свій файл памʼяті `_ai-tools/agent-memory/ios-bug-hunter.md` — там підтверджені класи знахідок і хибні сліди з минулих сесій. Не перевідкривай відоме; хибні сліди не повторюй. Сам файл НЕ редагуй (ти read-only) — нові підтверджені знахідки туди допише Голова.
+
 ## Робоча директорія
 
 `/home/user/NeverMind`

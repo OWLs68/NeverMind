@@ -1,0 +1,64 @@
+# 🤖 AI-смоук — живий OpenAI проти зібраного застосунку (Chromium+WebKit у CI).
+#
+# Що це (26yz5s 03.07, ADR-004): звичайні E2E мокають OpenAI → поведінку живого AI
+# перевіряли тільки руки Романа. Цей workflow ганяє tests/e2e/ai-smoke.spec.js
+# з РЕАЛЬНИМ ключем: «купити хліб»→Задача, «купив каву 50»→Фінанси,
+# «список покупок»→чекліст, «Хімчистка»→чіпи.
+#
+# Запуск: вручну (Actions → AI smoke → Run workflow) — перед великими релізами;
+# + щонеділі 08:00 UTC як регресійний пульс. Вартість прогону — центи (gpt-4o-mini).
+#
+# Ключ: Secrets → Actions → OPENAI_SMOKE_KEY. ОКРЕМИЙ ключ з лімітом $5/міс —
+# НЕ основний ключ Романа. Без секрета тести скіпаються (спец сам це вміє).
+
+name: AI smoke (live OpenAI)
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 8 * * 0'   # неділя 08:00 UTC
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ai-smoke
+  cancel-in-progress: true
+
+jobs:
+  ai-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+
+      - name: Install deps
+        run: npm install
+
+      - name: Build bundle
+        run: npm run build
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium webkit
+
+      - name: Run live AI smoke
+        env:
+          OPENAI_SMOKE_KEY: ${{ secrets.OPENAI_SMOKE_KEY }}
+        run: |
+          if [ -z "$OPENAI_SMOKE_KEY" ]; then
+            echo "::error::Секрет OPENAI_SMOKE_KEY не заданий — додай окремий ключ з лімітом \$5 у Settings → Secrets → Actions."
+            exit 1
+          fi
+          npx playwright test ai-smoke.spec.js
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-smoke-report
+          path: playwright-report/
+          retention-days: 7

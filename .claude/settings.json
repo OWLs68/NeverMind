@@ -95,6 +95,15 @@
             "command": "node .claude/hooks/pre-edit-read-check.js"
           }
         ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/do-not-touch-guard.js"
+          }
+        ]
       }
     ],
     "PostToolUse": [
