@@ -57,7 +57,17 @@ async function boot(page, opts = {}) {
 
   // За замовчуванням глушимо OpenAI (нічого не висить, $0). Якщо тест хоче
   // підмінити AI — віддаємо детерміновану відповідь.
-  if (opts.mockAI) {
+  // opts.realAI (26yz5s 03.07, AI-смоук): ЖИВИЙ OpenAI — ключ береться з env
+  // OPENAI_SMOKE_KEY (окремий, з лімітом $5/міс) і сіється у сховище ДО boot;
+  // виклики до api.openai.com НЕ глушаться. Використовує ТІЛЬКИ ai-smoke.spec.js
+  // через окремий workflow — звичайні E2E цей шлях не зачіпає.
+  if (opts.realAI) {
+    const key = process.env.OPENAI_SMOKE_KEY;
+    if (!key) throw new Error('realAI: env OPENAI_SMOKE_KEY порожній — нема ключа для живого AI-смоуку');
+    await page.addInitScript((k) => {
+      try { localStorage.setItem('nm_gemini_key', k); } catch (e) {}
+    }, key);
+  } else if (opts.mockAI) {
     await mockAI(page, opts.mockAI);
   } else {
     await page.route('**/api.openai.com/**', (route) => route.abort());
