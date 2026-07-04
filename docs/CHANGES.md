@@ -6,6 +6,22 @@
 
 ---
 
+## 2026-07-04 — 26yz5s: Ранковий брифінг /brief + 7 портів рев'ю/потоку (2 потоки /byyou, v1110→v1114)
+
+**Задачі А+Б+В** за погодженим планом Романа, залізне правило «нуль нових ручних команд» — усе авто-кроки всередині /byyou/Council//audit//qa-explore/CI/хуків (ADR-005).
+
+**А — /brief (Потік 1, окремий деплой):** read-only ранковий брифінг для Claude Code Routine (04:00 UTC щодня, свіжа сесія) — стан CI + 22 сторожі + беклог за пріоритетом → звіт у чат з готовою byyou-чернеткою. Звіт лише у чат (без файла — щоб не плодити деплой). Значення Routine Роман вставляє руками. Перший смоук виявив 2 старі security-Issues (#9/#12 з травня).
+
+**Б — alibaba/open-code-review (читано реальний код через raw):** P1 асиметричний фактчек знахідок Council (вбиває тільки за прямим контрдоказом, fail-open; замінив симетричний верифікатор 03.07) · P2 сніпет-якорі + resolve-anchor.js (порт resolver.go, НУЛЬ regex) · P3 мапа глоб→чекліст-шрами з lessons (review-rules/ + glob-match.js без regex) · P4 оцінка обсягу на брамі + мʼякий поріг 60-74% контексту (ранній handoff).
+
+**В — gstack + best-practice:** P5 авто security-агент (CSO-методологія у security.md) для чутливих файлів у byyou Фазі 4 · P6 JSONL-журнал хуків (log-event.js, 6 подій, fail-open) · P7 /qa-explore рівні Quick/Standard/Exhaustive + health-рядок (WebKit у CI був з 16.06).
+
+**Тести:** 5 нових контракт-сторожів (refute-parser 8/8 · review-rules 12/12 · context-guard 6/6 · anchor-resolver 10/10 · hooks-log 4/4) → CI 16→22 node + ESLint.
+
+**Файли:** .claude/commands/{brief,qa-explore,byyou}.md · .claude/hooks/{log-event.js,byyou-context-guard.sh} · scripts/{resolve-anchor,check-*}.js + scripts/lib/{glob-match,refute-parser}.js · _ai-tools/review-rules/* · CLAUDE.md · docs/adr/005. **src/ НЕ чіпався** (крім вранішнього B-201) → CACHE не бампали.
+
+**Інфра-нюанс:** Pages двічі за 2 дні падав «try again later» на боці GitHub → канарейка ловила + самокорекція порожнім комітом. **Відкрите (Роман):** створити Routine + OPENAI_SMOKE_KEY + тріаж #9/#12.
+
 ## 2026-07-03 — 26yz5s: Аудит brain + B-201/ESLint + потік «3 дірки тестування + прокачка /byyou»
 
 **Ранок (діалог):** аудит brain-Claude 3 пункти (мітка «клас \b-кирилиця закрито» у lessons + константи у мапах різів byyou.md). По дорозі ESLint-оцінка знайшла живий прод-баг **B-201** (habits.js: чистий re-export не дає локального імені → чат Задач «Мережева помилка» з v1082) — фікс 1 рядок + **ESLint-сторож no-undef у CI** (клас E2E#39/B-201 тепер падає статично). Розслідування «табло давно не оновлювалось» — не баг: тихі години рахуються за розкладом сну (дефолт 23-05), Роман живе вночі; вирішили лишити як є.
