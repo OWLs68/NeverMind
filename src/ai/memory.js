@@ -162,6 +162,17 @@ export function addFact({ text, category, ttlDays, source = 'auto' }) {
 
   if (!category || !FACT_CATEGORIES[category]) category = 'context';
 
+  // Дефолтний TTL для тимчасової категорії (26yz5s 04.07): 'context' = локація/
+  // розпорядок/тимчасові обставини. AI майже ніколи не ставить ttl_days сам →
+  // тимчасові факти («у відрядженні», «зараз на проекті X») жили вічно і
+  // накопичувались як мотлох (клас «болить горло»). Якщо AI не задав TTL для
+  // context — ставимо 90 днів. Постійні категорії (relationships/work/goals/
+  // preferences) лишаються вічними. Юзер може продовжити повторною згадкою (dedup
+  // бампне lastSeen, але ts і TTL рахуються від створення — свідомо: старе згасає).
+  if (category === 'context' && !(typeof ttlDays === 'number' && ttlDays > 0)) {
+    ttlDays = 90;
+  }
+
   const facts = getFactsRaw();
   const textLower = text.toLowerCase();
 
@@ -244,12 +255,20 @@ export function cleanupExpiredFacts() {
 // Форматує факти для getAIContext() — простий варіант без RAG.
 // Всі живі факти (до maxFacts штук) групуються по категорії з відносним часом.
 // AI сам судить актуальність (прямо проінструктовано у секції "ПРАВИЛО ЧЕСНОСТІ").
+// Категорії що описують СТІЙКУ особу — мають бути в контексті ЗАВЖДИ, не тонути
+// за свіжістю (26yz5s 04.07: активний юзер накопичує факти, важливі довгострокові
+// раніше випадали зі стелі 30, бо lastSeen не бампається при показі).
+const PERMANENT_CATEGORIES = ['relationships', 'work', 'goals'];
+
 export function formatFactsForContext(maxFacts = 30) {
   const facts = getFacts();
   if (facts.length === 0) return '';
 
-  // Сортуємо за свіжістю (lastSeen) — найсвіжіші зверху
-  const sorted = [...facts].sort((a, b) => (b.lastSeen || b.ts) - (a.lastSeen || a.ts)).slice(0, maxFacts);
+  // Постійні (хто людина) — завжди у контексті; решта — добираємо за свіжістю.
+  const permanent = facts.filter(f => PERMANENT_CATEGORIES.includes(f.category));
+  const rest = facts.filter(f => !PERMANENT_CATEGORIES.includes(f.category));
+  const byRecency = arr => [...arr].sort((a, b) => (b.lastSeen || b.ts) - (a.lastSeen || a.ts));
+  const sorted = [...byRecency(permanent), ...byRecency(rest)].slice(0, maxFacts);
 
   // Групуємо по категорії
   const grouped = {};
