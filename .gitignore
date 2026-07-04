@@ -22,3 +22,4 @@ scripts/__pycache__/
 playwright-report/
 test-results/
 .claude/hooks/logs/
+.claude/hooks/.byyou-handoff-warned
