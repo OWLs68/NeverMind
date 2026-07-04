@@ -15,8 +15,9 @@ name: AI smoke (live OpenAI)
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '0 8 * * 0'   # неділя 08:00 UTC
+  # Розклад прибрано (рішення Романа 04.07): ганяємо НЕ за таймером, а коли
+  # NM-Claude сам скаже під час роботи що варто прогнати (після зміни промптів
+  # OWL / диспетчера / фабрик). Запуск: Actions → AI smoke → Run workflow.
 
 permissions:
   contents: read
