@@ -58,6 +58,7 @@ jobs:
           node scripts/check-dnt-guard.js
           node scripts/check-hooks-log.js
           node scripts/check-review-rules.js
+          node scripts/check-refute-parser.js
 
       # Статичний ловець класу «переніс функцію — забув константи/import»
       # (E2E #39 getFolderColor, B-201 re-export без локального імені).
