@@ -1,0 +1,16 @@
+{
+  "_comment": "P3 (ADR-005): мапа глоб→чеклісти. Council/byyou Фаза 1 інжектить чеклісти у промпт рев'ю під конкретний файл. resolveChecklists() у scripts/lib/glob-match.js. Порядок не важливий — збираються УСІ збіги + default.md завжди.",
+  "rules": [
+    { "glob": "src/ai/**",            "checklists": ["security.md", "js.md"] },
+    { "glob": ".claude/hooks/**",     "checklists": ["hooks.md", "js.md"] },
+    { "glob": ".github/workflows/**", "checklists": ["security.md"] },
+    { "glob": "src/ui/**",            "checklists": ["render.md", "js.md"] },
+    { "glob": "src/tabs/**",          "checklists": ["render.md", "js.md"] },
+    { "glob": "src/owl/**",           "checklists": ["render.md", "js.md"] },
+    { "glob": "src/**/*.js",          "checklists": ["js.md"] },
+    { "glob": "scripts/**",           "checklists": ["js.md"] },
+    { "glob": "sw.js",                "checklists": ["js.md"] }
+  ],
+  "default": "default.md",
+  "security_sensitive": ["src/ai/**", ".claude/hooks/**", ".github/workflows/**", "src/ui/**", "src/owl/**"]
+}

@@ -21,3 +21,5 @@ scripts/__pycache__/
 # Playwright E2E артефакти (звіт + сліди) — генеруються щопрогону, у CI як artifact
 playwright-report/
 test-results/
+.claude/hooks/logs/
+.claude/hooks/.byyou-handoff-warned

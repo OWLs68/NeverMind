@@ -104,6 +104,15 @@
             "command": "node .claude/hooks/do-not-touch-guard.js"
           }
         ]
+      },
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/log-event.js"
+          }
+        ]
       }
     ],
     "PostToolUse": [
@@ -145,6 +154,15 @@
             "command": "bash .claude/hooks/lesson-reminder.sh"
           }
         ]
+      },
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/log-event.js"
+          }
+        ]
       }
     ],
     "UserPromptSubmit": [
@@ -179,6 +197,40 @@
           {
             "type": "command",
             "command": "bash .claude/hooks/byyou-context-guard.sh"
+          },
+          {
+            "type": "command",
+            "command": "node .claude/hooks/log-event.js"
+          }
+        ]
+      }
+    ],
+    "PostToolUseFailure": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/log-event.js"
+          }
+        ]
+      }
+    ],
+    "SubagentStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/log-event.js"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/log-event.js"
           }
         ]
       }
