@@ -131,16 +131,20 @@ const LENSES = {
   C: 'ЛІНЗА КОНТЕКСТ/ТАЙМЛАЙН: є whitelist/міграція/guard/детектор в ІНШОМУ місці коду що нейтралізує це? Чи існують взагалі дані/шлях що це тригерять (структурно real ≠ реально досяжно)?',
 }
 
+// Стеля агентів — тестовий прогін (рішення Романа 11.07: подивитись реальну
+// витрату токенів ПЕРЕД тим як зафіксувати число назавжди). Змінити тут.
+const AGENT_CAP = 100
+const SEV_RANK = { critical: 0, high: 1, medium: 2, low: 3, cosmetic: 4 }
+// Базова квота спростувачів за severity (лінзи). cosmetic=0 → unverified-low (свідомо).
 function refuterLenses(sev) {
   if (sev === 'critical' || sev === 'high') return ['A','B','C']
   if (sev === 'medium') return ['B','C']
   if (sev === 'low') return ['B']
-  return [] // cosmetic → без верифікації
+  return [] // cosmetic → без верифікації (unverified-low)
 }
 
 function classify(sev, cantRefuteVerdicts, total) {
   const R = cantRefuteVerdicts.length
-  if (total === 0) return 'unverified-low'
   if (sev === 'critical' || sev === 'high') {
     if (R >= 2) return 'confirmed'
     if (R === 1 && cantRefuteVerdicts[0].confidence === 'high') return 'unconfirmed'
@@ -159,62 +163,101 @@ const FIND_PREAMBLE = 'Ти незалежний аудитор коду NeverMi
 
 const REFUTE_PREAMBLE = 'Ти незалежний спростувач у аудиті коду NeverMind (~/home/user/NeverMind). Тобі дано ОДНУ знахідку. Твоя задача — НЕ підтвердити, а СПРОСТУВАТИ: довести прямим контрдоказом у реальному коді що вона НЕ реальна. Читай код через Read/Grep. 🚫 тільки читання, жодних змін. Правило асиметрії: «не можу перевірити» ≠ «неправда» — refuted=true ТІЛЬКИ за прямим контрдоказом у коді. Якщо контрдоказу нема — refuted=false (знахідка виживає). '
 
+// === ФАЗА 1 — FIND (бар'єр: усі 14 вимірів паралельно, потім план верифікації) ===
+// Бар'єр потрібен бо стеля агентів глобальна: щоб розподілити залишок верифікації
+// за severity ПО ВСIХ вимірах разом, треба спершу зібрати ВСI знахідки.
 phase('Find')
-log('🔍 /fullaudit: 14 вимірів, severity-прив\'язана верифікація. Пріоритет — повнота.')
+log(`🔍 /fullaudit (тестовий прогін, стеля ${AGENT_CAP} агентів): 14 find + верифікація в залишку.`)
 
-const audited = await pipeline(
-  DIMENSIONS,
-  (d) => agent(FIND_PREAMBLE + d.prompt, {
+const finds = await parallel(DIMENSIONS.map((d) => () =>
+  agent(FIND_PREAMBLE + d.prompt, {
     label: `find:${d.key}`, phase: 'Find', effort: 'high',
     agentType: d.agent || undefined, schema: FINDINGS_SCHEMA,
-  }),
-  (found, d) => {
-    const list = (found && found.findings) || []
-    return parallel(list.map((f) => () => {
-      const sev = f.severity
-      const lenses = refuterLenses(sev)
-      if (lenses.length === 0) {
-        return Promise.resolve({ ...f, dimension: d.key, status: 'unverified-low', R: 0, verdicts: [] })
-      }
-      const finding = `Знахідка [${f.id}] severity=${sev}\nФайл: ${f.file}:${f.line}\nТвердження: ${f.claim}\nСценарій: ${f.scenario}`
-      return parallel(lenses.map((L) => () =>
-        agent(`${REFUTE_PREAMBLE}\n\n${finding}\n\n${LENSES[L]}`, {
-          label: `verify:${f.id}:${L}`, phase: 'Verify', effort: 'high', schema: VERDICT_SCHEMA,
-        })
-      )).then((verdicts) => {
-        const valid = verdicts.filter(Boolean)
-        const cantRefute = valid.filter((v) => !v.refuted)
-        const status = classify(sev, cantRefute, lenses.length)
-        return { ...f, dimension: d.key, status, R: cantRefute.length, verdicts: valid }
-      })
-    }))
-  }
-)
+  }).then((r) => ({ d, findings: (r && r.findings) || [] }))
+))
 
-// Плаский список класифікованих знахідок → Голова синтезує звіт.
-const flat = audited.flat().filter(Boolean)
-log(`✅ Готово: ${flat.length} знахідок оброблено по 14 вимірах.`)
-return { findings: flat, dimensions: DIMENSIONS.map((d) => d.key) }
+// Плаский список знахідок з прив'язкою до виміру.
+const all = []
+for (const r of finds.filter(Boolean)) {
+  for (const f of r.findings) all.push({ ...f, dimension: r.d.key })
+}
+log(`📋 Find завершено: ${all.length} знахідок по ${DIMENSIONS.length} вимірах.`)
+
+// === РОЗПОДІЛ ВЕРИФІКАЦІЇ В МЕЖАХ СТЕЛІ ===
+// Find уже спожив DIMENSIONS.length агентів (непорушний мінімум). Залишок — на verify.
+// Йдемо згори вниз за severity (critical→cosmetic): фінансуємо повну квоту поки вистачає
+// бюджету. Не влазить повна квота — ріжемо ЦЮ знахідку у 0 (мітка cap-cut) і всі нижчі
+// за нею (вони ще нижчої критичності). cosmetic завжди 0 → unverified-low (свідомо, не cap).
+let verifyBudget = AGENT_CAP - DIMENSIONS.length
+const sorted = [...all].sort((a, b) => (SEV_RANK[a.severity] ?? 9) - (SEV_RANK[b.severity] ?? 9))
+let capCut = 0
+let exhausted = false // строгий пріоритет: щойно бюджет не вмістив знахідку — весь ХВIСТ
+                       // (усе нижче за severity) теж cap-cut. Інакше пізніша дешева low
+                       // профінансувалась би поки вища medium лишилась обрізаною.
+const plan = sorted.map((f) => {
+  const lenses = refuterLenses(f.severity)
+  if (lenses.length === 0) return { f, lenses: [], mark: 'unverified-low' } // cosmetic — свідомо
+  if (!exhausted && verifyBudget >= lenses.length) {
+    verifyBudget -= lenses.length
+    return { f, lenses, mark: null }
+  }
+  exhausted = true
+  capCut++
+  return { f, lenses: [], mark: 'cap-cut' } // стеля — недоверифіковано, чесно позначено
+})
+if (capCut > 0) log(`⚠️ Стеля ${AGENT_CAP}: ${capCut} знахідок (найнижчої критичності) лишились НЕДОВЕРИФІКОВАНІ — буде окремим рядком у звіті.`)
+
+// === ФАЗА 2 — VERIFY (спростувачі за планом, паралельно) ===
+phase('Verify')
+const audited = await parallel(plan.map((p) => () => {
+  if (p.lenses.length === 0) {
+    // Без верифікації: cosmetic (свідомо) або cap-cut (через стелю) — обидва чесно позначені.
+    return Promise.resolve({ ...p.f, status: p.mark, R: 0, verdicts: [], capCut: p.mark === 'cap-cut' })
+  }
+  const finding = `Знахідка [${p.f.id}] severity=${p.f.severity}\nФайл: ${p.f.file}:${p.f.line}\nТвердження: ${p.f.claim}\nСценарій: ${p.f.scenario}`
+  return parallel(p.lenses.map((L) => () =>
+    agent(`${REFUTE_PREAMBLE}\n\n${finding}\n\n${LENSES[L]}`, {
+      label: `verify:${p.f.id}:${L}`, phase: 'Verify', effort: 'high', schema: VERDICT_SCHEMA,
+    })
+  )).then((verdicts) => {
+    const valid = verdicts.filter(Boolean)
+    const cantRefute = valid.filter((v) => !v.refuted)
+    return { ...p.f, status: classify(p.f.severity, cantRefute, p.lenses.length), R: cantRefute.length, verdicts: valid, capCut: false }
+  })
+}))
+
+const flat = audited.filter(Boolean)
+const spent = DIMENSIONS.length + plan.reduce((s, p) => s + p.lenses.length, 0)
+log(`✅ Готово: ${flat.length} знахідок, ~${spent} агентів (стеля ${AGENT_CAP}). Недоверифіковано через стелю: ${capCut}.`)
+return { findings: flat, dimensions: DIMENSIONS.map((d) => d.key), agentsSpent: spent, agentCap: AGENT_CAP, capCut }
 ```
 
 ---
 
 ## 📋 Фінальний звіт (Голова синтезує ПІСЛЯ Workflow)
 
-Workflow повертає `{findings, dimensions}` з полем `status` на кожній
-(`confirmed`/`confirmed-low`/`unconfirmed`/`unverified-low`/`discarded`). Голова:
+Workflow повертає `{findings, dimensions, agentsSpent, agentCap, capCut}`. Кожна знахідка має
+`status` (`confirmed`/`confirmed-low`/`unconfirmed`/`unverified-low`/`cap-cut`/`discarded`) +
+`capCut` (bool). Голова:
 
 1. **Знахідки ранжовані за критичністю** (`confirmed` critical→high→medium→low, потім `confirmed-low`,
-   потім `unverified-low`). Кожна: `file:line` + severity + **конкретний сценарій відмови**. `discarded` — НЕ показувати (тільки в лічильнику таблиці).
+   потім `unverified-low`/`cap-cut`). Кожна: `file:line` + severity + **конкретний сценарій відмови**. `discarded` — НЕ показувати (тільки в лічильнику таблиці).
 2. **Окрема секція «⚠️ Непідтверджено — вартує другого погляду»** — усі `status:unconfirmed` (рівно 1 спростувач не зміг, висока впевненість). Не викидати мовчки.
-3. **Секція «🔵 Неверифіковане дрібне (`unverified-low`)»** — cosmetic-знахідки без верифікації, чесно позначені (довіра find-агенту).
-4. **Підсумкова таблиця:** вимір → знайдено / підтверджено / непідтверджено / спростовано / неверифіковано.
-5. **Обов'язкова секція «🚧 Що НЕ перевірено цього разу»** — недосяжне з хмари: реальні значення
+3. **Секція «🔵 Неверифіковане дрібне (`unverified-low`)»** — cosmetic без верифікації, чесно позначені (довіра find-агенту).
+4. **🚦 ОБОВʼЯЗКОВИЙ РЯДОК про стелю (якщо `capCut > 0`):** «⚠️ N знахідок не доверифіковано через
+   стелю агентів (${agentCap})» + перелік цих знахідок (`status:cap-cut`) окремо. **Ховати заборонено** —
+   якщо стеля щось обрізала, це видно у звіті явним рядком. Плюс завжди: «Витрачено ~agentsSpent з agentCap агентів» (це і є замір для тестового прогону).
+5. **Підсумкова таблиця:** вимір → знайдено / підтверджено / непідтверджено / спростовано / неверифіковано / cap-cut.
+6. **Обов'язкова секція «🚧 Що НЕ перевірено цього разу»** — недосяжне з хмари: реальні значення
    localStorage юзера, жива поведінка OpenAI на проді, справжній рендер/тач на iPhone, реальні
    обсяги usage; + будь-який вимір що find-агент сам позначив неповним. **Мовчазне «все чисто»
    без цієї секції — заборонено.**
-6. **Аудит лише ЗНАХОДИТЬ.** Голова НЕ робить Edit. Фікси — окремо через `/fix` (по одному)
+7. **Аудит лише ЗНАХОДИТЬ.** Голова НЕ робить Edit. Фікси — окремо через `/fix` (по одному)
    або `/byyou` (пакетом), кожен верифікований проти коду перед зміною.
+
+> **Тестовий прогін (11.07):** стеля `AGENT_CAP=100` — щоб побачити реальну витрату токенів
+> ПЕРЕД тим як зафіксувати число назавжди. Після прогону — глянути `agentsSpent` і токен-звіт
+> Workflow, тоді вирішити фінальну стелю. `AGENT_CAP` — одна константа у скрипті.
 
 ## Анти-патерни
 - ❌ Голова передає find/verify-агентам контекст «ми щойно зробили X» — вбиває незалежність.
