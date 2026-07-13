@@ -221,6 +221,15 @@ const audited = await parallel(plan.map((p) => () => {
     })
   )).then((verdicts) => {
     const valid = verdicts.filter(Boolean)
+    // 🔴 FAIL-OPEN (урок тестового прогону 11.07): agent() повертає null на ПОМИЛЦІ
+    // /скіпі (напр. вичерпано сесійний ліміт підписки). null ≠ «спростовано».
+    // Якщо хоч один спростувач НЕ відпрацював — знахідка НЕ discard, а
+    // 'under-verified' (жива, чесно позначена). Без цього 32 знахідки тестового
+    // прогону тихо зникли як «відкинуті», коли верифікація впала на ліміті.
+    if (valid.length < p.lenses.length) {
+      return { ...p.f, status: 'under-verified', R: null, verdicts: valid,
+        verifyErrors: p.lenses.length - valid.length, capCut: false }
+    }
     const cantRefute = valid.filter((v) => !v.refuted)
     return { ...p.f, status: classify(p.f.severity, cantRefute, p.lenses.length), R: cantRefute.length, verdicts: valid, capCut: false }
   })
@@ -237,12 +246,13 @@ return { findings: flat, dimensions: DIMENSIONS.map((d) => d.key), agentsSpent: 
 ## 📋 Фінальний звіт (Голова синтезує ПІСЛЯ Workflow)
 
 Workflow повертає `{findings, dimensions, agentsSpent, agentCap, capCut}`. Кожна знахідка має
-`status` (`confirmed`/`confirmed-low`/`unconfirmed`/`unverified-low`/`cap-cut`/`discarded`) +
+`status` (`confirmed`/`confirmed-low`/`unconfirmed`/`unverified-low`/`under-verified`/`cap-cut`/`discarded`) +
 `capCut` (bool). Голова:
 
 1. **Знахідки ранжовані за критичністю** (`confirmed` critical→high→medium→low, потім `confirmed-low`,
-   потім `unverified-low`/`cap-cut`). Кожна: `file:line` + severity + **конкретний сценарій відмови**. `discarded` — НЕ показувати (тільки в лічильнику таблиці).
+   потім `unverified-low`/`cap-cut`/`under-verified`). Кожна: `file:line` + severity + **конкретний сценарій відмови**. `discarded` — НЕ показувати (тільки в лічильнику таблиці).
 2. **Окрема секція «⚠️ Непідтверджено — вартує другого погляду»** — усі `status:unconfirmed` (рівно 1 спростувач не зміг, висока впевненість). Не викидати мовчки.
+2.5. **Секція «🟠 Недоверифіковано (verify впав, НЕ спростовано)»** — усі `status:under-verified` (хоч один спростувач помер, напр. сесійний ліміт). Це СИРІ find-знахідки — НЕ довіряти як підтвердженим, але й НЕ викидати: повторити верифікацію коли ліміт відновиться. Урок 11.07: 32 знахідки тихо зникали як «discarded» коли verify падав — тепер вони тут.
 3. **Секція «🔵 Неверифіковане дрібне (`unverified-low`)»** — cosmetic без верифікації, чесно позначені (довіра find-агенту).
 4. **🚦 ОБОВʼЯЗКОВИЙ РЯДОК про стелю (якщо `capCut > 0`):** «⚠️ N знахідок не доверифіковано через
    стелю агентів (${agentCap})» + перелік цих знахідок (`status:cap-cut`) окремо. **Ховати заборонено** —
@@ -255,9 +265,14 @@ Workflow повертає `{findings, dimensions, agentsSpent, agentCap, capCut}
 7. **Аудит лише ЗНАХОДИТЬ.** Голова НЕ робить Edit. Фікси — окремо через `/fix` (по одному)
    або `/byyou` (пакетом), кожен верифікований проти коду перед зміною.
 
-> **Тестовий прогін (11.07):** стеля `AGENT_CAP=100` — щоб побачити реальну витрату токенів
-> ПЕРЕД тим як зафіксувати число назавжди. Після прогону — глянути `agentsSpent` і токен-звіт
-> Workflow, тоді вирішити фінальну стелю. `AGENT_CAP` — одна константа у скрипті.
+> **🔴 РЕЗУЛЬТАТ ТЕСТОВОГО ПРОГОНУ 11.07 (заміряно, не теорія):** `AGENT_CAP=100`, реально
+> витрачено **92 агенти × high = ~2,64М токенів** за ~49 хв → **вичерпано сесійний ліміт підписки
+> Романа** на ~92-му агенті; 49 verify-агентів впали. **Справжня стеля — НЕ кількість агентів, а
+> токен/сесійний бюджет підписки** (~28,7К токенів/агент × high). Висновки: (1) `AGENT_CAP` реально
+> безпечний ≈ **20-30**, не 100; (2) великий аудит **дробити** — find-only у сесії 1, verify тільки
+> high у сесії 2, або 3-4 виміри/сесія; (3) розглянути gate на `budget.remaining()` (Workflow API),
+> не лише лічильник агентів; (4) verify можливо `effort: medium` (find — `high`). Повний звіт
+> прогону + 10 confirmed знахідок → `_ai-tools/FULLAUDIT_TESTRUN_2026-07-11.md`.
 
 ## Анти-патерни
 - ❌ Голова передає find/verify-агентам контекст «ми щойно зробили X» — вбиває незалежність.
