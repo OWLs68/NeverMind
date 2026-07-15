@@ -23,3 +23,4 @@ playwright-report/
 test-results/
 .claude/hooks/logs/
 .claude/hooks/.byyou-handoff-warned
+.claude/hooks/.token-guard-tripped

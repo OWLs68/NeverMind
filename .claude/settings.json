@@ -110,6 +110,10 @@
           {
             "type": "command",
             "command": "node .claude/hooks/log-event.js"
+          },
+          {
+            "type": "command",
+            "command": "node .claude/hooks/token-guard.js"
           }
         ]
       }
@@ -160,6 +164,10 @@
           {
             "type": "command",
             "command": "node .claude/hooks/log-event.js"
+          },
+          {
+            "type": "command",
+            "command": "node .claude/hooks/token-guard.js"
           }
         ]
       }
