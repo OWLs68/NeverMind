@@ -9,7 +9,9 @@
 
 ## 🔴 Критичні (зламана функціональність)
 
-_Немає відкритих критичних багів станом на 07.05.2026 (LfA6w — B-151+B-152+B-153 закрито)._
+| **B-202** | `src/core/execute-action.js:228` (delete_habit) + `:168` (edit_task) + `:144` (edit_habit) | 🔴 **ВIДКРИТО 26yz5s 14.07** (потрійно підтверджено R=3 незалежними агентами у тестовому прогоні `/fullaudit`, деталі → `_ai-tools/FULLAUDIT_TESTRUN_2026-07-11.md`). **Системний клас «порожній fuzzy-fallback → перша сутність».** Коли AI дає неіснуючий/галюцинований UUID (юзер каже «видали звичку читати», AI передає `habit_id` якого нема; tool-схема передає ЛИШЕ `*_id`, name/query undefined) → `nameQ=''` → `''.slice(0,6)=''` → `habits.find(x=>x.name.toLowerCase().includes(''))`===`habits[0]` (`.includes('')` завжди true) → `if(!target)` не спрацьовує бо `habits[0]` truthy → **мовчки видаляє/редагує ПЕРШУ звичку/задачу зі списку**. `delete_task` захищений guard'ом `nameQ.length>=3` (`:204`, коментар QDIGl 04.05 про ідентичний реальний баг «видали проект Х → видалена випадкова задача»), у `delete_habit`/`edit_task`/`edit_habit` guard'а НЕМА. Діє у 7 з 8 чатів (Evening має власний безпечний findIndex-handler `evening-actions.js:322`). **Фікс системний:** `if(!h) return` (без fuzzy) АБО guard `nameQ.length>=3` у ВСІХ delete_*/edit_* execute-action, не точково. Через `/fix B-202` або `/byyou`. |
+
+_(B-151/B-152/B-153 закрито LfA6w 07.05; до B-202 відкритих критичних не було.)_
 
 ---
 
