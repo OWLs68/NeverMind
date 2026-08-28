@@ -33,7 +33,7 @@ jobs:
     env:
       CANARY_URL: https://owls68.github.io/NeverMind/
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           ref: main   # канарейка міряє те що зʼїхало у main, не гілку
 
