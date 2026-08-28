@@ -422,7 +422,7 @@ jobs:
 
       - name: Create GitHub issue for critical findings
         if: steps.scan.outputs.has_findings == 'true'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         env:
           REPORT_PATH: /tmp/scan-report.md
           SCAN_MODE: ${{ steps.mode.outputs.mode }}
@@ -466,7 +466,7 @@ jobs:
       # Видалення тільки якщо це справді claude/scan/** push, не workflow_dispatch.
       - name: Delete trigger branch
         if: always() && steps.mode.outputs.trigger_branch != ''
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         env:
           TRIGGER_BRANCH: ${{ steps.mode.outputs.trigger_branch }}
         with:
